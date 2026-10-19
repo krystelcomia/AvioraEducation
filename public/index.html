@@ -80,96 +80,14 @@
          ======================================= -->
     <div id="view-home" class="app-page-view">
       
-      <!-- HERO SECTION -->
-      <section class="hero-section">
-        <div class="container hero-grid">
-          <div class="hero-content">
-            <div class="badge-gold">
-              <span>✦</span> Premier Academic Mentorship Platform
-            </div>
-
-            <h1 class="hero-headline">
-              Your Potential. <br />
-              Your Path. <br />
-              <span class="text-gold">Your Future.</span>
-            </h1>
-
-            <p class="hero-subtitle">
-              Aviora Education bridges ambitious students with rigorously vetted academic tutors from Stanford, MIT, Harvard, and Columbia. Master calculus, physics, coding, chemistry, and literature with personalized 1-on-1 mentorship.
-            </p>
-
-            <div class="hero-ctas">
-              <a href="#tutors" class="btn btn-primary btn-lg" id="hero-find-tutor-btn">
-                <span>Find Your Tutor</span>
-                <span>→</span>
-              </a>
-              <button class="btn btn-secondary btn-lg open-register-teacher-btn" id="hero-become-tutor-btn">
-                <span>Become an Aviora Tutor</span>
-              </button>
-            </div>
-
-            <!-- Trust Metrics Counter -->
-            <div class="hero-trust-metrics">
-              <div class="trust-metric-item">
-                <span class="metric-number text-gold" id="stat-counter-tutors">15+</span>
-                <span class="metric-label">Vetted Elite Tutors</span>
-              </div>
-              <div class="trust-metric-item">
-                <span class="metric-number" id="stat-counter-sessions">450+</span>
-                <span class="metric-label">Sessions Completed</span>
-              </div>
-              <div class="trust-metric-item">
-                <span class="metric-number text-gold" id="stat-counter-rating">4.9 ★</span>
-                <span class="metric-label">Average Student Rating</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Hero 3D Visual Composition -->
-          <div class="hero-visual-wrapper">
-            <div class="visual-ambient-ring"></div>
-            <div class="visual-ambient-ring-2"></div>
-
-            <div class="hero-image-card">
-              <img src="/assets/images/hero_visual.jpg" alt="Aviora Education Visual Learning" />
-            </div>
-
-            <!-- Floating Micro-Cards -->
-            <div class="floating-badge-card card-top-right">
-              <div class="floating-icon-circle">★</div>
-              <div>
-                <div class="floating-card-title">Top 1% Educators</div>
-                <div class="floating-card-sub">Strict Degree Verification</div>
-              </div>
-            </div>
-
-            <div class="floating-badge-card card-bottom-left">
-              <div class="floating-icon-circle">📈</div>
-              <div>
-                <div class="floating-card-title">98% Grade Boost</div>
-                <div class="floating-card-sub">Proven Conceptual Mastery</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- STUDENT CRAFTS SHOWCASE SECTION -->
+      <!-- STUDENT'S ACHIEVEMENT SHOWCASE SECTION -->
       <section class="section student-works-section" id="student-work-section">
         <div class="container">
-          <div class="section-header">
-            <span class="badge-gold">Student Achievement Gallery</span>
-            <h2 class="section-title">Student Crafts</h2>
-            <p class="section-desc">
+          <div class="section-header" style="text-align: center; margin-bottom: 2.5rem;">
+            <h2 class="section-title" style="text-align: center;">Student's Achievement</h2>
+            <p class="section-desc" style="text-align: center; margin: 0 auto; max-width: 720px;">
               Explore exceptional original works—from precision structural crafts and physical models to fine arts and mathematical drawings—crafted by Aviora students under 1-on-1 mentorship.
             </p>
-          </div>
-
-          <!-- Category Filter Bar -->
-          <div class="student-works-filter-bar">
-            <button class="work-filter-btn active" data-filter="all">All Student Crafts (6)</button>
-            <button class="work-filter-btn" data-filter="craft">Handmade Crafts &amp; Models (3)</button>
-            <button class="work-filter-btn" data-filter="drawing">Drawings &amp; Fine Arts (3)</button>
           </div>
 
           <!-- Student Works Grid -->
@@ -2751,52 +2669,52 @@
        MODAL: STUDENT WORK LIGHTBOX
        ========================================= -->
   <div class="modal-overlay" id="student-work-modal">
-    <div class="modal-card" style="max-width: 900px; padding: 0; overflow: hidden; background: #111319; border: 1px solid rgba(229, 169, 59, 0.35);">
-      <div class="modal-header" style="padding: 1.25rem 1.75rem; border-bottom: 1px solid rgba(255, 255, 255, 0.08); background: rgba(18, 20, 27, 0.95);">
+    <div class="modal-card" style="max-width: 920px; padding: 0; overflow: hidden; background: #FFFFFF; border: 1.5px solid rgba(198, 138, 40, 0.35); box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15); border-radius: var(--radius-xl);">
+      <div class="modal-header" style="padding: 1.25rem 1.75rem; border-bottom: 1px solid rgba(198, 138, 40, 0.2); background: #F6F2E9;">
         <div style="display: flex; align-items: center; gap: 0.75rem;">
           <span class="badge-gold" id="sw-modal-category">Drawing</span>
-          <span style="font-size: 0.85rem; color: var(--gold-light); font-weight: 600;" id="sw-modal-award">Award</span>
+          <span style="font-size: 0.85rem; color: var(--gold-800); font-weight: 700;" id="sw-modal-award">Award</span>
         </div>
         <button class="modal-close-btn" id="student-work-modal-close">✕</button>
       </div>
 
       <div class="student-work-modal-grid">
-        <div class="modal-artwork-preview">
-          <img id="sw-modal-img" src="" alt="Student Artwork" />
+        <div class="modal-artwork-preview" style="background: #FAF7F2; padding: 1.5rem; display: flex; align-items: center; justify-content: center;">
+          <img id="sw-modal-img" src="" alt="Student Artwork" style="max-height: 480px; width: 100%; object-fit: contain; border-radius: var(--radius-md); box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);" />
         </div>
 
-        <div class="modal-artwork-details">
+        <div class="modal-artwork-details" style="padding: 2rem 2.25rem; display: flex; flex-direction: column; background: #FFFFFF;">
           <!-- Student Creator Tag -->
-          <div class="student-creator-tag" style="margin-bottom: 1.25rem;">
+          <div class="student-creator-tag" style="margin-bottom: 1.25rem; background: linear-gradient(135deg, rgba(251, 244, 226, 0.95) 0%, rgba(246, 242, 233, 0.95) 100%); border: 1px solid rgba(198, 138, 40, 0.3);">
             <span class="student-creator-avatar" id="sw-modal-avatar">🎨</span>
             <div class="student-creator-info">
-              <span class="student-creator-name" id="sw-modal-student-name">Student Name</span>
-              <span class="student-creator-grade" id="sw-modal-student-grade">Grade Level</span>
+              <span class="student-creator-name" id="sw-modal-student-name" style="color: var(--gold-900); font-weight: 800;">Student Name</span>
+              <span class="student-creator-grade" id="sw-modal-student-grade" style="color: var(--text-muted); font-size: 0.78rem;">Grade Level</span>
             </div>
           </div>
 
-          <h3 style="font-size: 1.35rem; font-weight: 700; color: #fff; margin-bottom: 0.75rem;" id="sw-modal-title">Project Title</h3>
+          <h3 style="font-size: 1.45rem; font-weight: 800; color: var(--charcoal-950); margin-bottom: 0.75rem; line-height: 1.3;" id="sw-modal-title">Project Title</h3>
 
-          <p style="font-size: 0.9rem; color: var(--text-secondary); line-height: 1.6; margin-bottom: 1.25rem;" id="sw-modal-summary">Summary description</p>
+          <p style="font-size: 0.925rem; color: var(--text-secondary); line-height: 1.65; margin-bottom: 1.25rem;" id="sw-modal-summary">Summary description</p>
 
-          <div style="background: rgba(229, 169, 59, 0.05); border-left: 3px solid var(--gold-primary); padding: 0.85rem 1rem; border-radius: 4px; margin-bottom: 1.25rem;">
-            <div style="font-size: 0.75rem; color: var(--gold-light); font-weight: 700; text-transform: uppercase; margin-bottom: 0.25rem;">Student Reflection</div>
-            <p style="font-size: 0.85rem; color: #fff; font-style: italic; margin: 0; line-height: 1.5;" id="sw-modal-reflection">"Student reflection"</p>
+          <div style="background: #FAF7F2; border: 1px solid rgba(198, 138, 40, 0.25); border-left: 4px solid var(--gold-500); padding: 0.9rem 1.1rem; border-radius: var(--radius-sm); margin-bottom: 1.25rem;">
+            <div style="font-size: 0.75rem; color: var(--gold-800); font-weight: 700; text-transform: uppercase; margin-bottom: 0.25rem; letter-spacing: 0.04em;">Student Reflection</div>
+            <p style="font-size: 0.875rem; color: var(--charcoal-900); font-style: italic; margin: 0; line-height: 1.55;" id="sw-modal-reflection">"Student reflection"</p>
           </div>
 
-          <div style="border-top: 1px solid rgba(255, 255, 255, 0.08); padding-top: 1rem; margin-top: auto; display: flex; flex-direction: column; gap: 0.5rem; font-size: 0.82rem;">
+          <div style="border-top: 1px solid rgba(0, 0, 0, 0.08); padding-top: 1rem; margin-top: auto; display: flex; flex-direction: column; gap: 0.5rem; font-size: 0.85rem;">
             <div>
               <span style="color: var(--text-secondary);">Medium / Materials:</span>
-              <strong style="color: #fff; margin-left: 0.35rem;" id="sw-modal-materials">Materials</strong>
+              <strong style="color: var(--charcoal-900); margin-left: 0.35rem;" id="sw-modal-materials">Materials</strong>
             </div>
             <div>
               <span style="color: var(--text-secondary);">Academic Mentor:</span>
-              <strong style="color: var(--gold-light); margin-left: 0.35rem;" id="sw-modal-mentor">Mentor</strong>
+              <strong style="color: var(--gold-800); margin-left: 0.35rem;" id="sw-modal-mentor">Mentor</strong>
             </div>
           </div>
 
           <div style="margin-top: 1.5rem;">
-            <a href="#tutors" class="btn btn-outline-gold btn-sm" style="width: 100%; text-align: center;" onclick="document.getElementById('student-work-modal').classList.remove('active');">Explore Related Tutors →</a>
+            <a href="#tutors" class="btn btn-primary btn-sm" style="width: 100%; text-align: center;" onclick="document.getElementById('student-work-modal').classList.remove('active');">Explore Related Tutors →</a>
           </div>
         </div>
       </div>

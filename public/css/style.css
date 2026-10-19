@@ -1780,16 +1780,14 @@ a { text-decoration: none; color: inherit; transition: color var(--transition-fa
 .student-works-section {
   background: #FAF7F2;
   position: relative;
+  padding-top: calc(var(--header-height) + 2rem);
+  padding-bottom: 4rem;
   border-bottom: 1px solid rgba(0, 0, 0, 0.06);
 }
 
-.student-works-filter-bar {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.75rem;
-  margin-bottom: 3rem;
-  flex-wrap: wrap;
+.student-works-section .section-header {
+  text-align: center;
+  margin-bottom: 2.25rem;
 }
 
 .work-filter-btn {

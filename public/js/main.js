@@ -572,16 +572,16 @@ function openPolicyModal(type) {
     if (title) title.textContent = 'Aviora Education Privacy Policy';
     if (body) {
       body.innerHTML = `
-        <h4 style="color: var(--white); margin-bottom: 0.5rem;">Data Protection & Trust</h4>
-        <p style="color: var(--charcoal-300); font-size: 0.9rem; line-height: 1.6; margin-bottom: 1rem;">
+        <h4 style="color: var(--charcoal-900); font-weight: 700; margin-bottom: 0.5rem;">Data Protection & Trust</h4>
+        <p style="color: var(--text-secondary); font-size: 0.9rem; line-height: 1.6; margin-bottom: 1rem;">
           At Aviora Education, privacy and security are fundamental principles. We collect and process user data solely to facilitate academic matching, session scheduling, and secure communication between verified tutors and students.
         </p>
-        <h4 style="color: var(--white); margin-bottom: 0.5rem;">Credential Security</h4>
-        <p style="color: var(--charcoal-300); font-size: 0.9rem; line-height: 1.6; margin-bottom: 1rem;">
+        <h4 style="color: var(--charcoal-900); font-weight: 700; margin-bottom: 0.5rem;">Credential Security</h4>
+        <p style="color: var(--text-secondary); font-size: 0.9rem; line-height: 1.6; margin-bottom: 1rem;">
           All educator credentials, academic degrees, and verification documents are stored securely on encrypted servers. Only authorized academic directors have permission to audit educator background records.
         </p>
-        <h4 style="color: var(--white); margin-bottom: 0.5rem;">Cookies & Session Management</h4>
-        <p style="color: var(--charcoal-300); font-size: 0.9rem; line-height: 1.6;">
+        <h4 style="color: var(--charcoal-900); font-weight: 700; margin-bottom: 0.5rem;">Cookies & Session Management</h4>
+        <p style="color: var(--text-secondary); font-size: 0.9rem; line-height: 1.6;">
           Authentication tokens are managed strictly via industry standard JWT protocols. We do not sell personal student or tutor information to third-party advertisers.
         </p>
       `;
@@ -590,16 +590,16 @@ function openPolicyModal(type) {
     if (title) title.textContent = 'Aviora Education Terms of Service';
     if (body) {
       body.innerHTML = `
-        <h4 style="color: var(--white); margin-bottom: 0.5rem;">Academic Integrity</h4>
-        <p style="color: var(--charcoal-300); font-size: 0.9rem; line-height: 1.6; margin-bottom: 1rem;">
+        <h4 style="color: var(--charcoal-900); font-weight: 700; margin-bottom: 0.5rem;">Academic Integrity</h4>
+        <p style="color: var(--text-secondary); font-size: 0.9rem; line-height: 1.6; margin-bottom: 1rem;">
           Aviora Education provides conceptual tutoring, exam preparation, and mentoring. Tutors and students agree to adhere to strict institutional honor codes and academic integrity standards.
         </p>
-        <h4 style="color: var(--white); margin-bottom: 0.5rem;">Verification & Directory Rules</h4>
-        <p style="color: var(--charcoal-300); font-size: 0.9rem; line-height: 1.6; margin-bottom: 1rem;">
+        <h4 style="color: var(--charcoal-900); font-weight: 700; margin-bottom: 0.5rem;">Verification & Directory Rules</h4>
+        <p style="color: var(--text-secondary); font-size: 0.9rem; line-height: 1.6; margin-bottom: 1rem;">
           Only educators whose academic credentials and background have been formally vetted and approved by our Academic Board will be listed publicly on the Aviora tutor directory.
         </p>
-        <h4 style="color: var(--white); margin-bottom: 0.5rem;">Cancellation & Rescheduling</h4>
-        <p style="color: var(--charcoal-300); font-size: 0.9rem; line-height: 1.6;">
+        <h4 style="color: var(--charcoal-900); font-weight: 700; margin-bottom: 0.5rem;">Cancellation & Rescheduling</h4>
+        <p style="color: var(--text-secondary); font-size: 0.9rem; line-height: 1.6;">
           Students and tutors may reschedule or cancel upcoming tutoring sessions up to 12 hours prior to scheduled start times without penalty.
         </p>
       `;

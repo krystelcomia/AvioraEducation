@@ -75,7 +75,7 @@ function showConfirm(title, message, onConfirm) {
 
 // Router
 const Router = {
-  routes: ['#home', '#about', '#tutors', '#how-it-works', '#student-portal', '#teacher-portal', '#admin-portal'],
+  routes: ['#home', '#about', '#tutors', '#how-it-works', '#login', '#student-portal', '#teacher-portal', '#admin-portal'],
 
   init() {
     window.addEventListener('hashchange', () => this.handleRoute());
@@ -90,8 +90,7 @@ const Router = {
       const user = Auth.currentUser;
       if (!user) {
         showToast('Please sign in to access the Student Portal.', 'info');
-        Auth.openModal('login');
-        window.location.hash = '#home';
+        window.location.hash = '#login';
         return;
       }
       if (user.role !== 'student') {
@@ -104,8 +103,7 @@ const Router = {
       const user = Auth.currentUser;
       if (!user) {
         showToast('Please sign in to access the Teacher Portal.', 'info');
-        Auth.openModal('login');
-        window.location.hash = '#home';
+        window.location.hash = '#login';
         return;
       }
       if (user.role !== 'teacher') {
@@ -118,13 +116,12 @@ const Router = {
       const user = Auth.currentUser;
       if (!user) {
         showToast('Administrator privileges required. Please log in with admin credentials.', 'warning');
-        Auth.openModal('login');
-        window.location.hash = '#home';
+        window.location.hash = '#login';
         return;
       }
       if (user.role !== 'admin') {
         showToast('Access denied. Administrator privileges required.', 'error');
-        window.location.hash = '#home';
+        window.location.hash = '#login';
         return;
       }
     }
@@ -146,6 +143,10 @@ const Router = {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } else if (hash === '#how-it-works') {
       const view = document.getElementById('view-how-it-works');
+      if (view) view.style.display = 'block';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else if (hash === '#login') {
+      const view = document.getElementById('view-login');
       if (view) view.style.display = 'block';
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } else if (hash === '#tutors') {

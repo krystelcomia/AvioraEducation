@@ -450,6 +450,238 @@
 }
 
 /* =========================================
+   SOCIAL OAUTH BUTTONS (GOOGLE & FACEBOOK)
+   ========================================= */
+.social-auth-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+
+.btn-social-auth {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.85rem;
+  padding: 0.75rem 1.25rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: var(--white);
+  width: 100%;
+}
+
+.btn-social-auth:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(229, 169, 59, 0.35);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+}
+
+.btn-social-google:hover {
+  background: rgba(255, 255, 255, 0.09);
+  border-color: rgba(66, 133, 244, 0.4);
+}
+
+.btn-social-facebook:hover {
+  background: rgba(24, 119, 242, 0.15);
+  border-color: rgba(24, 119, 242, 0.45);
+}
+
+.auth-divider {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  margin: 1.25rem 0;
+  color: var(--charcoal-400);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: '';
+  flex: 1;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.auth-divider span {
+  padding: 0 0.85rem;
+}
+
+/* Password Input & Strength Meter */
+.password-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.password-input-wrap input {
+  padding-right: 2.75rem !important;
+}
+
+.password-toggle-eye {
+  position: absolute;
+  right: 0.75rem;
+  background: none;
+  border: none;
+  color: var(--charcoal-400);
+  cursor: pointer;
+  font-size: 1rem;
+  padding: 0.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color var(--transition-fast);
+}
+
+.password-toggle-eye:hover {
+  color: var(--gold-light);
+}
+
+.password-strength-box {
+  margin-top: 0.65rem;
+  padding: 0.75rem 0.85rem;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: var(--radius-xs);
+}
+
+.password-meter-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.72rem;
+  margin-bottom: 0.4rem;
+}
+
+.password-meter-label {
+  font-weight: 700;
+  transition: color 0.3s ease;
+}
+
+.password-meter-track {
+  width: 100%;
+  height: 5px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  overflow: hidden;
+  margin-bottom: 0.65rem;
+}
+
+.password-meter-bar {
+  height: 100%;
+  width: 0%;
+  border-radius: 999px;
+  transition: width 0.3s ease, background-color 0.3s ease;
+  background: #EF4444;
+}
+
+.password-rules-list {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.35rem 0.65rem;
+  font-size: 0.72rem;
+  color: var(--charcoal-400);
+}
+
+.password-rule-item {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  transition: color 0.2s ease;
+}
+
+.password-rule-item.valid {
+  color: #10B981;
+  font-weight: 600;
+}
+
+.password-rule-item.valid .rule-icon {
+  color: #10B981;
+}
+
+/* Dedicated Simple Login Page View */
+.simple-login-container {
+  max-width: 490px;
+  margin: 1.5rem auto 3rem;
+  padding: 2.5rem 2.25rem;
+  background: rgba(18, 20, 27, 0.96);
+  border: 1px solid rgba(229, 169, 59, 0.3);
+  border-radius: var(--radius-xl);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.7), 0 0 35px rgba(229, 169, 59, 0.08);
+  backdrop-filter: blur(16px);
+}
+
+.simple-login-header {
+  text-align: center;
+  margin-bottom: 1.75rem;
+}
+
+.simple-login-brand-logo {
+  height: 40px;
+  margin-bottom: 0.85rem;
+}
+
+.simple-login-title {
+  font-size: 1.65rem;
+  font-weight: 700;
+  color: var(--white);
+  margin-bottom: 0.35rem;
+}
+
+.simple-login-subtitle {
+  font-size: 0.88rem;
+  color: var(--charcoal-300);
+}
+
+/* Social Provider Choice Modal */
+.oauth-account-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.85rem 1rem;
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  margin-bottom: 0.65rem;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.oauth-account-item:hover {
+  background: rgba(229, 169, 59, 0.08);
+  border-color: rgba(229, 169, 59, 0.3);
+  transform: translateX(3px);
+}
+
+.oauth-account-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.oauth-account-name {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--white);
+}
+
+.oauth-account-email {
+  font-size: 0.78rem;
+  color: var(--charcoal-400);
+}
+
+
+/* =========================================
    TOAST NOTIFICATION COMPONENT
    ========================================= */
 .toast-container {

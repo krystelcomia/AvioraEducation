@@ -128,8 +128,21 @@ app.post('/api/auth/register', (req, res) => {
       return res.status(400).json({ error: 'Invalid role selected.' });
     }
 
-    if (password.length < 6) {
-      return res.status(400).json({ error: 'Password must be at least 6 characters.' });
+    // Strict Strong Password Requirement (8+ chars, upper, lower, number, special)
+    if (!password || password.length < 8) {
+      return res.status(400).json({ error: 'Password must be at least 8 characters long.' });
+    }
+    if (!/[A-Z]/.test(password)) {
+      return res.status(400).json({ error: 'Password must contain at least one uppercase letter (A-Z).' });
+    }
+    if (!/[a-z]/.test(password)) {
+      return res.status(400).json({ error: 'Password must contain at least one lowercase letter (a-z).' });
+    }
+    if (!/[0-9]/.test(password)) {
+      return res.status(400).json({ error: 'Password must contain at least one number (0-9).' });
+    }
+    if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
+      return res.status(400).json({ error: 'Password must contain at least one special symbol (e.g. !@#$%^&*).' });
     }
 
     const existing = db.prepare('SELECT id FROM users WHERE email = ?').get(email.toLowerCase().trim());
@@ -284,6 +297,81 @@ app.post('/api/auth/login', (req, res) => {
   } catch (error) {
     console.error('Login error:', error);
     return res.status(500).json({ error: 'An error occurred during login.' });
+  }
+});
+
+// Social OAuth Login / Registration (Google & Facebook)
+app.post('/api/auth/oauth', (req, res) => {
+  try {
+    const { provider, profile } = req.body;
+    if (!['google', 'facebook'].includes(provider)) {
+      return res.status(400).json({ error: 'Unsupported social authentication provider.' });
+    }
+
+    const email = profile?.email ? profile.email.toLowerCase().trim() : null;
+    const name = profile?.name ? profile.name.trim() : (provider === 'google' ? 'Google Scholar' : 'Facebook Scholar');
+    const avatar = profile?.picture || (provider === 'google'
+      ? 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=300&q=80'
+      : 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=300&q=80');
+    const role = profile?.role || 'student';
+
+    if (!email) {
+      return res.status(400).json({ error: 'Email address is required from social provider.' });
+    }
+
+    let user = db.prepare('SELECT * FROM users WHERE email = ?').get(email);
+
+    if (!user) {
+      // Auto-register user from Google / Facebook
+      const salt = bcrypt.genSaltSync(10);
+      const tempPasswordHash = bcrypt.hashSync('OAuth_' + Math.random().toString(36) + 'Aa1!#', salt);
+
+      const insert = db.prepare(`
+        INSERT INTO users (name, email, password_hash, role, avatar_url, status)
+        VALUES (?, ?, ?, ?, ?, 'active')
+      `).run(name, email, tempPasswordHash, role, avatar);
+
+      const newUserId = insert.lastInsertRowid;
+
+      if (role === 'student') {
+        db.prepare(`
+          INSERT INTO student_profiles (user_id, grade_level, school, learning_goals, target_subjects)
+          VALUES (?, 'Collegiate / High School', 'Aviora Learning Cohort', 'Academic excellence & mastery', 'Mathematics, Natural Sciences')
+        `).run(newUserId);
+      }
+
+      user = { id: newUserId, name, email, role, avatar_url: avatar, status: 'active' };
+    }
+
+    if (user.status !== 'active') {
+      return res.status(403).json({ error: 'This account has been deactivated or suspended.' });
+    }
+
+    const token = jwt.sign(
+      { id: user.id, email: user.email, role: user.role },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    const sanitizedUser = {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      phone: user.phone || null,
+      avatar_url: user.avatar_url,
+      status: user.status,
+      auth_provider: provider
+    };
+
+    return res.json({
+      message: `Signed in successfully with ${provider === 'google' ? 'Google' : 'Facebook'}.`,
+      token,
+      user: sanitizedUser
+    });
+  } catch (error) {
+    console.error('Social OAuth error:', error);
+    return res.status(500).json({ error: 'An error occurred during social authentication.' });
   }
 });
 

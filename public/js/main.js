@@ -140,7 +140,15 @@ const Router = {
     });
 
     // Show appropriate page view
-    if (hash === '#tutors') {
+    if (hash === '#about') {
+      const view = document.getElementById('view-about');
+      if (view) view.style.display = 'block';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else if (hash === '#how-it-works') {
+      const view = document.getElementById('view-how-it-works');
+      if (view) view.style.display = 'block';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else if (hash === '#tutors') {
       const view = document.getElementById('view-tutors');
       if (view) view.style.display = 'block';
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -164,14 +172,7 @@ const Router = {
       // Default to Home
       const view = document.getElementById('view-home');
       if (view) view.style.display = 'block';
-
-      if (hash === '#how-it-works') {
-        document.getElementById('how-it-works-section')?.scrollIntoView({ behavior: 'smooth' });
-      } else if (hash === '#about') {
-        document.getElementById('about-section')?.scrollIntoView({ behavior: 'smooth' });
-      } else {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      }
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   }
 };
@@ -198,18 +199,18 @@ document.addEventListener('DOMContentLoaded', async () => {
       navLinks.style.position = 'absolute';
       navLinks.style.top = 'var(--header-height)';
       navLinks.style.left = '0';
-      navLinks.style.background = '#FFFFFF';
+      navLinks.style.background = 'rgba(15, 17, 22, 0.98)';
       navLinks.style.padding = '1.5rem';
-      navLinks.style.borderBottom = '1px solid var(--border-subtle)';
-      navLinks.style.boxShadow = 'var(--shadow-lg)';
+      navLinks.style.borderBottom = '1px solid rgba(229, 169, 60, 0.2)';
+      navLinks.style.boxShadow = '0 16px 36px rgba(0, 0, 0, 0.5)';
     });
   }
 
   // How It Works Tabs (Student vs Tutor)
-  const tabStudent = document.getElementById('tab-how-student');
-  const tabTutor = document.getElementById('tab-how-tutor');
-  const stepsStudent = document.getElementById('steps-student');
-  const stepsTutor = document.getElementById('steps-tutor');
+  const tabStudent = document.getElementById('tab-hiw-page-student') || document.getElementById('tab-how-student');
+  const tabTutor = document.getElementById('tab-hiw-page-tutor') || document.getElementById('tab-how-tutor');
+  const stepsStudent = document.getElementById('hiw-steps-student') || document.getElementById('steps-student');
+  const stepsTutor = document.getElementById('hiw-steps-tutor') || document.getElementById('steps-tutor');
 
   if (tabStudent && tabTutor && stepsStudent && stepsTutor) {
     tabStudent.addEventListener('click', () => {

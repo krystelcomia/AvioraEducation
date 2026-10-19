@@ -58,22 +58,10 @@
           <a href="#signup" class="nav-link open-signup-btn" id="nav-signup-btn">Sign Up</a>
         </div>
 
-        <!-- Authenticated User Actions -->
-        <div id="nav-user-actions" style="display: none; align-items: center; gap: 0.75rem;">
-          <div class="notification-bell" id="nav-notification-bell" title="Notifications">
-            🔔
-            <span class="bell-badge" id="nav-bell-badge" style="display: none;">0</span>
-          </div>
-          
-          <div class="user-menu-trigger" id="user-menu-btn">
-            <img src="/assets/favicon.svg" alt="User Avatar" class="user-avatar-sm" id="nav-user-avatar" />
-            <div>
-              <span class="user-name-sm" id="nav-user-name">User</span>
-              <span class="badge-gold" id="nav-user-role" style="font-size: 0.65rem; padding: 0.1rem 0.4rem; display: block;">ROLE</span>
-            </div>
-          </div>
-          
-          <button class="btn btn-secondary btn-sm" id="user-logout-btn" title="Sign Out">Log Out</button>
+        <!-- Authenticated User Actions: Unboxed Profile & Log Out links -->
+        <div id="nav-user-actions" style="display: none; align-items: center; gap: 1.6rem;">
+          <a href="#student-profile" class="nav-link header-text-action" id="nav-user-profile-btn">Profile</a>
+          <button type="button" class="nav-link header-text-action" id="user-logout-btn">Log Out</button>
         </div>
 
         <!-- Mobile Menu Toggle Button -->
@@ -1396,9 +1384,23 @@
           <!-- Populated dynamically via student.js -->
         </div>
 
+        <!-- My Tutors Section -->
+        <div class="data-table-container" style="margin-top: 3.5rem; padding: 2.5rem;" id="student-my-tutors-section">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+            <div>
+              <h3 style="font-size: 1.3rem; color: var(--charcoal-900); margin-bottom: 0.4rem;">My Tutors &amp; Mentors</h3>
+              <p style="font-size: 0.875rem; color: var(--text-secondary); margin: 0;">Verified faculty and educators you have booked sessions with.</p>
+            </div>
+            <a href="#tutors" class="btn btn-outline-gold btn-sm">+ Find Another Specialist</a>
+          </div>
+          <div class="tutors-grid" id="student-connected-tutors-grid" style="grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.25rem;">
+            <!-- Rendered dynamically via student.js -->
+          </div>
+        </div>
+
         <!-- Student Profile Settings Card -->
-        <div class="data-table-container" style="margin-top: 3.5rem; padding: 2.5rem;">
-          <h3 style="font-size: 1.3rem; color: var(--white); margin-bottom: 0.5rem;">Student Profile & Academic Goals</h3>
+        <div class="data-table-container" style="margin-top: 3.5rem; padding: 2.5rem;" id="student-profile-section">
+          <h3 style="font-size: 1.3rem; color: var(--charcoal-900); margin-bottom: 0.5rem;">Student Profile & Academic Goals</h3>
           <p style="font-size: 0.875rem; color: var(--charcoal-400); margin-bottom: 2rem;">Keep your school details and target subjects updated so tutors can prepare personalized materials for your sessions.</p>
 
           <form id="student-profile-form">

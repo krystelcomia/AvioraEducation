@@ -90,9 +90,59 @@ const Student = {
       if (statCompleted) statCompleted.textContent = data.stats.completed || 0;
 
       this.renderRequestsList();
+      this.renderConnectedTutors();
       this.loadProfileForm();
     } catch (err) {
       console.error('Failed to load student dashboard:', err);
+    }
+  },
+
+  renderConnectedTutors() {
+    const tutorsGrid = document.getElementById('student-connected-tutors-grid');
+    if (!tutorsGrid) return;
+
+    const tutorsMap = new Map();
+    this.requests.forEach(r => {
+      if (!tutorsMap.has(r.tutor_id)) {
+        tutorsMap.set(r.tutor_id, {
+          id: r.tutor_id,
+          name: r.tutor_name,
+          avatar: r.tutor_avatar,
+          subject: r.subject,
+          hourly_rate: r.hourly_rate,
+          sessionsCount: 0
+        });
+      }
+      tutorsMap.get(r.tutor_id).sessionsCount++;
+    });
+
+    const uniqueTutors = Array.from(tutorsMap.values());
+    if (uniqueTutors.length === 0) {
+      tutorsGrid.innerHTML = `
+        <div style="grid-column: 1 / -1; padding: 2.5rem; text-align: center; background: var(--bg-surface-alt); border-radius: var(--radius-md); border: 1px dashed var(--border-light);">
+          <div style="font-size: 2.2rem; margin-bottom: 0.6rem;">👨‍🏫</div>
+          <h4 style="color: var(--charcoal-900); font-size: 1.1rem; margin-bottom: 0.4rem; font-weight: 700;">No Mentors Connected Yet</h4>
+          <p style="color: var(--text-secondary); font-size: 0.88rem; max-width: 480px; margin: 0 auto 1.25rem auto;">Browse verified faculty across mathematics, natural sciences, coding, and humanities to book your first tailored 1-on-1 session.</p>
+          <a href="#tutors" class="btn btn-primary btn-sm">Explore Verified Faculty →</a>
+        </div>
+      `;
+    } else {
+      tutorsGrid.innerHTML = uniqueTutors.map(t => `
+        <div class="tutor-card" style="padding: 1.5rem; background: var(--bg-surface); border: 1px solid var(--border-light); border-radius: var(--radius-md); box-shadow: var(--shadow-sm);">
+          <div style="display: flex; gap: 1rem; align-items: center; margin-bottom: 1rem;">
+            <img src="${t.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80'}" style="width: 52px; height: 52px; border-radius: 50%; object-fit: cover; border: 2px solid var(--gold-400);" />
+            <div>
+              <h4 style="color: var(--charcoal-900); font-size: 1rem; margin: 0 0 0.2rem 0; font-weight: 700;">${t.name}</h4>
+              <span class="badge-gold" style="font-size: 0.7rem; padding: 0.15rem 0.45rem;">${t.subject}</span>
+            </div>
+          </div>
+          <div style="font-size: 0.82rem; color: var(--text-secondary); margin-bottom: 1rem; display: flex; justify-content: space-between;">
+            <span>Total Sessions: <strong style="color: var(--charcoal-900);">${t.sessionsCount}</strong></span>
+            <span>Rate: <strong style="color: var(--gold-600);">$${t.hourly_rate}/hr</strong></span>
+          </div>
+          <button class="btn btn-outline-gold btn-sm" style="width: 100%;" onclick="Tutors.openBookingModal(${t.id})">Book Next Session →</button>
+        </div>
+      `).join('');
     }
   },
 

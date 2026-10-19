@@ -267,6 +267,12 @@ a { text-decoration: none; color: inherit; transition: color var(--transition-fa
   position: relative;
   padding: 0.4rem 0;
   transition: color var(--transition-fast);
+  background: transparent;
+  border: none;
+  font-family: inherit;
+  text-decoration: none;
+  cursor: pointer;
+  line-height: inherit;
 }
 
 .nav-link:hover, .nav-link.active {

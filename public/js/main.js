@@ -75,18 +75,25 @@ function showConfirm(title, message, onConfirm) {
 
 // Router
 const Router = {
-  routes: ['#home', '#about', '#tutors', '#how-it-works', '#login', '#student-portal', '#teacher-portal', '#admin-portal'],
+  routes: ['#home', '#about', '#tutors', '#how-it-works', '#book-now', '#subscriptions', '#login', '#signup', '#student-portal', '#student-lessons', '#student-tutors', '#student-history', '#student-schedule', '#student-profile', '#teacher-portal', '#admin-portal'],
 
   init() {
     window.addEventListener('hashchange', () => this.handleRoute());
     this.handleRoute();
   },
 
+  updateActiveNav() {
+    const hash = window.location.hash || '#home';
+    document.querySelectorAll('.nav-link').forEach(link => {
+      link.classList.toggle('active', link.getAttribute('href') === hash);
+    });
+  },
+
   async handleRoute() {
     const hash = window.location.hash || '#home';
 
     // Route Guards for Portals
-    if (hash === '#student-portal') {
+    if (hash === '#student-portal' || hash.startsWith('#student-')) {
       const user = Auth.currentUser;
       if (!user) {
         showToast('Please sign in to access the Student Portal.', 'info');
@@ -132,9 +139,7 @@ const Router = {
     });
 
     // Update Nav Active state
-    document.querySelectorAll('.nav-link').forEach(link => {
-      link.classList.toggle('active', link.getAttribute('href') === hash);
-    });
+    this.updateActiveNav();
 
     // Show appropriate page view
     if (hash === '#about') {
@@ -180,11 +185,50 @@ const Router = {
       if (view) view.style.display = 'block';
       window.scrollTo({ top: 0, behavior: 'smooth' });
       await Tutors.fetchTutors();
-    } else if (hash === '#student-portal') {
+    } else if (hash === '#student-portal' || hash === '#student-lessons' || hash === '#student-tutors' || hash === '#student-history' || hash === '#student-schedule' || hash === '#student-profile') {
       const view = document.getElementById('view-student-portal');
       if (view) view.style.display = 'block';
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      await Student.loadDashboard();
+
+      if (hash === '#student-lessons') {
+        Student.activeTab = 'all';
+        document.querySelectorAll('.student-filter-tab').forEach(t => t.classList.toggle('active', t.dataset.status === 'all'));
+        await Student.loadDashboard();
+        setTimeout(() => {
+          const el = document.getElementById('student-requests-container');
+          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 80);
+      } else if (hash === '#student-tutors') {
+        await Student.loadDashboard();
+        setTimeout(() => {
+          const el = document.getElementById('student-my-tutors-section');
+          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 80);
+      } else if (hash === '#student-history') {
+        Student.activeTab = 'completed';
+        document.querySelectorAll('.student-filter-tab').forEach(t => t.classList.toggle('active', t.dataset.status === 'completed'));
+        await Student.loadDashboard();
+        setTimeout(() => {
+          const el = document.getElementById('student-requests-container');
+          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 80);
+      } else if (hash === '#student-schedule') {
+        Student.activeTab = 'accepted';
+        document.querySelectorAll('.student-filter-tab').forEach(t => t.classList.toggle('active', t.dataset.status === 'accepted'));
+        await Student.loadDashboard();
+        setTimeout(() => {
+          const el = document.getElementById('student-requests-container');
+          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 80);
+      } else if (hash === '#student-profile') {
+        await Student.loadDashboard();
+        setTimeout(() => {
+          const el = document.getElementById('student-profile-section') || document.getElementById('student-profile-form');
+          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 80);
+      } else {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        await Student.loadDashboard();
+      }
     } else if (hash === '#teacher-portal') {
       const view = document.getElementById('view-teacher-portal');
       if (view) view.style.display = 'block';

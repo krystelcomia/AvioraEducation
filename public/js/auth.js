@@ -767,50 +767,75 @@ const Auth = {
   updateNavUI(user, unreadCount = 0) {
     const guestActions = document.getElementById('nav-guest-actions');
     const userActions = document.getElementById('nav-user-actions');
-    const portalNavLinks = document.getElementById('nav-portal-links');
-    const userAvatar = document.getElementById('nav-user-avatar');
-    const userName = document.getElementById('nav-user-name');
-    const userRoleTag = document.getElementById('nav-user-role');
-    const bellBadge = document.getElementById('nav-bell-badge');
+    const mainNavLinks = document.getElementById('main-nav-links');
 
     if (user) {
       if (guestActions) guestActions.style.display = 'none';
-      if (userActions) userActions.style.display = 'flex';
-      if (userAvatar) userAvatar.src = user.avatar_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=100&q=80';
-      if (userName) userName.textContent = user.name;
-      if (userRoleTag) userRoleTag.textContent = user.role.toUpperCase();
-
-      if (bellBadge) {
-        if (unreadCount > 0) {
-          bellBadge.style.display = 'inline-block';
-          bellBadge.textContent = unreadCount;
-        } else {
-          bellBadge.style.display = 'none';
+      if (userActions) {
+        userActions.style.display = 'flex';
+        const profileHash = user.role === 'student' ? '#student-profile' : (user.role === 'teacher' ? '#teacher-portal' : '#admin-portal');
+        userActions.innerHTML = `
+          <a href="${profileHash}" class="nav-link header-text-action" id="nav-user-profile-btn">Profile</a>
+          <button type="button" class="nav-link header-text-action" id="user-logout-btn">Log Out</button>
+        `;
+        const logoutBtn = document.getElementById('user-logout-btn');
+        if (logoutBtn) {
+          logoutBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            this.logout();
+          });
         }
       }
 
-      // Add Portal Link in Header
-      if (portalNavLinks) {
-        let portalHash = '#student-portal';
-        let portalLabel = 'Student Portal';
-        if (user.role === 'teacher') {
-          portalHash = '#teacher-portal';
-          portalLabel = 'Teacher Portal';
+      // Configure Header Navigation Links
+      if (mainNavLinks) {
+        if (user.role === 'student') {
+          // Exactly as requested: "Home," "About," "Subscription," "Lessons," "My Tutors," "History," "Schedule," and "Dashboard"
+          mainNavLinks.innerHTML = `
+            <li><a href="#home" class="nav-link" id="nav-link-home">Home</a></li>
+            <li><a href="#about" class="nav-link" id="nav-link-about">About</a></li>
+            <li><a href="#subscriptions" class="nav-link" id="nav-link-subscription">Subscription</a></li>
+            <li><a href="#student-lessons" class="nav-link" id="nav-link-lessons">Lessons</a></li>
+            <li><a href="#student-tutors" class="nav-link" id="nav-link-my-tutors">My Tutors</a></li>
+            <li><a href="#student-history" class="nav-link" id="nav-link-history">History</a></li>
+            <li><a href="#student-schedule" class="nav-link" id="nav-link-schedule">Schedule</a></li>
+            <li><a href="#student-portal" class="nav-link" id="nav-link-dashboard">Dashboard</a></li>
+          `;
+        } else if (user.role === 'teacher') {
+          mainNavLinks.innerHTML = `
+            <li><a href="#home" class="nav-link" id="nav-link-home">Home</a></li>
+            <li><a href="#about" class="nav-link" id="nav-link-about">About</a></li>
+            <li><a href="#how-it-works" class="nav-link" id="nav-link-how">How It Works</a></li>
+            <li><a href="#teacher-portal" class="nav-link" id="nav-link-teacher-portal">Teacher Portal</a></li>
+          `;
         } else if (user.role === 'admin') {
-          portalHash = '#admin-portal';
-          portalLabel = 'Admin Console';
+          mainNavLinks.innerHTML = `
+            <li><a href="#home" class="nav-link" id="nav-link-home">Home</a></li>
+            <li><a href="#about" class="nav-link" id="nav-link-about">About</a></li>
+            <li><a href="#admin-portal" class="nav-link" id="nav-link-admin-portal">Admin Console</a></li>
+          `;
         }
-
-        portalNavLinks.innerHTML = `
-          <a href="${portalHash}" class="nav-link" id="nav-active-portal-link" style="color: var(--gold-primary); font-weight: 700;">
-            ${portalLabel} →
-          </a>
-        `;
       }
     } else {
       if (guestActions) guestActions.style.display = 'flex';
-      if (userActions) userActions.style.display = 'none';
-      if (portalNavLinks) portalNavLinks.innerHTML = '';
+      if (userActions) {
+        userActions.style.display = 'none';
+        userActions.innerHTML = '';
+      }
+      if (mainNavLinks) {
+        mainNavLinks.innerHTML = `
+          <li><a href="#home" class="nav-link active" id="nav-link-home">Home</a></li>
+          <li><a href="#about" class="nav-link" id="nav-link-about">About</a></li>
+          <li><a href="#tutors" class="nav-link" id="nav-link-tutors">Find Tutors</a></li>
+          <li><a href="#how-it-works" class="nav-link" id="nav-link-how">How It Works</a></li>
+          <li><a href="#book-now" class="nav-link" id="nav-link-book">Book Now</a></li>
+          <li><a href="#subscriptions" class="nav-link" id="nav-link-subscriptions">Subscriptions</a></li>
+        `;
+      }
+    }
+
+    if (typeof Router !== 'undefined' && Router.updateActiveNav) {
+      Router.updateActiveNav();
     }
   }
 };

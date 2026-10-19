@@ -65,6 +65,8 @@ const API = {
 
   // Public
   getStats: () => apiRequest('/public/stats'),
+  getAnalytics: () => apiRequest('/public/analytics'),
+  getStudentWork: () => apiRequest('/public/student-work'),
   getTutors: (params = '') => apiRequest(`/tutors?${params}`),
   getTutorById: (id) => apiRequest(`/tutors/${id}`),
 

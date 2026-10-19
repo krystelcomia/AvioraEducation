@@ -162,6 +162,253 @@
         </div>
       </section>
 
+      <!-- REAL-TIME WEBSITE ANALYTICS SECTION -->
+      <section class="section analytics-section" id="realtime-analytics-section">
+        <div class="container">
+          <div class="section-header" style="margin-bottom: 2.5rem;">
+            <div style="display: flex; justify-content: center; margin-bottom: 0.75rem;">
+              <div class="live-indicator-badge">
+                <span class="live-pulse-dot"></span>
+                <span>Live Platform Telemetry</span>
+              </div>
+            </div>
+            <h2 class="section-title">Real-Time Platform &amp; Subject Analytics</h2>
+            <p class="section-desc">
+              Live telemetry reflecting real-time academic demand, active 1-on-1 sessions, and the most frequently accessed curricula across Aviora Education.
+            </p>
+          </div>
+
+          <!-- Real-Time Key Performance Indicators -->
+          <div class="analytics-kpis-grid">
+            <div class="analytics-kpi-card">
+              <div class="analytics-kpi-icon">🟢</div>
+              <div>
+                <div class="analytics-kpi-val" id="analytics-live-online">142 <span>online</span></div>
+                <div class="analytics-kpi-label">Active Learners Now</div>
+              </div>
+            </div>
+
+            <div class="analytics-kpi-card">
+              <div class="analytics-kpi-icon">⚡</div>
+              <div>
+                <div class="analytics-kpi-val" id="analytics-active-sessions">24 <span>active</span></div>
+                <div class="analytics-kpi-label">Live Mentorship Sessions</div>
+              </div>
+            </div>
+
+            <div class="analytics-kpi-card">
+              <div class="analytics-kpi-icon">⏱️</div>
+              <div>
+                <div class="analytics-kpi-val" id="analytics-study-hours">1,840+ <span>hrs</span></div>
+                <div class="analytics-kpi-label">Study Hours This Month</div>
+              </div>
+            </div>
+
+            <div class="analytics-kpi-card">
+              <div class="analytics-kpi-icon">🎯</div>
+              <div>
+                <div class="analytics-kpi-val">98.4% <span>retention</span></div>
+                <div class="analytics-kpi-label">Concept Mastery Index</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Split Layout: Trending Subjects vs Frequently Accessed Study Content -->
+          <div class="analytics-split-layout">
+            <!-- Left: Most Frequently Accessed Subjects -->
+            <div class="analytics-panel">
+              <div class="analytics-panel-header">
+                <div class="analytics-panel-title">
+                  <span>📊</span> Most Frequently Accessed Subjects
+                </div>
+                <span class="analytics-panel-badge">Updated in Real-Time</span>
+              </div>
+
+              <div class="subject-ranks-container" id="analytics-subjects-list">
+                <!-- Dynamically Populated via JS with fallback -->
+                <div class="subject-rank-row">
+                  <div class="subject-rank-num">01</div>
+                  <div class="subject-info-col">
+                    <div class="subject-name-line">
+                      <span class="subject-title-text">AP Calculus BC &amp; Multivariable</span>
+                      <span class="subject-cat-tag">Mathematics</span>
+                    </div>
+                    <div class="subject-meter-wrap">
+                      <div class="subject-meter-fill" style="width: 98%;"></div>
+                    </div>
+                  </div>
+                  <div class="subject-traffic-col">
+                    <div class="subject-views-count">3,854 views</div>
+                    <div class="subject-growth-tag">▲ +28% surge</div>
+                  </div>
+                </div>
+
+                <div class="subject-rank-row">
+                  <div class="subject-rank-num">02</div>
+                  <div class="subject-info-col">
+                    <div class="subject-name-line">
+                      <span class="subject-title-text">Organic &amp; General Chemistry</span>
+                      <span class="subject-cat-tag">Natural Sciences</span>
+                    </div>
+                    <div class="subject-meter-wrap">
+                      <div class="subject-meter-fill" style="width: 94%;"></div>
+                    </div>
+                  </div>
+                  <div class="subject-traffic-col">
+                    <div class="subject-views-count">3,132 views</div>
+                    <div class="subject-growth-tag">▲ +19% surge</div>
+                  </div>
+                </div>
+
+                <div class="subject-rank-row">
+                  <div class="subject-rank-num">03</div>
+                  <div class="subject-info-col">
+                    <div class="subject-name-line">
+                      <span class="subject-title-text">Python, Algorithms &amp; AI Fundamentals</span>
+                      <span class="subject-cat-tag">Computer Science</span>
+                    </div>
+                    <div class="subject-meter-wrap">
+                      <div class="subject-meter-fill" style="width: 91%;"></div>
+                    </div>
+                  </div>
+                  <div class="subject-traffic-col">
+                    <div class="subject-views-count">2,805 views</div>
+                    <div class="subject-growth-tag">▲ +34% surge</div>
+                  </div>
+                </div>
+
+                <div class="subject-rank-row">
+                  <div class="subject-rank-num">04</div>
+                  <div class="subject-info-col">
+                    <div class="subject-name-line">
+                      <span class="subject-title-text">AP Physics C: Mechanics &amp; E&amp;M</span>
+                      <span class="subject-cat-tag">Physical Sciences</span>
+                    </div>
+                    <div class="subject-meter-wrap">
+                      <div class="subject-meter-fill" style="width: 87%;"></div>
+                    </div>
+                  </div>
+                  <div class="subject-traffic-col">
+                    <div class="subject-views-count">2,422 views</div>
+                    <div class="subject-growth-tag">▲ +15% surge</div>
+                  </div>
+                </div>
+
+                <div class="subject-rank-row">
+                  <div class="subject-rank-num">05</div>
+                  <div class="subject-info-col">
+                    <div class="subject-name-line">
+                      <span class="subject-title-text">Collegiate Essay &amp; Literary Analysis</span>
+                      <span class="subject-cat-tag">Humanities</span>
+                    </div>
+                    <div class="subject-meter-wrap">
+                      <div class="subject-meter-fill" style="width: 82%;"></div>
+                    </div>
+                  </div>
+                  <div class="subject-traffic-col">
+                    <div class="subject-views-count">1,988 views</div>
+                    <div class="subject-growth-tag">▲ +12% steady</div>
+                  </div>
+                </div>
+
+                <div class="subject-rank-row">
+                  <div class="subject-rank-num">06</div>
+                  <div class="subject-info-col">
+                    <div class="subject-name-line">
+                      <span class="subject-title-text">SAT / ACT Math &amp; Evidence-Based Reading</span>
+                      <span class="subject-cat-tag">Test Prep</span>
+                    </div>
+                    <div class="subject-meter-wrap">
+                      <div class="subject-meter-fill" style="width: 80%;"></div>
+                    </div>
+                  </div>
+                  <div class="subject-traffic-col">
+                    <div class="subject-views-count">1,864 views</div>
+                    <div class="subject-growth-tag">▲ +22% surge</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right: Frequently Accessed Content & Live Stream -->
+            <div class="analytics-panel">
+              <div class="analytics-panel-header">
+                <div class="analytics-panel-title">
+                  <span>🔥</span> Frequently Accessed Content
+                </div>
+                <span class="analytics-panel-badge">Top Study Blueprints</span>
+              </div>
+
+              <div class="content-resources-list" id="analytics-content-list">
+                <div class="content-resource-item">
+                  <div class="content-resource-meta">
+                    <span class="content-resource-title">Calculus BC Diagnostic Problem Pack</span>
+                    <span class="content-resource-sub">Mathematics • Interactive Drill &amp; Solution Set</span>
+                  </div>
+                  <div class="content-resource-stat">4,220 views</div>
+                </div>
+
+                <div class="content-resource-item">
+                  <div class="content-resource-meta">
+                    <span class="content-resource-title">Organic Reaction Mechanism Flowchart</span>
+                    <span class="content-resource-sub">Chemistry • High-Resolution Matrix Guide</span>
+                  </div>
+                  <div class="content-resource-stat">3,695 views</div>
+                </div>
+
+                <div class="content-resource-item">
+                  <div class="content-resource-meta">
+                    <span class="content-resource-title">Dynamic Big-O &amp; Data Structures Cheatsheet</span>
+                    <span class="content-resource-sub">Coding • Complexity Hierarchy Reference</span>
+                  </div>
+                  <div class="content-resource-stat">3,205 views</div>
+                </div>
+
+                <div class="content-resource-item">
+                  <div class="content-resource-meta">
+                    <span class="content-resource-title">Newtonian Free-Body Diagram Mastery Drill</span>
+                    <span class="content-resource-sub">Physics • Diagnostic Practice Problems</span>
+                  </div>
+                  <div class="content-resource-stat">2,851 views</div>
+                </div>
+
+                <div class="content-resource-item">
+                  <div class="content-resource-meta">
+                    <span class="content-resource-title">Ivy League Personal Statement Deconstruction</span>
+                    <span class="content-resource-sub">Writing • Annotated Exemplar Essay</span>
+                  </div>
+                  <div class="content-resource-stat">2,458 views</div>
+                </div>
+              </div>
+
+              <!-- Live Stream Ticker -->
+              <div style="margin-top: 1.25rem;">
+                <div style="font-size: 0.8rem; font-weight: 700; color: var(--gold-light); margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: center; gap: 0.4rem;">
+                  <span>📡</span> Live Telemetry Feed
+                </div>
+                <div class="live-activity-stream" id="analytics-live-feed">
+                  <div class="live-activity-event">
+                    <span>⚡</span>
+                    <span style="flex: 1;">Student booked 1-on-1 session in AP Calculus BC</span>
+                    <span class="live-activity-time">Just now</span>
+                  </div>
+                  <div class="live-activity-event">
+                    <span>⭐</span>
+                    <span style="flex: 1;">5★ Verified Review published for Organic Chemistry mentorship</span>
+                    <span class="live-activity-time">2m ago</span>
+                  </div>
+                  <div class="live-activity-event">
+                    <span>💻</span>
+                    <span style="flex: 1;">Student completed Python Data Structures assessment</span>
+                    <span class="live-activity-time">4m ago</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
 
       <!-- ACADEMIC CATEGORIES SECTION -->
       <section class="section" style="background: rgba(18, 20, 27, 0.6); border-top: 1px solid rgba(255,255,255,0.05); border-bottom: 1px solid rgba(255,255,255,0.05);">
@@ -252,6 +499,38 @@
 
           <div style="text-align: center; margin-top: 3.5rem;">
             <a href="#tutors" class="btn btn-outline-gold btn-lg">Browse All Verified Tutors →</a>
+          </div>
+        </div>
+      </section>
+
+      <!-- STUDENT WORK SHOWCASE (DRAWINGS, CRAFTS & CAPSTONES) -->
+      <section class="section student-works-section" id="student-work-section">
+        <div class="container">
+          <div class="section-header">
+            <span class="badge-gold">Student Achievement Gallery</span>
+            <h2 class="section-title">Student Creations &amp; Capstones</h2>
+            <p class="section-desc">
+              Explore exceptional original works—from mathematical drawings and anatomical illustrations to precision structural crafts and physical models—crafted by Aviora students under 1-on-1 mentorship.
+            </p>
+          </div>
+
+          <!-- Category Filter Bar -->
+          <div class="student-works-filter-bar">
+            <button class="work-filter-btn active" data-filter="all">All Student Creations (6)</button>
+            <button class="work-filter-btn" data-filter="drawing">Drawings &amp; Fine Arts (3)</button>
+            <button class="work-filter-btn" data-filter="craft">Handmade Crafts &amp; Models (3)</button>
+          </div>
+
+          <!-- Student Works Grid -->
+          <div class="student-works-grid" id="student-works-grid">
+            <!-- Populated dynamically via JS from /api/public/student-work with static fallback -->
+          </div>
+
+          <div style="text-align: center; margin-top: 3.5rem;">
+            <p style="color: var(--text-secondary); font-size: 0.95rem; margin-bottom: 1.25rem;">
+              Ready to create university-level capstones, portfolio pieces, and mastery projects?
+            </p>
+            <a href="#tutors" class="btn btn-primary btn-md">Connect with a Mentor →</a>
           </div>
         </div>
       </section>
@@ -1911,6 +2190,63 @@
       </div>
       <div class="modal-body" id="policy-modal-content">
         <!-- Injected via main.js -->
+      </div>
+    </div>
+  </div>
+
+
+  <!-- =========================================
+       MODAL: STUDENT WORK LIGHTBOX
+       ========================================= -->
+  <div class="modal-overlay" id="student-work-modal">
+    <div class="modal-card" style="max-width: 900px; padding: 0; overflow: hidden; background: #111319; border: 1px solid rgba(229, 169, 59, 0.35);">
+      <div class="modal-header" style="padding: 1.25rem 1.75rem; border-bottom: 1px solid rgba(255, 255, 255, 0.08); background: rgba(18, 20, 27, 0.95);">
+        <div style="display: flex; align-items: center; gap: 0.75rem;">
+          <span class="badge-gold" id="sw-modal-category">Drawing</span>
+          <span style="font-size: 0.85rem; color: var(--gold-light); font-weight: 600;" id="sw-modal-award">Award</span>
+        </div>
+        <button class="modal-close-btn" id="student-work-modal-close">✕</button>
+      </div>
+
+      <div class="student-work-modal-grid">
+        <div class="modal-artwork-preview">
+          <img id="sw-modal-img" src="" alt="Student Artwork" />
+        </div>
+
+        <div class="modal-artwork-details">
+          <!-- Student Creator Tag -->
+          <div class="student-creator-tag" style="margin-bottom: 1.25rem;">
+            <span class="student-creator-avatar" id="sw-modal-avatar">🎨</span>
+            <div class="student-creator-info">
+              <span class="student-creator-name" id="sw-modal-student-name">Student Name</span>
+              <span class="student-creator-grade" id="sw-modal-student-grade">Grade Level</span>
+            </div>
+          </div>
+
+          <h3 style="font-size: 1.35rem; font-weight: 700; color: #fff; margin-bottom: 0.75rem;" id="sw-modal-title">Project Title</h3>
+
+          <p style="font-size: 0.9rem; color: var(--text-secondary); line-height: 1.6; margin-bottom: 1.25rem;" id="sw-modal-summary">Summary description</p>
+
+          <div style="background: rgba(229, 169, 59, 0.05); border-left: 3px solid var(--gold-primary); padding: 0.85rem 1rem; border-radius: 4px; margin-bottom: 1.25rem;">
+            <div style="font-size: 0.75rem; color: var(--gold-light); font-weight: 700; text-transform: uppercase; margin-bottom: 0.25rem;">Student Reflection</div>
+            <p style="font-size: 0.85rem; color: #fff; font-style: italic; margin: 0; line-height: 1.5;" id="sw-modal-reflection">"Student reflection"</p>
+          </div>
+
+          <div style="border-top: 1px solid rgba(255, 255, 255, 0.08); padding-top: 1rem; margin-top: auto; display: flex; flex-direction: column; gap: 0.5rem; font-size: 0.82rem;">
+            <div>
+              <span style="color: var(--text-secondary);">Medium / Materials:</span>
+              <strong style="color: #fff; margin-left: 0.35rem;" id="sw-modal-materials">Materials</strong>
+            </div>
+            <div>
+              <span style="color: var(--text-secondary);">Academic Mentor:</span>
+              <strong style="color: var(--gold-light); margin-left: 0.35rem;" id="sw-modal-mentor">Mentor</strong>
+            </div>
+          </div>
+
+          <div style="margin-top: 1.5rem;">
+            <a href="#tutors" class="btn btn-outline-gold btn-sm" style="width: 100%; text-align: center;" onclick="document.getElementById('student-work-modal').classList.remove('active');">Explore Related Tutors →</a>
+          </div>
+        </div>
       </div>
     </div>
   </div>

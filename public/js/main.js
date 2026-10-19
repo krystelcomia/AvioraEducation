@@ -285,9 +285,208 @@ document.addEventListener('DOMContentLoaded', async () => {
   Teacher.init();
   Admin.init();
 
+  // Initialize Real-Time Analytics & Student Work Showcase
+  initRealTimeAnalytics();
+  initStudentWorkShowcase();
+
   // Initialize Router
   Router.init();
 });
+
+// =========================================
+// REAL-TIME ANALYTICS MODULE
+// =========================================
+async function initRealTimeAnalytics() {
+  const onlineEl = document.getElementById('analytics-live-online');
+  const sessionsEl = document.getElementById('analytics-active-sessions');
+  const hoursEl = document.getElementById('analytics-study-hours');
+  const subjectsContainer = document.getElementById('analytics-subjects-list');
+  const contentContainer = document.getElementById('analytics-content-list');
+  const liveFeedContainer = document.getElementById('analytics-live-feed');
+
+  if (!subjectsContainer && !contentContainer) return;
+
+  async function updateAnalytics() {
+    try {
+      const data = await API.getAnalytics();
+      if (!data) return;
+
+      if (onlineEl && data.activeStudentsOnline) {
+        onlineEl.innerHTML = `${data.activeStudentsOnline} <span>online</span>`;
+      }
+      if (sessionsEl && data.activeSessionsNow) {
+        sessionsEl.innerHTML = `${data.activeSessionsNow} <span>active</span>`;
+      }
+      if (hoursEl && data.totalStudyHoursThisMonth) {
+        hoursEl.innerHTML = `${data.totalStudyHoursThisMonth.toLocaleString()}+ <span>hrs</span>`;
+      }
+
+      // Populate Subjects
+      if (subjectsContainer && Array.isArray(data.topSubjects)) {
+        subjectsContainer.innerHTML = data.topSubjects.map(sub => `
+          <div class="subject-rank-row" onclick="window.location.hash='#tutors'; Tutors.activeSubjectFilter='${sub.category.split(' ')[0]}'; Tutors.applyFilters();" style="cursor: pointer;" title="Explore ${sub.name} tutors">
+            <div class="subject-rank-num">0${sub.rank}</div>
+            <div class="subject-info-col">
+              <div class="subject-name-line">
+                <span class="subject-title-text">${sub.name}</span>
+                <span class="subject-cat-tag">${sub.category}</span>
+              </div>
+              <div class="subject-meter-wrap">
+                <div class="subject-meter-fill" style="width: ${sub.demandIndex || 85}%;"></div>
+              </div>
+            </div>
+            <div class="subject-traffic-col">
+              <div class="subject-views-count">${sub.accessCount.toLocaleString()} views</div>
+              <div class="subject-growth-tag">▲ ${sub.growth} ${sub.trend}</div>
+            </div>
+          </div>
+        `).join('');
+      }
+
+      // Populate Content
+      if (contentContainer && Array.isArray(data.topContent)) {
+        contentContainer.innerHTML = data.topContent.map(res => `
+          <div class="content-resource-item">
+            <div class="content-resource-meta">
+              <span class="content-resource-title">${res.title}</span>
+              <span class="content-resource-sub">${res.subject} • ${res.format}</span>
+            </div>
+            <div class="content-resource-stat">${res.views.toLocaleString()} views</div>
+          </div>
+        `).join('');
+      }
+
+      // Populate Live Activity Feed
+      if (liveFeedContainer && Array.isArray(data.liveActivityStream)) {
+        liveFeedContainer.innerHTML = data.liveActivityStream.map(evt => `
+          <div class="live-activity-event">
+            <span>${evt.icon}</span>
+            <span style="flex: 1;">${evt.action}</span>
+            <span class="live-activity-time">${evt.time}</span>
+          </div>
+        `).join('');
+      }
+    } catch (e) {
+      console.warn('Analytics polling error:', e);
+    }
+  }
+
+  await updateAnalytics();
+  // Poll periodically every 12 seconds for dynamic live feeling
+  setInterval(updateAnalytics, 12000);
+}
+
+// =========================================
+// STUDENT WORK SHOWCASE MODULE
+// =========================================
+let allStudentWorks = [];
+
+async function initStudentWorkShowcase() {
+  const grid = document.getElementById('student-works-grid');
+  if (!grid) return;
+
+  try {
+    allStudentWorks = await API.getStudentWork();
+    renderStudentWorks('all');
+  } catch (e) {
+    console.warn('Error fetching student work:', e);
+  }
+
+  // Filter Buttons
+  const filterBtns = document.querySelectorAll('.work-filter-btn');
+  filterBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      filterBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const filter = btn.dataset.filter || 'all';
+      renderStudentWorks(filter);
+    });
+  });
+
+  // Modal setup
+  const modal = document.getElementById('student-work-modal');
+  const closeBtn = document.getElementById('student-work-modal-close');
+  if (closeBtn && modal) {
+    closeBtn.addEventListener('click', () => {
+      modal.classList.remove('active');
+      document.body.style.overflow = '';
+    });
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        modal.classList.remove('active');
+        document.body.style.overflow = '';
+      }
+    });
+  }
+}
+
+function renderStudentWorks(filter = 'all') {
+  const grid = document.getElementById('student-works-grid');
+  if (!grid) return;
+
+  const filtered = filter === 'all' 
+    ? allStudentWorks 
+    : allStudentWorks.filter(w => w.category === filter);
+
+  if (filtered.length === 0) {
+    grid.innerHTML = `<p style="grid-column: 1/-1; text-align: center; color: var(--charcoal-400);">No student creations found in this category.</p>`;
+    return;
+  }
+
+  grid.innerHTML = filtered.map(work => `
+    <div class="student-work-card" onclick="openStudentWorkModal('${work.id}')">
+      <div class="work-image-container">
+        <span class="work-category-badge ${work.category === 'drawing' ? 'badge-drawing' : 'badge-craft'}">
+          ${work.category === 'drawing' ? '✏️ Drawing' : '🛠️ Handmade Craft'}
+        </span>
+        <img src="${work.image}" alt="${work.title}" loading="lazy" />
+      </div>
+
+      <div class="work-card-content">
+        <!-- Prominent Student Attribution Tag -->
+        <div class="student-creator-tag">
+          <span class="student-creator-avatar">${work.studentAvatar || '🎓'}</span>
+          <div class="student-creator-info">
+            <span class="student-creator-name">Created by ${work.studentName}</span>
+            <span class="student-creator-grade">${work.studentGrade}</span>
+          </div>
+        </div>
+
+        <h3 class="work-title-h3">${work.title}</h3>
+        <p class="work-materials-desc">${work.summary}</p>
+
+        <div class="work-footer-info">
+          <span class="work-mentor-tag">Mentored by <strong>${work.mentorName}</strong></span>
+          <button class="work-inspect-btn">Inspect Piece →</button>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function openStudentWorkModal(workId) {
+  const work = allStudentWorks.find(w => w.id === workId);
+  if (!work) return;
+
+  const modal = document.getElementById('student-work-modal');
+  if (!modal) return;
+
+  document.getElementById('sw-modal-category').textContent = work.categoryLabel || (work.category === 'drawing' ? 'Drawing' : 'Craft & Model');
+  document.getElementById('sw-modal-award').textContent = work.award || 'Aviora Student Showcase';
+  document.getElementById('sw-modal-img').src = work.image;
+  document.getElementById('sw-modal-img').alt = work.title;
+  document.getElementById('sw-modal-avatar').textContent = work.studentAvatar || '🎨';
+  document.getElementById('sw-modal-student-name').textContent = `Created by ${work.studentName}`;
+  document.getElementById('sw-modal-student-grade').textContent = `${work.studentGrade} • Student Contributor`;
+  document.getElementById('sw-modal-title').textContent = work.title;
+  document.getElementById('sw-modal-summary').textContent = work.summary;
+  document.getElementById('sw-modal-reflection').textContent = work.reflection || '';
+  document.getElementById('sw-modal-materials').textContent = work.materials || 'Bespoke mixed media';
+  document.getElementById('sw-modal-mentor').textContent = `${work.mentorName} (${work.mentorSpecialty || 'Faculty Mentor'})`;
+
+  modal.classList.add('active');
+  document.body.style.overflow = 'hidden';
+}
 
 function openPolicyModal(type) {
   const modal = document.getElementById('policy-modal');

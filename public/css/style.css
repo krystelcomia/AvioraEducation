@@ -829,16 +829,42 @@ a { text-decoration: none; color: inherit; transition: color var(--transition-fa
   max-width: 840px;
   margin: 0 auto 3.5rem;
   position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.section-header .badge-gold {
+  margin-bottom: 0.85rem;
+}
+
+/* Ensure any oval badge directly preceding a main heading is centered on its own line above the title */
+.badge-gold {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.badge-gold + h1,
+.badge-gold + h2,
+.badge-gold + h3,
+.badge-gold + .section-title,
+.badge-gold + .portal-title {
+  display: block !important;
+  width: 100% !important;
+  text-align: center !important;
+  margin-top: 0.85rem !important;
 }
 
 .section-title {
-  margin: 0.85rem 0 1rem;
+  margin: 0.5rem auto 1rem;
   color: var(--charcoal-950);
   font-size: clamp(2.2rem, 4vw, 3rem);
   font-weight: 800;
   letter-spacing: -0.02em;
   position: relative;
-  display: inline-block;
+  display: block;
+  width: 100%;
+  text-align: center;
 }
 
 .section-title::after {

@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 120" width="100%" height="100%" fill="none">
+  <defs>
+    <linearGradient id="goldGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFE082" />
+      <stop offset="40%" stop-color="#E5A93C" />
+      <stop offset="85%" stop-color="#B87E14" />
+      <stop offset="100%" stop-color="#8C5C05" />
+    </linearGradient>
+    <linearGradient id="goldGlow" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#FFF3D6" />
+      <stop offset="50%" stop-color="#E5A93C" />
+      <stop offset="100%" stop-color="#D49520" />
+    </linearGradient>
+    <filter id="glowFilter" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="3" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- Logo Icon -->
+  <g transform="translate(10, 10)">
+    <!-- Ambient back glow -->
+    <circle cx="50" cy="50" r="44" fill="#E5A93C" opacity="0.12" filter="url(#glowFilter)" />
+    
+    <!-- Outer Shield / Crest Ring -->
+    <circle cx="50" cy="50" r="42" stroke="url(#goldGrad1)" stroke-width="2.5" stroke-dasharray="210 20" stroke-linecap="round" fill="#14151B" />
+    <circle cx="50" cy="50" r="37" stroke="url(#goldGrad1)" stroke-width="1" stroke-opacity="0.5" />
+
+    <!-- Open Book of Knowledge -->
+    <path d="M50 68 C42 63 32 64 22 67 L22 42 C32 39 42 40 50 45 C58 40 68 39 78 42 L78 67 C68 64 58 63 50 68 Z" 
+          fill="url(#goldGrad1)" />
+    <!-- Book Center Spine -->
+    <line x1="50" y1="44" x2="50" y2="68" stroke="#14151B" stroke-width="2.2" stroke-linecap="round" />
+
+    <!-- Ascending Star / Beacon of Achievement -->
+    <path d="M50 20 L53.5 30 L64 33.5 L53.5 37 L50 47.5 L46.5 37 L36 33.5 L46.5 30 Z" 
+          fill="#FFF4D0" filter="url(#glowFilter)" />
+    <circle cx="50" cy="33.5" r="2.5" fill="#B87E14" />
+
+    <!-- Sparkle Accents -->
+    <circle cx="28" cy="27" r="1.8" fill="#FFE082" />
+    <circle cx="72" cy="27" r="1.8" fill="#FFE082" />
+  </g>
+
+  <!-- Wordmark Text -->
+  <g transform="translate(125, 30)">
+    <!-- "Aviora" -->
+    <text x="0" y="42" font-family="'Outfit', 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif" font-size="44" font-weight="800" letter-spacing="-0.5" fill="#FFFFFF">
+      Avi<tspan fill="url(#goldGlow)">ora</tspan>
+    </text>
+    
+    <!-- "EDUCATION" Subtitle with tracking and golden dot -->
+    <text x="3" y="66" font-family="'Outfit', 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif" font-size="13" font-weight="700" letter-spacing="6" fill="#E5A93C">
+      EDUCATION
+    </text>
+    <circle cx="160" cy="62" r="3" fill="url(#goldGrad1)" />
+  </g>
+</svg>

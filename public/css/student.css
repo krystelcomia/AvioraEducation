@@ -1,0 +1,207 @@
+/* =========================================
+   AVIORA EDUCATION - STUDENT PORTAL STYLES
+   ========================================= */
+
+.portal-wrapper {
+  padding-top: calc(var(--header-height) + 2rem);
+  padding-bottom: 5rem;
+  min-height: calc(100vh - 200px);
+}
+
+.portal-header {
+  margin-bottom: 2.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  background: var(--gradient-dark-card);
+  border: 1px solid rgba(229, 169, 60, 0.2);
+  border-radius: var(--radius-xl);
+  padding: 2rem 2.5rem;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+.portal-user-meta {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.portal-avatar-lg {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2.5px solid var(--gold-500);
+}
+
+.portal-title {
+  font-size: 1.6rem;
+  color: var(--white);
+  margin-bottom: 0.25rem;
+}
+
+.portal-subtitle {
+  font-size: 0.9rem;
+  color: var(--charcoal-300);
+}
+
+/* Stats Metrics Cards */
+.stats-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2.5rem;
+}
+
+.stat-widget {
+  background: var(--gradient-dark-card);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-lg);
+  padding: 1.75rem 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  transition: all var(--transition-fast);
+}
+
+.stat-widget:hover {
+  border-color: rgba(229, 169, 60, 0.3);
+  transform: translateY(-3px);
+}
+
+.stat-widget-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: var(--radius-md);
+  background: rgba(229, 169, 60, 0.12);
+  color: var(--gold-400);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+  flex-shrink: 0;
+}
+
+.stat-widget-info h3 {
+  font-size: 1.85rem;
+  font-weight: 800;
+  color: var(--white);
+  line-height: 1.1;
+}
+
+.stat-widget-info p {
+  font-size: 0.85rem;
+  color: var(--charcoal-400);
+  margin-top: 0.2rem;
+}
+
+/* Tab Navigation for Student Sections */
+.portal-tabs-nav {
+  display: flex;
+  gap: 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  margin-bottom: 2rem;
+}
+
+.portal-tab-btn {
+  background: transparent;
+  border: none;
+  color: var(--charcoal-400);
+  font-family: var(--font-heading);
+  font-size: 1rem;
+  font-weight: 600;
+  padding: 0.85rem 1.25rem;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all var(--transition-fast);
+}
+
+.portal-tab-btn:hover {
+  color: var(--white);
+}
+
+.portal-tab-btn.active {
+  color: var(--gold-300);
+  border-bottom-color: var(--gold-500);
+}
+
+/* Requests & Sessions List */
+.requests-card-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.request-item-card {
+  background: var(--gradient-dark-card);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-lg);
+  padding: 1.75rem;
+  display: grid;
+  grid-template-columns: auto 1.5fr 1fr 1fr auto;
+  align-items: center;
+  gap: 1.5rem;
+  transition: all var(--transition-fast);
+}
+
+.request-item-card:hover {
+  border-color: rgba(229, 169, 60, 0.3);
+}
+
+.request-tutor-avatar {
+  width: 54px;
+  height: 54px;
+  border-radius: var(--radius-md);
+  object-fit: cover;
+  border: 1.5px solid var(--gold-500);
+}
+
+.request-subject-info h4 {
+  font-size: 1.1rem;
+  color: var(--white);
+  margin-bottom: 0.25rem;
+}
+
+.request-subject-info p {
+  font-size: 0.85rem;
+  color: var(--gold-300);
+}
+
+.request-datetime-info {
+  font-size: 0.875rem;
+  color: var(--charcoal-200);
+}
+
+.request-datetime-info span {
+  display: block;
+  font-size: 0.775rem;
+  color: var(--charcoal-400);
+}
+
+.request-pricing-info {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--white);
+}
+
+.request-pricing-info span {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: var(--charcoal-400);
+}
+
+.request-actions-col {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+@media (max-width: 900px) {
+  .request-item-card {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+}

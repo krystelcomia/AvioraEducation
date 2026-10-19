@@ -1,0 +1,96 @@
+/**
+ * AVIORA EDUCATION - API CLIENT & STORAGE HELPER
+ */
+
+const API_BASE = '/api';
+
+const Storage = {
+  getToken: () => localStorage.getItem('aviora_token'),
+  setToken: (token) => localStorage.setItem('aviora_token', token),
+  removeToken: () => localStorage.removeItem('aviora_token'),
+
+  getUser: () => {
+    try {
+      const u = localStorage.getItem('aviora_user');
+      return u ? JSON.parse(u) : null;
+    } catch (e) {
+      return null;
+    }
+  },
+  setUser: (user) => localStorage.setItem('aviora_user', JSON.stringify(user)),
+  removeUser: () => localStorage.removeItem('aviora_user'),
+
+  clearSession: () => {
+    localStorage.removeItem('aviora_token');
+    localStorage.removeItem('aviora_user');
+  }
+};
+
+async function apiRequest(endpoint, options = {}) {
+  const token = Storage.getToken();
+  const headers = { ...options.headers };
+
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  // If body is not FormData, add JSON Content-Type
+  if (options.body && !(options.body instanceof FormData)) {
+    headers['Content-Type'] = 'application/json';
+    options.body = JSON.stringify(options.body);
+  }
+
+  options.headers = headers;
+
+  try {
+    const response = await fetch(`${API_BASE}${endpoint}`, options);
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      throw new Error(data.error || 'A network error occurred. Please try again.');
+    }
+
+    return data;
+  } catch (error) {
+    throw error;
+  }
+}
+
+const API = {
+  // Auth
+  register: (body) => apiRequest('/auth/register', { method: 'POST', body }),
+  login: (body) => apiRequest('/auth/login', { method: 'POST', body }),
+  getMe: () => apiRequest('/auth/me'),
+  updateProfile: (body) => apiRequest('/auth/profile', { method: 'PUT', body }),
+
+  // Public
+  getStats: () => apiRequest('/public/stats'),
+  getTutors: (params = '') => apiRequest(`/tutors?${params}`),
+  getTutorById: (id) => apiRequest(`/tutors/${id}`),
+
+  // Student
+  getStudentDashboard: () => apiRequest('/student/dashboard'),
+  createRequest: (body) => apiRequest('/student/requests', { method: 'POST', body }),
+  cancelRequest: (id) => apiRequest(`/student/requests/${id}/cancel`, { method: 'POST' }),
+  submitReview: (id, body) => apiRequest(`/student/requests/${id}/review`, { method: 'POST', body }),
+
+  // Teacher
+  getTeacherStatus: () => apiRequest('/teacher/application-status'),
+  submitTeacherApplication: (formData) => apiRequest('/teacher/apply', { method: 'POST', body: formData }),
+  getTeacherDashboard: () => apiRequest('/teacher/dashboard'),
+  updateRequestStatus: (id, body) => apiRequest(`/teacher/requests/${id}/status`, { method: 'POST', body }),
+
+  // Admin
+  getAdminDashboard: () => apiRequest('/admin/dashboard'),
+  getAdminApplications: (status = 'all') => apiRequest(`/admin/teacher-applications?status=${status}`),
+  reviewApplication: (id, body) => apiRequest(`/admin/teacher-applications/${id}/review`, { method: 'POST', body }),
+  getAdminTutors: () => apiRequest('/admin/tutors'),
+  toggleTutorStatus: (id) => apiRequest(`/admin/tutors/${id}/toggle-status`, { method: 'POST' }),
+  getAdminStudents: () => apiRequest('/admin/students'),
+  updateUserStatus: (id, body) => apiRequest(`/admin/users/${id}/status`, { method: 'POST', body }),
+  getAdminRequests: () => apiRequest('/admin/requests'),
+
+  // Notifications
+  getNotifications: () => apiRequest('/notifications'),
+  markNotificationsRead: () => apiRequest('/notifications/mark-read', { method: 'POST' })
+};

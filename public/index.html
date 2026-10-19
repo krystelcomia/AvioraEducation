@@ -1,0 +1,1586 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Aviora Education | Your Potential. Your Path. Your Future.</title>
+  <meta name="description" content="Aviora Education is a premier online academic tutoring platform connecting students with elite, verified educators from top institutions in mathematics, sciences, languages, and exam preparation." />
+  <meta name="keywords" content="tutoring, academic tutoring, calculus tutor, physics tutor, online learning, sat prep, mcat, chemistry tutor, coding mentor, aviora education" />
+  
+  <!-- Favicon -->
+  <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg" />
+
+  <!-- Google Fonts: Plus Jakarta Sans & Outfit -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet" />
+
+  <!-- Stylesheets -->
+  <link rel="stylesheet" href="/css/variables.css" />
+  <link rel="stylesheet" href="/css/style.css" />
+  <link rel="stylesheet" href="/css/components.css" />
+  <link rel="stylesheet" href="/css/student.css" />
+  <link rel="stylesheet" href="/css/teacher.css" />
+  <link rel="stylesheet" href="/css/admin.css" />
+</head>
+<body>
+
+  <!-- =========================================
+       NAVIGATION BAR
+       ========================================= -->
+  <header class="site-header" id="site-header">
+    <div class="container nav-container">
+      <a href="#home" class="brand-link" id="brand-home-link" aria-label="Aviora Education Home">
+        <img src="/assets/logo.svg" alt="Aviora Education" class="brand-logo" />
+      </a>
+
+      <!-- Main Navigation Links -->
+      <nav>
+        <ul class="nav-links" id="main-nav-links">
+          <li><a href="#home" class="nav-link active" id="nav-link-home">Home</a></li>
+          <li><a href="#tutors" class="nav-link" id="nav-link-tutors">Find Tutors</a></li>
+          <li><a href="#how-it-works" class="nav-link" id="nav-link-how">How It Works</a></li>
+          <li id="nav-portal-links"></li>
+        </ul>
+      </nav>
+
+      <!-- Nav Actions & User Bar -->
+      <div class="nav-actions">
+        <!-- Quick Demo Switcher for Evaluation -->
+        <div class="demo-role-pill" title="Fast Demo Persona Switcher">
+          <span>Demo:</span>
+          <button class="top-demo-btn demo-role-btn" data-role="student" title="Switch to Student">Student</button>
+          <button class="top-demo-btn demo-role-btn" data-role="teacher" title="Switch to Teacher">Teacher</button>
+          <button class="top-demo-btn demo-role-btn" data-role="admin" title="Switch to Administrator">Admin</button>
+        </div>
+
+        <!-- Guest Actions -->
+        <div id="nav-guest-actions" style="display: flex; align-items: center; gap: 0.75rem;">
+          <button class="btn btn-secondary btn-sm open-login-btn" id="nav-login-btn">Sign In</button>
+          <button class="btn btn-primary btn-sm open-register-teacher-btn" id="nav-apply-btn">Become a Tutor</button>
+        </div>
+
+        <!-- Authenticated User Actions -->
+        <div id="nav-user-actions" style="display: none; align-items: center; gap: 0.75rem;">
+          <div class="notification-bell" id="nav-notification-bell" title="Notifications">
+            🔔
+            <span class="bell-badge" id="nav-bell-badge" style="display: none;">0</span>
+          </div>
+          
+          <div class="user-menu-trigger" id="user-menu-btn">
+            <img src="/assets/favicon.svg" alt="User Avatar" class="user-avatar-sm" id="nav-user-avatar" />
+            <div>
+              <span class="user-name-sm" id="nav-user-name">User</span>
+              <span class="badge-gold" id="nav-user-role" style="font-size: 0.65rem; padding: 0.1rem 0.4rem; display: block;">ROLE</span>
+            </div>
+          </div>
+          
+          <button class="btn btn-secondary btn-sm" id="user-logout-btn" title="Sign Out">Log Out</button>
+        </div>
+
+        <!-- Mobile Menu Toggle Button -->
+        <button class="mobile-menu-btn" id="mobile-menu-btn" aria-label="Toggle navigation menu">☰</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- =========================================
+       MAIN APP CONTAINER (SPA VIEW ROUTING)
+       ========================================= -->
+  <main id="app-viewport">
+
+    <!-- =======================================
+         VIEW 1: HOMEPAGE
+         ======================================= -->
+    <div id="view-home" class="app-page-view">
+      
+      <!-- HERO SECTION -->
+      <section class="hero-section">
+        <div class="container hero-grid">
+          <div class="hero-content">
+            <div class="badge-gold">
+              <span>✦</span> Premier Academic Mentorship Platform
+            </div>
+
+            <h1 class="hero-headline">
+              Your Potential. <br />
+              Your Path. <br />
+              <span class="text-gold">Your Future.</span>
+            </h1>
+
+            <p class="hero-subtitle">
+              Aviora Education bridges ambitious students with rigorously vetted academic tutors from Stanford, MIT, Harvard, and Columbia. Master calculus, physics, coding, chemistry, and literature with personalized 1-on-1 mentorship.
+            </p>
+
+            <div class="hero-ctas">
+              <a href="#tutors" class="btn btn-primary btn-lg" id="hero-find-tutor-btn">
+                <span>Find Your Tutor</span>
+                <span>→</span>
+              </a>
+              <button class="btn btn-secondary btn-lg open-register-teacher-btn" id="hero-become-tutor-btn">
+                <span>Become an Aviora Tutor</span>
+              </button>
+            </div>
+
+            <!-- Trust Metrics Counter -->
+            <div class="hero-trust-metrics">
+              <div class="trust-metric-item">
+                <span class="metric-number text-gold" id="stat-counter-tutors">15+</span>
+                <span class="metric-label">Vetted Elite Tutors</span>
+              </div>
+              <div class="trust-metric-item">
+                <span class="metric-number" id="stat-counter-sessions">450+</span>
+                <span class="metric-label">Sessions Completed</span>
+              </div>
+              <div class="trust-metric-item">
+                <span class="metric-number text-gold" id="stat-counter-rating">4.9 ★</span>
+                <span class="metric-label">Average Student Rating</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Hero 3D Visual Composition -->
+          <div class="hero-visual-wrapper">
+            <div class="visual-ambient-ring"></div>
+            <div class="visual-ambient-ring-2"></div>
+
+            <div class="hero-image-card">
+              <img src="/assets/images/hero_visual.jpg" alt="Aviora Education Visual Learning" />
+            </div>
+
+            <!-- Floating Micro-Cards -->
+            <div class="floating-badge-card card-top-right">
+              <div class="floating-icon-circle">★</div>
+              <div>
+                <div class="floating-card-title">Top 1% Educators</div>
+                <div class="floating-card-sub">Strict Degree Verification</div>
+              </div>
+            </div>
+
+            <div class="floating-badge-card card-bottom-left">
+              <div class="floating-icon-circle">📈</div>
+              <div>
+                <div class="floating-card-title">98% Grade Boost</div>
+                <div class="floating-card-sub">Proven Conceptual Mastery</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ACADEMIC CATEGORIES SECTION -->
+      <section class="section" style="background: rgba(18, 20, 27, 0.6); border-top: 1px solid rgba(255,255,255,0.05); border-bottom: 1px solid rgba(255,255,255,0.05);">
+        <div class="container">
+          <div class="section-header">
+            <span class="badge-gold">Academic Disciplines</span>
+            <h2 class="section-title">Explore High-Impact Subjects</h2>
+            <p class="section-desc">From foundational high school coursework to competitive university exams and Olympiad prep, find the exact specialist you need.</p>
+          </div>
+
+          <div class="categories-grid">
+            <div class="category-card" onclick="window.location.hash='#tutors'; Tutors.activeSubjectFilter='Calculus'; Tutors.applyFilters();">
+              <div class="category-icon-box">∫dx</div>
+              <h3 class="category-name">Mathematics & Calculus</h3>
+              <p class="category-subjects">AP Calculus AB/BC, Linear Algebra, Multivariable, Differential Equations & Statistics.</p>
+              <div class="category-meta">
+                <span>4 Specialists</span>
+                <span>Explore →</span>
+              </div>
+            </div>
+
+            <div class="category-card" onclick="window.location.hash='#tutors'; Tutors.activeSubjectFilter='Physics'; Tutors.applyFilters();">
+              <div class="category-icon-box">⚛️</div>
+              <h3 class="category-name">Physics & Engineering</h3>
+              <p class="category-subjects">AP Physics C (Mechanics, E&M), Quantum Foundations, Thermodynamics & Statics.</p>
+              <div class="category-meta">
+                <span>3 Specialists</span>
+                <span>Explore →</span>
+              </div>
+            </div>
+
+            <div class="category-card" onclick="window.location.hash='#tutors'; Tutors.activeSubjectFilter='Chemistry'; Tutors.applyFilters();">
+              <div class="category-icon-box">🧪</div>
+              <h3 class="category-name">Chemistry & Pre-Med</h3>
+              <p class="category-subjects">Organic Chemistry I/II, General Chemistry, Biochemistry & MCAT Chemical Foundations.</p>
+              <div class="category-meta">
+                <span>3 Specialists</span>
+                <span>Explore →</span>
+              </div>
+            </div>
+
+            <div class="category-card" onclick="window.location.hash='#tutors'; Tutors.activeSubjectFilter='Python'; Tutors.applyFilters();">
+              <div class="category-icon-box">&lt;/&gt;</div>
+              <h3 class="category-name">Computer Science & AI</h3>
+              <p class="category-subjects">Python, AP Computer Science A, Data Structures, Algorithms & Full-Stack Web Development.</p>
+              <div class="category-meta">
+                <span>3 Specialists</span>
+                <span>Explore →</span>
+              </div>
+            </div>
+
+            <div class="category-card" onclick="window.location.hash='#tutors'; Tutors.activeSubjectFilter='English'; Tutors.applyFilters();">
+              <div class="category-icon-box">✍️</div>
+              <h3 class="category-name">Literature & Admissions</h3>
+              <p class="category-subjects">College Admissions Essays, AP English Lit, Analytical Writing & SAT/ACT Verbal.</p>
+              <div class="category-meta">
+                <span>2 Specialists</span>
+                <span>Explore →</span>
+              </div>
+            </div>
+
+            <div class="category-card" onclick="window.location.hash='#tutors'; Tutors.activeSubjectFilter='French'; Tutors.applyFilters();">
+              <div class="category-icon-box">🌍</div>
+              <h3 class="category-name">World Languages</h3>
+              <p class="category-subjects">French, Spanish, Mandarin, AP World Languages & Conversational Fluency.</p>
+              <div class="category-meta">
+                <span>2 Specialists</span>
+                <span>Explore →</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- FEATURED TUTORS PREVIEW SECTION -->
+      <section class="section">
+        <div class="container">
+          <div class="section-header">
+            <span class="badge-gold">Verified Faculty</span>
+            <h2 class="section-title">Meet Our Highly Rated Tutors</h2>
+            <p class="section-desc">Every Aviora tutor undergoes comprehensive academic credential verification, background audits, and pedagogical screening.</p>
+          </div>
+
+          <!-- Featured tutors grid rendered via JS from live database -->
+          <div class="tutors-grid" id="featured-tutors-grid">
+            <!-- Dynamically populated -->
+          </div>
+
+          <div style="text-align: center; margin-top: 3.5rem;">
+            <a href="#tutors" class="btn btn-outline-gold btn-lg">Browse All Verified Tutors →</a>
+          </div>
+        </div>
+      </section>
+
+      <!-- HOW AVIORA WORKS (INTERACTIVE TABBED STEP LAYOUT) -->
+      <section class="section" id="how-it-works-section" style="background: rgba(15, 17, 24, 0.8);">
+        <div class="container">
+          <div class="section-header">
+            <span class="badge-gold">Transparent Process</span>
+            <h2 class="section-title">How Aviora Works</h2>
+            <p class="section-desc">A frictionless experience built for seamless academic connection, whether you are seeking instruction or sharing your expertise.</p>
+          </div>
+
+          <!-- Tabs: For Students vs For Tutors -->
+          <div class="how-it-works-tabs">
+            <button class="tab-btn active" id="tab-how-student">For Students & Parents</button>
+            <button class="tab-btn" id="tab-how-tutor">For Prospective Tutors</button>
+          </div>
+
+          <!-- Student Steps Grid -->
+          <div class="steps-grid" id="steps-student">
+            <div class="step-card">
+              <span class="step-number-badge">01</span>
+              <h3 class="step-title">Discover Verified Tutors</h3>
+              <p class="step-desc">Filter by exact subject, academic level, budget, and weekly schedule availability. Inspect full educator bios, university credentials, and real student reviews.</p>
+            </div>
+            <div class="step-card">
+              <span class="step-number-badge">02</span>
+              <h3 class="step-title">Book Tailored Sessions</h3>
+              <p class="step-desc">Choose your preferred date, time slot, and session duration. Submit your specific coursework questions or learning goals directly with your booking request.</p>
+            </div>
+            <div class="step-card">
+              <span class="step-number-badge">03</span>
+              <h3 class="step-title">Achieve Mastery & Excel</h3>
+              <p class="step-desc">Engage in focused, interactive tutoring sessions. Track your ongoing academic progress in your student portal and leave reviews for your instructors.</p>
+            </div>
+          </div>
+
+          <!-- Tutor Steps Grid -->
+          <div class="steps-grid" id="steps-tutor" style="display: none;">
+            <div class="step-card">
+              <span class="step-number-badge">01</span>
+              <h3 class="step-title">Submit Application</h3>
+              <p class="step-desc">Register your teacher profile, outline your educational background, select the subjects and grade levels you teach, and upload your official degree verification.</p>
+            </div>
+            <div class="step-card">
+              <span class="step-number-badge">02</span>
+              <h3 class="step-title">Academic Board Review</h3>
+              <p class="step-desc">Our administrative academic board verifies your diplomas and teaching experience within 24-48 hours. Once verified, your profile is published to the public directory.</p>
+            </div>
+            <div class="step-card">
+              <span class="step-number-badge">03</span>
+              <h3 class="step-title">Teach, Mentor & Earn</h3>
+              <p class="step-desc">Set your own hourly rates and schedule availability. Receive tutoring requests, accept sessions that fit your calendar, and get paid for your expertise.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- DUAL BENEFITS SECTION -->
+      <section class="section">
+        <div class="container">
+          <div class="section-header">
+            <span class="badge-gold">Empowering Both Sides</span>
+            <h2 class="section-title">Why Students and Educators Choose Aviora</h2>
+            <p class="section-desc">A platform engineered to nurture academic excellence and foster lifelong intellectual curiosity.</p>
+          </div>
+
+          <div class="benefits-wrapper">
+            <!-- Student Benefits -->
+            <div class="benefit-column student-benefit">
+              <h3 class="benefit-col-title">
+                <span>🎓</span> For Students
+              </h3>
+              <ul class="benefit-list">
+                <li class="benefit-item">
+                  <div class="check-icon">✓</div>
+                  <div class="benefit-item-content">
+                    <h4>Vetted Top-Tier Instructors</h4>
+                    <p>Only verified graduates and educators with proven academic mastery are approved on Aviora.</p>
+                  </div>
+                </li>
+                <li class="benefit-item">
+                  <div class="check-icon">✓</div>
+                  <div class="benefit-item-content">
+                    <h4>Customized Conceptual Learning</h4>
+                    <p>Tutors adapt to your specific learning rhythm, breaking down tough theorems into intuitive mental models.</p>
+                  </div>
+                </li>
+                <li class="benefit-item">
+                  <div class="check-icon">✓</div>
+                  <div class="benefit-item-content">
+                    <h4>Flexible Scheduling & Direct Requests</h4>
+                    <p>Request sessions when it suits your busy school schedule, with instant tracking in your dashboard.</p>
+                  </div>
+                </li>
+                <li class="benefit-item">
+                  <div class="check-icon">✓</div>
+                  <div class="benefit-item-content">
+                    <h4>Transparent Pricing & Reviews</h4>
+                    <p>Clear hourly rates without hidden subscription fees, backed by verified ratings from real peers.</p>
+                  </div>
+                </li>
+              </ul>
+            </div>
+
+            <!-- Teacher Benefits -->
+            <div class="benefit-column teacher-benefit">
+              <h3 class="benefit-col-title">
+                <span>🧑‍🏫</span> For Teachers & Tutors
+              </h3>
+              <ul class="benefit-list">
+                <li class="benefit-item">
+                  <div class="check-icon">✓</div>
+                  <div class="benefit-item-content">
+                    <h4>Set Your Own Hourly Rates</h4>
+                    <p>You define your value. Keep control of your tutoring rates and retain fair earnings.</p>
+                  </div>
+                </li>
+                <li class="benefit-item">
+                  <div class="check-icon">✓</div>
+                  <div class="benefit-item-content">
+                    <h4>Full Calendar Autonomy</h4>
+                    <p>Configure your weekly available slots and accept only the student requests that match your schedule.</p>
+                  </div>
+                </li>
+                <li class="benefit-item">
+                  <div class="check-icon">✓</div>
+                  <div class="benefit-item-content">
+                    <h4>Dedicated Professional Dashboard</h4>
+                    <p>Manage incoming session requests, monitor student learning notes, and track your total earnings in one place.</p>
+                  </div>
+                </li>
+                <li class="benefit-item">
+                  <div class="check-icon">✓</div>
+                  <div class="benefit-item-content">
+                    <h4>Elite Academic Prestige</h4>
+                    <p>Join a curated network of passionate scholars, professors, and subject matter experts.</p>
+                  </div>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- STUDENT TESTIMONIALS SECTION -->
+      <section class="section" style="background: rgba(18, 20, 27, 0.6); border-top: 1px solid rgba(255,255,255,0.05); border-bottom: 1px solid rgba(255,255,255,0.05);">
+        <div class="container">
+          <div class="section-header">
+            <span class="badge-gold">Student Voices</span>
+            <h2 class="section-title">Real Academic Success Stories</h2>
+            <p class="section-desc">Sample verified student feedback reflecting real academic transformations across challenging STEM and humanities subjects.</p>
+          </div>
+
+          <div class="testimonials-grid">
+            <div class="testimonial-card">
+              <div>
+                <div class="testimonial-stars">★★★★★</div>
+                <p class="testimonial-quote">"Dr. Elena Vance made AP Calculus BC click for me after weeks of struggling with integration by parts. Her visual explanations turned my 76% test score into a 98% on my final exam."</p>
+              </div>
+              <div class="testimonial-author">
+                <img src="https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&w=120&q=80" alt="Lucas Taylor" class="author-avatar" />
+                <div>
+                  <h4 class="author-name">Lucas Taylor</h4>
+                  <p class="author-info">Grade 11 Student • Westlake High</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="testimonial-card">
+              <div>
+                <div class="testimonial-stars">★★★★★</div>
+                <p class="testimonial-quote">"Dr. Julian Morales is in a league of his own. Organic chemistry felt like a wall of impossible reaction mechanisms until he walked me through resonance and arrow-pushing principles."</p>
+              </div>
+              <div class="testimonial-author">
+                <img src="https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=120&q=80" alt="Sophia Martinez" class="author-avatar" />
+                <div>
+                  <h4 class="author-name">Sophia Martinez</h4>
+                  <p class="author-info">Pre-Med Sophomore • Northwestern University</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="testimonial-card">
+              <div>
+                <div class="testimonial-stars">★★★★★</div>
+                <p class="testimonial-quote">"Aaliyah Chen is incredible. She didn't just teach me Python syntax; she taught me how to think like a software engineer. My AP Computer Science confidence skyrocketed."</p>
+              </div>
+              <div class="testimonial-author">
+                <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=120&q=80" alt="Maya Patel" class="author-avatar" />
+                <div>
+                  <h4 class="author-name">Maya Patel</h4>
+                  <p class="author-info">Grade 10 Student • St. Claire Academy</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- BECOME A TUTOR CALL TO ACTION BANNER -->
+      <section class="section">
+        <div class="container">
+          <div class="teacher-cta-banner">
+            <div class="teacher-cta-grid">
+              <div class="teacher-cta-content">
+                <span class="badge-gold">Educator Opportunities</span>
+                <h2 class="teacher-cta-title">Inspire the Next Generation. <br /><span class="text-gold">Earn On Your Terms.</span></h2>
+                <p class="section-desc">Are you an expert educator, university researcher, or seasoned scholar? Aviora provides a prestigious platform, qualified students, and tools to run your tutoring practice effortlessly.</p>
+
+                <div class="teacher-cta-stats">
+                  <div class="t-stat">
+                    <h4>$40 - $95</h4>
+                    <span>Average Hourly Rate</span>
+                  </div>
+                  <div class="t-stat">
+                    <h4>100%</h4>
+                    <span>Schedule Flexibility</span>
+                  </div>
+                  <div class="t-stat">
+                    <h4>24-48h</h4>
+                    <span>Verification Time</span>
+                  </div>
+                </div>
+
+                <button class="btn btn-primary btn-lg open-register-teacher-btn" id="banner-apply-tutor-btn">
+                  <span>Apply as an Aviora Tutor</span>
+                  <span>→</span>
+                </button>
+              </div>
+
+              <div class="teacher-cta-image">
+                <img src="/assets/images/teacher_cta.jpg" alt="Aviora Educator Mentorship" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </div><!-- END VIEW 1: HOME -->
+
+
+    <!-- =======================================
+         VIEW 2: TUTORS DIRECTORY
+         ======================================= -->
+    <div id="view-tutors" class="app-page-view" style="display: none; padding-top: calc(var(--header-height) + 2rem); padding-bottom: 5rem;">
+      <div class="container">
+        <div class="portal-header">
+          <div>
+            <span class="badge-gold">Public Tutor Directory</span>
+            <h1 class="portal-title" style="margin-top: 0.5rem;">Explore Vetted Academic Specialists</h1>
+            <p class="portal-subtitle">Browse approved educators, view academic qualifications, inspect schedules, and book 1-on-1 sessions.</p>
+          </div>
+          <div>
+            <span class="badge-gold" id="tutor-count-badge">Loading verified tutors...</span>
+          </div>
+        </div>
+
+        <!-- Filter & Search Controls -->
+        <div class="tutor-filter-container">
+          <div class="filter-grid">
+            <div class="search-input-box">
+              <span class="search-icon">🔍</span>
+              <input type="text" id="tutor-search-input" class="form-control" placeholder="Search by tutor name, subject, university, or keyword..." />
+            </div>
+
+            <div>
+              <select id="tutor-grade-filter" class="form-control">
+                <option value="all">All Grade Levels</option>
+                <option value="Middle School">Middle School</option>
+                <option value="High School">High School</option>
+                <option value="College">College / Undergraduate</option>
+                <option value="Advanced Placement">Advanced Placement (AP)</option>
+              </select>
+            </div>
+
+            <div>
+              <select id="tutor-rate-filter" class="form-control">
+                <option value="">Any Hourly Rate</option>
+                <option value="45">Under $45/hr</option>
+                <option value="55">Under $55/hr</option>
+                <option value="65">Under $65/hr</option>
+              </select>
+            </div>
+
+            <div>
+              <select id="tutor-sort-filter" class="form-control">
+                <option value="featured">Sort: Featured & Recommended</option>
+                <option value="rating_desc">Highest Rated</option>
+                <option value="price_asc">Price: Low to High</option>
+                <option value="price_desc">Price: High to Low</option>
+                <option value="experience_desc">Most Experienced</option>
+              </select>
+            </div>
+
+            <div>
+              <button class="btn btn-secondary btn-sm" onclick="Tutors.resetFilters()" style="height: 100%;">Reset</button>
+            </div>
+          </div>
+
+          <!-- Subject Filter Pills -->
+          <div class="subject-pills">
+            <button class="pill-btn subject-pill-btn active" data-subject="all">All Subjects</button>
+            <button class="pill-btn subject-pill-btn" data-subject="Calculus">Calculus</button>
+            <button class="pill-btn subject-pill-btn" data-subject="Physics">Physics</button>
+            <button class="pill-btn subject-pill-btn" data-subject="Chemistry">Chemistry</button>
+            <button class="pill-btn subject-pill-btn" data-subject="Python">Computer Science</button>
+            <button class="pill-btn subject-pill-btn" data-subject="English">English & Essays</button>
+            <button class="pill-btn subject-pill-btn" data-subject="French">Languages</button>
+            <button class="pill-btn subject-pill-btn" data-subject="SAT">SAT / ACT Prep</button>
+          </div>
+        </div>
+
+        <!-- Tutors Grid -->
+        <div class="tutors-grid" id="tutors-directory-grid">
+          <!-- Populated dynamically via tutors.js -->
+        </div>
+      </div>
+    </div><!-- END VIEW 2: TUTORS -->
+
+
+    <!-- =======================================
+         VIEW 3: STUDENT PORTAL
+         ======================================= -->
+    <div id="view-student-portal" class="app-page-view" style="display: none;">
+      <div class="container portal-wrapper">
+        <div class="portal-header">
+          <div class="portal-user-meta">
+            <img src="/assets/favicon.svg" alt="Student Avatar" class="portal-avatar-lg" id="student-display-avatar" />
+            <div>
+              <h1 class="portal-title">Student Dashboard</h1>
+              <p class="portal-subtitle">Welcome back, <strong id="student-display-name" style="color: var(--white);">Student</strong>! Manage your active tutoring requests and learning path.</p>
+            </div>
+          </div>
+          <div>
+            <a href="#tutors" class="btn btn-primary btn-sm">+ Find New Tutor</a>
+          </div>
+        </div>
+
+        <!-- Student Stats Cards -->
+        <div class="stats-cards-grid">
+          <div class="stat-widget">
+            <div class="stat-widget-icon">📚</div>
+            <div class="stat-widget-info">
+              <h3 id="student-stat-total">0</h3>
+              <p>Total Sessions Requested</p>
+            </div>
+          </div>
+          <div class="stat-widget">
+            <div class="stat-widget-icon">⏳</div>
+            <div class="stat-widget-info">
+              <h3 id="student-stat-pending" style="color: var(--warning);">0</h3>
+              <p>Pending Tutor Acceptance</p>
+            </div>
+          </div>
+          <div class="stat-widget">
+            <div class="stat-widget-icon">🗓️</div>
+            <div class="stat-widget-info">
+              <h3 id="student-stat-upcoming" style="color: var(--gold-400);">0</h3>
+              <p>Upcoming Confirmed</p>
+            </div>
+          </div>
+          <div class="stat-widget">
+            <div class="stat-widget-icon">✓</div>
+            <div class="stat-widget-info">
+              <h3 id="student-stat-completed" style="color: var(--success);">0</h3>
+              <p>Completed Sessions</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Student Requests Filter Tabs -->
+        <div class="portal-tabs-nav">
+          <button class="portal-tab-btn student-filter-tab active" data-status="all">All Sessions</button>
+          <button class="portal-tab-btn student-filter-tab" data-status="pending">Pending</button>
+          <button class="portal-tab-btn student-filter-tab" data-status="accepted">Upcoming</button>
+          <button class="portal-tab-btn student-filter-tab" data-status="completed">Completed</button>
+        </div>
+
+        <!-- Requests Cards Container -->
+        <div class="requests-card-list" id="student-requests-container">
+          <!-- Populated dynamically via student.js -->
+        </div>
+
+        <!-- Student Profile Settings Card -->
+        <div class="data-table-container" style="margin-top: 3.5rem; padding: 2.5rem;">
+          <h3 style="font-size: 1.3rem; color: var(--white); margin-bottom: 0.5rem;">Student Profile & Academic Goals</h3>
+          <p style="font-size: 0.875rem; color: var(--charcoal-400); margin-bottom: 2rem;">Keep your school details and target subjects updated so tutors can prepare personalized materials for your sessions.</p>
+
+          <form id="student-profile-form">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem;">
+              <div class="form-group">
+                <label class="form-label">Full Name</label>
+                <input type="text" id="sp-name" class="form-control" required />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Phone Contact</label>
+                <input type="text" id="sp-phone" class="form-control" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Current Grade Level</label>
+                <select id="sp-grade" class="form-control">
+                  <option value="Grade 9 - High School">Grade 9 - High School</option>
+                  <option value="Grade 10 - High School">Grade 10 - High School</option>
+                  <option value="Grade 11 - High School">Grade 11 - High School</option>
+                  <option value="Grade 12 - High School">Grade 12 - High School</option>
+                  <option value="College Freshman">College Freshman</option>
+                  <option value="College Sophomore">College Sophomore</option>
+                  <option value="College Junior / Senior">College Junior / Senior</option>
+                  <option value="Graduate / Pre-Med">Graduate / Pre-Med</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">School / Institution Name</label>
+                <input type="text" id="sp-school" class="form-control" placeholder="e.g. Westlake High School" />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Primary Learning Goals</label>
+              <textarea id="sp-goals" class="form-control" rows="2" placeholder="e.g. Boost AP Calculus score to 5, master Python algorithms..."></textarea>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Target Subjects of Interest</label>
+              <input type="text" id="sp-subjects" class="form-control" placeholder="e.g. Calculus BC, Physics Mechanics, Python" />
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-sm">Save Profile Changes</button>
+          </form>
+        </div>
+      </div>
+    </div><!-- END VIEW 3: STUDENT -->
+
+
+    <!-- =======================================
+         VIEW 4: TEACHER PORTAL & APPLICATION
+         ======================================= -->
+    <div id="view-teacher-portal" class="app-page-view" style="display: none;">
+      <div class="container portal-wrapper">
+        
+        <!-- Status Banner (Pending / Approved / Rejected) -->
+        <div id="teacher-status-banner-wrap">
+          <!-- Populated dynamically via teacher.js -->
+        </div>
+
+        <!-- 1. TEACHER PORTAL DASHBOARD (Visible when Approved) -->
+        <div id="teacher-dashboard-section" style="display: none;">
+          <div class="portal-header">
+            <div>
+              <span class="badge-gold">Teacher Dashboard</span>
+              <h1 class="portal-title" style="margin-top: 0.5rem;">Tutoring Management Console</h1>
+              <p class="portal-subtitle">Review incoming session requests, manage accepted bookings, and track completed student hours.</p>
+            </div>
+            <div>
+              <a href="#tutors" class="btn btn-secondary btn-sm">View Public Listing</a>
+            </div>
+          </div>
+
+          <!-- Teacher Stats Widgets -->
+          <div class="stats-cards-grid">
+            <div class="stat-widget">
+              <div class="stat-widget-icon">💵</div>
+              <div class="stat-widget-info">
+                <h3 id="teacher-stat-earnings" style="color: var(--success);">$0.00</h3>
+                <p>Gross Tutoring Earnings</p>
+              </div>
+            </div>
+            <div class="stat-widget">
+              <div class="stat-widget-icon">📬</div>
+              <div class="stat-widget-info">
+                <h3 id="teacher-stat-requests" style="color: var(--warning);">0</h3>
+                <p>Pending Student Requests</p>
+              </div>
+            </div>
+            <div class="stat-widget">
+              <div class="stat-widget-icon">🗓️</div>
+              <div class="stat-widget-info">
+                <h3 id="teacher-stat-active" style="color: var(--gold-400);">0</h3>
+                <p>Active Upcoming Sessions</p>
+              </div>
+            </div>
+            <div class="stat-widget">
+              <div class="stat-widget-icon">★</div>
+              <div class="stat-widget-info">
+                <h3 id="teacher-stat-rating" style="color: #F59E0B;">5.0</h3>
+                <p>Tutor Rating Score</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Incoming Requests Table -->
+          <div class="data-table-container">
+            <div class="table-toolbar">
+              <h3 style="color: var(--white); font-size: 1.15rem;">Incoming & Scheduled Tutoring Requests</h3>
+              <span class="badge-gold">Live Updates</span>
+            </div>
+            <div style="overflow-x: auto;">
+              <table class="admin-table">
+                <thead>
+                  <tr>
+                    <th>Student</th>
+                    <th>Subject & Goal</th>
+                    <th>Requested Date/Time</th>
+                    <th>Fee</th>
+                    <th>Status</th>
+                    <th style="text-align: right;">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="teacher-requests-table-body">
+                  <!-- Populated via teacher.js -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Teacher Profile & Hourly Rate Settings -->
+          <div class="data-table-container" style="margin-top: 3.5rem; padding: 2.5rem;">
+            <h3 style="font-size: 1.3rem; color: var(--white); margin-bottom: 0.5rem;">Tutor Profile & Rate Settings</h3>
+            <p style="font-size: 0.875rem; color: var(--charcoal-400); margin-bottom: 2rem;">Adjust your public directory headline, hourly tutoring rate, and biography.</p>
+
+            <form id="teacher-profile-settings-form">
+              <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.25rem;">
+                <div class="form-group">
+                  <label class="form-label">Professional Headline</label>
+                  <input type="text" id="t-profile-headline" class="form-control" placeholder="e.g. Ph.D. in Applied Mathematics | Stanford University" required />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Hourly Rate ($ USD / hr)</label>
+                  <input type="number" id="t-profile-rate" class="form-control" min="20" max="250" step="1" required />
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Public Biography & Teaching Methodology</label>
+                <textarea id="t-profile-bio" class="form-control" rows="4" required></textarea>
+              </div>
+
+              <button type="submit" class="btn btn-primary btn-sm">Save Public Profile</button>
+            </form>
+          </div>
+        </div><!-- END TEACHER DASHBOARD -->
+
+
+        <!-- 2. TEACHER APPLICATION FORM (Visible when Pending, Rejected, or Updating) -->
+        <div id="teacher-application-section" class="application-form-card">
+          <div style="text-align: center; margin-bottom: 2.5rem;">
+            <span class="badge-gold">Educator Accreditation</span>
+            <h2 style="font-size: 1.85rem; color: var(--white); margin-top: 0.5rem;">Aviora Tutor Credential Application</h2>
+            <p style="font-size: 0.95rem; color: var(--charcoal-300); max-width: 600px; margin: 0.5rem auto 0;">
+              Submit your academic degrees, teaching background, and credentials. Only accredited tutors approved by our board are listed in our public directory.
+            </p>
+          </div>
+
+          <form id="teacher-application-form">
+            <!-- Step 1: Academic Background -->
+            <div class="form-step-section">
+              <h3 class="form-step-title">
+                <span class="step-num-circle">1</span>
+                <span>Academic Qualifications & Degree</span>
+              </h3>
+
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem;">
+                <div class="form-group">
+                  <label class="form-label">Highest Degree Attained</label>
+                  <input type="text" name="highest_degree" id="app-degree" class="form-control" placeholder="e.g. Ph.D. in Applied Mathematics, M.S. in Physics" required />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">University / Alma Mater</label>
+                  <input type="text" name="institution" id="app-institution" class="form-control" placeholder="e.g. Stanford University, MIT, Oxford" required />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Graduation Year</label>
+                  <input type="number" name="graduation_year" id="app-grad-year" class="form-control" min="1970" max="2026" value="2020" required />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Years of Teaching / Tutoring Experience</label>
+                  <input type="number" name="years_experience" id="app-years-exp" class="form-control" min="0" max="50" value="4" required />
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Professional Headline</label>
+                <input type="text" name="headline" id="app-headline" class="form-control" placeholder="e.g. Ph.D. in Applied Mathematics | Stanford University" required />
+                <span class="form-hint">This appears prominently on your public tutor profile card.</span>
+              </div>
+            </div>
+
+            <!-- Step 2: Subjects & Rates -->
+            <div class="form-step-section">
+              <h3 class="form-step-title">
+                <span class="step-num-circle">2</span>
+                <span>Subjects Taught & Preferred Hourly Rate</span>
+              </h3>
+
+              <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.25rem;">
+                <div class="form-group">
+                  <label class="form-label">Subjects (Comma separated)</label>
+                  <input type="text" name="subjects" id="app-subjects" class="form-control" placeholder="e.g. AP Calculus BC, Linear Algebra, SAT Math" required />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Hourly Rate ($ USD / hr)</label>
+                  <input type="number" name="hourly_rate" id="app-hourly-rate" class="form-control" min="20" max="250" value="55" required />
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Grade Levels Taught</label>
+                <div style="display: flex; gap: 1.5rem; flex-wrap: wrap; margin-top: 0.5rem;">
+                  <label style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; color: var(--charcoal-200); cursor: pointer;">
+                    <input type="checkbox" name="grade_levels" value="Middle School" checked /> Middle School
+                  </label>
+                  <label style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; color: var(--charcoal-200); cursor: pointer;">
+                    <input type="checkbox" name="grade_levels" value="High School" checked /> High School
+                  </label>
+                  <label style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; color: var(--charcoal-200); cursor: pointer;">
+                    <input type="checkbox" name="grade_levels" value="College / Undergraduate" checked /> College / Undergraduate
+                  </label>
+                  <label style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; color: var(--charcoal-200); cursor: pointer;">
+                    <input type="checkbox" name="grade_levels" value="Graduate / Pre-Med" /> Graduate / Pre-Med
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <!-- Step 3: Biographies & Teaching Philosophy -->
+            <div class="form-step-section">
+              <h3 class="form-step-title">
+                <span class="step-num-circle">3</span>
+                <span>Pedagogy & Teaching Philosophy</span>
+              </h3>
+
+              <div class="form-group">
+                <label class="form-label">Tutor Biography</label>
+                <textarea name="bio" id="app-bio" class="form-control" rows="3" placeholder="Describe your background, teaching achievements, and how you help students succeed..." required></textarea>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Teaching Philosophy & Approach</label>
+                <textarea name="teaching_philosophy" id="app-philosophy" class="form-control" rows="2" placeholder="e.g. Conceptual understanding before formulas. Demystifying hard theorems into visual mental models..."></textarea>
+              </div>
+            </div>
+
+            <!-- Step 4: Credential File Upload -->
+            <div class="form-step-section">
+              <h3 class="form-step-title">
+                <span class="step-num-circle">4</span>
+                <span>Credential & Diploma Verification</span>
+              </h3>
+              <p style="font-size: 0.85rem; color: var(--charcoal-300); margin-bottom: 1rem;">
+                Upload your degree diploma, university transcript, or teaching certificate (PDF, Word, or Image). Files are encrypted and audited solely by the Academic Board.
+              </p>
+
+              <div class="file-upload-box">
+                <input type="file" name="credential_document" id="credential-file-input" class="file-input-hidden" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg" />
+                <div class="upload-icon">📄</div>
+                <div class="upload-text">Drag & drop your credential document here, or click to browse</div>
+                <div class="upload-sub">Supports PDF, DOC, DOCX, PNG, JPG (Max 10MB)</div>
+                <div id="selected-file-name" class="selected-file-badge" style="display: none;"></div>
+              </div>
+            </div>
+
+            <div style="text-align: center; margin-top: 2rem;">
+              <button type="submit" class="btn btn-primary btn-lg" id="submit-teacher-app-btn">
+                <span>Submit Application for Academic Review</span>
+                <span>→</span>
+              </button>
+            </div>
+          </form>
+        </div><!-- END TEACHER APPLICATION FORM -->
+
+      </div>
+    </div><!-- END VIEW 4: TEACHER -->
+
+
+    <!-- =======================================
+         VIEW 5: CREATIVE ADMINISTRATOR DASHBOARD
+         ======================================= -->
+    <div id="view-admin-portal" class="app-page-view" style="display: none;">
+      <div class="admin-layout">
+        <!-- Admin Sidebar -->
+        <aside class="admin-sidebar">
+          <div style="padding-bottom: 1.5rem; margin-bottom: 1rem; border-bottom: 1px solid rgba(255,255,255,0.08);">
+            <span class="badge-gold" style="font-size: 0.75rem;">Administrator</span>
+            <h3 style="font-size: 1.15rem; color: var(--white); margin-top: 0.4rem;">Academic Console</h3>
+          </div>
+
+          <div class="admin-nav-item active" data-section="overview">
+            <span>📊</span>
+            <span>Dashboard Overview</span>
+          </div>
+
+          <div class="admin-nav-item" data-section="applications">
+            <span>📝</span>
+            <span>Teacher Applications</span>
+            <span class="admin-nav-badge" id="admin-pending-badge" style="display: none;">0</span>
+          </div>
+
+          <div class="admin-nav-item" data-section="tutors">
+            <span>🎓</span>
+            <span>Approved Tutors</span>
+          </div>
+
+          <div class="admin-nav-item" data-section="students">
+            <span>👥</span>
+            <span>Student Accounts</span>
+          </div>
+
+          <div class="admin-nav-item" data-section="requests">
+            <span>📑</span>
+            <span>Platform Requests Audit</span>
+          </div>
+
+          <div style="margin-top: auto; padding-top: 2rem;">
+            <a href="#home" class="btn btn-secondary btn-sm" style="width: 100%;">← Exit to Website</a>
+          </div>
+        </aside>
+
+        <!-- Admin Main Content Area -->
+        <section class="admin-main-content">
+          
+          <!-- PANEL 1: OVERVIEW & METRICS -->
+          <div id="admin-panel-overview" class="admin-view-panel">
+            <div class="admin-section-header">
+              <div>
+                <h1 class="admin-title">Academic Platform Overview</h1>
+                <p style="font-size: 0.9rem; color: var(--charcoal-400);">Real-time database metrics, pending teacher verifications, and tutoring activity.</p>
+              </div>
+              <button class="btn btn-outline-gold btn-sm" onclick="Admin.loadDashboardMetrics()">↻ Refresh Metrics</button>
+            </div>
+
+            <!-- Summary Cards with Real DB Counts -->
+            <div class="admin-metrics-grid">
+              <div class="admin-stat-card">
+                <div class="admin-stat-val text-gold" id="m-approved-tutors">0</div>
+                <div class="admin-stat-label">Approved Faculty Tutors</div>
+              </div>
+              <div class="admin-stat-card">
+                <div class="admin-stat-val" style="color: var(--warning);" id="m-pending-apps">0</div>
+                <div class="admin-stat-label">Pending Applications</div>
+              </div>
+              <div class="admin-stat-card">
+                <div class="admin-stat-val" id="m-students">0</div>
+                <div class="admin-stat-label">Active Student Accounts</div>
+              </div>
+              <div class="admin-stat-card">
+                <div class="admin-stat-val" id="m-teachers">0</div>
+                <div class="admin-stat-label">Registered Teachers</div>
+              </div>
+              <div class="admin-stat-card">
+                <div class="admin-stat-val" id="m-requests">0</div>
+                <div class="admin-stat-label">Total Tutoring Requests</div>
+              </div>
+              <div class="admin-stat-card">
+                <div class="admin-stat-val" style="color: var(--success);" id="m-volume">$0.00</div>
+                <div class="admin-stat-label">Gross Platform Volume</div>
+              </div>
+            </div>
+
+            <!-- Visual Charts & Analytics Grid -->
+            <div class="admin-charts-grid">
+              <div class="chart-card">
+                <div class="chart-header">
+                  <h3 class="chart-title">Tutoring Requests by Academic Subject</h3>
+                  <span class="badge-gold">Real DB Analytics</span>
+                </div>
+                <div id="chart-subjects-container">
+                  <!-- Rendered via JS -->
+                </div>
+              </div>
+
+              <div class="chart-card">
+                <div class="chart-header">
+                  <h3 class="chart-title">Teacher Application Status Breakdown</h3>
+                  <span class="badge-gold">Accreditation</span>
+                </div>
+                <div id="chart-apps-container">
+                  <!-- Rendered via JS -->
+                </div>
+              </div>
+            </div>
+
+            <!-- Recent Activity Stream -->
+            <div class="data-table-container" style="padding: 1.75rem 2rem;">
+              <h3 style="font-size: 1.15rem; color: var(--white); margin-bottom: 1rem;">Recent Platform Audit Log</h3>
+              <div id="admin-recent-activity-list">
+                <!-- Rendered via JS -->
+              </div>
+            </div>
+          </div><!-- END PANEL 1 -->
+
+
+          <!-- PANEL 2: TEACHER APPLICATIONS REVIEW -->
+          <div id="admin-panel-applications" class="admin-view-panel" style="display: none;">
+            <div class="admin-section-header">
+              <div>
+                <h1 class="admin-title">Teacher Credential Verification</h1>
+                <p style="font-size: 0.9rem; color: var(--charcoal-400);">Review educator applications, audit uploaded degrees, and approve or reject prospective tutors.</p>
+              </div>
+
+              <!-- Filter Tabs -->
+              <div style="display: flex; gap: 0.5rem;">
+                <button class="btn btn-secondary btn-sm app-filter-btn active" data-status="pending">Pending Review</button>
+                <button class="btn btn-secondary btn-sm app-filter-btn" data-status="approved">Approved</button>
+                <button class="btn btn-secondary btn-sm app-filter-btn" data-status="rejected">Rejected</button>
+                <button class="btn btn-secondary btn-sm app-filter-btn" data-status="all">All</button>
+              </div>
+            </div>
+
+            <div class="data-table-container">
+              <div style="overflow-x: auto;">
+                <table class="admin-table">
+                  <thead>
+                    <tr>
+                      <th>Applicant</th>
+                      <th>Degree & Institution</th>
+                      <th>Subjects</th>
+                      <th>Target Rate</th>
+                      <th>Status</th>
+                      <th style="text-align: right;">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody id="admin-apps-table-body">
+                    <!-- Populated via admin.js -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div><!-- END PANEL 2 -->
+
+
+          <!-- PANEL 3: APPROVED TUTORS MANAGEMENT -->
+          <div id="admin-panel-tutors" class="admin-view-panel" style="display: none;">
+            <div class="admin-section-header">
+              <div>
+                <h1 class="admin-title">Faculty Tutor Directory Management</h1>
+                <p style="font-size: 0.9rem; color: var(--charcoal-400);">Control public visibility, toggle active listings, and monitor educator performance ratings.</p>
+              </div>
+              <button class="btn btn-outline-gold btn-sm" onclick="Admin.loadTutors()">↻ Refresh</button>
+            </div>
+
+            <div class="data-table-container">
+              <div style="overflow-x: auto;">
+                <table class="admin-table">
+                  <thead>
+                    <tr>
+                      <th>Tutor Faculty Member</th>
+                      <th>Headline & Degree</th>
+                      <th>Rating & Sessions</th>
+                      <th>Rate</th>
+                      <th>Visibility</th>
+                      <th>Public Toggle</th>
+                    </tr>
+                  </thead>
+                  <tbody id="admin-tutors-table-body">
+                    <!-- Populated via admin.js -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div><!-- END PANEL 3 -->
+
+
+          <!-- PANEL 4: STUDENT ACCOUNTS MANAGEMENT -->
+          <div id="admin-panel-students" class="admin-view-panel" style="display: none;">
+            <div class="admin-section-header">
+              <div>
+                <h1 class="admin-title">Student Accounts Directory</h1>
+                <p style="font-size: 0.9rem; color: var(--charcoal-400);">Audit registered student profiles, total booked sessions, and account statuses.</p>
+              </div>
+              <button class="btn btn-outline-gold btn-sm" onclick="Admin.loadStudents()">↻ Refresh</button>
+            </div>
+
+            <div class="data-table-container">
+              <div style="overflow-x: auto;">
+                <table class="admin-table">
+                  <thead>
+                    <tr>
+                      <th>Student</th>
+                      <th>Grade & School</th>
+                      <th>Session Activity</th>
+                      <th>Status</th>
+                      <th>Account Action</th>
+                    </tr>
+                  </thead>
+                  <tbody id="admin-students-table-body">
+                    <!-- Populated via admin.js -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div><!-- END PANEL 4 -->
+
+
+          <!-- PANEL 5: REQUESTS AUDIT -->
+          <div id="admin-panel-requests" class="admin-view-panel" style="display: none;">
+            <div class="admin-section-header">
+              <div>
+                <h1 class="admin-title">Platform Tutoring Requests Audit</h1>
+                <p style="font-size: 0.9rem; color: var(--charcoal-400);">Full transaction and booking ledger across all students and educators.</p>
+              </div>
+              <button class="btn btn-outline-gold btn-sm" onclick="Admin.loadRequests()">↻ Refresh</button>
+            </div>
+
+            <div class="data-table-container">
+              <div style="overflow-x: auto;">
+                <table class="admin-table">
+                  <thead>
+                    <tr>
+                      <th>Student</th>
+                      <th>Tutor</th>
+                      <th>Subject</th>
+                      <th>Scheduled Date/Time</th>
+                      <th>Gross Total</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody id="admin-requests-table-body">
+                    <!-- Populated via admin.js -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div><!-- END PANEL 5 -->
+
+        </section>
+      </div>
+    </div><!-- END VIEW 5: ADMIN -->
+
+  </main>
+
+  <!-- =========================================
+       FOOTER
+       ========================================= -->
+  <footer class="site-footer">
+    <div class="container footer-grid">
+      <div class="footer-brand">
+        <a href="#home">
+          <img src="/assets/logo.svg" alt="Aviora Education" style="height: 42px;" />
+        </a>
+        <p>
+          Aviora Education is a next-generation academic mentorship platform dedicated to student excellence, personalized tutoring, and educator empowerment.
+        </p>
+        <div style="display: flex; gap: 0.5rem;">
+          <span class="badge-gold">Est. 2026</span>
+          <span class="badge-gold">Accredited Network</span>
+        </div>
+      </div>
+
+      <div>
+        <h4 class="footer-heading">Platform</h4>
+        <ul class="footer-links">
+          <li><a href="#home">Home</a></li>
+          <li><a href="#tutors">Browse All Tutors</a></li>
+          <li><a href="#how-it-works">How It Works</a></li>
+          <li><a href="#view-home" class="open-register-teacher-btn">Apply as a Tutor</a></li>
+          <li><a href="#tutors">Subject Directory</a></li>
+        </ul>
+      </div>
+
+      <div>
+        <h4 class="footer-heading">Top Subjects</h4>
+        <ul class="footer-links">
+          <li><a href="#tutors">AP Calculus AB/BC</a></li>
+          <li><a href="#tutors">Physics Mechanics</a></li>
+          <li><a href="#tutors">Organic Chemistry</a></li>
+          <li><a href="#tutors">Python Programming</a></li>
+          <li><a href="#tutors">College Admissions Essays</a></li>
+        </ul>
+      </div>
+
+      <div>
+        <h4 class="footer-heading">Portals & Policies</h4>
+        <ul class="footer-links">
+          <li><a href="#student-portal">Student Dashboard</a></li>
+          <li><a href="#teacher-portal">Teacher Portal</a></li>
+          <li><a href="#admin-portal">Admin Console</a></li>
+          <li><a href="#" class="open-policy-btn" data-policy="terms">Terms of Service</a></li>
+          <li><a href="#" class="open-policy-btn" data-policy="privacy">Privacy Notice</a></li>
+        </ul>
+      </div>
+
+      <div>
+        <h4 class="footer-heading">Academic Insights</h4>
+        <p style="font-size: 0.85rem; color: var(--charcoal-400); margin-bottom: 0.75rem;">
+          Subscribe to our monthly newsletter for study strategies and exam prep guides.
+        </p>
+        <form class="newsletter-form" id="newsletter-form">
+          <input type="email" class="newsletter-input" placeholder="Enter your email" required />
+          <button type="submit" class="btn btn-primary btn-sm">Join</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="container footer-bottom">
+      <div>
+        © 2026 Aviora Education Inc. All rights reserved. Your Potential. Your Path. Your Future.
+      </div>
+      <div style="display: flex; gap: 1.5rem;">
+        <a href="#" class="open-policy-btn" data-policy="privacy">Privacy Policy</a>
+        <a href="#" class="open-policy-btn" data-policy="terms">Terms of Service</a>
+        <a href="#admin-portal" style="color: var(--gold-400);">Admin Portal</a>
+      </div>
+    </div>
+  </footer>
+
+  <!-- =========================================
+       MODAL: AUTHENTICATION (LOGIN / REGISTER)
+       ========================================= -->
+  <div class="modal-overlay" id="auth-modal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 class="modal-title text-gold" id="auth-modal-title">Aviora Education Account</h3>
+        <button class="modal-close-btn" id="auth-modal-close">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <!-- 1-Click Fast Demo Switcher Card -->
+        <div class="demo-accounts-card">
+          <div class="demo-accounts-title">
+            <span>⚡</span> Quick 1-Click Demo Evaluation Fill:
+          </div>
+          <div class="demo-btns-row">
+            <button class="btn-demo-fill" id="demo-student-fill">Student (Lucas)</button>
+            <button class="btn-demo-fill" id="demo-teacher-fill">Teacher (Elena)</button>
+            <button class="btn-demo-fill" id="demo-admin-fill">Admin (Director)</button>
+          </div>
+        </div>
+
+        <!-- Auth Tabs (Sign In vs Register) -->
+        <div class="auth-tabs">
+          <div class="auth-tab active" id="tab-btn-login">Sign In</div>
+          <div class="auth-tab" id="tab-btn-register">Create Account</div>
+        </div>
+
+        <!-- LOGIN FORM -->
+        <div id="login-section">
+          <form id="login-form">
+            <div class="form-group">
+              <label class="form-label">Email Address</label>
+              <input type="email" id="login-email" class="form-control" placeholder="name@domain.com" required />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Password</label>
+              <input type="password" id="login-password" class="form-control" placeholder="Enter your password" required />
+            </div>
+            <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">Sign In to Aviora</button>
+          </form>
+        </div>
+
+        <!-- REGISTRATION FORM -->
+        <div id="register-section" style="display: none;">
+          <form id="register-form">
+            <div class="form-group">
+              <label class="form-label">Select Account Type</label>
+              <div style="display: flex; gap: 1.5rem; margin-top: 0.4rem;">
+                <label style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.9rem; color: var(--white); cursor: pointer;">
+                  <input type="radio" name="register_role" value="student" checked /> Student / Parent
+                </label>
+                <label style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.9rem; color: var(--gold-300); cursor: pointer;">
+                  <input type="radio" name="register_role" value="teacher" /> Prospective Tutor
+                </label>
+              </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+              <div class="form-group">
+                <label class="form-label">Full Name</label>
+                <input type="text" id="reg-name" class="form-control" placeholder="First & Last Name" required />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Email Address</label>
+                <input type="email" id="reg-email" class="form-control" placeholder="name@domain.com" required />
+              </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+              <div class="form-group">
+                <label class="form-label">Password (Min 6 chars)</label>
+                <input type="password" id="reg-password" class="form-control" placeholder="••••••••" required />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Phone Number (Optional)</label>
+                <input type="text" id="reg-phone" class="form-control" placeholder="+1 (555) 000-0000" />
+              </div>
+            </div>
+
+            <!-- Student Role Fields -->
+            <div id="student-extra-fields">
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div class="form-group">
+                  <label class="form-label">Grade Level</label>
+                  <select id="reg-student-grade" class="form-control">
+                    <option value="Grade 9 - High School">Grade 9 - High School</option>
+                    <option value="Grade 10 - High School">Grade 10 - High School</option>
+                    <option value="Grade 11 - High School" selected>Grade 11 - High School</option>
+                    <option value="Grade 12 - High School">Grade 12 - High School</option>
+                    <option value="College Undergraduate">College Undergraduate</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Current School / Academy</label>
+                  <input type="text" id="reg-student-school" class="form-control" placeholder="e.g. Westlake Academy" />
+                </div>
+              </div>
+            </div>
+
+            <!-- Teacher Role Fields -->
+            <div id="teacher-extra-fields" style="display: none;">
+              <div class="form-group">
+                <label class="form-label">Professional Headline</label>
+                <input type="text" id="reg-teacher-headline" class="form-control" placeholder="e.g. M.S. in Astrophysics | Caltech" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Target Subjects to Teach</label>
+                <input type="text" id="reg-teacher-subjects" class="form-control" placeholder="e.g. Physics, Calculus, SAT Math" />
+              </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">Create My Account</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- =========================================
+       MODAL: TUTOR PROFILE INSPECTION
+       ========================================= -->
+  <div class="modal-overlay" id="tutor-profile-modal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 class="modal-title text-gold">Educator Academic Profile</h3>
+        <button class="modal-close-btn" id="tutor-profile-modal-close">✕</button>
+      </div>
+      <div class="modal-body" id="tutor-profile-content">
+        <!-- Injected via tutors.js -->
+      </div>
+    </div>
+  </div>
+
+
+  <!-- =========================================
+       MODAL: BOOK TUTORING SESSION
+       ========================================= -->
+  <div class="modal-overlay" id="booking-modal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 class="modal-title text-gold">Book Tutoring Session</h3>
+        <button class="modal-close-btn" id="booking-modal-close">✕</button>
+      </div>
+      <div class="modal-body">
+        <div id="booking-tutor-header" style="margin-bottom: 1.5rem; padding-bottom: 1.25rem; border-bottom: 1px solid rgba(255,255,255,0.08);">
+          <!-- Injected via tutors.js -->
+        </div>
+
+        <form id="booking-form">
+          <div class="form-group">
+            <label class="form-label">Subject for Session</label>
+            <select id="booking-subject-select" class="form-control" required>
+              <!-- Populated dynamically -->
+            </select>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div class="form-group">
+              <label class="form-label">Requested Date</label>
+              <input type="date" id="booking-date" class="form-control" required />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Preferred Time Slot</label>
+              <select id="booking-time" class="form-control" required>
+                <option value="09:00 - 10:30">09:00 - 10:30 AM</option>
+                <option value="10:30 - 12:00">10:30 - 12:00 PM</option>
+                <option value="13:00 - 14:30">01:00 - 02:30 PM</option>
+                <option value="15:00 - 16:30" selected>03:00 - 04:30 PM</option>
+                <option value="17:00 - 18:30">05:00 - 06:30 PM</option>
+                <option value="19:00 - 20:30">07:00 - 08:30 PM</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Session Duration</label>
+            <select id="booking-duration" class="form-control" required>
+              <option value="1.0">1.0 Hour</option>
+              <option value="1.5" selected>1.5 Hours (Recommended)</option>
+              <option value="2.0">2.0 Hours (Intensive)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Specific Topics / Problem Sets (Optional)</label>
+            <textarea id="booking-notes" class="form-control" rows="2" placeholder="e.g. Preparing for trigonometric substitutions exam next Tuesday..."></textarea>
+          </div>
+
+          <!-- Total Calculation Display -->
+          <div style="background: rgba(229, 169, 60, 0.08); border: 1px solid rgba(229, 169, 60, 0.25); border-radius: var(--radius-md); padding: 1rem 1.25rem; display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem;">
+            <div>
+              <div style="font-size: 0.8rem; color: var(--charcoal-300);">Calculated Session Total:</div>
+              <div style="font-size: 0.75rem; color: var(--charcoal-400);">Hourly rate × duration</div>
+            </div>
+            <div id="booking-total-cost" class="text-gold" style="font-size: 1.6rem; font-weight: 800; font-family: var(--font-heading);">
+              $0.00
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-primary" style="width: 100%;">Confirm Tutoring Request</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- =========================================
+       MODAL: STUDENT REVIEW SUBMISSION
+       ========================================= -->
+  <div class="modal-overlay" id="review-modal">
+    <div class="modal-card" style="max-width: 500px;">
+      <div class="modal-header">
+        <h3 class="modal-title text-gold" id="review-modal-title">Review Tutoring Session</h3>
+        <button class="modal-close-btn" id="review-modal-close">✕</button>
+      </div>
+      <div class="modal-body">
+        <form id="review-form">
+          <input type="hidden" id="review-rating-val" value="5" />
+          
+          <div style="text-align: center; margin-bottom: 1.5rem;">
+            <label class="form-label" style="margin-bottom: 0.75rem;">Select Rating</label>
+            <div style="font-size: 2.2rem; cursor: pointer; display: flex; justify-content: center; gap: 0.5rem;" id="star-picker-row">
+              <span class="star-picker-icon" data-rating="1" style="color: #F59E0B;">★</span>
+              <span class="star-picker-icon" data-rating="2" style="color: #F59E0B;">★</span>
+              <span class="star-picker-icon" data-rating="3" style="color: #F59E0B;">★</span>
+              <span class="star-picker-icon" data-rating="4" style="color: #F59E0B;">★</span>
+              <span class="star-picker-icon" data-rating="5" style="color: #F59E0B;">★</span>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Review Comment</label>
+            <textarea id="review-comment" class="form-control" rows="4" placeholder="How was your tutor's explanation, pacing, and approach? Your feedback helps the learning community." required></textarea>
+          </div>
+
+          <button type="submit" class="btn btn-primary" style="width: 100%;">Submit Review</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- =========================================
+       MODAL: ADMIN APPLICATION INSPECTION
+       ========================================= -->
+  <div class="modal-overlay" id="admin-review-modal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 class="modal-title text-gold">Audit Teacher Application</h3>
+        <button class="modal-close-btn" id="admin-review-modal-close">✕</button>
+      </div>
+      <div class="modal-body">
+        <div id="admin-review-details">
+          <!-- Injected via admin.js -->
+        </div>
+
+        <div class="form-group" style="margin-top: 1.5rem;">
+          <label class="form-label">Administrative Decision Notes (Visible to Applicant)</label>
+          <textarea id="admin-review-notes" class="form-control" rows="2" placeholder="e.g. Academic credentials verified via registrar. Excellent syllabus."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary btn-sm" id="admin-action-reject-btn">Reject with Note</button>
+        <button class="btn btn-primary btn-sm" id="admin-action-approve-btn">✓ Approve & Publish Tutor</button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- =========================================
+       MODAL: CONFIRMATION DIALOG
+       ========================================= -->
+  <div class="modal-overlay" id="confirm-modal">
+    <div class="modal-card" style="max-width: 440px;">
+      <div class="modal-header">
+        <h3 class="modal-title text-gold" id="confirm-modal-title">Confirm Action</h3>
+      </div>
+      <div class="modal-body">
+        <p id="confirm-modal-msg" style="color: var(--charcoal-200); font-size: 0.95rem; line-height: 1.5;">Are you sure you want to proceed?</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary btn-sm" id="confirm-modal-cancel-btn">Cancel</button>
+        <button class="btn btn-primary btn-sm" id="confirm-modal-action-btn">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- =========================================
+       MODAL: POLICY VIEWER (TERMS & PRIVACY)
+       ========================================= -->
+  <div class="modal-overlay" id="policy-modal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 class="modal-title text-gold" id="policy-modal-title">Aviora Policies</h3>
+        <button class="modal-close-btn" id="policy-modal-close">✕</button>
+      </div>
+      <div class="modal-body" id="policy-modal-content">
+        <!-- Injected via main.js -->
+      </div>
+    </div>
+  </div>
+
+
+  <!-- Toast Notification Container -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- JavaScript Modules -->
+  <script src="/js/api.js"></script>
+  <script src="/js/auth.js"></script>
+  <script src="/js/tutors.js"></script>
+  <script src="/js/student.js"></script>
+  <script src="/js/teacher.js"></script>
+  <script src="/js/admin.js"></script>
+  <script src="/js/main.js"></script>
+</body>
+</html>

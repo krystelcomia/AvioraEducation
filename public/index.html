@@ -37,21 +37,25 @@
       </a>
 
       <!-- Main Navigation Links -->
-      <nav>
+      <!-- Main Navigation Links -->
+      <nav class="nav-menu">
         <ul class="nav-links" id="main-nav-links">
           <li><a href="#home" class="nav-link active" id="nav-link-home">Home</a></li>
           <li><a href="#about" class="nav-link" id="nav-link-about">About</a></li>
           <li><a href="#tutors" class="nav-link" id="nav-link-tutors">Find Tutors</a></li>
           <li><a href="#how-it-works" class="nav-link" id="nav-link-how">How It Works</a></li>
+          <li><a href="#book-now" class="nav-link" id="nav-link-book">Book Now</a></li>
+          <li><a href="#subscriptions" class="nav-link" id="nav-link-subscriptions">Subscriptions</a></li>
           <li id="nav-portal-links"></li>
         </ul>
       </nav>
 
       <!-- Nav Actions & User Bar -->
       <div class="nav-actions">
-        <!-- Guest Actions -->
-        <div id="nav-guest-actions" style="display: flex; align-items: center; gap: 0.75rem;">
-          <a href="#login" class="btn btn-primary btn-sm open-login-btn" id="nav-login-btn">Sign In</a>
+        <!-- Guest Actions: Unboxed Log In & Sign Up links (matching header items like Home) -->
+        <div id="nav-guest-actions" style="display: flex; align-items: center; gap: 1.6rem;">
+          <a href="#login" class="nav-link open-login-btn" id="nav-login-btn">Log In</a>
+          <a href="#signup" class="nav-link open-signup-btn" id="nav-signup-btn">Sign Up</a>
         </div>
 
         <!-- Authenticated User Actions -->
@@ -904,7 +908,7 @@
         </div>
 
         <!-- SECTION: SUBSCRIPTIONS & MEMBERSHIP PLANS -->
-        <div style="margin-bottom: 4.5rem;">
+        <div style="margin-bottom: 4.5rem;" id="subscriptions-section">
           <div style="text-align: center; margin-bottom: 2.5rem;">
             <span class="badge-gold">Membership & Packages</span>
             <h2 class="section-title" style="margin-top: 0.5rem; font-size: 2.2rem;">Flexible Subscription & Session Plans</h2>
@@ -1032,27 +1036,27 @@
         </div>
 
         <!-- FAQ Section on Process & Billing -->
-        <div style="background: rgba(18, 20, 27, 0.7); border: 1px solid rgba(255,255,255,0.06); border-radius: 16px; padding: 2.5rem;">
+        <div style="background: var(--bg-surface); border: 1px solid var(--border-light); border-radius: 16px; padding: 2.5rem; box-shadow: var(--shadow-sm);">
           <div style="text-align: center; margin-bottom: 2rem;">
-            <h3 style="font-size: 1.5rem; font-weight: 700; color: #fff; margin-bottom: 0.5rem;">Frequently Asked Questions</h3>
+            <h3 style="font-size: 1.5rem; font-weight: 700; color: var(--charcoal-900); margin-bottom: 0.5rem;">Frequently Asked Questions</h3>
             <p style="color: var(--text-secondary); font-size: 0.9rem;">Everything you need to know about billing, scheduling, and tutor matchmaking.</p>
           </div>
 
           <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.75rem;">
-            <div style="padding: 1rem; border-left: 2px solid var(--gold-primary);">
-              <h4 style="font-size: 1rem; font-weight: 600; color: #fff; margin-bottom: 0.4rem;">Can I switch between plans at any time?</h4>
+            <div style="padding: 1rem; border-left: 2px solid var(--gold-500);">
+              <h4 style="font-size: 1rem; font-weight: 600; color: var(--charcoal-900); margin-bottom: 0.4rem;">Can I switch between plans at any time?</h4>
               <p style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.6; margin: 0;">Yes. You can upgrade, downgrade, or cancel your monthly membership at any time with no lock-in fees or penalties.</p>
             </div>
-            <div style="padding: 1rem; border-left: 2px solid var(--gold-primary);">
-              <h4 style="font-size: 1rem; font-weight: 600; color: #fff; margin-bottom: 0.4rem;">What if a session doesn't meet my expectations?</h4>
+            <div style="padding: 1rem; border-left: 2px solid var(--gold-500);">
+              <h4 style="font-size: 1rem; font-weight: 600; color: var(--charcoal-900); margin-bottom: 0.4rem;">What if a session doesn't meet my expectations?</h4>
               <p style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.6; margin: 0;">We offer a 100% Satisfaction Guarantee. If you are not satisfied with your first session, we will credit your account in full or reassign you to another educator.</p>
             </div>
-            <div style="padding: 1rem; border-left: 2px solid var(--gold-primary);">
-              <h4 style="font-size: 1rem; font-weight: 600; color: #fff; margin-bottom: 0.4rem;">Do unused monthly hours roll over?</h4>
+            <div style="padding: 1rem; border-left: 2px solid var(--gold-500);">
+              <h4 style="font-size: 1rem; font-weight: 600; color: var(--charcoal-900); margin-bottom: 0.4rem;">Do unused monthly hours roll over?</h4>
               <p style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.6; margin: 0;">Yes. In the Scholar and Honors plans, unused tutoring hours automatically roll over for up to 60 days as long as your membership is active.</p>
             </div>
-            <div style="padding: 1rem; border-left: 2px solid var(--gold-primary);">
-              <h4 style="font-size: 1rem; font-weight: 600; color: #fff; margin-bottom: 0.4rem;">How are tutors paid?</h4>
+            <div style="padding: 1rem; border-left: 2px solid var(--gold-500);">
+              <h4 style="font-size: 1rem; font-weight: 600; color: var(--charcoal-900); margin-bottom: 0.4rem;">How are tutors paid?</h4>
               <p style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.6; margin: 0;">Educators receive direct electronic payouts within 2 business days of session completion and verification, ensuring top-tier reliability.</p>
             </div>
           </div>

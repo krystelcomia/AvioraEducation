@@ -127,6 +127,18 @@ const Auth = {
       });
     });
 
+    // Open Sign Up / Navigate to Register
+    document.querySelectorAll('.open-signup-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        if (btn.tagName.toLowerCase() === 'a' && btn.getAttribute('href') === '#signup') {
+          return;
+        }
+        e.preventDefault();
+        window.location.hash = '#signup';
+        this.switchPageTab('register');
+      });
+    });
+
     document.querySelectorAll('.open-register-student-btn').forEach(btn => {
       btn.addEventListener('click', (e) => {
         e.preventDefault();

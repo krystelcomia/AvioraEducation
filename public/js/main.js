@@ -145,10 +145,36 @@ const Router = {
       const view = document.getElementById('view-how-it-works');
       if (view) view.style.display = 'block';
       window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else if (hash === '#subscriptions') {
+      const view = document.getElementById('view-how-it-works');
+      if (view) view.style.display = 'block';
+      const subSection = document.getElementById('subscriptions-section');
+      if (subSection) {
+        setTimeout(() => {
+          subSection.scrollIntoView({ behavior: 'smooth' });
+        }, 80);
+      } else {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    } else if (hash === '#book-now') {
+      const view = document.getElementById('view-tutors');
+      if (view) view.style.display = 'block';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      await Tutors.fetchTutors();
     } else if (hash === '#login') {
       const view = document.getElementById('view-login');
       if (view) view.style.display = 'block';
       window.scrollTo({ top: 0, behavior: 'smooth' });
+      if (typeof Auth !== 'undefined' && Auth.switchPageTab) {
+        Auth.switchPageTab('login');
+      }
+    } else if (hash === '#signup') {
+      const view = document.getElementById('view-login');
+      if (view) view.style.display = 'block';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      if (typeof Auth !== 'undefined' && Auth.switchPageTab) {
+        Auth.switchPageTab('register');
+      }
     } else if (hash === '#tutors') {
       const view = document.getElementById('view-tutors');
       if (view) view.style.display = 'block';
@@ -200,10 +226,10 @@ document.addEventListener('DOMContentLoaded', async () => {
       navLinks.style.position = 'absolute';
       navLinks.style.top = 'var(--header-height)';
       navLinks.style.left = '0';
-      navLinks.style.background = 'rgba(15, 17, 22, 0.98)';
+      navLinks.style.background = 'rgba(250, 247, 242, 0.98)';
       navLinks.style.padding = '1.5rem';
-      navLinks.style.borderBottom = '1px solid rgba(229, 169, 60, 0.2)';
-      navLinks.style.boxShadow = '0 16px 36px rgba(0, 0, 0, 0.5)';
+      navLinks.style.borderBottom = '1px solid rgba(198, 138, 40, 0.2)';
+      navLinks.style.boxShadow = '0 16px 36px rgba(0, 0, 0, 0.08)';
     });
   }
 

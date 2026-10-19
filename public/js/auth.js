@@ -346,15 +346,36 @@ const Auth = {
   setupSocialAuth() {
     // Google Auth Triggers
     const pageGoogleBtn = document.getElementById('page-google-auth-btn');
+    const signupGoogleBtn = document.getElementById('signup-google-auth-btn');
     const modalGoogleBtn = document.getElementById('modal-google-auth-btn');
     if (pageGoogleBtn) pageGoogleBtn.addEventListener('click', () => this.openOAuthChoice('google'));
+    if (signupGoogleBtn) signupGoogleBtn.addEventListener('click', () => this.openOAuthChoice('google'));
     if (modalGoogleBtn) modalGoogleBtn.addEventListener('click', () => this.openOAuthChoice('google'));
 
     // Facebook Auth Triggers
     const pageFbBtn = document.getElementById('page-facebook-auth-btn');
+    const signupFbBtn = document.getElementById('signup-facebook-auth-btn');
     const modalFbBtn = document.getElementById('modal-facebook-auth-btn');
     if (pageFbBtn) pageFbBtn.addEventListener('click', () => this.openOAuthChoice('facebook'));
+    if (signupFbBtn) signupFbBtn.addEventListener('click', () => this.openOAuthChoice('facebook'));
     if (modalFbBtn) modalFbBtn.addEventListener('click', () => this.openOAuthChoice('facebook'));
+
+    // Navigation redirects between login and signup
+    const signupToLogin = document.getElementById('signup-to-login-link');
+    if (signupToLogin) {
+      signupToLogin.addEventListener('click', (e) => {
+        e.preventDefault();
+        window.location.hash = '#login';
+      });
+    }
+
+    const loginToSignup = document.getElementById('login-to-signup-link');
+    if (loginToSignup) {
+      loginToSignup.addEventListener('click', (e) => {
+        e.preventDefault();
+        window.location.hash = '#signup';
+      });
+    }
 
     // OAuth Modal Close
     const closeBtn = document.getElementById('oauth-modal-close');
@@ -399,14 +420,25 @@ const Auth = {
     modal.dataset.provider = provider;
 
     const isGoogle = provider === 'google';
+    const isSignup = window.location.hash === '#signup';
 
     if (heading) {
-      heading.textContent = isGoogle ? 'Sign In with Google' : 'Sign In with Facebook';
+      if (isSignup) {
+        heading.textContent = isGoogle ? 'Create Account with Google' : 'Create Account with Facebook';
+      } else {
+        heading.textContent = isGoogle ? 'Sign In with Google' : 'Sign In with Facebook';
+      }
     }
     if (sub) {
-      sub.textContent = isGoogle
-        ? 'Choose a Google account to continue to Aviora Education:'
-        : 'Choose a Facebook account to continue to Aviora Education:';
+      if (isSignup) {
+        sub.textContent = isGoogle
+          ? 'Choose a Google account to create your Aviora Education account:'
+          : 'Choose a Facebook account to create your Aviora Education account:';
+      } else {
+        sub.textContent = isGoogle
+          ? 'Choose a Google account to continue to Aviora Education:'
+          : 'Choose a Facebook account to continue to Aviora Education:';
+      }
     }
     if (icon) {
       icon.innerHTML = isGoogle

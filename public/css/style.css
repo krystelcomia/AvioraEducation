@@ -1,11 +1,29 @@
 /* =========================================
    AVIORA EDUCATION - GLOBAL STYLES & LAYOUT
+   Pristine White Luxury Theme with Gold Accents
    ========================================= */
 
 *, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
+}
+
+/* Hide scrollbar completely while maintaining full scrollability */
+html, body {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+*::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
+
+* {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 
 html {
@@ -16,12 +34,12 @@ html {
 
 body {
   font-family: var(--font-body);
-  color: var(--white);
-  background-color: var(--charcoal-950);
+  color: var(--text-body);
+  background-color: var(--bg-white);
   background-image: 
-    radial-gradient(circle at 50% 0%, rgba(229, 169, 60, 0.14) 0%, transparent 60%),
-    radial-gradient(circle at 90% 40%, rgba(229, 169, 60, 0.05) 0%, transparent 50%),
-    radial-gradient(circle at 10% 80%, rgba(212, 149, 32, 0.04) 0%, transparent 50%);
+    radial-gradient(circle at 50% 0%, rgba(229, 169, 60, 0.08) 0%, transparent 55%),
+    radial-gradient(circle at 85% 30%, rgba(229, 169, 60, 0.04) 0%, transparent 45%),
+    radial-gradient(circle at 15% 75%, rgba(212, 149, 32, 0.03) 0%, transparent 45%);
   background-attachment: fixed;
   line-height: 1.6;
   min-height: 100vh;
@@ -35,13 +53,14 @@ h1, h2, h3, h4, h5, h6 {
   font-weight: 700;
   line-height: 1.2;
   letter-spacing: -0.02em;
+  color: var(--text-main);
 }
 
 h1 { font-size: clamp(2.5rem, 5vw, 4rem); font-weight: 800; }
 h2 { font-size: clamp(2rem, 3.5vw, 2.75rem); }
 h3 { font-size: 1.5rem; }
 h4 { font-size: 1.25rem; }
-p { color: var(--charcoal-300); }
+p { color: var(--text-muted); }
 a { text-decoration: none; color: inherit; transition: color var(--transition-fast); }
 
 /* Utility Container */
@@ -63,14 +82,14 @@ a { text-decoration: none; color: inherit; transition: color var(--transition-fa
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.35rem 0.9rem;
+  padding: 0.35rem 0.95rem;
   background: rgba(229, 169, 60, 0.12);
-  border: 1px solid rgba(229, 169, 60, 0.3);
+  border: 1px solid rgba(229, 169, 60, 0.35);
   border-radius: var(--radius-full);
-  color: var(--gold-300);
+  color: var(--gold-800);
   font-size: 0.825rem;
-  font-weight: 600;
-  letter-spacing: 0.02em;
+  font-weight: 700;
+  letter-spacing: 0.03em;
   text-transform: uppercase;
 }
 
@@ -108,33 +127,34 @@ a { text-decoration: none; color: inherit; transition: color var(--transition-fa
 }
 
 .btn-secondary {
-  background: rgba(255, 255, 255, 0.06);
-  color: var(--white);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  backdrop-filter: blur(8px);
+  background: #FFFFFF;
+  color: var(--text-main);
+  border: 1.5px solid var(--border-subtle);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
 .btn-secondary:hover {
-  background: rgba(255, 255, 255, 0.12);
-  border-color: rgba(229, 169, 60, 0.4);
+  background: var(--bg-cream);
+  border-color: rgba(229, 169, 60, 0.5);
   transform: translateY(-2px);
-  color: var(--gold-200);
+  color: var(--gold-800);
+  box-shadow: 0 4px 14px rgba(229, 169, 60, 0.15);
 }
 
 .btn-outline-gold {
   background: transparent;
-  color: var(--gold-400);
+  color: var(--gold-800);
   border: 1.5px solid var(--gold-500);
 }
 
 .btn-outline-gold:hover {
-  background: rgba(229, 169, 60, 0.15);
-  color: var(--gold-300);
+  background: rgba(229, 169, 60, 0.12);
+  color: var(--gold-900);
   transform: translateY(-2px);
 }
 
 .btn-sm {
-  padding: 0.5rem 1.1rem;
+  padding: 0.5rem 1.15rem;
   font-size: 0.85rem;
 }
 
@@ -153,16 +173,16 @@ a { text-decoration: none; color: inherit; transition: color var(--transition-fa
   right: 0;
   height: var(--header-height);
   z-index: 1000;
-  background: rgba(15, 17, 22, 0.85);
+  background: rgba(255, 255, 255, 0.92);
   backdrop-filter: blur(16px);
-  border-bottom: 1px solid rgba(229, 169, 60, 0.15);
+  border-bottom: 1px solid rgba(229, 169, 60, 0.2);
   transition: all var(--transition-smooth);
 }
 
 .site-header.scrolled {
-  background: rgba(12, 14, 18, 0.95);
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
-  border-bottom-color: rgba(229, 169, 60, 0.25);
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+  border-bottom-color: rgba(229, 169, 60, 0.3);
 }
 
 .nav-container {
@@ -187,20 +207,20 @@ a { text-decoration: none; color: inherit; transition: color var(--transition-fa
 .nav-links {
   display: flex;
   align-items: center;
-  gap: 2rem;
+  gap: 2.25rem;
   list-style: none;
 }
 
 .nav-link {
-  color: var(--charcoal-300);
-  font-weight: 500;
+  color: var(--text-body);
+  font-weight: 600;
   font-size: 0.95rem;
   position: relative;
   padding: 0.5rem 0;
 }
 
 .nav-link:hover, .nav-link.active {
-  color: var(--gold-300);
+  color: var(--gold-700);
 }
 
 .nav-link.active::after {
@@ -209,7 +229,7 @@ a { text-decoration: none; color: inherit; transition: color var(--transition-fa
   bottom: 0;
   left: 0;
   width: 100%;
-  height: 2px;
+  height: 2.5px;
   background: var(--gradient-gold);
   border-radius: var(--radius-full);
 }
@@ -220,47 +240,12 @@ a { text-decoration: none; color: inherit; transition: color var(--transition-fa
   gap: 1rem;
 }
 
-/* Demo Role Switcher Bar */
-.demo-role-pill {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  background: rgba(229, 169, 60, 0.08);
-  border: 1px solid rgba(229, 169, 60, 0.25);
-  padding: 0.3rem 0.6rem;
-  border-radius: var(--radius-full);
-  font-size: 0.75rem;
-  color: var(--gold-300);
-}
-
-.demo-role-btn {
-  background: transparent;
-  border: none;
-  color: var(--charcoal-400);
-  font-size: 0.75rem;
-  font-weight: 600;
-  cursor: pointer;
-  padding: 0.2rem 0.5rem;
-  border-radius: var(--radius-full);
-  transition: all var(--transition-fast);
-}
-
-.demo-role-btn:hover {
-  color: var(--white);
-  background: rgba(255, 255, 255, 0.1);
-}
-
-.demo-role-btn.active {
-  background: var(--gold-500);
-  color: #14151B;
-}
-
 /* Notification Bell */
 .notification-bell {
   position: relative;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: var(--charcoal-300);
+  background: var(--bg-cream);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-body);
   width: 40px;
   height: 40px;
   border-radius: 50%;
@@ -273,8 +258,8 @@ a { text-decoration: none; color: inherit; transition: color var(--transition-fa
 
 .notification-bell:hover {
   background: rgba(229, 169, 60, 0.15);
-  color: var(--gold-300);
-  border-color: rgba(229, 169, 60, 0.3);
+  color: var(--gold-800);
+  border-color: rgba(229, 169, 60, 0.4);
 }
 
 .bell-badge {
@@ -291,7 +276,7 @@ a { text-decoration: none; color: inherit; transition: color var(--transition-fa
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 2px solid var(--charcoal-900);
+  border: 2px solid #FFFFFF;
 }
 
 /* User Profile Nav Dropdown */
@@ -299,9 +284,9 @@ a { text-decoration: none; color: inherit; transition: color var(--transition-fa
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  padding: 0.35rem 0.8rem 0.35rem 0.35rem;
+  background: var(--bg-cream);
+  border: 1px solid var(--border-subtle);
+  padding: 0.35rem 0.85rem 0.35rem 0.35rem;
   border-radius: var(--radius-full);
   cursor: pointer;
   transition: all var(--transition-fast);
@@ -309,7 +294,7 @@ a { text-decoration: none; color: inherit; transition: color var(--transition-fa
 
 .user-menu-trigger:hover {
   border-color: rgba(229, 169, 60, 0.4);
-  background: rgba(229, 169, 60, 0.1);
+  background: rgba(229, 169, 60, 0.08);
 }
 
 .user-avatar-sm {
@@ -322,8 +307,8 @@ a { text-decoration: none; color: inherit; transition: color var(--transition-fa
 
 .user-name-sm {
   font-size: 0.875rem;
-  font-weight: 600;
-  color: var(--white);
+  font-weight: 700;
+  color: var(--text-main);
   max-width: 120px;
   white-space: nowrap;
   overflow: hidden;
@@ -334,7 +319,7 @@ a { text-decoration: none; color: inherit; transition: color var(--transition-fa
   display: none;
   background: transparent;
   border: none;
-  color: var(--white);
+  color: var(--text-main);
   font-size: 1.5rem;
   cursor: pointer;
 }
@@ -344,9 +329,10 @@ a { text-decoration: none; color: inherit; transition: color var(--transition-fa
    ========================================= */
 .hero-section {
   padding-top: calc(var(--header-height) + 3.5rem);
-  padding-bottom: 5rem;
+  padding-bottom: 5.5rem;
   position: relative;
   overflow: hidden;
+  background: radial-gradient(circle at 60% 25%, rgba(229, 169, 60, 0.09) 0%, transparent 60%), #FFFFFF;
 }
 
 .hero-grid {
@@ -364,12 +350,13 @@ a { text-decoration: none; color: inherit; transition: color var(--transition-fa
 .hero-headline {
   margin: 1.25rem 0 1.5rem;
   line-height: 1.12;
+  color: var(--text-main);
 }
 
 .hero-subtitle {
   font-size: 1.15rem;
   line-height: 1.7;
-  color: var(--charcoal-300);
+  color: var(--text-body);
   margin-bottom: 2.25rem;
   max-width: 580px;
 }
@@ -387,7 +374,7 @@ a { text-decoration: none; color: inherit; transition: color var(--transition-fa
   grid-template-columns: repeat(3, 1fr);
   gap: 1.5rem;
   padding-top: 2rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 1px solid var(--border-subtle);
 }
 
 .trust-metric-item {
@@ -399,12 +386,12 @@ a { text-decoration: none; color: inherit; transition: color var(--transition-fa
   font-family: var(--font-heading);
   font-size: 1.85rem;
   font-weight: 800;
-  color: var(--white);
+  color: var(--text-main);
 }
 
 .metric-label {
   font-size: 0.85rem;
-  color: var(--charcoal-400);
+  color: var(--text-muted);
   margin-top: 0.15rem;
 }
 
@@ -421,7 +408,7 @@ a { text-decoration: none; color: inherit; transition: color var(--transition-fa
   width: 480px;
   height: 480px;
   border-radius: 50%;
-  border: 1px dashed rgba(229, 169, 60, 0.25);
+  border: 1px dashed rgba(229, 169, 60, 0.35);
   animation: rotateSlow 40s linear infinite;
   pointer-events: none;
 }
@@ -431,7 +418,7 @@ a { text-decoration: none; color: inherit; transition: color var(--transition-fa
   width: 560px;
   height: 560px;
   border-radius: 50%;
-  border: 1px solid rgba(229, 169, 60, 0.1);
+  border: 1px solid rgba(229, 169, 60, 0.15);
   pointer-events: none;
 }
 
@@ -444,9 +431,9 @@ a { text-decoration: none; color: inherit; transition: color var(--transition-fa
   position: relative;
   border-radius: var(--radius-xl);
   overflow: hidden;
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5), var(--shadow-gold);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.12), var(--shadow-gold);
   border: 1px solid rgba(229, 169, 60, 0.35);
-  background: var(--charcoal-900);
+  background: #FFFFFF;
   width: 100%;
   max-width: 520px;
 }
@@ -465,12 +452,12 @@ a { text-decoration: none; color: inherit; transition: color var(--transition-fa
 /* Floating Overlay Cards */
 .floating-badge-card {
   position: absolute;
-  background: rgba(24, 28, 38, 0.88);
+  background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(14px);
-  border: 1px solid rgba(229, 169, 60, 0.3);
+  border: 1px solid rgba(229, 169, 60, 0.35);
   border-radius: var(--radius-lg);
   padding: 0.85rem 1.25rem;
-  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.4), var(--shadow-gold);
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.08), 0 4px 12px rgba(229, 169, 60, 0.12);
   display: flex;
   align-items: center;
   gap: 0.85rem;
@@ -511,12 +498,12 @@ a { text-decoration: none; color: inherit; transition: color var(--transition-fa
 .floating-card-title {
   font-size: 0.95rem;
   font-weight: 700;
-  color: var(--white);
+  color: var(--text-main);
 }
 
 .floating-card-sub {
   font-size: 0.775rem;
-  color: var(--gold-300);
+  color: var(--gold-800);
 }
 
 /* =========================================
@@ -535,11 +522,12 @@ a { text-decoration: none; color: inherit; transition: color var(--transition-fa
 
 .section-title {
   margin: 0.85rem 0 1rem;
+  color: var(--text-main);
 }
 
 .section-desc {
   font-size: 1.05rem;
-  color: var(--charcoal-300);
+  color: var(--text-body);
 }
 
 .categories-grid {
@@ -549,8 +537,8 @@ a { text-decoration: none; color: inherit; transition: color var(--transition-fa
 }
 
 .category-card {
-  background: var(--gradient-dark-card);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: #FFFFFF;
+  border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
   padding: 2rem 1.75rem;
   text-align: left;
@@ -558,6 +546,7 @@ a { text-decoration: none; color: inherit; transition: color var(--transition-fa
   cursor: pointer;
   position: relative;
   overflow: hidden;
+  box-shadow: var(--shadow-sm);
 }
 
 .category-card::before {
@@ -566,7 +555,7 @@ a { text-decoration: none; color: inherit; transition: color var(--transition-fa
   top: 0;
   left: 0;
   right: 0;
-  height: 3px;
+  height: 3.5px;
   background: var(--gradient-gold);
   opacity: 0;
   transition: opacity var(--transition-fast);
@@ -574,8 +563,8 @@ a { text-decoration: none; color: inherit; transition: color var(--transition-fa
 
 .category-card:hover {
   transform: translateY(-6px);
-  border-color: rgba(229, 169, 60, 0.35);
-  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.3), var(--shadow-gold);
+  border-color: rgba(229, 169, 60, 0.45);
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.07), 0 4px 12px rgba(229, 169, 60, 0.15);
 }
 
 .category-card:hover::before {
@@ -587,25 +576,25 @@ a { text-decoration: none; color: inherit; transition: color var(--transition-fa
   height: 52px;
   border-radius: var(--radius-md);
   background: rgba(229, 169, 60, 0.12);
-  border: 1px solid rgba(229, 169, 60, 0.25);
+  border: 1px solid rgba(229, 169, 60, 0.3);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 1.4rem;
-  color: var(--gold-400);
+  color: var(--gold-700);
   margin-bottom: 1.25rem;
 }
 
 .category-name {
   font-size: 1.2rem;
   font-weight: 700;
-  color: var(--white);
+  color: var(--text-main);
   margin-bottom: 0.5rem;
 }
 
 .category-subjects {
   font-size: 0.85rem;
-  color: var(--charcoal-400);
+  color: var(--text-muted);
   line-height: 1.5;
   margin-bottom: 1rem;
 }
@@ -615,8 +604,8 @@ a { text-decoration: none; color: inherit; transition: color var(--transition-fa
   align-items: center;
   justify-content: space-between;
   font-size: 0.8rem;
-  color: var(--gold-300);
-  font-weight: 600;
+  color: var(--gold-800);
+  font-weight: 700;
 }
 
 /* =========================================
@@ -632,9 +621,9 @@ a { text-decoration: none; color: inherit; transition: color var(--transition-fa
 
 .tab-btn {
   padding: 0.75rem 1.75rem;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  color: var(--charcoal-300);
+  background: var(--bg-cream);
+  border: 1.5px solid var(--border-subtle);
+  color: var(--text-body);
   border-radius: var(--radius-full);
   font-family: var(--font-heading);
   font-weight: 600;
@@ -644,8 +633,8 @@ a { text-decoration: none; color: inherit; transition: color var(--transition-fa
 }
 
 .tab-btn:hover {
-  color: var(--white);
-  border-color: rgba(229, 169, 60, 0.3);
+  color: var(--gold-800);
+  border-color: rgba(229, 169, 60, 0.4);
 }
 
 .tab-btn.active {
@@ -663,17 +652,19 @@ a { text-decoration: none; color: inherit; transition: color var(--transition-fa
 }
 
 .step-card {
-  background: var(--gradient-dark-card);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: #FFFFFF;
+  border: 1px solid var(--border-subtle);
   border-radius: var(--radius-xl);
   padding: 2.5rem 2rem;
   position: relative;
   transition: transform var(--transition-smooth);
+  box-shadow: var(--shadow-sm);
 }
 
 .step-card:hover {
   transform: translateY(-5px);
-  border-color: rgba(229, 169, 60, 0.3);
+  border-color: rgba(229, 169, 60, 0.4);
+  box-shadow: var(--shadow-md);
 }
 
 .step-number-badge {
@@ -689,13 +680,13 @@ a { text-decoration: none; color: inherit; transition: color var(--transition-fa
 
 .step-title {
   font-size: 1.25rem;
-  color: var(--white);
+  color: var(--text-main);
   margin-bottom: 0.75rem;
 }
 
 .step-desc {
   font-size: 0.925rem;
-  color: var(--charcoal-300);
+  color: var(--text-muted);
   line-height: 1.6;
 }
 
@@ -709,19 +700,20 @@ a { text-decoration: none; color: inherit; transition: color var(--transition-fa
 }
 
 .benefit-column {
-  background: var(--charcoal-850);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--bg-cream);
+  border: 1px solid var(--border-subtle);
   border-radius: var(--radius-xl);
   padding: 3rem 2.5rem;
   position: relative;
+  box-shadow: var(--shadow-sm);
 }
 
 .benefit-column.student-benefit {
-  border-top: 3px solid var(--gold-400);
+  border-top: 4px solid var(--gold-500);
 }
 
 .benefit-column.teacher-benefit {
-  border-top: 3px solid var(--gold-600);
+  border-top: 4px solid var(--gold-700);
 }
 
 .benefit-col-title {
@@ -730,6 +722,7 @@ a { text-decoration: none; color: inherit; transition: color var(--transition-fa
   display: flex;
   align-items: center;
   gap: 0.75rem;
+  color: var(--text-main);
 }
 
 .benefit-list {
@@ -749,25 +742,26 @@ a { text-decoration: none; color: inherit; transition: color var(--transition-fa
   width: 22px;
   height: 22px;
   border-radius: 50%;
-  background: rgba(229, 169, 60, 0.15);
-  color: var(--gold-400);
+  background: rgba(229, 169, 60, 0.18);
+  color: var(--gold-800);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 0.75rem;
+  font-weight: 700;
   flex-shrink: 0;
   margin-top: 0.2rem;
 }
 
 .benefit-item-content h4 {
   font-size: 1rem;
-  color: var(--white);
+  color: var(--text-main);
   margin-bottom: 0.25rem;
 }
 
 .benefit-item-content p {
   font-size: 0.875rem;
-  color: var(--charcoal-400);
+  color: var(--text-muted);
 }
 
 /* =========================================
@@ -780,25 +774,26 @@ a { text-decoration: none; color: inherit; transition: color var(--transition-fa
 }
 
 .testimonial-card {
-  background: var(--gradient-dark-card);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: #FFFFFF;
+  border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
   padding: 2.25rem;
   position: relative;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  box-shadow: var(--shadow-sm);
 }
 
 .testimonial-stars {
-  color: var(--gold-400);
+  color: #F59E0B;
   font-size: 1.1rem;
   margin-bottom: 1rem;
 }
 
 .testimonial-quote {
   font-size: 0.95rem;
-  color: var(--charcoal-200);
+  color: var(--text-body);
   line-height: 1.65;
   margin-bottom: 1.5rem;
   font-style: italic;
@@ -809,7 +804,7 @@ a { text-decoration: none; color: inherit; transition: color var(--transition-fa
   align-items: center;
   gap: 0.9rem;
   padding-top: 1.25rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 1px solid var(--border-subtle);
 }
 
 .author-avatar {
@@ -817,29 +812,29 @@ a { text-decoration: none; color: inherit; transition: color var(--transition-fa
   height: 44px;
   border-radius: 50%;
   object-fit: cover;
-  border: 1.5px solid var(--gold-400);
+  border: 2px solid var(--gold-500);
 }
 
 .author-name {
   font-size: 0.95rem;
   font-weight: 700;
-  color: var(--white);
+  color: var(--text-main);
 }
 
 .author-info {
   font-size: 0.775rem;
-  color: var(--charcoal-400);
+  color: var(--text-muted);
 }
 
 /* =========================================
    TEACHER CTA BANNER SECTION
    ========================================= */
 .teacher-cta-banner {
-  background: linear-gradient(135deg, rgba(27, 30, 43, 0.95) 0%, rgba(18, 20, 28, 0.98) 100%);
-  border: 1px solid rgba(229, 169, 60, 0.35);
+  background: linear-gradient(135deg, #181C26 0%, #12141C 100%);
+  border: 1px solid rgba(229, 169, 60, 0.4);
   border-radius: var(--radius-xl);
   overflow: hidden;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5), var(--shadow-gold);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.15), var(--shadow-gold);
 }
 
 .teacher-cta-grid {
@@ -854,6 +849,7 @@ a { text-decoration: none; color: inherit; transition: color var(--transition-fa
 
 .teacher-cta-title {
   margin: 1rem 0 1.25rem;
+  color: #FFFFFF;
 }
 
 .teacher-cta-stats {
@@ -870,7 +866,7 @@ a { text-decoration: none; color: inherit; transition: color var(--transition-fa
 
 .t-stat span {
   font-size: 0.85rem;
-  color: var(--charcoal-400);
+  color: #9CA3AF;
 }
 
 .teacher-cta-image {
@@ -889,10 +885,10 @@ a { text-decoration: none; color: inherit; transition: color var(--transition-fa
    FOOTER
    ========================================= */
 .site-footer {
-  background: #090A0E;
-  border-top: 1px solid rgba(229, 169, 60, 0.15);
+  background: var(--bg-cream);
+  border-top: 1px solid rgba(229, 169, 60, 0.2);
   padding: 5rem 0 2.5rem;
-  color: var(--charcoal-400);
+  color: var(--text-muted);
 }
 
 .footer-grid {
@@ -912,7 +908,7 @@ a { text-decoration: none; color: inherit; transition: color var(--transition-fa
 .footer-heading {
   font-size: 1rem;
   font-weight: 700;
-  color: var(--white);
+  color: var(--text-main);
   margin-bottom: 1.25rem;
   font-family: var(--font-heading);
 }
@@ -926,12 +922,12 @@ a { text-decoration: none; color: inherit; transition: color var(--transition-fa
 
 .footer-links a {
   font-size: 0.875rem;
-  color: var(--charcoal-400);
+  color: var(--text-muted);
   transition: color var(--transition-fast);
 }
 
 .footer-links a:hover {
-  color: var(--gold-300);
+  color: var(--gold-800);
 }
 
 .newsletter-form {
@@ -942,11 +938,11 @@ a { text-decoration: none; color: inherit; transition: color var(--transition-fa
 
 .newsletter-input {
   flex: 1;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: #FFFFFF;
+  border: 1px solid var(--border-subtle);
   border-radius: var(--radius-full);
   padding: 0.65rem 1.1rem;
-  color: var(--white);
+  color: var(--text-main);
   font-size: 0.85rem;
   outline: none;
 }
@@ -957,7 +953,7 @@ a { text-decoration: none; color: inherit; transition: color var(--transition-fa
 
 .footer-bottom {
   padding-top: 2rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 1px solid var(--border-subtle);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1003,9 +999,6 @@ a { text-decoration: none; color: inherit; transition: color var(--transition-fa
   }
   .mobile-menu-btn {
     display: block;
-  }
-  .demo-role-pill {
-    display: none;
   }
   .teacher-cta-content {
     padding: 2.5rem 1.75rem;

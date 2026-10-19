@@ -1,5 +1,6 @@
 /* =========================================
    AVIORA EDUCATION - STUDENT PORTAL STYLES
+   White & Gold Luxury Theme
    ========================================= */
 
 .portal-wrapper {
@@ -15,11 +16,11 @@
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 1.5rem;
-  background: var(--gradient-dark-card);
-  border: 1px solid rgba(229, 169, 60, 0.2);
+  background: #FFFFFF;
+  border: 1px solid var(--border-subtle);
   border-radius: var(--radius-xl);
   padding: 2rem 2.5rem;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
 }
 
 .portal-user-meta {
@@ -38,13 +39,13 @@
 
 .portal-title {
   font-size: 1.6rem;
-  color: var(--white);
+  color: var(--text-main);
   margin-bottom: 0.25rem;
 }
 
 .portal-subtitle {
   font-size: 0.9rem;
-  color: var(--charcoal-300);
+  color: var(--text-muted);
 }
 
 /* Stats Metrics Cards */
@@ -56,19 +57,21 @@
 }
 
 .stat-widget {
-  background: var(--gradient-dark-card);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: #FFFFFF;
+  border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
   padding: 1.75rem 1.5rem;
   display: flex;
   align-items: center;
   gap: 1.25rem;
   transition: all var(--transition-fast);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
 .stat-widget:hover {
-  border-color: rgba(229, 169, 60, 0.3);
+  border-color: rgba(229, 169, 60, 0.4);
   transform: translateY(-3px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06);
 }
 
 .stat-widget-icon {
@@ -76,7 +79,7 @@
   height: 52px;
   border-radius: var(--radius-md);
   background: rgba(229, 169, 60, 0.12);
-  color: var(--gold-400);
+  color: var(--gold-700);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -87,13 +90,13 @@
 .stat-widget-info h3 {
   font-size: 1.85rem;
   font-weight: 800;
-  color: var(--white);
+  color: var(--text-main);
   line-height: 1.1;
 }
 
 .stat-widget-info p {
   font-size: 0.85rem;
-  color: var(--charcoal-400);
+  color: var(--text-muted);
   margin-top: 0.2rem;
 }
 
@@ -101,17 +104,17 @@
 .portal-tabs-nav {
   display: flex;
   gap: 1rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 2px solid var(--border-subtle);
   margin-bottom: 2rem;
 }
 
 .portal-tab-btn {
   background: transparent;
   border: none;
-  color: var(--charcoal-400);
+  color: var(--text-muted);
   font-family: var(--font-heading);
   font-size: 1rem;
-  font-weight: 600;
+  font-weight: 700;
   padding: 0.85rem 1.25rem;
   cursor: pointer;
   border-bottom: 2px solid transparent;
@@ -119,11 +122,11 @@
 }
 
 .portal-tab-btn:hover {
-  color: var(--white);
+  color: var(--text-main);
 }
 
 .portal-tab-btn.active {
-  color: var(--gold-300);
+  color: var(--gold-800);
   border-bottom-color: var(--gold-500);
 }
 
@@ -135,8 +138,8 @@
 }
 
 .request-item-card {
-  background: var(--gradient-dark-card);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: #FFFFFF;
+  border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
   padding: 1.75rem;
   display: grid;
@@ -144,10 +147,11 @@
   align-items: center;
   gap: 1.5rem;
   transition: all var(--transition-fast);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
 .request-item-card:hover {
-  border-color: rgba(229, 169, 60, 0.3);
+  border-color: rgba(229, 169, 60, 0.4);
 }
 
 .request-tutor-avatar {
@@ -160,37 +164,38 @@
 
 .request-subject-info h4 {
   font-size: 1.1rem;
-  color: var(--white);
+  color: var(--text-main);
   margin-bottom: 0.25rem;
 }
 
 .request-subject-info p {
   font-size: 0.85rem;
-  color: var(--gold-300);
+  color: var(--gold-800);
+  font-weight: 600;
 }
 
 .request-datetime-info {
   font-size: 0.875rem;
-  color: var(--charcoal-200);
+  color: var(--text-main);
 }
 
 .request-datetime-info span {
   display: block;
   font-size: 0.775rem;
-  color: var(--charcoal-400);
+  color: var(--text-muted);
 }
 
 .request-pricing-info {
   font-size: 1rem;
   font-weight: 700;
-  color: var(--white);
+  color: var(--text-main);
 }
 
 .request-pricing-info span {
   display: block;
   font-size: 0.75rem;
   font-weight: 400;
-  color: var(--charcoal-400);
+  color: var(--text-muted);
 }
 
 .request-actions-col {

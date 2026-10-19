@@ -196,10 +196,10 @@ document.addEventListener('DOMContentLoaded', async () => {
       navLinks.style.position = 'absolute';
       navLinks.style.top = 'var(--header-height)';
       navLinks.style.left = '0';
-      navLinks.style.right = '0';
-      navLinks.style.background = 'var(--charcoal-900)';
+      navLinks.style.background = '#FFFFFF';
       navLinks.style.padding = '1.5rem';
-      navLinks.style.borderBottom = '1px solid rgba(229, 169, 60, 0.2)';
+      navLinks.style.borderBottom = '1px solid var(--border-subtle)';
+      navLinks.style.boxShadow = 'var(--shadow-lg)';
     });
   }
 

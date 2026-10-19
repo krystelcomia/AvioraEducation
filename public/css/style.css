@@ -436,8 +436,12 @@ a { text-decoration: none; color: inherit; transition: color var(--transition-fa
    HERO SECTION
    ========================================= */
 .hero-section {
+  min-height: calc(100vh - var(--header-height));
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
   padding-top: calc(var(--header-height) + 2.5rem);
-  padding-bottom: 3.5rem;
+  padding-bottom: 2.75rem;
   position: relative;
   overflow: hidden;
   background: radial-gradient(ellipse 75% 55% at 50% -10%, rgba(198, 138, 40, 0.12) 0%, rgba(250, 247, 242, 0.4) 60%, transparent 100%), #FAF7F2;
@@ -474,6 +478,160 @@ a { text-decoration: none; color: inherit; transition: color var(--transition-fa
   gap: 1.25rem;
   flex-wrap: wrap;
   margin-bottom: 0.5rem;
+}
+
+/* Hero Bottom Wrap: Trust Bar + 3 Pillars + Scroll Indicator */
+.hero-bottom-wrap {
+  margin-top: 3rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  position: relative;
+  z-index: 2;
+}
+
+.hero-trust-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.25rem;
+  padding: 0.85rem 1.75rem;
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(198, 138, 40, 0.22);
+  border-radius: var(--radius-full);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.03);
+  flex-wrap: wrap;
+}
+
+.trust-bar-label {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--gold-800);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.trust-bar-pills {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.trust-pill {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--charcoal-900);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.65rem;
+  border-radius: var(--radius-full);
+  background: rgba(198, 138, 40, 0.08);
+}
+
+.trust-pill .pill-dot {
+  color: var(--gold-600);
+  font-size: 0.7rem;
+}
+
+.hero-pillars-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+}
+
+@media (max-width: 992px) {
+  .hero-pillars-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.hero-pillar-card {
+  background: #FFFFFF;
+  border: 1.5px solid rgba(198, 138, 40, 0.2);
+  border-radius: var(--radius-lg);
+  padding: 1.35rem 1.5rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.03);
+  transition: all var(--transition-fast);
+}
+
+.hero-pillar-card:hover {
+  transform: translateY(-3px);
+  border-color: rgba(198, 138, 40, 0.45);
+  box-shadow: 0 10px 24px rgba(198, 138, 40, 0.1);
+}
+
+.pillar-icon-box {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, rgba(251, 244, 226, 0.95) 0%, rgba(246, 242, 233, 0.95) 100%);
+  border: 1px solid rgba(198, 138, 40, 0.28);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(198, 138, 40, 0.1);
+}
+
+.pillar-title {
+  font-size: 0.98rem;
+  font-weight: 700;
+  color: var(--charcoal-950);
+  margin-bottom: 0.3rem;
+}
+
+.pillar-desc {
+  font-size: 0.825rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.hero-scroll-indicator {
+  text-align: center;
+  padding-top: 0.5rem;
+}
+
+.hero-scroll-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--gold-800);
+  padding: 0.5rem 1.25rem;
+  border-radius: var(--radius-full);
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(198, 138, 40, 0.25);
+  transition: all var(--transition-fast);
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.hero-scroll-btn:hover {
+  background: #FFFFFF;
+  color: var(--gold-900);
+  border-color: var(--gold-500);
+  transform: translateY(2px);
+  box-shadow: 0 4px 14px rgba(198, 138, 40, 0.15);
+}
+
+.scroll-arrow {
+  display: inline-block;
+  animation: bounceArrow 1.6s infinite;
+  font-size: 1rem;
+}
+
+@keyframes bounceArrow {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(4px); }
 }
 
 .hero-trust-metrics {

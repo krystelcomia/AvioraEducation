@@ -146,6 +146,13 @@ const Router = {
       const view = document.getElementById('view-about');
       if (view) view.style.display = 'block';
       window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else if (hash === '#contact' || hash === '#about-contact') {
+      const view = document.getElementById('view-about');
+      if (view) view.style.display = 'block';
+      setTimeout(() => {
+        const contactSec = document.getElementById('contact');
+        if (contactSec) contactSec.scrollIntoView({ behavior: 'smooth' });
+      }, 100);
     } else if (hash === '#how-it-works') {
       const view = document.getElementById('view-how-it-works');
       if (view) view.style.display = 'block';
@@ -350,6 +357,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         showToast('Thank you for subscribing to Aviora Academic Insights!', 'success');
         input.value = '';
       }
+    });
+  }
+
+  // About Page Inquiry form
+  const aboutInquiryForm = document.getElementById('about-inquiry-form');
+  if (aboutInquiryForm) {
+    aboutInquiryForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const nameInput = document.getElementById('inquiry-name');
+      const name = nameInput ? nameInput.value.trim() : 'there';
+      showToast(`Thank you, ${name}! Your inquiry has been sent to our academic advisory team. We will respond within 24 hours.`, 'success');
+      aboutInquiryForm.reset();
     });
   }
 

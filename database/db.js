@@ -134,6 +134,20 @@ function initSchema() {
       link TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
+
+    CREATE TABLE IF NOT EXISTS student_subscriptions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      plan_name TEXT NOT NULL,
+      lessons_total INTEGER NOT NULL,
+      lessons_remaining INTEGER NOT NULL,
+      price_paid REAL NOT NULL,
+      purchase_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+      expires_at DATETIME NOT NULL,
+      status TEXT DEFAULT 'active' CHECK(status IN ('active', 'expired', 'exhausted')),
+      is_trial INTEGER DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
   `);
 }
 
@@ -635,6 +649,27 @@ function seedData() {
 
 initSchema();
 seedData();
+
+// Ensure demo student has an active subscription if none exists
+try {
+  const student = db.prepare("SELECT id FROM users WHERE email = 'student@aviora.edu'").get();
+  if (student) {
+    const existingSub = db.prepare("SELECT id FROM student_subscriptions WHERE user_id = ?").get(student.id);
+    if (!existingSub) {
+      db.prepare(`
+        INSERT INTO student_subscriptions (
+          user_id, plan_name, lessons_total, lessons_remaining, price_paid,
+          purchase_date, expires_at, status, is_trial
+        ) VALUES (
+          ?, '8 Lessons Monthly', 8, 5, 399.00,
+          datetime('now', '-2 days'), datetime('now', '+28 days'), 'active', 0
+        )
+      `).run(student.id);
+    }
+  }
+} catch (e) {
+  console.warn('Subscription seed note:', e.message);
+}
 
 module.exports = {
   db,

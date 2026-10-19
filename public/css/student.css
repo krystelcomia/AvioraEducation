@@ -209,3 +209,122 @@
     gap: 1rem;
   }
 }
+
+/* =========================================
+   STUDENT SUBSCRIPTION HUB STYLES
+   ========================================= */
+.sub-active-banner-card {
+  background: #FFFFFF;
+  border: 1px solid rgba(198, 138, 40, 0.3);
+  border-radius: var(--radius-xl);
+  padding: 2.25rem 2.5rem;
+  margin-bottom: 2.5rem;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.05);
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 2.5rem;
+  align-items: center;
+}
+
+@media (max-width: 900px) {
+  .sub-active-banner-card {
+    grid-template-columns: 1fr;
+    gap: 1.75rem;
+    padding: 1.75rem;
+  }
+}
+
+.sub-progress-bar {
+  height: 9px;
+  background: rgba(0, 0, 0, 0.07);
+  border-radius: 6px;
+  overflow: hidden;
+  margin: 0.75rem 0 1rem 0;
+}
+
+.sub-progress-fill {
+  height: 100%;
+  background: var(--gradient-gold);
+  border-radius: 6px;
+  transition: width var(--transition-smooth);
+}
+
+.sub-analytics-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+  margin-bottom: 3.5rem;
+}
+
+@media (max-width: 1024px) {
+  .sub-analytics-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.sub-analytics-card {
+  background: #FFFFFF;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: var(--radius-lg);
+  padding: 1.75rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+}
+
+.sub-stat-value {
+  font-family: var(--font-heading);
+  font-size: 2.35rem;
+  font-weight: 800;
+  color: var(--charcoal-900);
+  margin: 0.5rem 0 0.25rem 0;
+}
+
+.sub-packages-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.5rem;
+  margin-bottom: 3.5rem;
+}
+
+@media (max-width: 1200px) {
+  .sub-packages-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 680px) {
+  .sub-packages-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.sub-package-card {
+  background: #FFFFFF;
+  border: 1px solid rgba(0, 0, 0, 0.09);
+  border-radius: var(--radius-lg);
+  padding: 2rem 1.6rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  transition: all var(--transition-fast);
+}
+
+.sub-package-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(198, 138, 40, 0.4);
+  box-shadow: 0 10px 28px rgba(198, 138, 40, 0.12);
+}
+
+.sub-package-card.popular {
+  border: 2px solid var(--gold-500);
+  background: #FFFFFF;
+  box-shadow: 0 8px 30px rgba(198, 138, 40, 0.16);
+}
+
+.sub-policy-card {
+  background: #FFFFFF;
+  border: 1px solid rgba(198, 138, 40, 0.25);
+  border-radius: var(--radius-xl);
+  padding: 2.5rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+}

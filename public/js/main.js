@@ -75,7 +75,7 @@ function showConfirm(title, message, onConfirm) {
 
 // Router
 const Router = {
-  routes: ['#home', '#about', '#tutors', '#how-it-works', '#book-now', '#subscriptions', '#login', '#signup', '#student-portal', '#student-lessons', '#student-tutors', '#student-history', '#student-schedule', '#student-profile', '#teacher-portal', '#admin-portal'],
+  routes: ['#home', '#about', '#tutors', '#how-it-works', '#book-now', '#subscriptions', '#student-subscriptions', '#login', '#signup', '#student-portal', '#student-lessons', '#student-tutors', '#student-history', '#student-schedule', '#student-profile', '#teacher-portal', '#admin-portal'],
 
   init() {
     window.addEventListener('hashchange', () => this.handleRoute());
@@ -150,16 +150,26 @@ const Router = {
       const view = document.getElementById('view-how-it-works');
       if (view) view.style.display = 'block';
       window.scrollTo({ top: 0, behavior: 'smooth' });
-    } else if (hash === '#subscriptions') {
-      const view = document.getElementById('view-how-it-works');
-      if (view) view.style.display = 'block';
-      const subSection = document.getElementById('subscriptions-section');
-      if (subSection) {
-        setTimeout(() => {
-          subSection.scrollIntoView({ behavior: 'smooth' });
-        }, 80);
-      } else {
+    } else if (hash === '#subscriptions' || hash === '#student-subscriptions') {
+      const user = Auth.currentUser;
+      if (user && user.role === 'student') {
+        const studentSubView = document.getElementById('view-student-subscription');
+        if (studentSubView) studentSubView.style.display = 'block';
         window.scrollTo({ top: 0, behavior: 'smooth' });
+        if (typeof StudentSub !== 'undefined' && StudentSub.loadSubscriptionHub) {
+          await StudentSub.loadSubscriptionHub();
+        }
+      } else {
+        const view = document.getElementById('view-how-it-works');
+        if (view) view.style.display = 'block';
+        const subSection = document.getElementById('subscriptions-section');
+        if (subSection) {
+          setTimeout(() => {
+            subSection.scrollIntoView({ behavior: 'smooth' });
+          }, 80);
+        } else {
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
       }
     } else if (hash === '#book-now') {
       const view = document.getElementById('view-tutors');

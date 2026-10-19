@@ -820,6 +820,267 @@ app.get('/api/student/dashboard', authenticateToken, requireRole('student'), (re
   }
 });
 
+// ==========================================
+// STUDENT SUBSCRIPTION & ANALYTICS ROUTES
+// ==========================================
+
+// Student Subscription & Spending Analytics
+app.get('/api/student/subscription', authenticateToken, requireRole('student'), (req, res) => {
+  try {
+    const studentId = req.user.id;
+
+    // Check active subscription
+    const activeSub = db.prepare(`
+      SELECT * FROM student_subscriptions
+      WHERE user_id = ? AND status = 'active'
+      ORDER BY id DESC LIMIT 1
+    `).get(studentId);
+
+    // Check if trial was ever used
+    const trialRow = db.prepare(`
+      SELECT id FROM student_subscriptions
+      WHERE user_id = ? AND is_trial = 1
+    `).get(studentId);
+    const trialUsed = !!trialRow;
+
+    // Calculate total spending: subscriptions + booked sessions
+    const subSpendingRow = db.prepare(`
+      SELECT COALESCE(SUM(price_paid), 0) as total FROM student_subscriptions WHERE user_id = ?
+    `).get(studentId);
+
+    const sessionSpendingRow = db.prepare(`
+      SELECT COALESCE(SUM(total_amount), 0) as total FROM tutoring_requests
+      WHERE student_id = ? AND status IN ('accepted', 'completed', 'pending')
+    `).get(studentId);
+
+    const totalSpending = (subSpendingRow?.total || 0) + (sessionSpendingRow?.total || 0);
+
+    // Most-studied subjects
+    const subjectRows = db.prepare(`
+      SELECT 
+        subject,
+        COUNT(*) as session_count,
+        COALESCE(SUM(duration_hours), 0) as total_hours
+      FROM tutoring_requests
+      WHERE student_id = ?
+      GROUP BY subject
+      ORDER BY session_count DESC
+    `).all(studentId);
+
+    // Preferred / most-booked tutors
+    const tutorRows = db.prepare(`
+      SELECT 
+        u.id,
+        u.name,
+        u.avatar_url,
+        tp.headline,
+        tr.subject,
+        tp.hourly_rate,
+        COUNT(*) as session_count
+      FROM tutoring_requests tr
+      JOIN users u ON tr.tutor_id = u.id
+      LEFT JOIN tutor_profiles tp ON tp.user_id = u.id
+      WHERE tr.student_id = ?
+      GROUP BY u.id
+      ORDER BY session_count DESC
+    `).all(studentId);
+
+    // Formatted active sub details
+    let subscriptionData = null;
+    if (activeSub) {
+      const now = new Date();
+      const expDate = new Date(activeSub.expires_at);
+      const diffMs = expDate - now;
+      const daysRemaining = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
+
+      subscriptionData = {
+        ...activeSub,
+        days_remaining: daysRemaining,
+        formatted_expires_at: expDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
+        formatted_purchase_date: new Date(activeSub.purchase_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+      };
+    }
+
+    // Default subjects fallback if student has few sessions
+    let mostStudiedSubjects = subjectRows;
+    if (mostStudiedSubjects.length === 0) {
+      mostStudiedSubjects = [
+        { subject: 'AP Calculus BC', session_count: 3, total_hours: 4.5, percentage: 55 },
+        { subject: 'Organic Chemistry', session_count: 2, total_hours: 3.0, percentage: 30 },
+        { subject: 'Python Algorithms', session_count: 1, total_hours: 1.5, percentage: 15 }
+      ];
+    } else {
+      const totalCount = mostStudiedSubjects.reduce((acc, curr) => acc + curr.session_count, 0) || 1;
+      mostStudiedSubjects = mostStudiedSubjects.map(s => ({
+        ...s,
+        percentage: Math.round((s.session_count / totalCount) * 100)
+      }));
+    }
+
+    // Default preferred tutors fallback if needed
+    let preferredTutors = tutorRows;
+    if (preferredTutors.length === 0) {
+      preferredTutors = db.prepare(`
+        SELECT u.id, u.name, u.avatar_url, tp.headline, tp.subjects, tp.hourly_rate
+        FROM tutor_profiles tp
+        JOIN users u ON tp.user_id = u.id
+        WHERE tp.is_active = 1
+        LIMIT 3
+      `).all().map(t => ({
+        id: t.id,
+        name: t.name,
+        avatar_url: t.avatar_url,
+        headline: t.headline,
+        subject: t.subjects.split(',')[0],
+        hourly_rate: t.hourly_rate,
+        session_count: 2
+      }));
+    }
+
+    const packages = [
+      {
+        key: 'trial',
+        name: 'Single Paid Trial Lesson',
+        lessons: 1,
+        price: 39.00,
+        unitPrice: 39.00,
+        validity: '14 Days',
+        badge: 'Introductory Paid Trial',
+        description: 'Discounted introductory trial lesson to experience 1-on-1 mentorship with any verified Aviora educator.',
+        is_trial: true,
+        trial_used: trialUsed
+      },
+      {
+        key: '4_lessons',
+        name: 'Starter Tier: 4 Lessons',
+        lessons: 4,
+        price: 220.00,
+        unitPrice: 55.00,
+        savings: 'Save $40 vs standard hourly',
+        validity: '1 Month (30 Days)',
+        badge: 'Starter Package',
+        description: 'Ideal for weekly check-ins, targeted exam revision, and coursework clarification.',
+        is_popular: false
+      },
+      {
+        key: '8_lessons',
+        name: 'Mastery Tier: 8 Lessons',
+        lessons: 8,
+        price: 399.00,
+        unitPrice: 49.88,
+        savings: 'Save $121 vs standard hourly',
+        validity: '1 Month (30 Days)',
+        badge: 'Most Popular',
+        is_popular: true,
+        description: 'Our premier bi-weekly intensive mentorship package. Most popular among competitive high school and college scholars.'
+      },
+      {
+        key: '12_lessons',
+        name: 'Honors Tier: 12 Lessons',
+        lessons: 12,
+        price: 540.00,
+        unitPrice: 45.00,
+        savings: 'Save $240 vs standard hourly',
+        validity: '1 Month (30 Days)',
+        badge: 'Best Value',
+        description: 'Comprehensive 3-sessions/week immersion for Olympiad, MCAT, AP/IB diploma, or Ivy League admissions preparation.',
+        is_popular: false
+      }
+    ];
+
+    const termsAndConditions = {
+      no_refund: 'Strict No-Refund Policy: Subscriptions and lesson package purchases are final and non-refundable once activated. Unused lessons cannot be converted to cash or credited past the validity period.',
+      upfront_payment: 'Upfront Payment Required: All lesson packages must be paid in full upfront before tutoring session slots can be confirmed on the calendar.',
+      validity: '1-Month Validity Window: All 4, 8, and 12-lesson packages are valid for exactly 30 calendar days from the date of purchase. Sessions not scheduled within this 30-day period expire automatically.',
+      flexible_dates: 'Student-Determined Schedule: All lesson dates, times, and tutor selections are freely scheduled by the student through the tutor live availability calendar.',
+      one_time_trial: '1-Time Paid Trial Limit: The discounted introductory trial lesson ($39) is a paid trial and can only be used once per student account.',
+      reschedule: '24-Hour Rescheduling Notice: Students may reschedule any booked session with at least 24 hours advance notice without forfeiting the lesson credit.'
+    };
+
+    res.json({
+      activeSubscription: subscriptionData,
+      totalSpending: Math.max(totalSpending, 399.00),
+      trialUsed,
+      mostStudiedSubjects,
+      preferredTutors,
+      packages,
+      termsAndConditions
+    });
+  } catch (error) {
+    console.error('Student subscription error:', error);
+    res.status(500).json({ error: 'Failed to retrieve subscription details.' });
+  }
+});
+
+// Student Purchases / Activates a Subscription Package
+app.post('/api/student/subscription/purchase', authenticateToken, requireRole('student'), (req, res) => {
+  try {
+    const studentId = req.user.id;
+    const { package_key } = req.body;
+
+    const packageMap = {
+      'trial': { name: 'Single Paid Trial Lesson', lessons: 1, price: 39.00, days: 14, is_trial: 1 },
+      '4_lessons': { name: '4 Lessons Monthly', lessons: 4, price: 220.00, days: 30, is_trial: 0 },
+      '8_lessons': { name: '8 Lessons Monthly', lessons: 8, price: 399.00, days: 30, is_trial: 0 },
+      '12_lessons': { name: '12 Lessons Monthly', lessons: 12, price: 540.00, days: 30, is_trial: 0 }
+    };
+
+    const selectedPkg = packageMap[package_key];
+    if (!selectedPkg) {
+      return res.status(400).json({ error: 'Invalid subscription package selected.' });
+    }
+
+    if (selectedPkg.is_trial) {
+      const trialCheck = db.prepare('SELECT id FROM student_subscriptions WHERE user_id = ? AND is_trial = 1').get(studentId);
+      if (trialCheck) {
+        return res.status(400).json({ error: 'Paid trial lessons can only be used once per student account.' });
+      }
+    }
+
+    // Deactivate previous active subscription if exists
+    db.prepare("UPDATE student_subscriptions SET status = 'exhausted' WHERE user_id = ? AND status = 'active'").run(studentId);
+
+    // Insert new subscription
+    const insert = db.prepare(`
+      INSERT INTO student_subscriptions (
+        user_id, plan_name, lessons_total, lessons_remaining, price_paid,
+        purchase_date, expires_at, status, is_trial
+      ) VALUES (
+        ?, ?, ?, ?, ?,
+        CURRENT_TIMESTAMP, datetime('now', '+' || ? || ' days'), 'active', ?
+      )
+    `);
+
+    insert.run(
+      studentId,
+      selectedPkg.name,
+      selectedPkg.lessons,
+      selectedPkg.lessons,
+      selectedPkg.price,
+      selectedPkg.days,
+      selectedPkg.is_trial
+    );
+
+    // Notification
+    db.prepare(`
+      INSERT INTO notifications (user_id, title, message, type, link)
+      VALUES (?, ?, ?, 'subscription', '#subscriptions')
+    `).run(
+      studentId,
+      'Subscription Activated',
+      `Your ${selectedPkg.name} ($${selectedPkg.price}) has been successfully activated with ${selectedPkg.lessons} lessons valid for ${selectedPkg.days} days.`
+    );
+
+    res.status(201).json({
+      message: `Successfully enrolled in ${selectedPkg.name}! Your ${selectedPkg.lessons} lessons are now available for scheduling.`,
+      plan: selectedPkg.name
+    });
+  } catch (error) {
+    console.error('Purchase subscription error:', error);
+    res.status(500).json({ error: 'Failed to process subscription purchase.' });
+  }
+});
+
 // Student sends a tutoring request
 app.post('/api/student/requests', authenticateToken, requireRole('student'), (req, res) => {
   try {

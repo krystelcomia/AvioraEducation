@@ -111,14 +111,14 @@
   font-family: var(--font-heading);
   font-size: 2rem;
   font-weight: 800;
-  color: var(--white);
+  color: var(--charcoal-900);
   line-height: 1.1;
   margin-bottom: 0.25rem;
 }
 
 .admin-stat-label {
   font-size: 0.825rem;
-  color: var(--charcoal-400);
+  color: var(--text-secondary);
   font-weight: 500;
 }
 
@@ -131,10 +131,11 @@
 }
 
 .chart-card {
-  background: var(--gradient-dark-card);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: #FFFFFF;
+  border: 1px solid rgba(0, 0, 0, 0.08);
   border-radius: var(--radius-xl);
   padding: 1.75rem 2rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
 }
 
 .chart-header {
@@ -146,7 +147,8 @@
 
 .chart-title {
   font-size: 1.15rem;
-  color: var(--white);
+  font-weight: 700;
+  color: var(--charcoal-900);
 }
 
 /* Modern Data Table */
@@ -214,12 +216,12 @@
 
 .user-cell-name {
   font-weight: 600;
-  color: var(--white);
+  color: var(--charcoal-900);
 }
 
 .user-cell-email {
   font-size: 0.775rem;
-  color: var(--charcoal-400);
+  color: var(--text-secondary);
 }
 
 /* Switch Toggle for Tutor Visibility */

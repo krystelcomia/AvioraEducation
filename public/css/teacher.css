@@ -150,13 +150,13 @@
 
 .upload-text {
   font-size: 0.95rem;
-  color: var(--white);
-  font-weight: 600;
+  color: var(--charcoal-900);
+  font-weight: 700;
 }
 
 .upload-sub {
   font-size: 0.8rem;
-  color: var(--charcoal-400);
+  color: var(--text-secondary);
   margin-top: 0.25rem;
 }
 

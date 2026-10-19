@@ -180,16 +180,10 @@ const Router = {
       const view = document.getElementById('view-login');
       if (view) view.style.display = 'block';
       window.scrollTo({ top: 0, behavior: 'smooth' });
-      if (typeof Auth !== 'undefined' && Auth.switchPageTab) {
-        Auth.switchPageTab('login');
-      }
     } else if (hash === '#signup') {
-      const view = document.getElementById('view-login');
+      const view = document.getElementById('view-signup');
       if (view) view.style.display = 'block';
       window.scrollTo({ top: 0, behavior: 'smooth' });
-      if (typeof Auth !== 'undefined' && Auth.switchPageTab) {
-        Auth.switchPageTab('register');
-      }
     } else if (hash === '#tutors') {
       const view = document.getElementById('view-tutors');
       if (view) view.style.display = 'block';

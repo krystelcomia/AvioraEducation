@@ -303,20 +303,21 @@ a { text-decoration: none; color: inherit; transition: color var(--transition-fa
   display: flex;
   align-items: center;
   gap: 0.4rem;
-  background: rgba(229, 169, 60, 0.08);
-  border: 1px solid rgba(229, 169, 60, 0.25);
-  padding: 0.3rem 0.6rem;
+  background: var(--cream-100);
+  border: 1px solid rgba(198, 138, 40, 0.35);
+  padding: 0.3rem 0.65rem;
   border-radius: var(--radius-full);
   font-size: 0.75rem;
-  color: var(--gold-300);
+  color: var(--gold-800);
+  font-weight: 700;
 }
 
 .demo-role-btn {
   background: transparent;
   border: none;
-  color: var(--charcoal-400);
+  color: var(--charcoal-800);
   font-size: 0.75rem;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
   padding: 0.2rem 0.5rem;
   border-radius: var(--radius-full);
@@ -324,13 +325,13 @@ a { text-decoration: none; color: inherit; transition: color var(--transition-fa
 }
 
 .demo-role-btn:hover {
-  color: var(--white);
-  background: rgba(255, 255, 255, 0.1);
+  color: var(--gold-800);
+  background: rgba(198, 138, 40, 0.14);
 }
 
 .demo-role-btn.active {
   background: var(--gold-500);
-  color: #14151B;
+  color: #FFFFFF;
 }
 
 /* Notification Bell */
@@ -1389,22 +1390,23 @@ a { text-decoration: none; color: inherit; transition: color var(--transition-fa
 }
 
 .rate-tier-card {
-  background: var(--charcoal-900);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: #FFFFFF;
+  border: 1px solid rgba(0, 0, 0, 0.09);
   border-radius: var(--radius-md);
   padding: 2rem 1.75rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
   transition: all var(--transition-smooth);
 }
 
 .rate-tier-card:hover {
-  border-color: rgba(229, 169, 60, 0.3);
+  border-color: rgba(198, 138, 40, 0.4);
   transform: translateY(-3px);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 10px 24px rgba(198, 138, 40, 0.12);
 }
 
 .rate-tier-badge {
   font-size: 0.75rem;
-  color: var(--gold-400);
+  color: var(--gold-800);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -1415,13 +1417,13 @@ a { text-decoration: none; color: inherit; transition: color var(--transition-fa
   font-family: var(--font-heading);
   font-size: 1.85rem;
   font-weight: 800;
-  color: var(--white);
+  color: var(--charcoal-900);
   margin-bottom: 0.5rem;
 }
 
 .rate-tier-desc {
   font-size: 0.875rem;
-  color: var(--charcoal-400);
+  color: var(--text-secondary);
   line-height: 1.6;
 }
 
@@ -1694,20 +1696,20 @@ a { text-decoration: none; color: inherit; transition: color var(--transition-fa
 
 .content-resource-title {
   font-size: 0.9rem;
-  font-weight: 600;
-  color: var(--white);
+  font-weight: 700;
+  color: var(--charcoal-900);
 }
 
 .content-resource-sub {
   font-size: 0.75rem;
-  color: var(--charcoal-400);
+  color: var(--text-secondary);
 }
 
 .content-resource-stat {
   text-align: right;
   font-size: 0.8rem;
   font-weight: 700;
-  color: var(--gold-light);
+  color: var(--gold-800);
 }
 
 /* Live Activity Ticker Stream */

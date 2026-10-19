@@ -135,23 +135,25 @@ const Auth = {
         }
         e.preventDefault();
         window.location.hash = '#signup';
-        this.switchPageTab('register');
       });
     });
 
     document.querySelectorAll('.open-register-student-btn').forEach(btn => {
       btn.addEventListener('click', (e) => {
         e.preventDefault();
-        window.location.hash = '#login';
-        this.switchPageTab('register');
+        window.location.hash = '#signup';
+        const studentRadio = document.querySelector('input[name="page_register_role"][value="student"]');
+        if (studentRadio) {
+          studentRadio.checked = true;
+          this.togglePageRoleFields('student');
+        }
       });
     });
 
     document.querySelectorAll('.open-register-teacher-btn').forEach(btn => {
       btn.addEventListener('click', (e) => {
         e.preventDefault();
-        window.location.hash = '#login';
-        this.switchPageTab('register');
+        window.location.hash = '#signup';
         const teacherRadio = document.querySelector('input[name="page_register_role"][value="teacher"]');
         if (teacherRadio) {
           teacherRadio.checked = true;
@@ -541,27 +543,10 @@ const Auth = {
   },
 
   switchPageTab(tab) {
-    const tabLogin = document.getElementById('page-tab-login');
-    const tabRegister = document.getElementById('page-tab-register');
-    const loginSection = document.getElementById('page-login-section');
-    const registerSection = document.getElementById('page-register-section');
-    const heading = document.getElementById('page-auth-heading');
-    const subheading = document.getElementById('page-auth-subheading');
-
     if (tab === 'login') {
-      tabLogin?.classList.add('active');
-      tabRegister?.classList.remove('active');
-      if (loginSection) loginSection.style.display = 'block';
-      if (registerSection) registerSection.style.display = 'none';
-      if (heading) heading.textContent = 'Welcome to Aviora';
-      if (subheading) subheading.textContent = 'Access your personalized academic mentorship portal';
+      window.location.hash = '#login';
     } else {
-      tabLogin?.classList.remove('active');
-      tabRegister?.classList.add('active');
-      if (loginSection) loginSection.style.display = 'none';
-      if (registerSection) registerSection.style.display = 'block';
-      if (heading) heading.textContent = 'Join Aviora Education';
-      if (subheading) subheading.textContent = 'Create your account to unlock world-class 1-on-1 instruction';
+      window.location.hash = '#signup';
     }
   },
 

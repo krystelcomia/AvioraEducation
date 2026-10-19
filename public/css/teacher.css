@@ -1,6 +1,5 @@
 /* =========================================
    AVIORA EDUCATION - TEACHER PORTAL & APPLICATION STYLES
-   White & Gold Luxury Theme
    ========================================= */
 
 /* Application Status Banner */
@@ -16,21 +15,20 @@
 }
 
 .app-status-banner.pending {
-  background: #FFFBEB;
-  border: 1.5px solid #FCD34D;
-  box-shadow: 0 4px 16px rgba(245, 158, 11, 0.1);
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(20, 24, 34, 0.95) 100%);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  box-shadow: 0 10px 30px rgba(245, 158, 11, 0.15);
 }
 
 .app-status-banner.approved {
-  background: #ECFDF5;
-  border: 1.5px solid #6EE7B7;
-  box-shadow: 0 4px 16px rgba(16, 185, 129, 0.1);
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(20, 24, 34, 0.95) 100%);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  box-shadow: 0 10px 30px rgba(16, 185, 129, 0.15);
 }
 
 .app-status-banner.rejected {
-  background: #FEF2F2;
-  border: 1.5px solid #FCA5A5;
-  box-shadow: 0 4px 16px rgba(239, 68, 68, 0.1);
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(20, 24, 34, 0.95) 100%);
+  border: 1px solid rgba(239, 68, 68, 0.4);
 }
 
 .status-icon-circle {
@@ -45,29 +43,29 @@
 }
 
 .app-status-banner.pending .status-icon-circle {
-  background: #FEF3C7;
-  color: #D97706;
+  background: rgba(245, 158, 11, 0.2);
+  color: #F59E0B;
 }
 
 .app-status-banner.approved .status-icon-circle {
-  background: #D1FAE5;
-  color: #059669;
+  background: rgba(16, 185, 129, 0.2);
+  color: #10B981;
 }
 
 .app-status-banner.rejected .status-icon-circle {
-  background: #FEE2E2;
-  color: #DC2626;
+  background: rgba(239, 68, 68, 0.2);
+  color: #EF4444;
 }
 
 .status-banner-content h3 {
   font-size: 1.35rem;
-  color: var(--text-main);
+  color: var(--white);
   margin-bottom: 0.4rem;
 }
 
 .status-banner-content p {
   font-size: 0.925rem;
-  color: var(--text-body);
+  color: var(--charcoal-300);
   line-height: 1.6;
 }
 
@@ -76,25 +74,25 @@
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background: #D97706;
-  box-shadow: 0 0 0 0 rgba(217, 119, 6, 0.7);
+  background: #F59E0B;
+  box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7);
   animation: pulseDot 1.8s infinite;
   margin-right: 0.4rem;
 }
 
 @keyframes pulseDot {
-  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(217, 119, 6, 0.7); }
-  70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(217, 119, 6, 0); }
-  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(217, 119, 6, 0); }
+  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7); }
+  70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(245, 158, 11, 0); }
+  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
 }
 
 /* Teacher Application Form */
 .application-form-card {
-  background: #FFFFFF;
-  border: 1px solid var(--border-subtle);
+  background: var(--gradient-dark-card);
+  border: 1px solid rgba(229, 169, 60, 0.25);
   border-radius: var(--radius-xl);
   padding: 3rem;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
   max-width: 900px;
   margin: 0 auto;
 }
@@ -102,12 +100,12 @@
 .form-step-section {
   padding-bottom: 2rem;
   margin-bottom: 2rem;
-  border-bottom: 1px solid var(--border-subtle);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .form-step-title {
   font-size: 1.25rem;
-  color: var(--text-main);
+  color: var(--white);
   margin-bottom: 0.5rem;
   display: flex;
   align-items: center;
@@ -129,11 +127,11 @@
 
 /* Upload Dropzone */
 .file-upload-box {
-  border: 2px dashed rgba(229, 169, 60, 0.45);
+  border: 2px dashed rgba(229, 169, 60, 0.35);
   border-radius: var(--radius-lg);
   padding: 2.5rem 1.5rem;
   text-align: center;
-  background: #FAF8F5;
+  background: rgba(229, 169, 60, 0.03);
   cursor: pointer;
   transition: all var(--transition-fast);
   position: relative;
@@ -141,24 +139,24 @@
 
 .file-upload-box:hover {
   border-color: var(--gold-500);
-  background: #FFFDF5;
+  background: rgba(229, 169, 60, 0.07);
 }
 
 .upload-icon {
   font-size: 2.5rem;
-  color: var(--gold-600);
+  color: var(--gold-400);
   margin-bottom: 0.75rem;
 }
 
 .upload-text {
   font-size: 0.95rem;
-  color: var(--text-main);
-  font-weight: 700;
+  color: var(--white);
+  font-weight: 600;
 }
 
 .upload-sub {
   font-size: 0.8rem;
-  color: var(--text-muted);
+  color: var(--charcoal-400);
   margin-top: 0.25rem;
 }
 
@@ -179,11 +177,10 @@
   margin-top: 1rem;
   background: rgba(16, 185, 129, 0.15);
   border: 1px solid rgba(16, 185, 129, 0.3);
-  color: #059669;
+  color: #10B981;
   padding: 0.4rem 0.8rem;
   border-radius: var(--radius-full);
   font-size: 0.825rem;
-  font-weight: 600;
 }
 
 /* Schedule Picker Table */
@@ -195,8 +192,8 @@
 }
 
 .day-slot-card {
-  background: var(--bg-cream);
-  border: 1px solid var(--border-subtle);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: var(--radius-md);
   padding: 0.85rem;
 }
@@ -204,7 +201,7 @@
 .day-name {
   font-size: 0.85rem;
   font-weight: 700;
-  color: var(--gold-800);
+  color: var(--gold-300);
   margin-bottom: 0.5rem;
 }
 
@@ -213,7 +210,7 @@
   align-items: center;
   gap: 0.4rem;
   font-size: 0.775rem;
-  color: var(--text-body);
+  color: var(--charcoal-300);
   margin-bottom: 0.35rem;
   cursor: pointer;
 }

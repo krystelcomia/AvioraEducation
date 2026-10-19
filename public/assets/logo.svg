@@ -1,13 +1,13 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 120" width="100%" height="100%" fill="none">
   <defs>
     <linearGradient id="goldGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#F5B842" />
+      <stop offset="0%" stop-color="#FFE082" />
       <stop offset="40%" stop-color="#E5A93C" />
       <stop offset="85%" stop-color="#B87E14" />
       <stop offset="100%" stop-color="#8C5C05" />
     </linearGradient>
     <linearGradient id="goldGlow" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" stop-color="#F5B842" />
+      <stop offset="0%" stop-color="#FFF3D6" />
       <stop offset="50%" stop-color="#E5A93C" />
       <stop offset="100%" stop-color="#D49520" />
     </linearGradient>
@@ -20,7 +20,7 @@
   <!-- Logo Icon -->
   <g transform="translate(10, 10)">
     <!-- Ambient back glow -->
-    <circle cx="50" cy="50" r="44" fill="#E5A93C" opacity="0.15" filter="url(#glowFilter)" />
+    <circle cx="50" cy="50" r="44" fill="#E5A93C" opacity="0.12" filter="url(#glowFilter)" />
     
     <!-- Outer Shield / Crest Ring -->
     <circle cx="50" cy="50" r="42" stroke="url(#goldGrad1)" stroke-width="2.5" stroke-dasharray="210 20" stroke-linecap="round" fill="#14151B" />
@@ -38,19 +38,19 @@
     <circle cx="50" cy="33.5" r="2.5" fill="#B87E14" />
 
     <!-- Sparkle Accents -->
-    <circle cx="28" cy="27" r="1.8" fill="#F5B842" />
-    <circle cx="72" cy="27" r="1.8" fill="#F5B842" />
+    <circle cx="28" cy="27" r="1.8" fill="#FFE082" />
+    <circle cx="72" cy="27" r="1.8" fill="#FFE082" />
   </g>
 
   <!-- Wordmark Text -->
   <g transform="translate(125, 30)">
-    <!-- "Aviora" with deep luxury charcoal and golden suffix -->
-    <text x="0" y="42" font-family="'Outfit', 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif" font-size="44" font-weight="800" letter-spacing="-0.5" fill="#111318">
-      Avi<tspan fill="url(#goldGrad1)">ora</tspan>
+    <!-- "Aviora" -->
+    <text x="0" y="42" font-family="'Outfit', 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif" font-size="44" font-weight="800" letter-spacing="-0.5" fill="#FFFFFF">
+      Avi<tspan fill="url(#goldGlow)">ora</tspan>
     </text>
     
     <!-- "EDUCATION" Subtitle with tracking and golden dot -->
-    <text x="3" y="66" font-family="'Outfit', 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif" font-size="13" font-weight="700" letter-spacing="6" fill="#B87E14">
+    <text x="3" y="66" font-family="'Outfit', 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif" font-size="13" font-weight="700" letter-spacing="6" fill="#E5A93C">
       EDUCATION
     </text>
     <circle cx="160" cy="62" r="3" fill="url(#goldGrad1)" />

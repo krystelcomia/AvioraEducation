@@ -1,16 +1,15 @@
 /* =========================================
    AVIORA EDUCATION - COMPONENTS & MODALS
-   White & Gold Luxury Theme
    ========================================= */
 
 /* Filter & Search Bar */
 .tutor-filter-container {
-  background: #FFFFFF;
-  border: 1px solid rgba(229, 169, 60, 0.3);
-  border-radius: var(--radius-xl);
-  padding: 1.5rem 1.75rem;
+  background: var(--charcoal-900);
+  border: 1px solid rgba(229, 169, 60, 0.25);
+  border-radius: var(--radius-md);
+  padding: 1.25rem 1.5rem;
   margin-bottom: 2.5rem;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
 }
 
 .filter-grid {
@@ -29,43 +28,43 @@
 .search-icon {
   position: absolute;
   left: 1rem;
-  color: var(--text-muted);
-  font-size: 1.1rem;
+  color: var(--charcoal-400);
+  font-size: 1rem;
 }
 
 .form-control {
   width: 100%;
-  background: #FFFFFF;
-  border: 1.5px solid var(--border-subtle);
-  border-radius: var(--radius-full);
-  padding: 0.75rem 1.25rem;
-  color: var(--text-main);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--radius-sm);
+  padding: 0.65rem 1rem;
+  color: var(--white);
   font-family: var(--font-body);
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   outline: none;
   transition: all var(--transition-fast);
 }
 
 .form-control:focus {
   border-color: var(--gold-500);
-  background: #FFFFFF;
-  box-shadow: 0 0 0 3.5px rgba(229, 169, 60, 0.2);
+  background: rgba(229, 169, 60, 0.06);
+  box-shadow: 0 0 0 2px rgba(229, 169, 60, 0.2);
 }
 
 .form-control option {
-  background: #FFFFFF;
-  color: var(--text-main);
+  background: var(--charcoal-900);
+  color: var(--white);
 }
 
 .search-input-box .form-control {
-  padding-left: 2.75rem;
+  padding-left: 2.5rem;
 }
 
 .subject-pills {
   display: flex;
   gap: 0.5rem;
   overflow-x: auto;
-  padding: 0.85rem 0 0.25rem;
+  padding: 0.75rem 0 0.25rem;
   scrollbar-width: none;
 }
 
@@ -74,29 +73,29 @@
 }
 
 .pill-btn {
-  background: var(--bg-cream);
-  border: 1px solid var(--border-subtle);
-  color: var(--text-body);
-  padding: 0.35rem 0.95rem;
-  border-radius: var(--radius-full);
-  font-size: 0.8rem;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--charcoal-300);
+  padding: 0.35rem 0.85rem;
+  border-radius: var(--radius-xs);
+  font-size: 0.775rem;
   font-weight: 600;
   cursor: pointer;
   white-space: nowrap;
   transition: all var(--transition-fast);
+  letter-spacing: 0.02em;
 }
 
 .pill-btn:hover {
-  background: rgba(229, 169, 60, 0.15);
-  color: var(--gold-800);
-  border-color: rgba(229, 169, 60, 0.4);
+  background: rgba(229, 169, 60, 0.12);
+  color: var(--gold-300);
+  border-color: rgba(229, 169, 60, 0.3);
 }
 
 .pill-btn.active {
-  background: var(--gradient-gold);
+  background: var(--gold-500);
   color: #14151B;
   border-color: var(--gold-500);
-  box-shadow: 0 2px 8px rgba(229, 169, 60, 0.25);
 }
 
 /* =========================================
@@ -109,21 +108,21 @@
 }
 
 .tutor-card {
-  background: #FFFFFF;
-  border: 1px solid var(--border-subtle);
+  background: var(--gradient-dark-card);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: var(--radius-xl);
   overflow: hidden;
   transition: all var(--transition-smooth);
   display: flex;
   flex-direction: column;
   position: relative;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25);
 }
 
 .tutor-card:hover {
   transform: translateY(-8px);
-  border-color: rgba(229, 169, 60, 0.5);
-  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.09), 0 4px 12px rgba(229, 169, 60, 0.15);
+  border-color: rgba(229, 169, 60, 0.4);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.4), var(--shadow-gold);
 }
 
 .tutor-card-header {
@@ -145,7 +144,7 @@
   height: 100%;
   border-radius: var(--radius-lg);
   object-fit: cover;
-  border: 2.5px solid var(--gold-500);
+  border: 2px solid var(--gold-500);
 }
 
 .verified-badge-icon {
@@ -161,8 +160,7 @@
   align-items: center;
   justify-content: center;
   font-size: 0.75rem;
-  font-weight: 700;
-  border: 2px solid #FFFFFF;
+  border: 2px solid var(--charcoal-900);
 }
 
 .tutor-info-meta {
@@ -172,16 +170,15 @@
 .tutor-name {
   font-size: 1.2rem;
   font-weight: 700;
-  color: var(--text-main);
+  color: var(--white);
   margin-bottom: 0.25rem;
 }
 
 .tutor-headline {
   font-size: 0.825rem;
-  color: var(--gold-800);
+  color: var(--gold-300);
   line-height: 1.4;
   margin-bottom: 0.5rem;
-  font-weight: 600;
 }
 
 .tutor-ratings-line {
@@ -189,8 +186,7 @@
   align-items: center;
   gap: 0.4rem;
   font-size: 0.85rem;
-  font-weight: 700;
-  color: var(--text-main);
+  font-weight: 600;
 }
 
 .star-gold {
@@ -198,7 +194,7 @@
 }
 
 .review-count {
-  color: var(--text-muted);
+  color: var(--charcoal-400);
   font-weight: 400;
   font-size: 0.8rem;
 }
@@ -210,7 +206,7 @@
 
 .tutor-bio-snippet {
   font-size: 0.875rem;
-  color: var(--text-body);
+  color: var(--charcoal-300);
   line-height: 1.6;
   margin-bottom: 1.25rem;
   display: -webkit-box;
@@ -227,9 +223,9 @@
 }
 
 .subject-tag {
-  background: rgba(229, 169, 60, 0.12);
-  border: 1px solid rgba(229, 169, 60, 0.3);
-  color: var(--gold-800);
+  background: rgba(229, 169, 60, 0.1);
+  border: 1px solid rgba(229, 169, 60, 0.25);
+  color: var(--gold-300);
   padding: 0.2rem 0.65rem;
   border-radius: var(--radius-sm);
   font-size: 0.75rem;
@@ -238,11 +234,11 @@
 
 .tutor-card-footer {
   padding: 1.25rem 1.75rem;
-  border-top: 1px solid var(--border-subtle);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: var(--bg-cream);
+  background: rgba(0, 0, 0, 0.15);
 }
 
 .tutor-rate-box {
@@ -254,12 +250,12 @@
   font-family: var(--font-heading);
   font-size: 1.35rem;
   font-weight: 800;
-  color: var(--text-main);
+  color: var(--white);
 }
 
 .rate-period {
   font-size: 0.75rem;
-  color: var(--text-muted);
+  color: var(--charcoal-400);
 }
 
 .tutor-card-actions {
@@ -277,8 +273,8 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(17, 19, 24, 0.65);
-  backdrop-filter: blur(8px);
+  background: rgba(9, 10, 14, 0.85);
+  backdrop-filter: blur(12px);
   z-index: 2000;
   display: flex;
   align-items: center;
@@ -295,18 +291,17 @@
 }
 
 .modal-card {
-  background: #FFFFFF;
+  background: #141721;
   border: 1px solid rgba(229, 169, 60, 0.35);
   border-radius: var(--radius-xl);
   width: 100%;
   max-width: 650px;
   max-height: 90vh;
   overflow-y: auto;
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.2), var(--shadow-gold-lg);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.7), var(--shadow-gold-lg);
   transform: translateY(30px) scale(0.97);
   transition: all var(--transition-smooth);
   position: relative;
-  color: var(--text-main);
 }
 
 .modal-overlay.active .modal-card {
@@ -318,22 +313,22 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-bottom: 1px solid var(--border-subtle);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   position: sticky;
   top: 0;
-  background: #FFFFFF;
+  background: #141721;
   z-index: 10;
 }
 
 .modal-title {
   font-size: 1.35rem;
-  color: var(--text-main);
+  color: var(--white);
 }
 
 .modal-close-btn {
-  background: var(--bg-cream);
-  border: 1px solid var(--border-subtle);
-  color: var(--text-muted);
+  background: rgba(255, 255, 255, 0.06);
+  border: none;
+  color: var(--charcoal-300);
   width: 36px;
   height: 36px;
   border-radius: 50%;
@@ -346,9 +341,8 @@
 }
 
 .modal-close-btn:hover {
-  background: rgba(220, 38, 38, 0.1);
+  background: rgba(239, 68, 68, 0.2);
   color: var(--danger);
-  border-color: rgba(220, 38, 38, 0.3);
 }
 
 .modal-body {
@@ -357,12 +351,12 @@
 
 .modal-footer {
   padding: 1.25rem 2rem 1.75rem;
-  border-top: 1px solid var(--border-subtle);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
   display: flex;
   align-items: center;
   justify-content: flex-end;
   gap: 1rem;
-  background: var(--bg-cream);
+  background: #10131B;
 }
 
 /* Form Groups */
@@ -373,21 +367,21 @@
 .form-label {
   display: block;
   font-size: 0.85rem;
-  font-weight: 700;
-  color: var(--text-main);
+  font-weight: 600;
+  color: var(--charcoal-200);
   margin-bottom: 0.45rem;
 }
 
 .form-hint {
   font-size: 0.75rem;
-  color: var(--text-muted);
+  color: var(--charcoal-400);
   margin-top: 0.35rem;
 }
 
 /* Quick Demo Login Switcher Bar inside Auth Modal */
 .demo-accounts-card {
-  background: var(--bg-cream);
-  border: 1px solid rgba(229, 169, 60, 0.3);
+  background: rgba(229, 169, 60, 0.08);
+  border: 1px solid rgba(229, 169, 60, 0.25);
   border-radius: var(--radius-lg);
   padding: 1rem 1.25rem;
   margin-bottom: 1.5rem;
@@ -396,7 +390,7 @@
 .demo-accounts-title {
   font-size: 0.8rem;
   font-weight: 700;
-  color: var(--gold-800);
+  color: var(--gold-300);
   text-transform: uppercase;
   letter-spacing: 0.05em;
   margin-bottom: 0.6rem;
@@ -412,9 +406,9 @@
 }
 
 .btn-demo-fill {
-  background: #FFFFFF;
-  border: 1.5px solid var(--border-subtle);
-  color: var(--text-main);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: var(--white);
   padding: 0.5rem 0.75rem;
   border-radius: var(--radius-sm);
   font-size: 0.8rem;
@@ -425,7 +419,7 @@
 }
 
 .btn-demo-fill:hover {
-  background: var(--gradient-gold);
+  background: var(--gold-500);
   color: #14151B;
   border-color: var(--gold-500);
 }
@@ -433,7 +427,7 @@
 /* Tab Switcher inside Auth */
 .auth-tabs {
   display: flex;
-  border-bottom: 2px solid var(--border-subtle);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   margin-bottom: 1.5rem;
 }
 
@@ -442,16 +436,16 @@
   padding: 0.85rem;
   text-align: center;
   font-family: var(--font-heading);
-  font-weight: 700;
+  font-weight: 600;
   font-size: 0.95rem;
-  color: var(--text-muted);
+  color: var(--charcoal-400);
   cursor: pointer;
   border-bottom: 2px solid transparent;
   transition: all var(--transition-fast);
 }
 
 .auth-tab.active {
-  color: var(--gold-800);
+  color: var(--gold-300);
   border-bottom-color: var(--gold-500);
 }
 
@@ -470,17 +464,16 @@
 }
 
 .toast {
-  background: #FFFFFF;
+  background: #181C26;
   border-radius: var(--radius-md);
   padding: 1rem 1.25rem;
   display: flex;
   align-items: center;
   gap: 0.85rem;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.06);
-  border: 1px solid var(--border-subtle);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
   border-left: 4px solid var(--gold-500);
   animation: slideToast 0.35s cubic-bezier(0.16, 1, 0.3, 1);
-  color: var(--text-main);
+  color: var(--white);
 }
 
 .toast.success { border-left-color: var(--success); }
@@ -499,13 +492,12 @@
 
 .toast.success .toast-icon { color: var(--success); }
 .toast.error .toast-icon { color: var(--danger); }
-.toast.info .toast-icon { color: var(--gold-600); }
+.toast.info .toast-icon { color: var(--gold-400); }
 
 .toast-content {
   flex: 1;
   font-size: 0.875rem;
   line-height: 1.4;
-  color: var(--text-main);
 }
 
 /* Empty States */
@@ -516,19 +508,19 @@
 
 .empty-icon {
   font-size: 3rem;
-  color: var(--gold-500);
+  color: var(--charcoal-500);
   margin-bottom: 1rem;
 }
 
 .empty-title {
   font-size: 1.2rem;
-  color: var(--text-main);
+  color: var(--white);
   margin-bottom: 0.5rem;
 }
 
 .empty-desc {
   font-size: 0.9rem;
-  color: var(--text-muted);
+  color: var(--charcoal-400);
   max-width: 400px;
   margin: 0 auto 1.5rem;
 }
@@ -549,19 +541,19 @@
 .status-pill.pending {
   background: var(--warning-bg);
   color: var(--warning);
-  border: 1px solid rgba(217, 119, 6, 0.3);
+  border: 1px solid rgba(245, 158, 11, 0.3);
 }
 
 .status-pill.approved, .status-pill.accepted, .status-pill.completed, .status-pill.active {
   background: var(--success-bg);
   color: var(--success);
-  border: 1px solid rgba(5, 150, 105, 0.3);
+  border: 1px solid rgba(16, 185, 129, 0.3);
 }
 
 .status-pill.rejected, .status-pill.declined, .status-pill.cancelled, .status-pill.suspended, .status-pill.inactive {
   background: var(--danger-bg);
   color: var(--danger);
-  border: 1px solid rgba(220, 38, 38, 0.3);
+  border: 1px solid rgba(239, 68, 68, 0.3);
 }
 
 @media (max-width: 900px) {

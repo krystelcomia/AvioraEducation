@@ -1,6 +1,5 @@
 /* =========================================
    AVIORA EDUCATION - ADMIN DASHBOARD STYLES
-   White & Gold Luxury Theme
    ========================================= */
 
 .admin-layout {
@@ -11,8 +10,8 @@
 }
 
 .admin-sidebar {
-  background: var(--bg-cream);
-  border-right: 1px solid var(--border-subtle);
+  background: #0C0E14;
+  border-right: 1px solid rgba(229, 169, 60, 0.15);
   padding: 2rem 1.25rem;
   display: flex;
   flex-direction: column;
@@ -25,7 +24,7 @@
   gap: 0.85rem;
   padding: 0.85rem 1.1rem;
   border-radius: var(--radius-md);
-  color: var(--text-body);
+  color: var(--charcoal-300);
   font-size: 0.925rem;
   font-weight: 600;
   cursor: pointer;
@@ -34,15 +33,14 @@
 }
 
 .admin-nav-item:hover {
-  background: rgba(229, 169, 60, 0.12);
-  color: var(--gold-800);
+  background: rgba(229, 169, 60, 0.08);
+  color: var(--gold-300);
 }
 
 .admin-nav-item.active {
-  background: rgba(229, 169, 60, 0.18);
-  color: var(--gold-800);
-  border-color: rgba(229, 169, 60, 0.35);
-  font-weight: 700;
+  background: rgba(229, 169, 60, 0.15);
+  color: var(--gold-400);
+  border-color: rgba(229, 169, 60, 0.3);
 }
 
 .admin-nav-badge {
@@ -57,7 +55,7 @@
 
 .admin-main-content {
   padding: 2.5rem 3rem 5rem;
-  background: #FFFFFF;
+  background: #0F1116;
   overflow-y: auto;
 }
 
@@ -72,7 +70,7 @@
 
 .admin-title {
   font-size: 1.85rem;
-  color: var(--text-main);
+  color: var(--white);
 }
 
 /* Admin Metric Grid */
@@ -84,20 +82,18 @@
 }
 
 .admin-stat-card {
-  background: #FFFFFF;
-  border: 1px solid var(--border-subtle);
+  background: var(--gradient-dark-card);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: var(--radius-lg);
   padding: 1.5rem;
   position: relative;
   overflow: hidden;
   transition: transform var(--transition-fast);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
 .admin-stat-card:hover {
   transform: translateY(-3px);
-  border-color: rgba(229, 169, 60, 0.45);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06);
+  border-color: rgba(229, 169, 60, 0.35);
 }
 
 .admin-stat-card::after {
@@ -106,7 +102,7 @@
   top: 0;
   left: 0;
   right: 0;
-  height: 3px;
+  height: 2px;
   background: var(--gradient-gold);
 }
 
@@ -114,15 +110,15 @@
   font-family: var(--font-heading);
   font-size: 2rem;
   font-weight: 800;
-  color: var(--text-main);
+  color: var(--white);
   line-height: 1.1;
   margin-bottom: 0.25rem;
 }
 
 .admin-stat-label {
   font-size: 0.825rem;
-  color: var(--text-muted);
-  font-weight: 600;
+  color: var(--charcoal-400);
+  font-weight: 500;
 }
 
 /* Visual Charts & Summary Row */
@@ -134,11 +130,10 @@
 }
 
 .chart-card {
-  background: #FFFFFF;
-  border: 1px solid var(--border-subtle);
+  background: var(--gradient-dark-card);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: var(--radius-xl);
   padding: 1.75rem 2rem;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
 }
 
 .chart-header {
@@ -150,16 +145,16 @@
 
 .chart-title {
   font-size: 1.15rem;
-  color: var(--text-main);
+  color: var(--white);
 }
 
 /* Modern Data Table */
 .data-table-container {
-  background: #FFFFFF;
-  border: 1px solid var(--border-subtle);
+  background: var(--gradient-dark-card);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: var(--radius-xl);
   overflow: hidden;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
 }
 
 .table-toolbar {
@@ -168,7 +163,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  border-bottom: 1px solid var(--border-subtle);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   flex-wrap: wrap;
 }
 
@@ -184,21 +179,21 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--gold-800);
-  background: var(--bg-cream);
-  border-bottom: 1px solid var(--border-subtle);
+  color: var(--gold-300);
+  background: rgba(0, 0, 0, 0.2);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .admin-table td {
   padding: 1.25rem 1.5rem;
   font-size: 0.875rem;
-  color: var(--text-body);
-  border-bottom: 1px solid var(--border-subtle);
+  color: var(--charcoal-200);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   vertical-align: middle;
 }
 
 .admin-table tr:hover td {
-  background: #FFFDF8;
+  background: rgba(229, 169, 60, 0.03);
 }
 
 /* User cell */
@@ -217,13 +212,13 @@
 }
 
 .user-cell-name {
-  font-weight: 700;
-  color: var(--text-main);
+  font-weight: 600;
+  color: var(--white);
 }
 
 .user-cell-email {
   font-size: 0.775rem;
-  color: var(--text-muted);
+  color: var(--charcoal-400);
 }
 
 /* Switch Toggle for Tutor Visibility */
@@ -247,7 +242,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: #D1D5DB;
+  background-color: var(--charcoal-700);
   transition: .3s;
   border-radius: 34px;
 }
@@ -262,7 +257,6 @@
   background-color: white;
   transition: .3s;
   border-radius: 50%;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
 input:checked + .slider {
@@ -281,7 +275,7 @@ input:checked + .slider:before {
     flex-direction: row;
     overflow-x: auto;
     border-right: none;
-    border-bottom: 1px solid var(--border-subtle);
+    border-bottom: 1px solid rgba(229, 169, 60, 0.15);
   }
   .admin-charts-grid {
     grid-template-columns: 1fr;

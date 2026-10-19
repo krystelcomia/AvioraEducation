@@ -1,13 +1,30 @@
 const Database = require('better-sqlite3');
 const path = require('path');
+const fs = require('fs');
 const bcrypt = require('bcryptjs');
 
-const dbPath = path.join(__dirname, 'aviora.db');
+const isVercel = process.env.VERCEL === '1' || process.env.VERCEL === 'true' || !!process.env.AWS_LAMBDA_FUNCTION_NAME;
+const sourceDbPath = path.join(__dirname, 'aviora.db');
+const targetDbDir = isVercel ? '/tmp' : __dirname;
+const dbPath = path.join(targetDbDir, 'aviora.db');
+
+if (isVercel && !fs.existsSync(dbPath)) {
+  if (fs.existsSync(sourceDbPath)) {
+    try {
+      fs.copyFileSync(sourceDbPath, dbPath);
+    } catch (e) {
+      console.warn('Could not copy initial aviora.db to /tmp, will initialize new DB:', e);
+    }
+  }
+}
+
 const db = new Database(dbPath);
 
 // Enable foreign keys and WAL mode for fast concurrent operations
 db.pragma('foreign_keys = ON');
-db.pragma('journal_mode = WAL');
+if (!isVercel) {
+  db.pragma('journal_mode = WAL');
+}
 
 function initSchema() {
   db.exec(`

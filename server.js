@@ -11,10 +11,29 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'aviora-education-secret-key-2026-luxury-edtech';
 
+const isVercel = process.env.VERCEL === '1' || process.env.VERCEL === 'true' || !!process.env.AWS_LAMBDA_FUNCTION_NAME;
+
 // Ensure uploads folder exists
-const uploadsDir = path.join(__dirname, 'uploads');
+const sourceUploadsDir = path.join(__dirname, 'uploads');
+const uploadsDir = isVercel ? path.join('/tmp', 'uploads') : sourceUploadsDir;
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+// If running in Vercel serverless environment, copy seed uploads to writable /tmp/uploads
+if (isVercel && fs.existsSync(sourceUploadsDir)) {
+  try {
+    const files = fs.readdirSync(sourceUploadsDir);
+    for (const f of files) {
+      const srcFile = path.join(sourceUploadsDir, f);
+      const destFile = path.join(uploadsDir, f);
+      if (!fs.existsSync(destFile)) {
+        fs.copyFileSync(srcFile, destFile);
+      }
+    }
+  } catch (e) {
+    console.warn('Could not copy initial uploads to /tmp:', e);
+  }
 }
 
 // Multer storage configuration for credentials
@@ -1292,14 +1311,18 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: err.message || 'An internal server error occurred.' });
 });
 
-// Start Server
-app.listen(PORT, () => {
-  console.log(`===============================================`);
-  console.log(`🌟 Aviora Education Server is Live & Running!`);
-  console.log(`📡 URL: http://localhost:${PORT}`);
-  console.log(`🎓 Role Credentials Demo:`);
-  console.log(`   - Administrator: admin@aviora.edu / admin123`);
-  console.log(`   - Student Demo:  student@aviora.edu / student123`);
-  console.log(`   - Teacher Demo:  elena.vance@aviora.edu / teacher123`);
-  console.log(`===============================================`);
-});
+// Start Server locally if run directly
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`===============================================`);
+    console.log(`🌟 Aviora Education Server is Live & Running!`);
+    console.log(`📡 URL: http://localhost:${PORT}`);
+    console.log(`🎓 Role Credentials Demo:`);
+    console.log(`   - Administrator: admin@aviora.edu / admin123`);
+    console.log(`   - Student Demo:  student@aviora.edu / student123`);
+    console.log(`   - Teacher Demo:  elena.vance@aviora.edu / teacher123`);
+    console.log(`===============================================`);
+  });
+}
+
+module.exports = app;

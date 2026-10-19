@@ -89,6 +89,15 @@ Open your browser at:
 
 ---
 
+## 🌐 Vercel Deployment
+
+Aviora Education is configured for zero-configuration continuous deployment on Vercel:
+- **Live URL**: [https://avioraeducation.vercel.app/](https://avioraeducation.vercel.app/)
+- **Configuration**: [vercel.json](file:///c:/Users/comia/AvioraEducation/vercel.json) routes static assets directly through Vercel's Edge Network while routing `/api/*` and dynamic routes through the serverless function in [api/index.js](file:///c:/Users/comia/AvioraEducation/api/index.js).
+- **Automated CI/CD**: Pushing changes to the `main` branch automatically triggers a new deployment on Vercel.
+
+---
+
 ## 📂 Architecture
 
 ```

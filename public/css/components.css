@@ -160,7 +160,7 @@
   align-items: center;
   justify-content: center;
   font-size: 0.75rem;
-  border: 2px solid var(--charcoal-900);
+  border: 2px solid #FFFFFF;
 }
 
 .tutor-info-meta {

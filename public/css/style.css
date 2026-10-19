@@ -1372,7 +1372,7 @@ a { text-decoration: none; color: inherit; transition: color var(--transition-fa
 }
 
 .pricing-feature-icon {
-  color: var(--gold-400);
+  color: var(--gold-600);
   font-weight: 700;
   flex-shrink: 0;
 }
@@ -1717,8 +1717,8 @@ a { text-decoration: none; color: inherit; transition: color var(--transition-fa
   display: flex;
   flex-direction: column;
   gap: 0.65rem;
-  background: rgba(0, 0, 0, 0.25);
-  border: 1px solid rgba(255, 255, 255, 0.04);
+  background: #FAF7F2;
+  border: 1px solid rgba(198, 138, 40, 0.22);
   border-radius: var(--radius-sm);
   padding: 1rem;
   font-size: 0.82rem;
@@ -1728,13 +1728,14 @@ a { text-decoration: none; color: inherit; transition: color var(--transition-fa
   display: flex;
   align-items: center;
   gap: 0.65rem;
-  color: var(--charcoal-300);
+  color: var(--charcoal-900);
   line-height: 1.4;
 }
 
 .live-activity-time {
   font-size: 0.72rem;
-  color: var(--charcoal-400);
+  color: var(--gold-800);
+  font-weight: 700;
   white-space: nowrap;
 }
 

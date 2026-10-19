@@ -15,20 +15,21 @@
 }
 
 .app-status-banner.pending {
-  background: linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(20, 24, 34, 0.95) 100%);
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.12) 0%, #FFFFFF 100%);
   border: 1px solid rgba(245, 158, 11, 0.4);
-  box-shadow: 0 10px 30px rgba(245, 158, 11, 0.15);
+  box-shadow: 0 6px 20px rgba(245, 158, 11, 0.08);
 }
 
 .app-status-banner.approved {
-  background: linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(20, 24, 34, 0.95) 100%);
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.12) 0%, #FFFFFF 100%);
   border: 1px solid rgba(16, 185, 129, 0.4);
-  box-shadow: 0 10px 30px rgba(16, 185, 129, 0.15);
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.08);
 }
 
 .app-status-banner.rejected {
-  background: linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(20, 24, 34, 0.95) 100%);
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.12) 0%, #FFFFFF 100%);
   border: 1px solid rgba(239, 68, 68, 0.4);
+  box-shadow: 0 6px 20px rgba(239, 68, 68, 0.08);
 }
 
 .status-icon-circle {
@@ -192,16 +193,17 @@
 }
 
 .day-slot-card {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: #FFFFFF;
+  border: 1px solid rgba(198, 138, 40, 0.25);
   border-radius: var(--radius-md);
   padding: 0.85rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
 }
 
 .day-name {
   font-size: 0.85rem;
   font-weight: 700;
-  color: var(--gold-300);
+  color: var(--gold-800);
   margin-bottom: 0.5rem;
 }
 
@@ -210,7 +212,7 @@
   align-items: center;
   gap: 0.4rem;
   font-size: 0.775rem;
-  color: var(--charcoal-300);
+  color: var(--charcoal-900);
   margin-bottom: 0.35rem;
   cursor: pointer;
 }

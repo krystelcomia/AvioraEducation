@@ -153,11 +153,11 @@
 
 /* Modern Data Table */
 .data-table-container {
-  background: var(--gradient-dark-card);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: #FFFFFF;
+  border: 1px solid rgba(0, 0, 0, 0.08);
   border-radius: var(--radius-xl);
   overflow: hidden;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
 }
 
 .table-toolbar {
@@ -166,7 +166,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
   flex-wrap: wrap;
 }
 
@@ -182,21 +182,21 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--gold-300);
-  background: rgba(0, 0, 0, 0.2);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--gold-800);
+  background: #F6F2E9;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
 }
 
 .admin-table td {
   padding: 1.25rem 1.5rem;
   font-size: 0.875rem;
-  color: var(--charcoal-200);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  color: var(--charcoal-900);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
   vertical-align: middle;
 }
 
 .admin-table tr:hover td {
-  background: rgba(229, 169, 60, 0.03);
+  background: rgba(198, 138, 40, 0.05);
 }
 
 /* User cell */

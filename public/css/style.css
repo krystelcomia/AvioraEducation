@@ -436,8 +436,8 @@ a { text-decoration: none; color: inherit; transition: color var(--transition-fa
    HERO SECTION
    ========================================= */
 .hero-section {
-  padding-top: calc(var(--header-height) + 4rem);
-  padding-bottom: 5.5rem;
+  padding-top: calc(var(--header-height) + 2.5rem);
+  padding-bottom: 3.5rem;
   position: relative;
   overflow: hidden;
   background: radial-gradient(ellipse 75% 55% at 50% -10%, rgba(198, 138, 40, 0.12) 0%, rgba(250, 247, 242, 0.4) 60%, transparent 100%), #FAF7F2;
@@ -473,7 +473,7 @@ a { text-decoration: none; color: inherit; transition: color var(--transition-fa
   align-items: center;
   gap: 1.25rem;
   flex-wrap: wrap;
-  margin-bottom: 3rem;
+  margin-bottom: 0.5rem;
 }
 
 .hero-trust-metrics {
@@ -1780,8 +1780,8 @@ a { text-decoration: none; color: inherit; transition: color var(--transition-fa
 .student-works-section {
   background: #FAF7F2;
   position: relative;
-  padding-top: calc(var(--header-height) + 2rem);
-  padding-bottom: 4rem;
+  padding-top: 4.5rem;
+  padding-bottom: 4.5rem;
   border-bottom: 1px solid rgba(0, 0, 0, 0.06);
 }
 

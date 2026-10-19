@@ -191,6 +191,16 @@ const Router = {
       const view = document.getElementById('view-signup');
       if (view) view.style.display = 'block';
       window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else if (hash.startsWith('#tutor-profile')) {
+      const view = document.getElementById('view-tutor-profile');
+      if (view) view.style.display = 'block';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      const queryStr = window.location.hash.includes('?') ? window.location.hash.split('?')[1] : '';
+      const params = new URLSearchParams(queryStr);
+      const tutorId = params.get('id');
+      if (tutorId && typeof Tutors !== 'undefined') {
+        await Tutors.loadFullProfilePage(tutorId);
+      }
     } else if (hash === '#tutors') {
       const view = document.getElementById('view-tutors');
       if (view) view.style.display = 'block';

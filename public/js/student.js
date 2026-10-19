@@ -193,13 +193,15 @@ const Student = {
 
     container.innerHTML = filtered.map(r => `
       <div class="request-item-card">
-        <img src="${r.tutor_avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80'}" class="request-tutor-avatar" />
+        <a href="${r.tutor_profile_id ? `#tutor-profile?id=${r.tutor_profile_id}` : '#tutors'}" title="View Tutor Profile">
+          <img src="${r.tutor_avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80'}" class="request-tutor-avatar" />
+        </a>
         
         <div class="request-subject-info">
           <h4>${r.subject}</h4>
-          <p>Tutor: <strong>${r.tutor_name}</strong></p>
+          <p>Tutor: ${r.tutor_profile_id ? `<a href="#tutor-profile?id=${r.tutor_profile_id}" style="color: var(--gold-800); font-weight: 700; text-decoration: underline;">${r.tutor_name}</a>` : `<strong>${r.tutor_name}</strong>`}</p>
           ${r.notes ? `<p style="font-size: 0.8rem; color: var(--charcoal-400); margin-top: 0.2rem;">Topic: ${r.notes}</p>` : ''}
-          ${r.tutor_response_note ? `<p style="font-size: 0.8rem; color: var(--gold-300); margin-top: 0.2rem;">Tutor note: "${r.tutor_response_note}"</p>` : ''}
+          ${r.tutor_response_note ? `<p style="font-size: 0.8rem; color: var(--gold-700); margin-top: 0.2rem;">Tutor note: "${r.tutor_response_note}"</p>` : ''}
         </div>
 
         <div class="request-datetime-info">

@@ -64,6 +64,46 @@ const Tutors = {
       });
     }
 
+    // Message Modal
+    const messageModalClose = document.getElementById('tutor-message-modal-close');
+    if (messageModalClose) {
+      messageModalClose.addEventListener('click', () => this.closeMessageModal());
+    }
+
+    const cancelMessageBtn = document.getElementById('direct-message-cancel-btn');
+    if (cancelMessageBtn) {
+      cancelMessageBtn.addEventListener('click', () => this.closeMessageModal());
+    }
+
+    const messageOverlay = document.getElementById('tutor-message-modal');
+    if (messageOverlay) {
+      messageOverlay.addEventListener('click', (e) => {
+        if (e.target === messageOverlay) this.closeMessageModal();
+      });
+    }
+
+    // Direct Message Form Submit
+    const messageForm = document.getElementById('tutor-direct-message-form');
+    if (messageForm) {
+      messageForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const tutorId = document.getElementById('direct-message-tutor-id')?.value;
+        const name = document.getElementById('direct-message-name')?.value;
+        const email = document.getElementById('direct-message-email')?.value;
+        const subject = document.getElementById('direct-message-subject')?.value;
+        const message = document.getElementById('direct-message-content')?.value;
+
+        try {
+          await API.sendMessageToTutor(tutorId, { name, email, subject, message });
+          showToast('Your message has been sent directly to the educator! They will be notified immediately.', 'success');
+          document.getElementById('direct-message-content').value = '';
+          this.closeMessageModal();
+        } catch (err) {
+          showToast(err.message, 'error');
+        }
+      });
+    }
+
     const requestModalClose = document.getElementById('booking-modal-close');
     if (requestModalClose) {
       requestModalClose.addEventListener('click', () => this.closeBookingModal());
@@ -216,7 +256,12 @@ const Tutors = {
             <span class="rate-amount">$${t.hourly_rate}</span>
             <span class="rate-period">per hour</span>
           </div>
-          <div class="tutor-card-actions">
+          <div class="tutor-card-actions" style="display: flex; align-items: center; gap: 0.45rem;">
+            <button class="btn btn-icon btn-sm message-tutor-btn" data-id="${t.id}" title="Send message to ${t.name}" style="background: rgba(198, 138, 40, 0.1); border: 1px solid rgba(198, 138, 40, 0.25); color: var(--gold-800); width: 34px; height: 34px; border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all var(--transition-fast);">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+              </svg>
+            </button>
             <button class="btn btn-secondary btn-sm view-profile-btn" data-id="${t.id}">Profile</button>
             <button class="btn btn-primary btn-sm book-tutor-btn" data-id="${t.id}">Book</button>
           </div>
@@ -226,11 +271,19 @@ const Tutors = {
   },
 
   attachCardEventListeners(container) {
+    container.querySelectorAll('.message-tutor-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const tutorId = btn.dataset.id;
+        this.openMessageModal(tutorId);
+      });
+    });
+
     container.querySelectorAll('.view-profile-btn').forEach(btn => {
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
         const tutorId = btn.dataset.id;
-        this.openProfileModal(tutorId);
+        this.navigateToProfile(tutorId);
       });
     });
 
@@ -243,108 +296,403 @@ const Tutors = {
     });
   },
 
-  async openProfileModal(tutorId) {
+  navigateToProfile(tutorId) {
+    window.location.hash = `#tutor-profile?id=${tutorId}`;
+  },
+
+  async loadFullProfilePage(tutorId) {
+    const container = document.getElementById('tutor-full-profile-container');
+    if (!container) return;
+
     try {
+      container.innerHTML = `
+        <div style="text-align: center; padding: 4rem 0;">
+          <p style="color: var(--text-secondary); font-size: 1.05rem;">Loading educator academic profile...</p>
+        </div>
+      `;
+
       const data = await API.getTutorById(tutorId);
       const tutor = data.tutor;
       this.selectedTutor = tutor;
 
-      const modal = document.getElementById('tutor-profile-modal');
-      const content = document.getElementById('tutor-profile-content');
-      if (!modal || !content) return;
-
       const subjectsTags = (tutor.subjects || []).map(s => `<span class="subject-tag">${s}</span>`).join(' ');
       const gradeLevelsTags = (tutor.grade_levels || []).map(g => `<span class="badge-gold">${g}</span>`).join(' ');
 
-      // Format Schedule Table
-      let scheduleHtml = '';
-      if (tutor.availability_schedule && Object.keys(tutor.availability_schedule).length > 0) {
-        scheduleHtml = Object.entries(tutor.availability_schedule).map(([day, slots]) => `
-          <div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 0.85rem;">
-            <strong style="color: var(--gold-300);">${day}</strong>
-            <span style="color: var(--charcoal-300);">${Array.isArray(slots) ? slots.join(', ') : slots}</span>
-          </div>
-        `).join('');
-      } else {
-        scheduleHtml = '<p style="color: var(--charcoal-400); font-size: 0.85rem;">Flexible schedule available upon request.</p>';
-      }
+      // Format Schedule Table (Monday through Sunday)
+      let scheduleRowsHtml = '';
+      const daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+      const sched = tutor.availability_schedule || {};
+
+      daysOfWeek.forEach(day => {
+        const slots = sched[day] || (day !== 'Sunday' ? ['10:00 - 12:00', '14:00 - 17:00'] : ['Flexible Consultation']);
+        const slotsArray = Array.isArray(slots) ? slots : [slots];
+        const badgesHtml = slotsArray.map(slot => `<span class="schedule-slot-badge">⏰ ${slot}</span>`).join(' ');
+
+        scheduleRowsHtml += `
+          <tr class="schedule-row">
+            <td class="schedule-day-td">${day}</td>
+            <td class="schedule-slots-td">${badgesHtml}</td>
+          </tr>
+        `;
+      });
 
       // Reviews
       let reviewsHtml = '';
       if (tutor.reviews && tutor.reviews.length > 0) {
         reviewsHtml = tutor.reviews.map(r => `
-          <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: var(--radius-md); padding: 1rem; margin-bottom: 0.75rem;">
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.35rem;">
-              <strong style="color: var(--white); font-size: 0.9rem;">${r.student_name}</strong>
-              <span style="color: #F59E0B; font-size: 0.85rem;">★ ${r.rating}.0</span>
+          <div class="tutor-review-card">
+            <div class="tutor-review-header">
+              <div class="tutor-review-author">
+                <div class="tutor-review-avatar">${(r.student_name || 'S').charAt(0)}</div>
+                <div>
+                  <div style="font-weight: 700; color: var(--charcoal-950); font-size: 0.925rem;">${r.student_name}</div>
+                  <div style="font-size: 0.76rem; color: var(--text-muted);">${r.created_at ? new Date(r.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : 'Verified Student'}</div>
+                </div>
+              </div>
+              <div style="color: #F59E0B; font-weight: 700; font-size: 0.9rem;">
+                ${'★'.repeat(Math.round(r.rating || 5))} <span style="font-size: 0.8rem; color: var(--text-muted); font-weight: normal;">(${r.rating}.0)</span>
+              </div>
             </div>
-            <p style="color: var(--charcoal-300); font-size: 0.85rem; line-height: 1.5; font-style: italic;">"${r.comment}"</p>
+            <p class="tutor-review-comment">"${r.comment}"</p>
           </div>
         `).join('');
       } else {
-        reviewsHtml = '<p style="color: var(--charcoal-400); font-size: 0.85rem;">No reviews yet for this tutor.</p>';
+        reviewsHtml = `
+          <div class="tutor-review-card" style="text-align: center; padding: 2rem;">
+            <p style="color: var(--text-secondary); margin: 0; font-style: italic;">
+              This educator recently completed credential verification with the Aviora Academic Board. No public student reviews posted yet.
+            </p>
+          </div>
+        `;
       }
 
-      content.innerHTML = `
-        <div style="display: flex; gap: 1.5rem; align-items: center; margin-bottom: 1.75rem; flex-wrap: wrap;">
-          <img src="${tutor.avatar_url}" style="width: 88px; height: 88px; border-radius: var(--radius-lg); object-fit: cover; border: 2.5px solid var(--gold-500);" />
-          <div style="flex: 1;">
-            <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.25rem;">
-              <h2 style="font-size: 1.5rem; color: var(--white);">${tutor.name}</h2>
-              <span class="badge-gold">Verified Educator</span>
+      container.innerHTML = `
+        <!-- Top Breadcrumb & Back Action -->
+        <div class="tutor-breadcrumb-bar">
+          <button class="btn btn-outline-gold btn-sm" id="full-profile-back-btn" style="display: inline-flex; align-items: center; gap: 0.4rem;">
+            <span>←</span>
+            <span>Back to Tutors Directory</span>
+          </button>
+          <div class="tutor-breadcrumb-text">
+            <a href="#tutors">Directory</a> / <span>${tutor.name}</span>
+          </div>
+        </div>
+
+        <!-- Tutor Hero Header Card -->
+        <div class="tutor-profile-hero-card">
+          <div class="tutor-hero-top">
+            <div class="tutor-hero-avatar-box">
+              <img src="${tutor.avatar_url}" alt="${tutor.name}" class="tutor-hero-avatar-img" />
+              <div class="tutor-hero-badge-verified" title="Aviora Board Verified">✓</div>
             </div>
-            <p style="color: var(--gold-300); font-size: 0.95rem; margin-bottom: 0.4rem;">${tutor.headline || ''}</p>
-            <div style="display: flex; align-items: center; gap: 1rem; font-size: 0.875rem;">
-              <span style="color: #F59E0B; font-weight: 700;">★ ${tutor.rating.toFixed(1)} (${tutor.reviews_count} reviews)</span>
-              <span style="color: var(--charcoal-400);">•</span>
-              <span style="color: var(--white); font-weight: 700;">$${tutor.hourly_rate} / hour</span>
-              <span style="color: var(--charcoal-400);">•</span>
-              <span style="color: var(--charcoal-300);">${tutor.total_sessions} sessions completed</span>
+
+            <div class="tutor-hero-info">
+              <div class="tutor-hero-title-row">
+                <h1 class="tutor-hero-name">${tutor.name}</h1>
+                <span class="badge-gold">Verified Educator</span>
+              </div>
+              <div class="tutor-hero-headline">${tutor.headline || 'Distinguished Faculty Specialist'}</div>
+              <div class="tutor-hero-credentials">
+                <span>🎓 <strong>${tutor.highest_degree || 'Advanced Degree'}</strong></span>
+                <span>•</span>
+                <span>🏛️ <strong>${tutor.institution || 'Accredited University'}</strong></span>
+                <span>•</span>
+                <span>⏳ ${tutor.years_experience || 5} Years Teaching Experience</span>
+              </div>
+
+              <div class="tutor-hero-actions">
+                <button class="btn btn-outline-gold btn-md" id="hero-message-tutor-btn" data-id="${tutor.id}" style="display: inline-flex; align-items: center; gap: 0.5rem;">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                  </svg>
+                  <span>Message Tutor</span>
+                </button>
+                <button class="btn btn-primary btn-md" id="hero-book-tutor-btn" data-id="${tutor.id}" style="display: inline-flex; align-items: center; gap: 0.5rem;">
+                  <span>Book 1-on-1 Session</span>
+                  <span>→</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 4 Core High-Impact Stat Strip -->
+          <div class="tutor-stats-strip">
+            <div class="tutor-stat-item">
+              <div class="tutor-stat-icon">👥</div>
+              <div class="tutor-stat-info-col">
+                <span class="tutor-stat-num">${tutor.total_students || 18}</span>
+                <span class="tutor-stat-label">Total Students Mentored</span>
+              </div>
+            </div>
+
+            <div class="tutor-stat-item">
+              <div class="tutor-stat-icon">📚</div>
+              <div class="tutor-stat-info-col">
+                <span class="tutor-stat-num">${tutor.total_sessions || 0}</span>
+                <span class="tutor-stat-label">Sessions Completed</span>
+              </div>
+            </div>
+
+            <div class="tutor-stat-item">
+              <div class="tutor-stat-icon">⭐</div>
+              <div class="tutor-stat-info-col">
+                <span class="tutor-stat-num">${tutor.rating ? tutor.rating.toFixed(1) : '5.0'}</span>
+                <span class="tutor-stat-label">Rating (${tutor.reviews_count || 0} Reviews)</span>
+              </div>
+            </div>
+
+            <div class="tutor-stat-item">
+              <div class="tutor-stat-icon">💎</div>
+              <div class="tutor-stat-info-col">
+                <span class="tutor-stat-num">$${tutor.hourly_rate}</span>
+                <span class="tutor-stat-label">Standard Hourly Rate</span>
+              </div>
             </div>
           </div>
         </div>
 
-        <div style="margin-bottom: 1.5rem;">
-          <h4 style="color: var(--white); margin-bottom: 0.5rem; font-size: 1.05rem;">Academic Qualifications</h4>
-          <p style="color: var(--charcoal-200); font-size: 0.9rem;">
-            🎓 <strong>${tutor.highest_degree || 'Advanced Degree'}</strong> from <strong>${tutor.institution || 'Accredited University'}</strong>
-            (${tutor.years_experience} years of teaching experience)
-          </p>
-        </div>
+        <!-- 2-Column Content Grid -->
+        <div class="tutor-profile-grid">
+          <!-- Left Main Column -->
+          <div class="tutor-profile-main-col">
+            <!-- Biography Card -->
+            <div class="tutor-profile-card">
+              <h2 class="tutor-profile-card-title">
+                <span>📖</span>
+                <span>Biography &amp; Mentorship Philosophy</span>
+              </h2>
+              <p style="font-size: 0.95rem; line-height: 1.75; color: var(--charcoal-900); margin-bottom: 1.25rem;">
+                ${tutor.bio || 'Expert educator committed to rigorous conceptual instruction and academic empowerment.'}
+              </p>
+              <div style="background: rgba(198, 138, 40, 0.08); border-left: 3px solid var(--gold-600); padding: 0.85rem 1.15rem; border-radius: 0 var(--radius-sm) var(--radius-sm) 0;">
+                <p style="font-size: 0.85rem; color: var(--gold-900); font-weight: 600; margin: 0;">
+                  ✦ First-Principles Instruction: Lessons prioritize deep analytical understanding over memorization shortcuts.
+                </p>
+              </div>
+            </div>
 
-        <div style="margin-bottom: 1.5rem;">
-          <h4 style="color: var(--white); margin-bottom: 0.5rem; font-size: 1.05rem;">Subjects & Target Grade Levels</h4>
-          <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.6rem;">
-            ${subjectsTags}
+            <!-- Academic Qualifications Card -->
+            <div class="tutor-profile-card">
+              <h2 class="tutor-profile-card-title">
+                <span>🎓</span>
+                <span>Academic Qualifications &amp; Pedagogy Vetting</span>
+              </h2>
+              <div style="display: flex; flex-direction: column; gap: 0.85rem;">
+                <div style="display: flex; align-items: flex-start; gap: 0.85rem;">
+                  <span style="font-size: 1.25rem;">🏛️</span>
+                  <div>
+                    <strong style="color: var(--charcoal-950); font-size: 0.95rem;">${tutor.institution || 'University Faculty'}</strong>
+                    <p style="font-size: 0.85rem; color: var(--text-secondary); margin: 0.2rem 0 0 0;">Highest Credential: ${tutor.highest_degree || 'Advanced Degree'}</p>
+                  </div>
+                </div>
+                <div style="display: flex; align-items: flex-start; gap: 0.85rem;">
+                  <span style="font-size: 1.25rem;">🛡️</span>
+                  <div>
+                    <strong style="color: var(--charcoal-950); font-size: 0.95rem;">Identity &amp; Degree Verified</strong>
+                    <p style="font-size: 0.85rem; color: var(--text-secondary); margin: 0.2rem 0 0 0;">Official transcripts, teaching pedigree, and identity authenticated by the Aviora Academic Board.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Subjects & Target Grades Card -->
+            <div class="tutor-profile-card">
+              <h2 class="tutor-profile-card-title">
+                <span>🎯</span>
+                <span>Subjects &amp; Target Grade Levels</span>
+              </h2>
+              <div style="margin-bottom: 1.25rem;">
+                <h4 style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--gold-800); margin-bottom: 0.65rem;">Instructional Disciplines:</h4>
+                <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+                  ${subjectsTags}
+                </div>
+              </div>
+              <div>
+                <h4 style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--gold-800); margin-bottom: 0.65rem;">Target Grade Competencies:</h4>
+                <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+                  ${gradeLevelsTags}
+                </div>
+              </div>
+            </div>
+
+            <!-- Student Reviews Card -->
+            <div class="tutor-profile-card">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; border-bottom: 1px solid rgba(0,0,0,0.06); padding-bottom: 0.75rem;">
+                <h2 style="font-size: 1.25rem; font-weight: 700; color: var(--charcoal-950); margin: 0; display: flex; align-items: center; gap: 0.6rem;">
+                  <span>⭐</span>
+                  <span>Previous Student Ratings &amp; Reviews</span>
+                </h2>
+                <span class="badge-gold">★ ${tutor.rating ? tutor.rating.toFixed(1) : '5.0'} (${tutor.reviews?.length || 0})</span>
+              </div>
+              <div class="tutor-reviews-list">
+                ${reviewsHtml}
+              </div>
+            </div>
           </div>
-          <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
-            ${gradeLevelsTags}
+
+          <!-- Right Sidebar (Schedule & Quick Message) -->
+          <div class="tutor-profile-sidebar">
+            <!-- Weekly Schedule Card -->
+            <div class="tutor-profile-card" style="padding: 1.75rem;">
+              <h2 class="tutor-profile-card-title" style="margin-bottom: 0.75rem;">
+                <span>🗓️</span>
+                <span>Weekly Availability Schedule</span>
+              </h2>
+              <p style="font-size: 0.82rem; color: var(--text-secondary); margin-bottom: 1rem;">
+                Standard weekly time slots open for 1-on-1 sessions:
+              </p>
+              <table class="tutor-schedule-table">
+                <tbody>
+                  ${scheduleRowsHtml}
+                </tbody>
+              </table>
+              <button class="btn btn-primary btn-md" id="sidebar-book-btn" data-id="${tutor.id}" style="width: 100%; justify-content: center; margin-top: 1.25rem;">
+                <span>Book a Session Slot</span>
+                <span>→</span>
+              </button>
+            </div>
+
+            <!-- Quick Direct Message to Tutor Card -->
+            <div class="tutor-quick-message-card">
+              <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.5rem;">
+                <span style="font-size: 1.3rem;">💬</span>
+                <h3 style="font-size: 1.15rem; font-weight: 700; color: var(--charcoal-950); margin: 0;">Send Direct Message</h3>
+              </div>
+              <p style="font-size: 0.825rem; color: var(--text-secondary); margin-bottom: 1rem;">
+                Reach out to ${tutor.name} directly regarding learning goals or schedule inquiries.
+              </p>
+              <form id="sidebar-tutor-message-form">
+                <input type="hidden" name="tutorId" value="${tutor.id}" />
+                <div class="form-group" style="margin-bottom: 0.75rem;">
+                  <label class="form-label" style="font-size: 0.8rem; font-weight: 600;">Your Name</label>
+                  <input type="text" class="form-control" id="sidebar-msg-name" placeholder="Your full name" required />
+                </div>
+                <div class="form-group" style="margin-bottom: 0.75rem;">
+                  <label class="form-label" style="font-size: 0.8rem; font-weight: 600;">Your Email</label>
+                  <input type="email" class="form-control" id="sidebar-msg-email" placeholder="Your email address" required />
+                </div>
+                <div class="form-group" style="margin-bottom: 0.85rem;">
+                  <label class="form-label" style="font-size: 0.8rem; font-weight: 600;">Message</label>
+                  <textarea class="form-control" id="sidebar-msg-content" rows="3" placeholder="Hi ${tutor.name}, I am interested in your classes..." required></textarea>
+                </div>
+                <button type="submit" class="btn btn-outline-gold btn-md" style="width: 100%; justify-content: center; display: inline-flex; align-items: center; gap: 0.5rem;">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                  </svg>
+                  <span>Send Message to ${tutor.name.split(' ')[0]}</span>
+                </button>
+              </form>
+            </div>
           </div>
-        </div>
-
-        <div style="margin-bottom: 1.5rem;">
-          <h4 style="color: var(--white); margin-bottom: 0.5rem; font-size: 1.05rem;">Biography & Mentorship Approach</h4>
-          <p style="color: var(--charcoal-300); font-size: 0.925rem; line-height: 1.6;">${tutor.bio}</p>
-        </div>
-
-        <div style="margin-bottom: 1.75rem;">
-          <h4 style="color: var(--white); margin-bottom: 0.75rem; font-size: 1.05rem;">Weekly Availability Schedule</h4>
-          <div style="background: rgba(0,0,0,0.25); border-radius: var(--radius-md); padding: 1rem 1.25rem;">
-            ${scheduleHtml}
-          </div>
-        </div>
-
-        <div>
-          <h4 style="color: var(--white); margin-bottom: 0.75rem; font-size: 1.05rem;">Verified Student Reviews (${tutor.reviews?.length || 0})</h4>
-          ${reviewsHtml}
         </div>
       `;
 
-      modal.classList.add('active');
-      document.body.style.overflow = 'hidden';
+      // Pre-fill user details if logged in
+      const currentUser = Auth.currentUser;
+      if (currentUser) {
+        const nameField = document.getElementById('sidebar-msg-name');
+        const emailField = document.getElementById('sidebar-msg-email');
+        if (nameField && !nameField.value) nameField.value = currentUser.name || '';
+        if (emailField && !emailField.value) emailField.value = currentUser.email || '';
+      }
+
+      // Attach event listeners on the generated page
+      document.getElementById('full-profile-back-btn')?.addEventListener('click', () => {
+        window.location.hash = '#tutors';
+      });
+
+      document.getElementById('hero-message-tutor-btn')?.addEventListener('click', () => {
+        this.openMessageModal(tutor.id);
+      });
+
+      document.getElementById('hero-book-tutor-btn')?.addEventListener('click', () => {
+        this.openBookingModal(tutor.id);
+      });
+
+      document.getElementById('sidebar-book-btn')?.addEventListener('click', () => {
+        this.openBookingModal(tutor.id);
+      });
+
+      const sidebarMsgForm = document.getElementById('sidebar-tutor-message-form');
+      if (sidebarMsgForm) {
+        sidebarMsgForm.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const name = document.getElementById('sidebar-msg-name')?.value;
+          const email = document.getElementById('sidebar-msg-email')?.value;
+          const message = document.getElementById('sidebar-msg-content')?.value;
+
+          try {
+            await API.sendMessageToTutor(tutor.id, { name, email, message });
+            showToast(`Your message has been sent to ${tutor.name}! They will be notified immediately.`, 'success');
+            document.getElementById('sidebar-msg-content').value = '';
+          } catch (err) {
+            showToast(err.message, 'error');
+          }
+        });
+      }
+
     } catch (err) {
-      showToast(err.message, 'error');
+      container.innerHTML = `
+        <div style="text-align: center; padding: 4rem 0;">
+          <p style="color: #EF4444; font-size: 1.1rem; margin-bottom: 1rem;">Could not load tutor profile: ${err.message}</p>
+          <button class="btn btn-primary btn-sm" onclick="window.location.hash = '#tutors'">Return to Tutors Directory</button>
+        </div>
+      `;
     }
+  },
+
+  async openMessageModal(tutorId) {
+    let tutor = this.allTutors.find(t => t.id == tutorId);
+    if (!tutor) {
+      try {
+        const res = await API.getTutorById(tutorId);
+        tutor = res.tutor;
+      } catch (e) {
+        // Fallback
+      }
+    }
+
+    const modal = document.getElementById('tutor-message-modal');
+    const banner = document.getElementById('message-tutor-banner');
+    const idInput = document.getElementById('direct-message-tutor-id');
+    const nameInput = document.getElementById('direct-message-name');
+    const emailInput = document.getElementById('direct-message-email');
+
+    if (!modal) return;
+
+    if (idInput) idInput.value = tutorId;
+
+    const user = Auth.currentUser;
+    if (user) {
+      if (nameInput) nameInput.value = user.name || '';
+      if (emailInput) emailInput.value = user.email || '';
+    }
+
+    if (banner && tutor) {
+      banner.innerHTML = `
+        <img src="${tutor.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80'}" style="width: 46px; height: 46px; border-radius: var(--radius-md); object-fit: cover; border: 1.5px solid var(--gold-500);" />
+        <div>
+          <strong style="color: var(--charcoal-950); font-size: 0.95rem;">${tutor.name}</strong>
+          <p style="color: var(--gold-800); font-size: 0.8rem; margin: 0.15rem 0 0 0;">${tutor.headline || 'Verified Educator'}</p>
+        </div>
+      `;
+    }
+
+    modal.classList.add('active');
+    document.body.style.overflow = 'hidden';
+  },
+
+  closeMessageModal() {
+    const modal = document.getElementById('tutor-message-modal');
+    if (modal) {
+      modal.classList.remove('active');
+      document.body.style.overflow = '';
+    }
+  },
+
+  async openProfileModal(tutorId) {
+    // Navigate directly to the dedicated full profile page!
+    this.navigateToProfile(tutorId);
   },
 
   closeProfileModal() {

@@ -70,6 +70,7 @@ const API = {
   getStudentWork: () => apiRequest('/public/student-work'),
   getTutors: (params = '') => apiRequest(`/tutors?${params}`),
   getTutorById: (id) => apiRequest(`/tutors/${id}`),
+  sendMessageToTutor: (tutorId, body) => apiRequest(`/tutors/${tutorId}/messages`, { method: 'POST', body }),
 
   // Student
   getStudentDashboard: () => apiRequest('/student/dashboard'),

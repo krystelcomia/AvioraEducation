@@ -2479,3 +2479,337 @@ a { text-decoration: none; color: inherit; transition: color var(--transition-fa
   flex-direction: column;
 }
 
+/* =========================================
+   DEDICATED TUTOR FULL PROFILE PAGE
+   ========================================= */
+.tutor-breadcrumb-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.75rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.tutor-breadcrumb-text {
+  font-size: 0.88rem;
+  color: var(--text-muted);
+}
+
+.tutor-breadcrumb-text a {
+  color: var(--gold-800);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.tutor-breadcrumb-text a:hover {
+  text-decoration: underline;
+}
+
+.tutor-profile-hero-card {
+  background: #FFFFFF;
+  border: 1.5px solid rgba(198, 138, 40, 0.24);
+  border-radius: var(--radius-xl);
+  padding: 2.5rem;
+  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.04), 0 4px 16px rgba(198, 138, 40, 0.08);
+  margin-bottom: 2.5rem;
+}
+
+.tutor-hero-top {
+  display: flex;
+  gap: 2rem;
+  align-items: flex-start;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+}
+
+.tutor-hero-avatar-box {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  flex-shrink: 0;
+}
+
+.tutor-hero-avatar-img {
+  width: 100%;
+  height: 100%;
+  border-radius: var(--radius-xl);
+  object-fit: cover;
+  border: 3px solid var(--gold-500);
+  box-shadow: 0 8px 24px rgba(198, 138, 40, 0.2);
+}
+
+.tutor-hero-badge-verified {
+  position: absolute;
+  bottom: -6px;
+  right: -6px;
+  background: #10B981;
+  color: #FFFFFF;
+  border: 2px solid #FFFFFF;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+  font-weight: 800;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.tutor-hero-info {
+  flex: 1;
+  min-width: 260px;
+}
+
+.tutor-hero-title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.4rem;
+}
+
+.tutor-hero-name {
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--charcoal-950);
+  margin: 0;
+}
+
+.tutor-hero-headline {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--gold-800);
+  margin-bottom: 0.65rem;
+}
+
+.tutor-hero-credentials {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.25rem;
+}
+
+.tutor-hero-actions {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.tutor-stats-strip {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.25rem;
+  padding-top: 1.75rem;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+@media (max-width: 820px) {
+  .tutor-stats-strip {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.tutor-stat-item {
+  background: rgba(250, 247, 242, 0.85);
+  border: 1px solid rgba(198, 138, 40, 0.18);
+  border-radius: var(--radius-lg);
+  padding: 1.1rem 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+}
+
+.tutor-stat-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: var(--radius-md);
+  background: #FFFFFF;
+  border: 1px solid rgba(198, 138, 40, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  flex-shrink: 0;
+}
+
+.tutor-stat-info-col {
+  display: flex;
+  flex-direction: column;
+}
+
+.tutor-stat-num {
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: var(--charcoal-950);
+}
+
+.tutor-stat-label {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* Two Column Layout */
+.tutor-profile-grid {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr;
+  gap: 2.25rem;
+  align-items: start;
+}
+
+@media (max-width: 960px) {
+  .tutor-profile-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.tutor-profile-card {
+  background: #FFFFFF;
+  border: 1.5px solid rgba(198, 138, 40, 0.2);
+  border-radius: var(--radius-lg);
+  padding: 2rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+}
+
+.tutor-profile-card-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--charcoal-950);
+  margin-bottom: 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  padding-bottom: 0.75rem;
+}
+
+/* Schedule Table */
+.tutor-schedule-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0 0.5rem;
+}
+
+.schedule-row {
+  background: rgba(250, 247, 242, 0.6);
+  border-radius: var(--radius-md);
+  transition: all var(--transition-fast);
+}
+
+.schedule-row:hover {
+  background: rgba(250, 247, 242, 1);
+  box-shadow: 0 2px 8px rgba(198, 138, 40, 0.1);
+}
+
+.schedule-day-td {
+  padding: 0.75rem 1rem;
+  font-weight: 700;
+  color: var(--gold-900);
+  width: 32%;
+  border-radius: var(--radius-md) 0 0 var(--radius-md);
+  border-left: 3px solid var(--gold-600);
+}
+
+.schedule-slots-td {
+  padding: 0.75rem 1rem;
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.schedule-slot-badge {
+  display: inline-block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--charcoal-900);
+  background: #FFFFFF;
+  border: 1px solid rgba(198, 138, 40, 0.28);
+  border-radius: var(--radius-full);
+  padding: 0.25rem 0.65rem;
+}
+
+/* Reviews List */
+.tutor-reviews-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.tutor-review-card {
+  background: rgba(250, 247, 242, 0.6);
+  border: 1px solid rgba(198, 138, 40, 0.2);
+  border-radius: var(--radius-md);
+  padding: 1.35rem 1.5rem;
+  transition: all var(--transition-fast);
+}
+
+.tutor-review-card:hover {
+  background: #FFFFFF;
+  border-color: rgba(198, 138, 40, 0.4);
+  box-shadow: 0 4px 14px rgba(198, 138, 40, 0.1);
+}
+
+.tutor-review-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.6rem;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.tutor-review-author {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.tutor-review-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(198, 138, 40, 0.2), rgba(198, 138, 40, 0.05));
+  border: 1px solid var(--gold-400);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  color: var(--gold-900);
+  font-size: 0.85rem;
+}
+
+.tutor-review-comment {
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: var(--charcoal-900);
+  font-style: italic;
+  margin: 0;
+}
+
+/* Sticky Right Sidebar */
+.tutor-profile-sidebar {
+  position: sticky;
+  top: calc(var(--header-height) + 1.5rem);
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+}
+
+.tutor-quick-message-card {
+  background: #FFFFFF;
+  border: 1.5px solid rgba(198, 138, 40, 0.28);
+  border-radius: var(--radius-lg);
+  padding: 1.75rem;
+  box-shadow: 0 4px 20px rgba(198, 138, 40, 0.08);
+}
+
+

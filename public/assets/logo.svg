@@ -25,6 +25,5 @@
     <text x="3" y="79" font-family="'Outfit', 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif" font-size="16" font-weight="700" letter-spacing="7" fill="#F5B842">
       EDUCATION
     </text>
-    <circle cx="198" y="74" r="3.5" fill="url(#goldGrad1)" />
   </g>
 </svg>

@@ -75,7 +75,7 @@ function showConfirm(title, message, onConfirm) {
 
 // Router
 const Router = {
-  routes: ['#home', '#tutors', '#how-it-works', '#student-portal', '#teacher-portal', '#admin-portal'],
+  routes: ['#home', '#about', '#tutors', '#how-it-works', '#student-portal', '#teacher-portal', '#admin-portal'],
 
   init() {
     window.addEventListener('hashchange', () => this.handleRoute());
@@ -167,6 +167,8 @@ const Router = {
 
       if (hash === '#how-it-works') {
         document.getElementById('how-it-works-section')?.scrollIntoView({ behavior: 'smooth' });
+      } else if (hash === '#about') {
+        document.getElementById('about-section')?.scrollIntoView({ behavior: 'smooth' });
       } else {
         window.scrollTo({ top: 0, behavior: 'smooth' });
       }

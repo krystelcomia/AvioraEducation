@@ -1,36 +1,57 @@
 :root {
   /* =========================================
      AVIORA EDUCATION - LUXURY EDTECH PALETTE
-     Primary: Yellow Gold & Warm Ambient Tones
+     Dirty White / Cream Theme with Warm Gold Accents
      ========================================= */
-  --gold-50: #FFFDF5;
-  --gold-100: #FFF8E1;
-  --gold-200: #FFECB3;
-  --gold-300: #FFE082;
-  --gold-400: #FFD54F;
-  --gold-500: #E5A93C; /* Core Brand Yellow-Gold */
-  --gold-600: #D49520;
-  --gold-700: #B87E14;
-  --gold-800: #8C5C05;
-  --gold-900: #5E3D02;
+  --bg-main: #FAF7F2;          /* Primary Dirty White / Warm Cream Canvas */
+  --bg-surface: #FFFFFF;       /* Crisp White Surface for Elevated Cards */
+  --bg-surface-alt: #F3EFE6;   /* Subtle Cream Alternate Surface */
+  --bg-surface-elevated: #FFFFFF;
+  --border-color: rgba(0, 0, 0, 0.08);
+  --border-color-strong: rgba(0, 0, 0, 0.14);
+  --border-gold: rgba(184, 126, 20, 0.28);
 
-  /* Supporting Neutrals */
-  --cream-50: #FDFBF7;
-  --cream-100: #F8F5EE;
-  --cream-200: #ECE6D8;
-  --cream-300: #DDD5C2;
+  /* Warm Gold Palette - Calibrated for high contrast on light backgrounds */
+  --gold-50: #FFFDF5;
+  --gold-100: #FBF4E2;
+  --gold-200: #F4E4BC;
+  --gold-300: #E6C878;
+  --gold-400: #D8AA3C;
+  --gold-500: #C68A28; /* Core Brand Yellow-Gold */
+  --gold-600: #B87E14;
+  --gold-700: #9E6B15;
+  --gold-800: #7A4F05;
+  --gold-900: #553502;
+  --gold-primary: #C68A28;
+  --gold-light: #B87E14;
+  --gold-dark: #8C5C05;
+
+  /* Cream & Dirty White Neutrals */
+  --cream-bg: #FAF7F2;
+  --cream-50: #FDFCFA;
+  --cream-100: #F6F2E9;
+  --cream-200: #EEE8DC;
+  --cream-300: #DFD7C7;
+  --cream-400: #CFC5B2;
   
   --white: #FFFFFF;
-  --charcoal-950: #090A0D;
-  --charcoal-900: #0F1116; /* Deep dark background */
-  --charcoal-850: #151821;
-  --charcoal-800: #1B1E2B; /* Card & surface dark */
-  --charcoal-700: #262B3D; /* Borders & active elements */
-  --charcoal-600: #3E455E;
-  --charcoal-500: #6B7280;
-  --charcoal-400: #9CA3AF;
-  --charcoal-300: #D1D5DB;
-  --charcoal-100: #F3F4F6;
+
+  /* Typography Neutrals (Near-Black & Slate Charcoal) */
+  --text-primary: #14171E;
+  --text-secondary: #4A5262;
+  --text-muted: #6B768C;
+
+  --charcoal-950: #14171E;
+  --charcoal-900: #1C2029;
+  --charcoal-850: #262B37;
+  --charcoal-800: #323847;
+  --charcoal-700: #444C5E;
+  --charcoal-600: #555F73;
+  --charcoal-500: #6B768C;
+  --charcoal-400: #60697B;
+  --charcoal-300: #4A5262;
+  --charcoal-200: #333A48;
+  --charcoal-100: #1D222C;
 
   /* Status Colors */
   --success: #10B981;
@@ -43,13 +64,13 @@
   --info-bg: rgba(59, 130, 246, 0.12);
 
   /* Gradients */
-  --gradient-gold: linear-gradient(135deg, #FFE082 0%, #E5A93C 50%, #B87E14 100%);
-  --gradient-gold-hover: linear-gradient(135deg, #FFF3D6 0%, #F5B842 50%, #D49520 100%);
-  --gradient-gold-soft: linear-gradient(135deg, rgba(229, 169, 60, 0.15) 0%, rgba(184, 126, 20, 0.05) 100%);
-  --gradient-gold-text: linear-gradient(135deg, #FFF6D8 0%, #FFD778 40%, #E5A93C 100%);
-  --gradient-dark: linear-gradient(180deg, #0F1116 0%, #151821 100%);
-  --gradient-dark-card: linear-gradient(145deg, #181C26 0%, #12141C 100%);
-  --gradient-glow: radial-gradient(circle at 50% 0%, rgba(229, 169, 60, 0.22) 0%, transparent 70%);
+  --gradient-gold: linear-gradient(135deg, #E5A93C 0%, #C68A28 100%);
+  --gradient-gold-hover: linear-gradient(135deg, #F0B84A 0%, #B87E14 100%);
+  --gradient-gold-soft: linear-gradient(135deg, rgba(198, 138, 40, 0.12) 0%, rgba(184, 126, 20, 0.04) 100%);
+  --gradient-gold-text: linear-gradient(135deg, #B87E14 0%, #9E6B15 50%, #7A4F05 100%);
+  --gradient-dark: linear-gradient(180deg, #FFFFFF 0%, #FAF7F2 100%);
+  --gradient-dark-card: linear-gradient(145deg, #FFFFFF 0%, #FAF7F2 100%);
+  --gradient-glow: radial-gradient(circle at 50% 0%, rgba(198, 138, 40, 0.12) 0%, transparent 70%);
 
   /* Typography */
   --font-heading: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -63,13 +84,13 @@
   --radius-xl: 16px;
   --radius-full: 9999px;
 
-  /* Shadows */
-  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.15);
-  --shadow-md: 0 6px 20px rgba(0, 0, 0, 0.25);
-  --shadow-lg: 0 16px 36px rgba(0, 0, 0, 0.35);
-  --shadow-gold: 0 8px 30px rgba(229, 169, 60, 0.22);
-  --shadow-gold-lg: 0 12px 40px rgba(229, 169, 60, 0.32);
-  --shadow-inner-gold: inset 0 1px 0 rgba(255, 255, 255, 0.2), inset 0 -1px 0 rgba(0, 0, 0, 0.2);
+  /* Shadows - Warm Soft Natural Elevation */
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 6px 20px rgba(0, 0, 0, 0.07);
+  --shadow-lg: 0 16px 36px rgba(0, 0, 0, 0.09);
+  --shadow-gold: 0 8px 30px rgba(184, 126, 20, 0.12);
+  --shadow-gold-lg: 0 12px 40px rgba(184, 126, 20, 0.18);
+  --shadow-inner-gold: inset 0 1px 0 rgba(255, 255, 255, 0.4), inset 0 -1px 0 rgba(0, 0, 0, 0.08);
 
   /* Transitions */
   --transition-fast: 0.18s cubic-bezier(0.4, 0, 0.2, 1);

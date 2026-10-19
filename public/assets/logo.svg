@@ -1,14 +1,14 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 540 110" width="100%" height="100%" fill="none">
   <defs>
     <linearGradient id="goldGlow" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" stop-color="#FFF3D6" />
-      <stop offset="50%" stop-color="#E5A93C" />
-      <stop offset="100%" stop-color="#D49520" />
+      <stop offset="0%" stop-color="#E5A93C" />
+      <stop offset="50%" stop-color="#C68A28" />
+      <stop offset="100%" stop-color="#B87E14" />
     </linearGradient>
     <linearGradient id="goldGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#FFE082" />
-      <stop offset="50%" stop-color="#E5A93C" />
-      <stop offset="100%" stop-color="#B87E14" />
+      <stop offset="0%" stop-color="#E5A93C" />
+      <stop offset="50%" stop-color="#C68A28" />
+      <stop offset="100%" stop-color="#9E6B15" />
     </linearGradient>
   </defs>
 
@@ -19,10 +19,10 @@
 
   <!-- Larger Aviora Education Wordmark Text -->
   <g transform="translate(122, 14)">
-    <text x="0" y="52" font-family="'Outfit', 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif" font-size="52" font-weight="800" letter-spacing="-0.5" fill="#FFFFFF">
+    <text x="0" y="52" font-family="'Outfit', 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif" font-size="52" font-weight="800" letter-spacing="-0.5" fill="#181B22">
       Avi<tspan fill="url(#goldGlow)">ora</tspan>
     </text>
-    <text x="3" y="79" font-family="'Outfit', 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif" font-size="16" font-weight="700" letter-spacing="7" fill="#F5B842">
+    <text x="3" y="79" font-family="'Outfit', 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif" font-size="16" font-weight="700" letter-spacing="7" fill="#B87E14">
       EDUCATION
     </text>
   </g>

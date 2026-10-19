@@ -162,7 +162,59 @@
         </div>
       </section>
 
-      <!-- REAL-TIME WEBSITE ANALYTICS SECTION -->
+      <!-- STUDENT CRAFTS SHOWCASE SECTION -->
+      <section class="section student-works-section" id="student-work-section">
+        <div class="container">
+          <div class="section-header">
+            <span class="badge-gold">Student Achievement Gallery</span>
+            <h2 class="section-title">Student Crafts</h2>
+            <p class="section-desc">
+              Explore exceptional original works—from precision structural crafts and physical models to fine arts and mathematical drawings—crafted by Aviora students under 1-on-1 mentorship.
+            </p>
+          </div>
+
+          <!-- Category Filter Bar -->
+          <div class="student-works-filter-bar">
+            <button class="work-filter-btn active" data-filter="all">All Student Crafts (6)</button>
+            <button class="work-filter-btn" data-filter="craft">Handmade Crafts &amp; Models (3)</button>
+            <button class="work-filter-btn" data-filter="drawing">Drawings &amp; Fine Arts (3)</button>
+          </div>
+
+          <!-- Student Works Grid -->
+          <div class="student-works-grid" id="student-works-grid">
+            <!-- Populated dynamically via JS from /api/public/student-work with static fallback -->
+          </div>
+
+          <div style="text-align: center; margin-top: 3.5rem;">
+            <p style="color: var(--text-secondary); font-size: 0.95rem; margin-bottom: 1.25rem;">
+              Ready to create university-level capstones, portfolio pieces, and mastery projects?
+            </p>
+            <a href="#tutors" class="btn btn-primary btn-md">Connect with a Mentor →</a>
+          </div>
+        </div>
+      </section>
+
+      <!-- TOP TUTORS SECTION -->
+      <section class="section" id="featured-tutors-section">
+        <div class="container">
+          <div class="section-header">
+            <span class="badge-gold">Verified Faculty</span>
+            <h2 class="section-title">Top Tutors</h2>
+            <p class="section-desc">Every Aviora tutor undergoes comprehensive academic credential verification, background audits, and pedagogical screening.</p>
+          </div>
+
+          <!-- Featured tutors grid rendered via JS from live database -->
+          <div class="tutors-grid" id="featured-tutors-grid">
+            <!-- Dynamically populated -->
+          </div>
+
+          <div style="text-align: center; margin-top: 3.5rem;">
+            <a href="#tutors" class="btn btn-outline-gold btn-lg">Browse All Verified Tutors →</a>
+          </div>
+        </div>
+      </section>
+
+      <!-- REAL-TIME PLATFORM & SUBJECT ANALYTICS SECTION -->
       <section class="section analytics-section" id="realtime-analytics-section">
         <div class="container">
           <div class="section-header" style="margin-bottom: 2.5rem;">
@@ -174,46 +226,11 @@
             </div>
             <h2 class="section-title">Real-Time Platform &amp; Subject Analytics</h2>
             <p class="section-desc">
-              Live telemetry reflecting real-time academic demand, active 1-on-1 sessions, and the most frequently accessed curricula across Aviora Education.
+              Live telemetry reflecting real-time academic demand and the most frequently accessed curricula across Aviora Education.
             </p>
           </div>
 
-          <!-- Real-Time Key Performance Indicators -->
-          <div class="analytics-kpis-grid">
-            <div class="analytics-kpi-card">
-              <div class="analytics-kpi-icon">🟢</div>
-              <div>
-                <div class="analytics-kpi-val" id="analytics-live-online">142 <span>online</span></div>
-                <div class="analytics-kpi-label">Active Learners Now</div>
-              </div>
-            </div>
-
-            <div class="analytics-kpi-card">
-              <div class="analytics-kpi-icon">⚡</div>
-              <div>
-                <div class="analytics-kpi-val" id="analytics-active-sessions">24 <span>active</span></div>
-                <div class="analytics-kpi-label">Live Mentorship Sessions</div>
-              </div>
-            </div>
-
-            <div class="analytics-kpi-card">
-              <div class="analytics-kpi-icon">⏱️</div>
-              <div>
-                <div class="analytics-kpi-val" id="analytics-study-hours">1,840+ <span>hrs</span></div>
-                <div class="analytics-kpi-label">Study Hours This Month</div>
-              </div>
-            </div>
-
-            <div class="analytics-kpi-card">
-              <div class="analytics-kpi-icon">🎯</div>
-              <div>
-                <div class="analytics-kpi-val">98.4% <span>retention</span></div>
-                <div class="analytics-kpi-label">Concept Mastery Index</div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Split Layout: Trending Subjects vs Frequently Accessed Study Content -->
+          <!-- Split Layout: Top Subjects vs Frequently Accessed Content ONLY -->
           <div class="analytics-split-layout">
             <!-- Left: Most Frequently Accessed Subjects -->
             <div class="analytics-panel">
@@ -330,7 +347,7 @@
               </div>
             </div>
 
-            <!-- Right: Frequently Accessed Content & Live Stream -->
+            <!-- Right: Frequently Accessed Content -->
             <div class="analytics-panel">
               <div class="analytics-panel-header">
                 <div class="analytics-panel-title">
@@ -380,38 +397,13 @@
                   <div class="content-resource-stat">2,458 views</div>
                 </div>
               </div>
-
-              <!-- Live Stream Ticker -->
-              <div style="margin-top: 1.25rem;">
-                <div style="font-size: 0.8rem; font-weight: 700; color: var(--gold-light); margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: center; gap: 0.4rem;">
-                  <span>📡</span> Live Telemetry Feed
-                </div>
-                <div class="live-activity-stream" id="analytics-live-feed">
-                  <div class="live-activity-event">
-                    <span>⚡</span>
-                    <span style="flex: 1;">Student booked 1-on-1 session in AP Calculus BC</span>
-                    <span class="live-activity-time">Just now</span>
-                  </div>
-                  <div class="live-activity-event">
-                    <span>⭐</span>
-                    <span style="flex: 1;">5★ Verified Review published for Organic Chemistry mentorship</span>
-                    <span class="live-activity-time">2m ago</span>
-                  </div>
-                  <div class="live-activity-event">
-                    <span>💻</span>
-                    <span style="flex: 1;">Student completed Python Data Structures assessment</span>
-                    <span class="live-activity-time">4m ago</span>
-                  </div>
-                </div>
-              </div>
             </div>
           </div>
         </div>
       </section>
 
-
       <!-- ACADEMIC CATEGORIES SECTION -->
-      <section class="section" style="background: rgba(18, 20, 27, 0.6); border-top: 1px solid rgba(255,255,255,0.05); border-bottom: 1px solid rgba(255,255,255,0.05);">
+      <section class="section" style="background: var(--bg-surface-alt); border-top: 1px solid var(--border-light); border-bottom: 1px solid var(--border-light);">
         <div class="container">
           <div class="section-header">
             <span class="badge-gold">Academic Disciplines</span>
@@ -422,8 +414,8 @@
           <div class="categories-grid">
             <div class="category-card" onclick="window.location.hash='#tutors'; Tutors.activeSubjectFilter='Calculus'; Tutors.applyFilters();">
               <div class="category-icon-box">∫dx</div>
-              <h3 class="category-name">Mathematics & Calculus</h3>
-              <p class="category-subjects">AP Calculus AB/BC, Linear Algebra, Multivariable, Differential Equations & Statistics.</p>
+              <h3 class="category-name">Mathematics &amp; Calculus</h3>
+              <p class="category-subjects">AP Calculus AB/BC, Linear Algebra, Multivariable, Differential Equations &amp; Statistics.</p>
               <div class="category-meta">
                 <span>4 Specialists</span>
                 <span>Explore →</span>
@@ -432,8 +424,8 @@
 
             <div class="category-card" onclick="window.location.hash='#tutors'; Tutors.activeSubjectFilter='Physics'; Tutors.applyFilters();">
               <div class="category-icon-box">⚛️</div>
-              <h3 class="category-name">Physics & Engineering</h3>
-              <p class="category-subjects">AP Physics C (Mechanics, E&M), Quantum Foundations, Thermodynamics & Statics.</p>
+              <h3 class="category-name">Physics &amp; Engineering</h3>
+              <p class="category-subjects">AP Physics C (Mechanics, E&amp;M), Quantum Foundations, Thermodynamics &amp; Statics.</p>
               <div class="category-meta">
                 <span>3 Specialists</span>
                 <span>Explore →</span>
@@ -442,8 +434,8 @@
 
             <div class="category-card" onclick="window.location.hash='#tutors'; Tutors.activeSubjectFilter='Chemistry'; Tutors.applyFilters();">
               <div class="category-icon-box">🧪</div>
-              <h3 class="category-name">Chemistry & Pre-Med</h3>
-              <p class="category-subjects">Organic Chemistry I/II, General Chemistry, Biochemistry & MCAT Chemical Foundations.</p>
+              <h3 class="category-name">Chemistry &amp; Pre-Med</h3>
+              <p class="category-subjects">Organic Chemistry I/II, General Chemistry, Biochemistry &amp; MCAT Chemical Foundations.</p>
               <div class="category-meta">
                 <span>3 Specialists</span>
                 <span>Explore →</span>
@@ -452,8 +444,8 @@
 
             <div class="category-card" onclick="window.location.hash='#tutors'; Tutors.activeSubjectFilter='Python'; Tutors.applyFilters();">
               <div class="category-icon-box">&lt;/&gt;</div>
-              <h3 class="category-name">Computer Science & AI</h3>
-              <p class="category-subjects">Python, AP Computer Science A, Data Structures, Algorithms & Full-Stack Web Development.</p>
+              <h3 class="category-name">Computer Science &amp; AI</h3>
+              <p class="category-subjects">Python, AP Computer Science A, Data Structures, Algorithms &amp; Full-Stack Web Development.</p>
               <div class="category-meta">
                 <span>3 Specialists</span>
                 <span>Explore →</span>
@@ -462,8 +454,8 @@
 
             <div class="category-card" onclick="window.location.hash='#tutors'; Tutors.activeSubjectFilter='English'; Tutors.applyFilters();">
               <div class="category-icon-box">✍️</div>
-              <h3 class="category-name">Literature & Admissions</h3>
-              <p class="category-subjects">College Admissions Essays, AP English Lit, Analytical Writing & SAT/ACT Verbal.</p>
+              <h3 class="category-name">Literature &amp; Admissions</h3>
+              <p class="category-subjects">College Admissions Essays, AP English Lit, Analytical Writing &amp; SAT/ACT Verbal.</p>
               <div class="category-meta">
                 <span>2 Specialists</span>
                 <span>Explore →</span>
@@ -473,64 +465,12 @@
             <div class="category-card" onclick="window.location.hash='#tutors'; Tutors.activeSubjectFilter='French'; Tutors.applyFilters();">
               <div class="category-icon-box">🌍</div>
               <h3 class="category-name">World Languages</h3>
-              <p class="category-subjects">French, Spanish, Mandarin, AP World Languages & Conversational Fluency.</p>
+              <p class="category-subjects">French, Spanish, Mandarin, AP World Languages &amp; Conversational Fluency.</p>
               <div class="category-meta">
                 <span>2 Specialists</span>
                 <span>Explore →</span>
               </div>
             </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- FEATURED TUTORS PREVIEW SECTION -->
-      <section class="section">
-        <div class="container">
-          <div class="section-header">
-            <span class="badge-gold">Verified Faculty</span>
-            <h2 class="section-title">Meet Our Highly Rated Tutors</h2>
-            <p class="section-desc">Every Aviora tutor undergoes comprehensive academic credential verification, background audits, and pedagogical screening.</p>
-          </div>
-
-          <!-- Featured tutors grid rendered via JS from live database -->
-          <div class="tutors-grid" id="featured-tutors-grid">
-            <!-- Dynamically populated -->
-          </div>
-
-          <div style="text-align: center; margin-top: 3.5rem;">
-            <a href="#tutors" class="btn btn-outline-gold btn-lg">Browse All Verified Tutors →</a>
-          </div>
-        </div>
-      </section>
-
-      <!-- STUDENT WORK SHOWCASE (DRAWINGS, CRAFTS & CAPSTONES) -->
-      <section class="section student-works-section" id="student-work-section">
-        <div class="container">
-          <div class="section-header">
-            <span class="badge-gold">Student Achievement Gallery</span>
-            <h2 class="section-title">Student Creations &amp; Capstones</h2>
-            <p class="section-desc">
-              Explore exceptional original works—from mathematical drawings and anatomical illustrations to precision structural crafts and physical models—crafted by Aviora students under 1-on-1 mentorship.
-            </p>
-          </div>
-
-          <!-- Category Filter Bar -->
-          <div class="student-works-filter-bar">
-            <button class="work-filter-btn active" data-filter="all">All Student Creations (6)</button>
-            <button class="work-filter-btn" data-filter="drawing">Drawings &amp; Fine Arts (3)</button>
-            <button class="work-filter-btn" data-filter="craft">Handmade Crafts &amp; Models (3)</button>
-          </div>
-
-          <!-- Student Works Grid -->
-          <div class="student-works-grid" id="student-works-grid">
-            <!-- Populated dynamically via JS from /api/public/student-work with static fallback -->
-          </div>
-
-          <div style="text-align: center; margin-top: 3.5rem;">
-            <p style="color: var(--text-secondary); font-size: 0.95rem; margin-bottom: 1.25rem;">
-              Ready to create university-level capstones, portfolio pieces, and mastery projects?
-            </p>
-            <a href="#tutors" class="btn btn-primary btn-md">Connect with a Mentor →</a>
           </div>
         </div>
       </section>

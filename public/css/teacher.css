@@ -59,13 +59,13 @@
 
 .status-banner-content h3 {
   font-size: 1.35rem;
-  color: var(--white);
+  color: var(--text-primary);
   margin-bottom: 0.4rem;
 }
 
 .status-banner-content p {
   font-size: 0.925rem;
-  color: var(--charcoal-300);
+  color: var(--text-secondary);
   line-height: 1.6;
 }
 
@@ -88,11 +88,11 @@
 
 /* Teacher Application Form */
 .application-form-card {
-  background: var(--gradient-dark-card);
-  border: 1px solid rgba(229, 169, 60, 0.25);
+  background: #FFFFFF;
+  border: 1px solid rgba(198, 138, 40, 0.25);
   border-radius: var(--radius-xl);
   padding: 3rem;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
   max-width: 900px;
   margin: 0 auto;
 }
@@ -100,12 +100,12 @@
 .form-step-section {
   padding-bottom: 2rem;
   margin-bottom: 2rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
 }
 
 .form-step-title {
   font-size: 1.25rem;
-  color: var(--white);
+  color: var(--text-primary);
   margin-bottom: 0.5rem;
   display: flex;
   align-items: center;

@@ -1264,18 +1264,6 @@
             <p class="simple-login-subtitle" id="page-auth-subheading">Sign in to your personalized academic mentorship portal</p>
           </div>
 
-          <!-- 1-Click Fast Demo Switcher Pill -->
-          <div class="demo-accounts-card" style="padding: 0.85rem 1.1rem; margin-bottom: 1.5rem;">
-            <div class="demo-accounts-title" style="font-size: 0.76rem; margin-bottom: 0.5rem; color: var(--gold-800); font-weight: 700; text-align: center; justify-content: center;">
-              <span>⚡</span> FAST LOGIN:
-            </div>
-            <div class="demo-btns-row">
-              <button class="btn-demo-fill" type="button" id="page-demo-student">Student</button>
-              <button class="btn-demo-fill" type="button" id="page-demo-teacher">Teacher</button>
-              <button class="btn-demo-fill" type="button" id="page-demo-admin">Admin</button>
-            </div>
-          </div>
-
           <!-- Page Sign In Form (Strictly Login Only) -->
           <div id="page-login-section">
             <form id="page-login-form">
@@ -1285,24 +1273,23 @@
               </div>
 
               <div class="form-group" style="margin-bottom: 0.5rem;">
-                <label class="form-label" for="page-login-password" style="color: var(--charcoal-900); font-weight: 700;">Password</label>
-                <div class="password-input-wrap">
-                  <input type="password" id="page-login-password" class="form-control" placeholder="Enter your password" required autocomplete="current-password" />
+                <div class="password-label-row">
+                  <label class="form-label" for="page-login-password" style="color: var(--charcoal-900); font-weight: 700;">Password</label>
                   <button type="button" class="password-toggle-btn" data-target="page-login-password" aria-label="Show password" title="Show password">
-                    <svg class="eye-show" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <svg class="eye-show" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                       <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8z"></path>
                       <circle cx="12" cy="12" r="3"></circle>
                     </svg>
-                    <svg class="eye-hide" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: none;">
+                    <svg class="eye-hide" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: none;">
                       <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
                       <line x1="1" y1="1" x2="23" y2="23"></line>
                     </svg>
-                    <span class="password-toggle-text">Show</span>
                   </button>
                 </div>
+                <input type="password" id="page-login-password" class="form-control" placeholder="Enter your password" required autocomplete="current-password" />
                 <!-- "Forgot password?" link placed below the password field -->
                 <div style="display: flex; justify-content: flex-end; margin-top: 0.5rem;">
-                  <a href="#" id="page-forgot-password-link" style="font-size: 0.82rem; color: var(--gold-800); font-weight: 600; text-decoration: underline;" onclick="event.preventDefault(); showToast('Demo Mode: Click Student, Teacher, or Admin above for 1-click login, or reset via support.', 'info');">Forgot password?</a>
+                  <a href="#" id="page-forgot-password-link" style="font-size: 0.82rem; color: var(--gold-800); font-weight: 600; text-decoration: underline;" onclick="event.preventDefault(); showToast('Reset via support or contact admissions.', 'info');">Forgot password?</a>
                 </div>
               </div>
 
@@ -1395,21 +1382,20 @@
 
               <!-- Strong Password Field with Real-Time Checklist -->
               <div class="form-group">
-                <label class="form-label" for="page-reg-password" style="color: var(--charcoal-900); font-weight: 700;">Create Strong Password</label>
-                <div class="password-input-wrap">
-                  <input type="password" id="page-reg-password" class="form-control" placeholder="Create a strong password" required autocomplete="new-password" />
+                <div class="password-label-row">
+                  <label class="form-label" for="page-reg-password" style="color: var(--charcoal-900); font-weight: 700;">Create Strong Password</label>
                   <button type="button" class="password-toggle-btn" data-target="page-reg-password" aria-label="Show password" title="Show password">
-                    <svg class="eye-show" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <svg class="eye-show" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                       <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8z"></path>
                       <circle cx="12" cy="12" r="3"></circle>
                     </svg>
-                    <svg class="eye-hide" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: none;">
+                    <svg class="eye-hide" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: none;">
                       <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
                       <line x1="1" y1="1" x2="23" y2="23"></line>
                     </svg>
-                    <span class="password-toggle-text">Show</span>
                   </button>
                 </div>
+                <input type="password" id="page-reg-password" class="form-control" placeholder="Create a strong password" required autocomplete="new-password" />
 
                 <!-- Password Strength Meter & Interactive Rules -->
                 <div class="password-strength-box" id="page-password-strength-box">
@@ -1441,21 +1427,20 @@
               </div>
 
               <div class="form-group">
-                <label class="form-label" for="page-reg-confirm" style="color: var(--charcoal-900); font-weight: 700;">Confirm Password</label>
-                <div class="password-input-wrap">
-                  <input type="password" id="page-reg-confirm" class="form-control" placeholder="Re-enter password" required autocomplete="new-password" />
+                <div class="password-label-row">
+                  <label class="form-label" for="page-reg-confirm" style="color: var(--charcoal-900); font-weight: 700;">Confirm Password</label>
                   <button type="button" class="password-toggle-btn" data-target="page-reg-confirm" aria-label="Show password" title="Show password">
-                    <svg class="eye-show" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <svg class="eye-show" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                       <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8z"></path>
                       <circle cx="12" cy="12" r="3"></circle>
                     </svg>
-                    <svg class="eye-hide" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: none;">
+                    <svg class="eye-hide" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: none;">
                       <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
                       <line x1="1" y1="1" x2="23" y2="23"></line>
                     </svg>
-                    <span class="password-toggle-text">Show</span>
                   </button>
                 </div>
+                <input type="password" id="page-reg-confirm" class="form-control" placeholder="Re-enter password" required autocomplete="new-password" />
                 <div id="page-password-match-msg" style="font-size: 0.76rem; margin-top: 0.35rem; display: none;"></div>
               </div>
 
@@ -2679,21 +2664,20 @@
               <input type="email" id="login-email" class="form-control" placeholder="Enter your email" required autocomplete="email" />
             </div>
             <div class="form-group">
-              <label class="form-label">Password</label>
-              <div class="password-input-wrap">
-                <input type="password" id="login-password" class="form-control" placeholder="Enter your password" required autocomplete="current-password" />
+              <div class="password-label-row">
+                <label class="form-label">Password</label>
                 <button type="button" class="password-toggle-btn" data-target="login-password" aria-label="Show password" title="Show password">
-                  <svg class="eye-show" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <svg class="eye-show" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8z"></path>
                     <circle cx="12" cy="12" r="3"></circle>
                   </svg>
-                  <svg class="eye-hide" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: none;">
+                  <svg class="eye-hide" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: none;">
                     <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
                     <line x1="1" y1="1" x2="23" y2="23"></line>
                   </svg>
-                  <span class="password-toggle-text">Show</span>
                 </button>
               </div>
+              <input type="password" id="login-password" class="form-control" placeholder="Enter your password" required autocomplete="current-password" />
             </div>
             <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">Sign In to Aviora</button>
           </form>
@@ -2727,21 +2711,20 @@
 
             <!-- Strong Password Field with Real-Time Checklist -->
             <div class="form-group">
-              <label class="form-label">Create Strong Password</label>
-              <div class="password-input-wrap">
-                <input type="password" id="reg-password" class="form-control" placeholder="Create a strong password" required autocomplete="new-password" />
+              <div class="password-label-row">
+                <label class="form-label">Create Strong Password</label>
                 <button type="button" class="password-toggle-btn" data-target="reg-password" aria-label="Show password" title="Show password">
-                  <svg class="eye-show" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <svg class="eye-show" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8z"></path>
                     <circle cx="12" cy="12" r="3"></circle>
                   </svg>
-                  <svg class="eye-hide" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: none;">
+                  <svg class="eye-hide" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: none;">
                     <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
                     <line x1="1" y1="1" x2="23" y2="23"></line>
                   </svg>
-                  <span class="password-toggle-text">Show</span>
                 </button>
               </div>
+              <input type="password" id="reg-password" class="form-control" placeholder="Create a strong password" required autocomplete="new-password" />
 
               <!-- Password Strength Meter & Interactive Rules -->
               <div class="password-strength-box" id="modal-password-strength-box">
@@ -2774,21 +2757,20 @@
 
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
               <div class="form-group">
-                <label class="form-label">Confirm Password</label>
-                <div class="password-input-wrap">
-                  <input type="password" id="reg-confirm" class="form-control" placeholder="Re-enter password" required autocomplete="new-password" />
+                <div class="password-label-row">
+                  <label class="form-label">Confirm Password</label>
                   <button type="button" class="password-toggle-btn" data-target="reg-confirm" aria-label="Show password" title="Show password">
-                    <svg class="eye-show" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <svg class="eye-show" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                       <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8z"></path>
                       <circle cx="12" cy="12" r="3"></circle>
                     </svg>
-                    <svg class="eye-hide" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: none;">
+                    <svg class="eye-hide" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: none;">
                       <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
                       <line x1="1" y1="1" x2="23" y2="23"></line>
                     </svg>
-                    <span class="password-toggle-text">Show</span>
                   </button>
                 </div>
+                <input type="password" id="reg-confirm" class="form-control" placeholder="Re-enter password" required autocomplete="new-password" />
                 <div id="modal-password-match-msg" style="font-size: 0.72rem; margin-top: 0.35rem; display: none;"></div>
               </div>
               <div class="form-group">

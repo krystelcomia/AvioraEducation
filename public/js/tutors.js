@@ -207,9 +207,9 @@ const Tutors = {
     const rateFilter = document.getElementById('tutor-rate-filter');
 
     if (searchInput) searchInput.value = '';
-    if (gradeFilter) gradeFilter.value = 'all';
-    if (sortFilter) sortFilter.value = 'featured';
-    if (rateFilter) rateFilter.value = '';
+    if (gradeFilter) gradeFilter.selectedIndex = 0;
+    if (sortFilter) sortFilter.selectedIndex = 0;
+    if (rateFilter) rateFilter.selectedIndex = 0;
 
     document.querySelectorAll('.subject-pill-btn').forEach(b => b.classList.remove('active'));
     document.querySelector('.subject-pill-btn[data-subject="all"]')?.classList.add('active');
@@ -258,8 +258,9 @@ const Tutors = {
           </div>
           <div class="tutor-card-actions" style="display: flex; align-items: center; gap: 0.45rem;">
             <button class="btn btn-icon btn-sm message-tutor-btn" data-id="${t.id}" title="Send message to ${t.name}" style="background: rgba(198, 138, 40, 0.1); border: 1px solid rgba(198, 138, 40, 0.25); color: var(--gold-800); width: 34px; height: 34px; border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all var(--transition-fast);">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect width="20" height="16" x="2" y="4" rx="2"></rect>
+                <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"></path>
               </svg>
             </button>
             <button class="btn btn-secondary btn-sm view-profile-btn" data-id="${t.id}">Profile</button>
@@ -403,7 +404,8 @@ const Tutors = {
               <div class="tutor-hero-actions">
                 <button class="btn btn-outline-gold btn-md" id="hero-message-tutor-btn" data-id="${tutor.id}" style="display: inline-flex; align-items: center; gap: 0.5rem;">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                    <rect width="20" height="16" x="2" y="4" rx="2"></rect>
+                    <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"></path>
                   </svg>
                   <span>Message Tutor</span>
                 </button>
@@ -577,7 +579,8 @@ const Tutors = {
                 </div>
                 <button type="submit" class="btn btn-outline-gold btn-md" style="width: 100%; justify-content: center; display: inline-flex; align-items: center; gap: 0.5rem;">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                    <rect width="20" height="16" x="2" y="4" rx="2"></rect>
+                    <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"></path>
                   </svg>
                   <span>Send Message to ${tutor.name.split(' ')[0]}</span>
                 </button>

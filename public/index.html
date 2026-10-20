@@ -1499,7 +1499,7 @@
         <div class="portal-header">
           <div>
             <span class="badge-gold">Public Tutor Directory</span>
-            <h1 class="portal-title" style="margin-top: 0.5rem;">Explore Vetted Academic Specialists</h1>
+            <h1 class="portal-title" style="margin-top: 0.5rem; text-align: left !important;">Explore Vetted Academic Specialists</h1>
             <p class="portal-subtitle">Browse approved educators, view academic qualifications, inspect schedules, and book 1-on-1 sessions.</p>
           </div>
           <div>
@@ -1517,7 +1517,7 @@
 
             <div>
               <select id="tutor-grade-filter" class="form-control">
-                <option value="all">All Grade Levels</option>
+                <option value="all" hidden selected>All Grade Levels</option>
                 <option value="Middle School">Middle School</option>
                 <option value="High School">High School</option>
                 <option value="College">College / Undergraduate</option>
@@ -1527,7 +1527,7 @@
 
             <div>
               <select id="tutor-rate-filter" class="form-control">
-                <option value="">Any Hourly Rate</option>
+                <option value="" hidden selected>Any Hourly Rate</option>
                 <option value="45">Under $45/hr</option>
                 <option value="55">Under $55/hr</option>
                 <option value="65">Under $65/hr</option>
@@ -1536,7 +1536,8 @@
 
             <div>
               <select id="tutor-sort-filter" class="form-control">
-                <option value="featured">Sort: Featured & Recommended</option>
+                <option value="featured" hidden selected>Sort: Featured & Recommended</option>
+                <option value="featured">Featured & Recommended</option>
                 <option value="rating_desc">Highest Rated</option>
                 <option value="price_asc">Price: Low to High</option>
                 <option value="price_desc">Price: High to Low</option>

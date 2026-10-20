@@ -40,6 +40,12 @@
   font-size: 1.6rem;
   color: var(--text-primary);
   margin-bottom: 0.25rem;
+  text-align: left;
+}
+
+.portal-header .portal-title,
+.portal-header .badge-gold + .portal-title {
+  text-align: left !important;
 }
 
 .portal-subtitle {

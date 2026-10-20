@@ -636,7 +636,7 @@ function openPolicyModal(type) {
         </p>
         <h4 style="color: var(--charcoal-900); font-weight: 700; margin-bottom: 0.5rem;">Cancellation & Rescheduling</h4>
         <p style="color: var(--text-secondary); font-size: 0.9rem; line-height: 1.6;">
-          Students and tutors may reschedule or cancel upcoming tutoring sessions up to 12 hours prior to scheduled start times without penalty.
+          Students and tutors may reschedule or cancel upcoming tutoring sessions up to 3 hours prior to scheduled start times without penalty.
         </p>
       `;
     }

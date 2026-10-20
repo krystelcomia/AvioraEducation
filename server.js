@@ -1073,7 +1073,7 @@ app.get('/api/student/subscription', authenticateToken, requireRole('student'), 
       validity: '1-Month Validity Window: All 4, 8, and 12-lesson packages are valid for exactly 30 calendar days from the date of purchase. Sessions not scheduled within this 30-day period expire automatically.',
       flexible_dates: 'Student-Determined Schedule: All lesson dates, times, and tutor selections are freely scheduled by the student through the tutor live availability calendar.',
       one_time_trial: '1-Time Paid Trial Limit: The discounted introductory trial lesson ($39) is a paid trial and can only be used once per student account.',
-      reschedule: '24-Hour Rescheduling Notice: Students may reschedule any booked session with at least 24 hours advance notice without forfeiting the lesson credit.'
+      reschedule: '3-Hour Rescheduling Notice: Students may reschedule any booked session with at least 3 hours advance notice before the class without forfeiting the lesson credit.'
     };
 
     res.json({

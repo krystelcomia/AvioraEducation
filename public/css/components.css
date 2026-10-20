@@ -555,30 +555,35 @@
 }
 
 /* Password Input & Strength Meter */
-.password-label-row {
-  display: flex;
-  align-items: center;
-  gap: 0.45rem;
-  margin-bottom: 0.35rem;
+.password-input-wrap {
+  position: relative !important;
+  display: flex !important;
+  align-items: center !important;
+  width: 100% !important;
 }
 
-.password-label-row .form-label {
-  margin-bottom: 0 !important;
+.password-input-wrap input {
+  width: 100% !important;
+  padding-right: 2.85rem !important;
 }
 
 .password-toggle-btn {
-  background: none;
+  position: absolute;
+  right: 0.85rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
   border: none;
-  color: var(--charcoal-600);
+  color: var(--charcoal-500, #555555);
   cursor: pointer;
-  padding: 0.2rem 0.3rem;
-  display: inline-flex;
+  padding: 0.35rem;
+  display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: var(--radius-xs);
+  border-radius: 50%;
   transition: all var(--transition-fast);
   line-height: 1;
-  vertical-align: middle;
+  z-index: 2;
 }
 
 .password-toggle-btn:hover {
@@ -587,10 +592,11 @@
 }
 
 .password-toggle-btn svg {
-  width: 17px;
-  height: 17px;
+  width: 18px;
+  height: 18px;
   stroke: currentColor;
   flex-shrink: 0;
+  display: block;
 }
 
 .password-strength-box {

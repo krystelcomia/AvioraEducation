@@ -271,10 +271,17 @@ a { text-decoration: none; color: inherit; transition: color var(--transition-fa
 }
 
 .brand-logo {
-  height: 58px; /* Increased size of Aviora Education text and emblem */
-  width: auto;
-  object-fit: contain;
-  filter: drop-shadow(0 2px 8px rgba(198, 138, 40, 0.18));
+  height: 68px;
+  width: 68px;
+  border-radius: 50%;
+  object-fit: cover;
+  filter: drop-shadow(0 2px 10px rgba(198, 138, 40, 0.25));
+  transition: transform var(--transition-fast);
+  display: block;
+}
+
+.brand-logo:hover {
+  transform: scale(1.05);
 }
 
 /* Header items left-aligned directly after the brand */

@@ -668,8 +668,13 @@
 }
 
 .simple-login-brand-logo {
-  height: 40px;
+  height: 78px;
+  width: 78px;
+  border-radius: 50%;
+  object-fit: cover;
   margin-bottom: 0.85rem;
+  filter: drop-shadow(0 2px 10px rgba(198, 138, 40, 0.22));
+  display: inline-block;
 }
 
 .simple-login-title {

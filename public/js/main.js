@@ -179,6 +179,13 @@ const Router = {
         }
       }
     } else if (hash === '#book-now') {
+      const user = (typeof Auth !== 'undefined' && Auth.currentUser);
+      if (!user) {
+        showToast('Please create an account to book your tutoring session.', 'info');
+        window.location.hash = '#signup';
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
+      }
       const view = document.getElementById('view-tutors');
       if (view) view.style.display = 'block';
       window.scrollTo({ top: 0, behavior: 'smooth' });

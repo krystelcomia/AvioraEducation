@@ -918,8 +918,16 @@ const Tutors = {
     const user = Auth.currentUser;
 
     if (!user) {
-      showToast('Please sign in or register as a student to book a session.', 'info');
-      Auth.openModal('login');
+      if (tutorId) {
+        sessionStorage.setItem('pending_booking_tutor_id', tutorId);
+      }
+      showToast('Please create an account to book your tutoring session.', 'info');
+      if (typeof Auth !== 'undefined' && Auth.closeModal) {
+        Auth.closeModal();
+      }
+      this.closeMessageModal();
+      window.location.hash = '#signup';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
 

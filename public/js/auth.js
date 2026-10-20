@@ -689,6 +689,20 @@ const Auth = {
       this.updateNavUI(res.user);
       showToast(`Welcome back, ${res.user.name}!`, 'success');
 
+      // Check for pending booking
+      const pendingTutorId = sessionStorage.getItem('pending_booking_tutor_id');
+      if (pendingTutorId && res.user.role === 'student') {
+        sessionStorage.removeItem('pending_booking_tutor_id');
+        window.location.hash = '#tutors';
+        Router.handleRoute();
+        setTimeout(() => {
+          if (typeof Tutors !== 'undefined' && Tutors.openBookingModal) {
+            Tutors.openBookingModal(pendingTutorId);
+          }
+        }, 350);
+        return;
+      }
+
       // Smart redirect based on role
       if (res.user.role === 'admin') {
         window.location.hash = '#admin-portal';
@@ -772,6 +786,20 @@ const Auth = {
       this.closeModal();
       this.updateNavUI(res.user);
       showToast(`Account created successfully! Welcome to Aviora, ${res.user.name}.`, 'success');
+
+      // Check for pending booking
+      const pendingTutorId = sessionStorage.getItem('pending_booking_tutor_id');
+      if (pendingTutorId && role === 'student') {
+        sessionStorage.removeItem('pending_booking_tutor_id');
+        window.location.hash = '#tutors';
+        Router.handleRoute();
+        setTimeout(() => {
+          if (typeof Tutors !== 'undefined' && Tutors.openBookingModal) {
+            Tutors.openBookingModal(pendingTutorId);
+          }
+        }, 350);
+        return;
+      }
 
       if (role === 'teacher') {
         window.location.hash = '#teacher-portal';

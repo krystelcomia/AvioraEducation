@@ -1073,7 +1073,8 @@ app.get('/api/student/subscription', authenticateToken, requireRole('student'), 
       validity: '1-Month Validity Window: All 4, 8, and 12-lesson packages are valid for exactly 30 calendar days from the date of purchase. Sessions not scheduled within this 30-day period expire automatically.',
       flexible_dates: 'Student-Determined Schedule: All lesson dates, times, and tutor selections are freely scheduled by the student through the tutor live availability calendar.',
       one_time_trial: '1-Time Paid Trial Limit: The discounted introductory trial lesson ($39) is a paid trial and can only be used once per student account.',
-      reschedule: '3-Hour Rescheduling Notice: Students may reschedule any booked session with at least 3 hours advance notice before the class without forfeiting the lesson credit.'
+      reschedule: '3-Hour Rescheduling Notice: Students may reschedule any booked session with at least 3 hours advance notice before the class without forfeiting the lesson credit.',
+      class_duration: 'Class Duration Limit: All subjects are a maximum of 50 minutes of class.'
     };
 
     res.json({
@@ -1175,7 +1176,11 @@ app.post('/api/student/requests', authenticateToken, requireRole('student'), (re
       return res.status(400).json({ error: 'Selected tutor is not currently accepting requests.' });
     }
 
-    const duration = parseFloat(duration_hours) || 1.0;
+    const requestedDuration = parseFloat(duration_hours) || 1.0;
+    if (requestedDuration > 1.0) {
+      return res.status(400).json({ error: 'All subjects are a maximum of 50 minutes of class.' });
+    }
+    const duration = Math.min(requestedDuration, 1.0);
     const totalAmount = duration * tutorProfile.hourly_rate;
 
     const insert = db.prepare(`

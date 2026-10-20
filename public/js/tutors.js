@@ -957,7 +957,7 @@ const Tutors = {
           <img src="${tutor.avatar_url}" style="width: 50px; height: 50px; border-radius: var(--radius-md); object-fit: cover; border: 1.5px solid var(--gold-500);" />
           <div>
             <h4 style="color: var(--white); font-size: 1.1rem;">${tutor.name}</h4>
-            <p style="color: var(--gold-300); font-size: 0.85rem;">$${tutor.hourly_rate} / hour</p>
+            <p style="color: var(--gold-300); font-size: 0.85rem;">$${tutor.hourly_rate} / hour • Max 50 min class</p>
           </div>
         </div>
       `;

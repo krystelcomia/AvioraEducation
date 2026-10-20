@@ -635,8 +635,12 @@ function openPolicyModal(type) {
           Only educators whose academic credentials and background have been formally vetted and approved by our Academic Board will be listed publicly on the Aviora tutor directory.
         </p>
         <h4 style="color: var(--charcoal-900); font-weight: 700; margin-bottom: 0.5rem;">Cancellation & Rescheduling</h4>
-        <p style="color: var(--text-secondary); font-size: 0.9rem; line-height: 1.6;">
+        <p style="color: var(--text-secondary); font-size: 0.9rem; line-height: 1.6; margin-bottom: 1rem;">
           Students and tutors may reschedule or cancel upcoming tutoring sessions up to 3 hours prior to scheduled start times without penalty.
+        </p>
+        <h4 style="color: var(--charcoal-900); font-weight: 700; margin-bottom: 0.5rem;">Class Duration</h4>
+        <p style="color: var(--text-secondary); font-size: 0.9rem; line-height: 1.6;">
+          All subjects are a maximum of 50 minutes of class per session to optimize student focus and academic retention.
         </p>
       `;
     }

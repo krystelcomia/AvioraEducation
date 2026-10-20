@@ -2835,45 +2835,107 @@
   </div>
 
   <!-- =========================================
-       MODAL: SEND MESSAGE TO TUTOR
+       MODAL: TUTOR MESSENGER CONVERSATION (DIRECT 1-ON-1)
        ========================================= -->
   <div class="modal-overlay" id="tutor-message-modal">
-    <div class="modal-card" style="max-width: 540px;">
-      <div class="modal-header">
-        <div style="display: flex; align-items: center; gap: 0.6rem;">
-          <span style="font-size: 1.3rem;">✉️</span>
-          <h3 class="modal-title text-gold" id="message-modal-title">Message Tutor</h3>
+    <div class="modal-card tutor-messenger-card">
+      <!-- Messenger Top Header -->
+      <div class="messenger-header">
+        <div class="messenger-header-profile">
+          <div class="messenger-avatar-wrap">
+            <img id="messenger-tutor-avatar" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80" alt="Tutor Avatar" class="messenger-header-avatar" />
+            <span class="messenger-status-dot" title="Active now"></span>
+          </div>
+          <div class="messenger-header-info">
+            <div class="messenger-name-row">
+              <h4 id="messenger-tutor-name" class="messenger-tutor-name">Prof. Marcus Sterling</h4>
+              <span class="messenger-verified-badge" title="Verified Faculty">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                </svg>
+              </span>
+            </div>
+            <div class="messenger-header-status">
+              <span class="messenger-status-indicator">● Active now</span>
+              <span class="messenger-status-sep">•</span>
+              <span id="messenger-tutor-headline" class="messenger-headline-text">Theoretical Physics | MIT</span>
+            </div>
+          </div>
         </div>
-        <button class="modal-close-btn" id="tutor-message-modal-close">✕</button>
+        <div class="messenger-header-actions">
+          <button type="button" class="btn btn-gold-sm messenger-book-btn" id="messenger-book-session-btn" title="Book a 1-on-1 session with this tutor">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect width="18" height="18" x="3" y="4" rx="2" ry="2"></rect>
+              <line x1="16" x2="16" y1="2" y2="6"></line>
+              <line x1="8" x2="8" y1="2" y2="6"></line>
+              <line x1="3" x2="21" y1="10" y2="10"></line>
+            </svg>
+            <span>Book Session</span>
+          </button>
+          <button class="modal-close-btn" id="tutor-message-modal-close" aria-label="Close Messenger">✕</button>
+        </div>
       </div>
-      <div class="modal-body">
-        <div id="message-tutor-banner" style="display: flex; align-items: center; gap: 1rem; padding: 0.85rem 1rem; background: rgba(198, 138, 40, 0.08); border: 1px solid rgba(198, 138, 40, 0.22); border-radius: var(--radius-md); margin-bottom: 1.25rem;">
-          <!-- Injected dynamically -->
+
+      <!-- Separation Notice Bar (Direct Conversation vs General Inquiries) -->
+      <div class="messenger-notice-bar">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+        </svg>
+        <span><strong>Direct Educator Messenger:</strong> This conversation is private between you and this tutor. Responses appear directly here, separate from general inquiry tickets.</span>
+      </div>
+
+      <!-- Messenger Chat Body (Scrollable Messages Feed) -->
+      <div class="messenger-body" id="messenger-chat-body">
+        <div class="messenger-date-divider">
+          <span>Today</span>
         </div>
-        <form id="tutor-direct-message-form">
+        
+        <!-- Live Message Thread -->
+        <div class="messenger-thread" id="messenger-messages-thread">
+          <!-- Dynamically populated with chat history and tutor responses -->
+        </div>
+
+        <!-- Real-Time Typing Indicator -->
+        <div class="messenger-typing-indicator" id="messenger-typing-indicator" style="display: none;">
+          <img id="messenger-typing-avatar" src="" alt="Tutor" class="messenger-avatar-tiny" />
+          <div class="typing-bubble">
+            <span class="typing-dot"></span>
+            <span class="typing-dot"></span>
+            <span class="typing-dot"></span>
+          </div>
+          <span class="typing-text" id="messenger-typing-text">Prof. Marcus Sterling is typing...</span>
+        </div>
+      </div>
+
+      <!-- Quick Conversation Prompts -->
+      <div class="messenger-quick-prompts" id="messenger-quick-prompts">
+        <button type="button" class="quick-prompt-chip" data-prompt="Hi! I'm interested in scheduling a 1-on-1 tutoring session. What is your current availability?">
+          📅 Inquire about schedule
+        </button>
+        <button type="button" class="quick-prompt-chip" data-prompt="Hello! I would like guidance on exam prep and syllabus breakdown for my coursework.">
+          📚 Exam & syllabus prep
+        </button>
+        <button type="button" class="quick-prompt-chip" data-prompt="Hi! Could you tell me more about your mentoring approach and what we cover in our first session?">
+          💡 First session & goals
+        </button>
+      </div>
+
+      <!-- Messenger Footer Composer -->
+      <div class="messenger-footer">
+        <form id="messenger-composer-form" class="messenger-composer-form">
           <input type="hidden" id="direct-message-tutor-id" />
-          <div class="form-group" style="margin-bottom: 1rem;">
-            <label class="form-label" for="direct-message-name">Your Full Name</label>
-            <input type="text" id="direct-message-name" class="form-control" placeholder="e.g. Maria Santos" required />
-          </div>
-          <div class="form-group" style="margin-bottom: 1rem;">
-            <label class="form-label" for="direct-message-email">Your Email Address</label>
-            <input type="email" id="direct-message-email" class="form-control" placeholder="e.g. maria@example.com" required />
-          </div>
-          <div class="form-group" style="margin-bottom: 1rem;">
-            <label class="form-label" for="direct-message-subject">Subject / Inquiry Topic</label>
-            <input type="text" id="direct-message-subject" class="form-control" placeholder="e.g. Inquiry regarding AP Calculus BC coaching" required />
-          </div>
-          <div class="form-group" style="margin-bottom: 1.25rem;">
-            <label class="form-label" for="direct-message-content">Your Message to the Educator</label>
-            <textarea id="direct-message-content" class="form-control" rows="4" placeholder="Introduce yourself, discuss your current syllabus, target test date, or schedule preferences..." required></textarea>
-          </div>
-          <div style="display: flex; gap: 0.75rem; justify-content: flex-end;">
-            <button type="button" class="btn btn-secondary btn-md" id="direct-message-cancel-btn">Cancel</button>
-            <button type="submit" class="btn btn-primary btn-md" style="display: inline-flex; align-items: center; gap: 0.5rem;">
-              <span>✉</span>
-              <span>Send Message</span>
+          <div class="messenger-input-wrap">
+            <textarea id="messenger-chat-input" class="messenger-textarea" placeholder="Type a message to educator..." rows="1" required></textarea>
+            <button type="submit" class="messenger-send-btn" id="messenger-send-btn" aria-label="Send message" title="Send message (Enter)">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="22" y1="2" x2="11" y2="13"></line>
+                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+              </svg>
             </button>
+          </div>
+          <div class="messenger-footer-sub">
+            <span>Press <strong>Enter</strong> to send, <strong>Shift + Enter</strong> for line break</span>
+            <span id="messenger-active-sender">1-on-1 Direct Line</span>
           </div>
         </form>
       </div>

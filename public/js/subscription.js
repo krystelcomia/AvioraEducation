@@ -139,7 +139,53 @@ const StudentSub = {
     }
   },
 
+  purchasePlan(planKey) {
+    const user = typeof Auth !== 'undefined' ? Auth.currentUser : null;
+    if (!user) {
+      sessionStorage.setItem('pending_subscription_plan', planKey);
+      showToast('Please log in to your account to purchase a subscription.', 'info');
+      if (typeof Auth !== 'undefined' && Auth.closeModal) {
+        Auth.closeModal();
+      }
+      window.location.hash = '#login';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
+    if (user.role !== 'student') {
+      showToast('Please log in with a student account to purchase a subscription.', 'warning');
+      return;
+    }
+
+    const packageMap = {
+      'scholar': '4_lessons',
+      'honors': '8_lessons'
+    };
+    const packageKey = packageMap[planKey] || '4_lessons';
+    window.location.hash = '#student-subscriptions';
+    setTimeout(() => {
+      this.buyPackage(packageKey);
+    }, 350);
+  },
+
   async buyPackage(packageKey) {
+    const user = typeof Auth !== 'undefined' ? Auth.currentUser : null;
+    if (!user) {
+      sessionStorage.setItem('pending_subscription_package', packageKey);
+      showToast('Please log in to your account to purchase a subscription.', 'info');
+      if (typeof Auth !== 'undefined' && Auth.closeModal) {
+        Auth.closeModal();
+      }
+      window.location.hash = '#login';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
+    if (user.role !== 'student') {
+      showToast('Please log in with a student account to purchase a subscription.', 'warning');
+      return;
+    }
+
     const pkgLabels = {
       'trial': 'Single Paid Trial Lesson ($39.00)',
       '4_lessons': 'Starter Package: 4 Lessons Monthly ($220.00)',

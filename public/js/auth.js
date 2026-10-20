@@ -532,17 +532,58 @@ const Auth = {
       this.updateNavUI(res.user);
       showToast(`Welcome, ${res.user.name}! Connected securely via ${provider === 'google' ? 'Google' : 'Facebook'}.`, 'success');
 
-      if (res.user.role === 'teacher') {
-        window.location.hash = '#teacher-portal';
-      } else if (res.user.role === 'admin') {
-        window.location.hash = '#admin-portal';
-      } else {
-        window.location.hash = '#student-portal';
-      }
-      Router.handleRoute();
+      this.handlePostAuthRedirect(res.user);
     } catch (err) {
       showToast(err.message || 'Social authentication failed.', 'error');
     }
+  },
+
+  handlePostAuthRedirect(user) {
+    if (!user) return;
+
+    // 1. Check for pending subscription purchase intent
+    const pendingSubPlan = sessionStorage.getItem('pending_subscription_plan');
+    const pendingSubPkg = sessionStorage.getItem('pending_subscription_package');
+    if ((pendingSubPlan || pendingSubPkg) && user.role === 'student') {
+      sessionStorage.removeItem('pending_subscription_plan');
+      sessionStorage.removeItem('pending_subscription_package');
+      window.location.hash = '#student-subscriptions';
+      Router.handleRoute();
+      setTimeout(() => {
+        if (typeof StudentSub !== 'undefined') {
+          if (pendingSubPkg && StudentSub.buyPackage) {
+            StudentSub.buyPackage(pendingSubPkg);
+          } else if (pendingSubPlan && StudentSub.purchasePlan) {
+            StudentSub.purchasePlan(pendingSubPlan);
+          }
+        }
+      }, 400);
+      return;
+    }
+
+    // 2. Check for pending tutor booking intent
+    const pendingTutorId = sessionStorage.getItem('pending_booking_tutor_id');
+    if (pendingTutorId && user.role === 'student') {
+      sessionStorage.removeItem('pending_booking_tutor_id');
+      window.location.hash = '#tutors';
+      Router.handleRoute();
+      setTimeout(() => {
+        if (typeof Tutors !== 'undefined' && Tutors.openBookingModal) {
+          Tutors.openBookingModal(pendingTutorId);
+        }
+      }, 350);
+      return;
+    }
+
+    // 3. Default smart dashboard redirect
+    if (user.role === 'admin') {
+      window.location.hash = '#admin-portal';
+    } else if (user.role === 'teacher') {
+      window.location.hash = '#teacher-portal';
+    } else {
+      window.location.hash = '#student-portal';
+    }
+    Router.handleRoute();
   },
 
   openModal(tab = 'login', role = 'student') {
@@ -658,6 +699,8 @@ const Auth = {
       if (redirectHash) {
         window.location.hash = redirectHash;
         Router.handleRoute();
+      } else {
+        this.handlePostAuthRedirect(res.user);
       }
     } catch (err) {
       showToast(err.message, 'error');
@@ -689,29 +732,7 @@ const Auth = {
       this.updateNavUI(res.user);
       showToast(`Welcome back, ${res.user.name}!`, 'success');
 
-      // Check for pending booking
-      const pendingTutorId = sessionStorage.getItem('pending_booking_tutor_id');
-      if (pendingTutorId && res.user.role === 'student') {
-        sessionStorage.removeItem('pending_booking_tutor_id');
-        window.location.hash = '#tutors';
-        Router.handleRoute();
-        setTimeout(() => {
-          if (typeof Tutors !== 'undefined' && Tutors.openBookingModal) {
-            Tutors.openBookingModal(pendingTutorId);
-          }
-        }, 350);
-        return;
-      }
-
-      // Smart redirect based on role
-      if (res.user.role === 'admin') {
-        window.location.hash = '#admin-portal';
-      } else if (res.user.role === 'teacher') {
-        window.location.hash = '#teacher-portal';
-      } else {
-        window.location.hash = '#student-portal';
-      }
-      Router.handleRoute();
+      this.handlePostAuthRedirect(res.user);
     } catch (err) {
       showToast(err.message, 'error');
     } finally {
@@ -787,26 +808,7 @@ const Auth = {
       this.updateNavUI(res.user);
       showToast(`Account created successfully! Welcome to Aviora, ${res.user.name}.`, 'success');
 
-      // Check for pending booking
-      const pendingTutorId = sessionStorage.getItem('pending_booking_tutor_id');
-      if (pendingTutorId && role === 'student') {
-        sessionStorage.removeItem('pending_booking_tutor_id');
-        window.location.hash = '#tutors';
-        Router.handleRoute();
-        setTimeout(() => {
-          if (typeof Tutors !== 'undefined' && Tutors.openBookingModal) {
-            Tutors.openBookingModal(pendingTutorId);
-          }
-        }, 350);
-        return;
-      }
-
-      if (role === 'teacher') {
-        window.location.hash = '#teacher-portal';
-      } else {
-        window.location.hash = '#student-portal';
-      }
-      Router.handleRoute();
+      this.handlePostAuthRedirect(res.user);
     } catch (err) {
       showToast(err.message, 'error');
     } finally {

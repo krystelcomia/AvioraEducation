@@ -261,8 +261,10 @@ a { text-decoration: none; color: inherit; transition: color var(--transition-fa
 .brand-link {
   display: flex;
   align-items: center;
-  height: 62px;
+  gap: 0.95rem;
+  height: 64px;
   flex-shrink: 0;
+  text-decoration: none;
   transition: transform var(--transition-fast);
 }
 
@@ -271,17 +273,55 @@ a { text-decoration: none; color: inherit; transition: color var(--transition-fa
 }
 
 .brand-logo {
-  height: 68px;
-  width: 68px;
+  height: 62px;
+  width: 62px;
   border-radius: 50%;
   object-fit: cover;
   filter: drop-shadow(0 2px 10px rgba(198, 138, 40, 0.25));
   transition: transform var(--transition-fast);
   display: block;
+  flex-shrink: 0;
 }
 
 .brand-logo:hover {
-  transform: scale(1.05);
+  transform: scale(1.04);
+}
+
+/* Distinctive Luxury Brand Title & Subtitle */
+.brand-text {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  user-select: none;
+  text-align: left;
+}
+
+.brand-title {
+  font-family: var(--font-brand);
+  font-size: 1.55rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  color: var(--charcoal-900);
+  line-height: 1.05;
+  transition: color var(--transition-fast);
+}
+
+.brand-title-gold {
+  color: var(--gold-600);
+  background: linear-gradient(135deg, #B87E14 0%, #E5A93C 50%, #C68A28 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.brand-subtitle {
+  font-family: var(--font-brand);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.32em;
+  color: var(--gold-800);
+  text-transform: uppercase;
+  margin-top: 0.18rem;
+  line-height: 1;
 }
 
 /* Header items left-aligned directly after the brand */
@@ -495,11 +535,22 @@ a { text-decoration: none; color: inherit; transition: color var(--transition-fa
 .hero-content {
   position: relative;
   z-index: 2;
+  text-align: left;
 }
 
-.hero-headline {
-  margin: 1.25rem 0 1.5rem;
-  line-height: 1.12;
+.hero-content .badge-gold {
+  margin-left: 0 !important;
+  margin-right: auto !important;
+  display: inline-flex !important;
+}
+
+.hero-headline,
+.hero-content .hero-headline {
+  margin: 1.25rem 0 1.5rem !important;
+  line-height: 1.12 !important;
+  text-align: left !important;
+  display: block !important;
+  width: auto !important;
 }
 
 .hero-subtitle {
@@ -508,6 +559,7 @@ a { text-decoration: none; color: inherit; transition: color var(--transition-fa
   color: var(--text-secondary);
   margin-bottom: 2.25rem;
   max-width: 720px;
+  text-align: left !important;
 }
 
 .hero-ctas {
@@ -1230,17 +1282,18 @@ a { text-decoration: none; color: inherit; transition: color var(--transition-fa
   margin-bottom: 0.85rem;
 }
 
-/* Ensure any oval badge directly preceding a main heading is centered on its own line above the title */
-.badge-gold {
+/* Ensure any oval badge directly preceding a main heading in section and portal headers is centered on its own line above the title */
+.section-header .badge-gold,
+.portal-header .badge-gold {
   margin-left: auto;
   margin-right: auto;
 }
 
-.badge-gold + h1,
-.badge-gold + h2,
-.badge-gold + h3,
-.badge-gold + .section-title,
-.badge-gold + .portal-title {
+.section-header .badge-gold + h1,
+.section-header .badge-gold + h2,
+.section-header .badge-gold + h3,
+.section-header .badge-gold + .section-title,
+.portal-header .badge-gold + .portal-title {
   display: block !important;
   width: 100% !important;
   text-align: center !important;

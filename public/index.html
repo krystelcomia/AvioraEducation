@@ -1258,8 +1258,8 @@
 
           <!-- 1-Click Fast Demo Switcher Pill -->
           <div class="demo-accounts-card" style="padding: 0.85rem 1.1rem; margin-bottom: 1.5rem;">
-            <div class="demo-accounts-title" style="font-size: 0.76rem; margin-bottom: 0.5rem; color: var(--gold-800); font-weight: 700;">
-              <span>⚡</span> FAST DEMO EVALUATION:
+            <div class="demo-accounts-title" style="font-size: 0.76rem; margin-bottom: 0.5rem; color: var(--gold-800); font-weight: 700; text-align: center; justify-content: center;">
+              <span>⚡</span> FAST LOGIN:
             </div>
             <div class="demo-btns-row">
               <button class="btn-demo-fill" type="button" id="page-demo-student">Student</button>
@@ -1273,14 +1273,24 @@
             <form id="page-login-form">
               <div class="form-group">
                 <label class="form-label" for="page-login-email" style="color: var(--charcoal-900); font-weight: 700;">Email Address</label>
-                <input type="email" id="page-login-email" class="form-control" placeholder="name@domain.com" required autocomplete="email" />
+                <input type="email" id="page-login-email" class="form-control" placeholder="Enter your email" required autocomplete="email" />
               </div>
 
               <div class="form-group" style="margin-bottom: 0.5rem;">
                 <label class="form-label" for="page-login-password" style="color: var(--charcoal-900); font-weight: 700;">Password</label>
                 <div class="password-input-wrap">
                   <input type="password" id="page-login-password" class="form-control" placeholder="Enter your password" required autocomplete="current-password" />
-                  <button type="button" class="password-toggle-eye" data-target="page-login-password" title="Show/Hide Password" aria-label="Toggle password visibility">👁️</button>
+                  <button type="button" class="password-toggle-btn" data-target="page-login-password" aria-label="Show password" title="Show password">
+                    <svg class="eye-show" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8z"></path>
+                      <circle cx="12" cy="12" r="3"></circle>
+                    </svg>
+                    <svg class="eye-hide" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: none;">
+                      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                      <line x1="1" y1="1" x2="23" y2="23"></line>
+                    </svg>
+                    <span class="password-toggle-text">Show</span>
+                  </button>
                 </div>
                 <!-- "Forgot password?" link placed below the password field -->
                 <div style="display: flex; justify-content: flex-end; margin-top: 0.5rem;">
@@ -1302,7 +1312,7 @@
           </div>
 
           <!-- Facebook and Google options appearing ONLY as icons at the very bottom -->
-          <div class="social-auth-icons-row" style="display: flex; justify-content: center; align-items: center; gap: 1.25rem; margin-bottom: 0.85rem;">
+          <div class="social-auth-icons-row" style="display: flex; justify-content: center; align-items: center; gap: 1.25rem; margin-bottom: 1.25rem;">
             <!-- Google Icon Button -->
             <button class="social-icon-btn social-google-icon-btn" id="page-google-auth-btn" type="button" title="Access via Google" aria-label="Access via Google">
               <svg width="22" height="22" viewBox="0 0 48 48">
@@ -1320,10 +1330,6 @@
               </svg>
             </button>
           </div>
-
-          <p style="text-align: center; font-size: 0.78rem; color: var(--text-secondary); margin: 0 0 1.25rem 0; line-height: 1.45;">
-            Click an icon above to access your account via Google or Facebook, depending on which service you linked when creating your account.
-          </p>
 
           <div style="text-align: center; font-size: 0.8rem; color: var(--text-secondary); border-top: 1px solid rgba(0, 0, 0, 0.08); padding-top: 1rem;">
             By continuing, you agree to Aviora Education's 
@@ -1372,7 +1378,7 @@
 
               <div class="form-group">
                 <label class="form-label" for="page-reg-email" style="color: var(--charcoal-900); font-weight: 700;">Email Address</label>
-                <input type="email" id="page-reg-email" class="form-control" placeholder="name@domain.com" required autocomplete="email" />
+                <input type="email" id="page-reg-email" class="form-control" placeholder="Enter your email" required autocomplete="email" />
               </div>
 
               <!-- Strong Password Field with Real-Time Checklist -->
@@ -1380,7 +1386,17 @@
                 <label class="form-label" for="page-reg-password" style="color: var(--charcoal-900); font-weight: 700;">Create Strong Password</label>
                 <div class="password-input-wrap">
                   <input type="password" id="page-reg-password" class="form-control" placeholder="Create a strong password" required autocomplete="new-password" />
-                  <button type="button" class="password-toggle-eye" data-target="page-reg-password" title="Show/Hide Password" aria-label="Toggle password visibility">👁️</button>
+                  <button type="button" class="password-toggle-btn" data-target="page-reg-password" aria-label="Show password" title="Show password">
+                    <svg class="eye-show" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8z"></path>
+                      <circle cx="12" cy="12" r="3"></circle>
+                    </svg>
+                    <svg class="eye-hide" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: none;">
+                      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                      <line x1="1" y1="1" x2="23" y2="23"></line>
+                    </svg>
+                    <span class="password-toggle-text">Show</span>
+                  </button>
                 </div>
 
                 <!-- Password Strength Meter & Interactive Rules -->
@@ -1416,7 +1432,17 @@
                 <label class="form-label" for="page-reg-confirm" style="color: var(--charcoal-900); font-weight: 700;">Confirm Password</label>
                 <div class="password-input-wrap">
                   <input type="password" id="page-reg-confirm" class="form-control" placeholder="Re-enter password" required autocomplete="new-password" />
-                  <button type="button" class="password-toggle-eye" data-target="page-reg-confirm" title="Show/Hide Password" aria-label="Toggle password visibility">👁️</button>
+                  <button type="button" class="password-toggle-btn" data-target="page-reg-confirm" aria-label="Show password" title="Show password">
+                    <svg class="eye-show" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8z"></path>
+                      <circle cx="12" cy="12" r="3"></circle>
+                    </svg>
+                    <svg class="eye-hide" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: none;">
+                      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                      <line x1="1" y1="1" x2="23" y2="23"></line>
+                    </svg>
+                    <span class="password-toggle-text">Show</span>
+                  </button>
                 </div>
                 <div id="page-password-match-msg" style="font-size: 0.76rem; margin-top: 0.35rem; display: none;"></div>
               </div>
@@ -1457,7 +1483,7 @@
           </div>
 
           <!-- Facebook and Google options appearing ONLY as icons at the very bottom -->
-          <div class="social-auth-icons-row" style="display: flex; justify-content: center; align-items: center; gap: 1.25rem; margin-bottom: 0.85rem;">
+          <div class="social-auth-icons-row" style="display: flex; justify-content: center; align-items: center; gap: 1.25rem; margin-bottom: 1.25rem;">
             <!-- Google Icon Button -->
             <button class="social-icon-btn social-google-icon-btn" id="signup-google-auth-btn" type="button" title="Create account with Google" aria-label="Create account with Google">
               <svg width="22" height="22" viewBox="0 0 48 48">
@@ -1475,10 +1501,6 @@
               </svg>
             </button>
           </div>
-
-          <p style="text-align: center; font-size: 0.78rem; color: var(--text-secondary); margin: 0 0 1.25rem 0; line-height: 1.45;">
-            Click an icon above if you wish to create an account using your Google or Facebook credentials.
-          </p>
 
           <div style="text-align: center; margin-top: 1rem; font-size: 0.8rem; color: var(--text-secondary); border-top: 1px solid rgba(0, 0, 0, 0.08); padding-top: 1rem;">
             By registering, you agree to Aviora Education's 
@@ -2593,8 +2615,8 @@
       <div class="modal-body">
         <!-- 1-Click Fast Demo Switcher Card -->
         <div class="demo-accounts-card">
-          <div class="demo-accounts-title">
-            <span>⚡</span> Quick 1-Click Demo Evaluation Fill:
+          <div class="demo-accounts-title" style="text-align: center; justify-content: center;">
+            <span>⚡</span> Quick 1-Click Fast Login:
           </div>
           <div class="demo-btns-row">
             <button class="btn-demo-fill" id="demo-student-fill">Student (Lucas)</button>
@@ -2638,13 +2660,23 @@
           <form id="login-form">
             <div class="form-group">
               <label class="form-label">Email Address</label>
-              <input type="email" id="login-email" class="form-control" placeholder="name@domain.com" required autocomplete="email" />
+              <input type="email" id="login-email" class="form-control" placeholder="Enter your email" required autocomplete="email" />
             </div>
             <div class="form-group">
               <label class="form-label">Password</label>
               <div class="password-input-wrap">
                 <input type="password" id="login-password" class="form-control" placeholder="Enter your password" required autocomplete="current-password" />
-                <button type="button" class="password-toggle-eye" data-target="login-password" title="Show/Hide Password" aria-label="Toggle password visibility">👁️</button>
+                <button type="button" class="password-toggle-btn" data-target="login-password" aria-label="Show password" title="Show password">
+                  <svg class="eye-show" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8z"></path>
+                    <circle cx="12" cy="12" r="3"></circle>
+                  </svg>
+                  <svg class="eye-hide" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: none;">
+                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                    <line x1="1" y1="1" x2="23" y2="23"></line>
+                  </svg>
+                  <span class="password-toggle-text">Show</span>
+                </button>
               </div>
             </div>
             <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">Sign In to Aviora</button>
@@ -2673,7 +2705,7 @@
               </div>
               <div class="form-group">
                 <label class="form-label">Email Address</label>
-                <input type="email" id="reg-email" class="form-control" placeholder="name@domain.com" required autocomplete="email" />
+                <input type="email" id="reg-email" class="form-control" placeholder="Enter your email" required autocomplete="email" />
               </div>
             </div>
 
@@ -2682,7 +2714,17 @@
               <label class="form-label">Create Strong Password</label>
               <div class="password-input-wrap">
                 <input type="password" id="reg-password" class="form-control" placeholder="Create a strong password" required autocomplete="new-password" />
-                <button type="button" class="password-toggle-eye" data-target="reg-password" title="Show/Hide Password" aria-label="Toggle password visibility">👁️</button>
+                <button type="button" class="password-toggle-btn" data-target="reg-password" aria-label="Show password" title="Show password">
+                  <svg class="eye-show" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8z"></path>
+                    <circle cx="12" cy="12" r="3"></circle>
+                  </svg>
+                  <svg class="eye-hide" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: none;">
+                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                    <line x1="1" y1="1" x2="23" y2="23"></line>
+                  </svg>
+                  <span class="password-toggle-text">Show</span>
+                </button>
               </div>
 
               <!-- Password Strength Meter & Interactive Rules -->
@@ -2719,7 +2761,17 @@
                 <label class="form-label">Confirm Password</label>
                 <div class="password-input-wrap">
                   <input type="password" id="reg-confirm" class="form-control" placeholder="Re-enter password" required autocomplete="new-password" />
-                  <button type="button" class="password-toggle-eye" data-target="reg-confirm" title="Show/Hide Password" aria-label="Toggle password visibility">👁️</button>
+                  <button type="button" class="password-toggle-btn" data-target="reg-confirm" aria-label="Show password" title="Show password">
+                    <svg class="eye-show" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8z"></path>
+                      <circle cx="12" cy="12" r="3"></circle>
+                    </svg>
+                    <svg class="eye-hide" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: none;">
+                      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                      <line x1="1" y1="1" x2="23" y2="23"></line>
+                    </svg>
+                    <span class="password-toggle-text">Show</span>
+                  </button>
                 </div>
                 <div id="modal-password-match-msg" style="font-size: 0.72rem; margin-top: 0.35rem; display: none;"></div>
               </div>

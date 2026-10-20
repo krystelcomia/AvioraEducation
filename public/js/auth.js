@@ -274,14 +274,29 @@ const Auth = {
     }
 
     // Password Show/Hide Toggles
-    document.querySelectorAll('.password-toggle-eye').forEach(btn => {
-      btn.addEventListener('click', () => {
+    document.querySelectorAll('.password-toggle-btn, .password-toggle-eye').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
         const targetId = btn.dataset.target;
         const input = document.getElementById(targetId);
         if (input) {
           const isPassword = input.type === 'password';
           input.type = isPassword ? 'text' : 'password';
-          btn.textContent = isPassword ? '🙈' : '👁️';
+          
+          const textSpan = btn.querySelector('.password-toggle-text');
+          const showIcon = btn.querySelector('.eye-show');
+          const hideIcon = btn.querySelector('.eye-hide');
+
+          if (textSpan) {
+            textSpan.textContent = isPassword ? 'Hide' : 'Show';
+          }
+          if (showIcon && hideIcon) {
+            showIcon.style.display = isPassword ? 'none' : 'block';
+            hideIcon.style.display = isPassword ? 'block' : 'none';
+          }
+          const actionLabel = isPassword ? 'Hide password' : 'Show password';
+          btn.setAttribute('aria-label', actionLabel);
+          btn.setAttribute('title', actionLabel);
         }
       });
     });

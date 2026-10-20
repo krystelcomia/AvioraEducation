@@ -401,6 +401,8 @@
   margin-bottom: 0.65rem;
   display: flex;
   align-items: center;
+  justify-content: center;
+  text-align: center;
   gap: 0.4rem;
 }
 
@@ -551,36 +553,53 @@
 .auth-divider span {
   padding: 0 0.85rem;
 }
-}
 
 /* Password Input & Strength Meter */
 .password-input-wrap {
-  position: relative;
-  display: flex;
-  align-items: center;
+  position: relative !important;
+  display: flex !important;
+  align-items: center !important;
+  width: 100% !important;
 }
 
 .password-input-wrap input {
-  padding-right: 2.75rem !important;
+  padding-right: 5.5rem !important;
+  width: 100% !important;
 }
 
+.password-toggle-btn,
 .password-toggle-eye {
   position: absolute;
-  right: 0.75rem;
-  background: none;
-  border: none;
-  color: var(--charcoal-400);
+  right: 0.65rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(198, 138, 40, 0.09);
+  border: 1px solid rgba(198, 138, 40, 0.28);
+  border-radius: var(--radius-sm);
+  color: var(--charcoal-700);
   cursor: pointer;
-  font-size: 1rem;
-  padding: 0.25rem;
-  display: flex;
+  font-size: 0.76rem;
+  font-weight: 600;
+  padding: 0.28rem 0.55rem;
+  display: inline-flex;
   align-items: center;
-  justify-content: center;
-  transition: color var(--transition-fast);
+  gap: 0.35rem;
+  transition: all var(--transition-fast);
+  user-select: none;
+  line-height: 1;
 }
 
+.password-toggle-btn:hover,
 .password-toggle-eye:hover {
-  color: var(--gold-light);
+  background: rgba(198, 138, 40, 0.18);
+  border-color: var(--gold-500);
+  color: var(--gold-800);
+}
+
+.password-toggle-btn svg,
+.password-toggle-eye svg {
+  stroke: currentColor;
+  flex-shrink: 0;
 }
 
 .password-strength-box {

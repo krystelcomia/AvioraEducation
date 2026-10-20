@@ -179,6 +179,37 @@ a { text-decoration: none; color: inherit; transition: color var(--transition-fa
   border-radius: var(--radius-sm);
 }
 
+.btn-icon {
+  width: 36px !important;
+  height: 36px !important;
+  min-width: 36px !important;
+  min-height: 36px !important;
+  padding: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+}
+
+.btn-icon svg {
+  display: block;
+  flex-shrink: 0;
+  pointer-events: none;
+}
+
+.message-tutor-btn {
+  background: rgba(198, 138, 40, 0.12) !important;
+  border: 1.5px solid rgba(198, 138, 40, 0.35) !important;
+  color: #7A4F05 !important;
+}
+
+.message-tutor-btn:hover {
+  background: rgba(198, 138, 40, 0.22) !important;
+  border-color: rgba(198, 138, 40, 0.6) !important;
+  transform: translateY(-1px);
+}
+
 /* =========================================
    NAVIGATION BAR - FORMAL LEFT-ALIGNED ITEMS
    ========================================= */

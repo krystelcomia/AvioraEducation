@@ -161,11 +161,8 @@ const Student = {
           <div class="spotlight-session-grid">
             <div style="font-size: 2.4rem;">🎓</div>
             <div>
-              <h4 style="font-size: 1.15rem; color: var(--charcoal-900); font-weight: 800; margin-bottom: 0.3rem;">Ready for your next learning milestone?</h4>
-              <p style="color: var(--text-secondary); font-size: 0.88rem; margin: 0;">Explore top-tier faculty across calculus, physics, chemistry, coding, and humanities. All sessions are 50 minutes of focused 1-on-1 guidance.</p>
-            </div>
-            <div>
-              <a href="#tutors" class="btn btn-primary btn-sm">+ Schedule a 50-Min Class</a>
+              <h4 style="font-size: 1.15rem; color: var(--charcoal-900); font-weight: 800; margin-bottom: 0.3rem;">No Upcoming Classes Scheduled</h4>
+              <p style="color: var(--text-secondary); font-size: 0.88rem; margin: 0;">Your next scheduled 1-on-1 class will be highlighted here once booked. All sessions are 50 minutes of focused instruction.</p>
             </div>
           </div>
         </div>
@@ -230,10 +227,9 @@ const Student = {
         <div style="padding: 2.5rem; text-align: center; background: var(--bg-surface-alt); border-radius: var(--radius-lg); border: 1px dashed var(--border-light);">
           <div style="font-size: 2rem; margin-bottom: 0.5rem;">🗓️</div>
           <h4 style="color: var(--charcoal-900); font-weight: 700; margin-bottom: 0.3rem;">No Scheduled Classes on Your Calendar</h4>
-          <p style="color: var(--text-secondary); font-size: 0.88rem; max-width: 440px; margin: 0 auto 1.25rem auto;">
-            You have no upcoming or pending tutoring appointments. Book your next 50-minute bespoke 1-on-1 session today.
+          <p style="color: var(--text-secondary); font-size: 0.88rem; max-width: 440px; margin: 0 auto;">
+            Your schedule is based on your booked lessons. Confirmed and pending sessions will appear here automatically.
           </p>
-          <a href="#tutors" class="btn btn-primary btn-sm">+ Find a Tutor &amp; Schedule</a>
         </div>
       `;
       return;

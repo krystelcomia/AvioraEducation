@@ -75,7 +75,7 @@ function showConfirm(title, message, onConfirm) {
 
 // Router
 const Router = {
-  routes: ['#home', '#about', '#tutors', '#how-it-works', '#book-now', '#subscriptions', '#student-subscriptions', '#login', '#signup', '#student-portal', '#student-lessons', '#student-tutors', '#student-history', '#student-schedule', '#student-profile', '#teacher-portal', '#admin-portal'],
+  routes: ['#home', '#about', '#tutors', '#how-it-works', '#book-now', '#book-lesson', '#subscriptions', '#student-subscriptions', '#login', '#signup', '#student-portal', '#student-lessons', '#student-tutors', '#student-history', '#student-schedule', '#student-profile', '#teacher-portal', '#admin-portal'],
 
   init() {
     window.addEventListener('hashchange', () => this.handleRoute());
@@ -87,7 +87,7 @@ const Router = {
     document.querySelectorAll('.nav-link').forEach(link => {
       const href = link.getAttribute('href');
       let isActive = (href === hash);
-      if (!isActive && href === '#student-portal' && ['#student-portal', '#student-lessons', '#student-schedule', '#student-history', '#student-tutors', '#student-profile'].includes(hash)) {
+      if (!isActive && href === '#student-portal' && ['#student-portal', '#book-lesson', '#student-lessons', '#student-schedule', '#student-history', '#student-tutors', '#student-profile'].includes(hash)) {
         isActive = true;
       }
       if (!isActive && href === '#tutors' && (hash === '#tutors' || hash.startsWith('#tutor-profile'))) {
@@ -100,8 +100,8 @@ const Router = {
   async handleRoute() {
     const hash = window.location.hash || '#home';
 
-    // Route Guards for Portals
-    if (hash === '#student-portal' || hash.startsWith('#student-')) {
+    // Route Guards for Portals & Lesson Booking
+    if (hash === '#student-portal' || hash === '#book-lesson' || hash.startsWith('#book-lesson') || hash.startsWith('#student-')) {
       const user = Auth.currentUser;
       if (!user) {
         showToast('Please sign in to access the Student Portal.', 'info');
@@ -194,10 +194,15 @@ const Router = {
         window.scrollTo({ top: 0, behavior: 'smooth' });
         return;
       }
-      const view = document.getElementById('view-tutors');
+      window.location.hash = '#book-lesson';
+      return;
+    } else if (hash === '#book-lesson' || hash.startsWith('#book-lesson')) {
+      const view = document.getElementById('view-book-lesson');
       if (view) view.style.display = 'block';
       window.scrollTo({ top: 0, behavior: 'smooth' });
-      await Tutors.fetchTutors();
+      if (typeof BookLesson !== 'undefined' && BookLesson.init) {
+        await BookLesson.init();
+      }
     } else if (hash === '#login') {
       const view = document.getElementById('view-login');
       if (view) view.style.display = 'block';

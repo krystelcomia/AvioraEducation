@@ -1639,4 +1639,94 @@
   margin-bottom: 1.25rem;
 }
 
+/* =========================================
+   DEDICATED BOOK A NEW LESSON PAGE LAYOUT
+   ========================================= */
+.book-lesson-grid {
+  display: grid;
+  grid-template-columns: 1fr 1.15fr;
+  gap: 1.75rem;
+  align-items: start;
+}
+@media (max-width: 900px) {
+  .book-lesson-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.tutor-picker-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-height: 440px;
+  overflow-y: auto;
+  padding-right: 0.35rem;
+}
+.tutor-picker-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.85rem 1rem;
+  border-radius: var(--radius-md);
+  border: 1.5px solid rgba(0, 0, 0, 0.1);
+  background: #FFFFFF;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  gap: 0.75rem;
+}
+.tutor-picker-item:hover {
+  border-color: var(--gold-600);
+  background: rgba(198, 138, 40, 0.04);
+}
+.tutor-picker-item.selected {
+  border-color: var(--gold-600);
+  background: rgba(198, 138, 40, 0.08);
+  box-shadow: 0 0 0 2px var(--gold-600);
+}
+.tutor-picker-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  min-width: 0;
+}
+.tutor-picker-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--gold-500);
+  flex-shrink: 0;
+}
+.tutor-picker-name {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--charcoal-950);
+  margin-bottom: 0.15rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tutor-picker-sub {
+  font-size: 0.78rem;
+  color: var(--charcoal-600);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tutor-picker-rate {
+  text-align: right;
+  flex-shrink: 0;
+}
+.tutor-picker-price {
+  font-weight: 800;
+  font-size: 1rem;
+  color: var(--gold-800);
+}
+.tutor-picker-badge {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--charcoal-500);
+}
+
+
 

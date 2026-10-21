@@ -88,6 +88,8 @@ const API = {
 
   // Admin
   getAdminDashboard: () => apiRequest('/admin/dashboard'),
+  getAdminUsers: (role = 'all') => apiRequest(`/admin/users?role=${role}`),
+  createAdminUser: (body) => apiRequest('/admin/users', { method: 'POST', body }),
   getAdminApplications: (status = 'all') => apiRequest(`/admin/teacher-applications?status=${status}`),
   reviewApplication: (id, body) => apiRequest(`/admin/teacher-applications/${id}/review`, { method: 'POST', body }),
   getAdminTutors: () => apiRequest('/admin/tutors'),

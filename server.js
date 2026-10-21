@@ -179,6 +179,19 @@ app.post('/api/auth/register', (req, res) => {
         INSERT INTO student_profiles (user_id, grade_level, school, learning_goals, target_subjects)
         VALUES (?, ?, ?, ?, ?)
       `).run(userId, grade_level || 'Grade 11', school || '', 'Achieve academic excellence and master core coursework.', subjects || '');
+
+      // Notify admin of new student account
+      const admin = db.prepare("SELECT id FROM users WHERE role = 'admin' LIMIT 1").get();
+      if (admin) {
+        db.prepare(`
+          INSERT INTO notifications (user_id, title, message, type, link)
+          VALUES (?, ?, ?, 'registration', '/#admin')
+        `).run(
+          admin.id,
+          'New Student Account Created',
+          `${name} (${email}) has registered a student account.`
+        );
+      }
     } else if (role === 'teacher') {
       // Create draft teacher application
       const defaultSchedule = JSON.stringify({
@@ -338,6 +351,19 @@ app.post('/api/auth/oauth', (req, res) => {
           INSERT INTO student_profiles (user_id, grade_level, school, learning_goals, target_subjects)
           VALUES (?, 'Collegiate / High School', 'Aviora Learning Cohort', 'Academic excellence & mastery', 'Mathematics, Natural Sciences')
         `).run(newUserId);
+      }
+
+      // Notify admin
+      const admin = db.prepare("SELECT id FROM users WHERE role = 'admin' LIMIT 1").get();
+      if (admin) {
+        db.prepare(`
+          INSERT INTO notifications (user_id, title, message, type, link)
+          VALUES (?, ?, ?, 'registration', '/#admin')
+        `).run(
+          admin.id,
+          'New Social Account Created',
+          `${name} (${email}) registered via ${provider} as a ${role}.`
+        );
       }
 
       user = { id: newUserId, name, email, role, avatar_url: avatar, status: 'active' };
@@ -1528,16 +1554,19 @@ app.post('/api/teacher/requests/:id/status', authenticateToken, requireRole('tea
 // Admin overview stats & charts
 app.get('/api/admin/dashboard', authenticateToken, requireRole('admin'), (req, res) => {
   try {
+    const totalUsers = db.prepare("SELECT COUNT(*) as count FROM users").get().count;
     const totalStudents = db.prepare("SELECT COUNT(*) as count FROM users WHERE role = 'student'").get().count;
     const totalTeachers = db.prepare("SELECT COUNT(*) as count FROM users WHERE role = 'teacher'").get().count;
+    const totalAdmins = db.prepare("SELECT COUNT(*) as count FROM users WHERE role = 'admin'").get().count;
     const approvedTutors = db.prepare("SELECT COUNT(*) as count FROM tutor_profiles WHERE is_active = 1").get().count;
     const pendingApps = db.prepare("SELECT COUNT(*) as count FROM teacher_applications WHERE status = 'pending'").get().count;
     const totalRequests = db.prepare("SELECT COUNT(*) as count FROM tutoring_requests").get().count;
     const completedSessions = db.prepare("SELECT COUNT(*) as count FROM tutoring_requests WHERE status = 'completed'").get().count;
 
-    // Platform revenue calculation
-    const volumeRow = db.prepare("SELECT SUM(total_amount) as total FROM tutoring_requests WHERE status IN ('accepted', 'completed')").get();
-    const platformVolume = volumeRow.total || 0;
+    // Platform revenue calculation: Tutoring sessions + Subscriptions
+    const tutoringRev = db.prepare("SELECT COALESCE(SUM(total_amount), 0) as total FROM tutoring_requests WHERE status IN ('accepted', 'completed')").get().total;
+    const subRev = db.prepare("SELECT COALESCE(SUM(price_paid), 0) as total FROM student_subscriptions").get().total;
+    const platformVolume = tutoringRev + subRev;
 
     // Distribution by Subject
     const subjectStats = db.prepare(`
@@ -1555,9 +1584,12 @@ app.get('/api/admin/dashboard', authenticateToken, requireRole('admin'), (req, r
       GROUP BY status
     `).all();
 
-    // Recent platform activity
+    // Recent platform activity (Accounts, Applications, Requests)
     const recentActivity = db.prepare(`
       SELECT * FROM (
+        SELECT 'registration' as type, u.id, u.name as user_name, u.status, u.created_at, ('Account created (' || u.role || ')') as info
+        FROM users u
+        UNION ALL
         SELECT 'application' as type, ta.id, u.name as user_name, ta.status, ta.created_at, ta.headline as info
         FROM teacher_applications ta
         JOIN users u ON ta.user_id = u.id
@@ -1565,13 +1597,15 @@ app.get('/api/admin/dashboard', authenticateToken, requireRole('admin'), (req, r
         SELECT 'request' as type, tr.id, u.name as user_name, tr.status, tr.created_at, tr.subject as info
         FROM tutoring_requests tr
         JOIN users u ON tr.student_id = u.id
-      ) ORDER BY created_at DESC LIMIT 8
+      ) ORDER BY created_at DESC LIMIT 10
     `).all();
 
     res.json({
       metrics: {
+        totalUsers,
         totalStudents,
         totalTeachers,
+        totalAdmins,
         approvedTutors,
         pendingApps,
         totalRequests,
@@ -1587,6 +1621,147 @@ app.get('/api/admin/dashboard', authenticateToken, requireRole('admin'), (req, r
   } catch (error) {
     console.error('Admin dashboard error:', error);
     res.status(500).json({ error: 'Failed to retrieve admin dashboard metrics.' });
+  }
+});
+
+// Admin: Get All User Accounts (Students, Teachers, Admins)
+app.get('/api/admin/users', authenticateToken, requireRole('admin'), (req, res) => {
+  try {
+    const { role } = req.query;
+    let query = `
+      SELECT 
+        u.id,
+        u.name,
+        u.email,
+        u.role,
+        u.phone,
+        u.avatar_url,
+        u.status,
+        u.created_at,
+        sp.grade_level,
+        sp.school,
+        sp.target_subjects,
+        ta.headline as teacher_headline,
+        ta.highest_degree,
+        ta.institution,
+        ta.status as application_status,
+        tp.is_active as tutor_active,
+        tp.rating as tutor_rating,
+        tp.hourly_rate as tutor_rate,
+        (SELECT COUNT(*) FROM tutoring_requests WHERE student_id = u.id) as student_requests,
+        (SELECT COUNT(*) FROM tutoring_requests WHERE tutor_id = u.id) as tutor_requests
+      FROM users u
+      LEFT JOIN student_profiles sp ON sp.user_id = u.id
+      LEFT JOIN teacher_applications ta ON ta.user_id = u.id
+      LEFT JOIN tutor_profiles tp ON tp.user_id = u.id
+    `;
+    const params = [];
+    if (role && role !== 'all') {
+      query += ` WHERE u.role = ?`;
+      params.push(role);
+    }
+    query += ` ORDER BY u.created_at DESC`;
+
+    const users = db.prepare(query).all(...params);
+    res.json({ users });
+  } catch (error) {
+    console.error('Admin get users error:', error);
+    res.status(500).json({ error: 'Failed to fetch user accounts.' });
+  }
+});
+
+// Admin: Directly Create User Account (Student, Teacher, or Admin)
+app.post('/api/admin/users', authenticateToken, requireRole('admin'), (req, res) => {
+  try {
+    const { name, email, password, role, phone, grade_level, school, headline, institution, highest_degree, hourly_rate, subjects } = req.body;
+
+    if (!name || !email || !password || !role) {
+      return res.status(400).json({ error: 'Name, email, password, and role are required.' });
+    }
+
+    if (!['student', 'teacher', 'admin'].includes(role)) {
+      return res.status(400).json({ error: 'Role must be student, teacher, or admin.' });
+    }
+
+    const existing = db.prepare('SELECT id FROM users WHERE email = ?').get(email.toLowerCase().trim());
+    if (existing) {
+      return res.status(409).json({ error: 'An account with this email address already exists.' });
+    }
+
+    const salt = bcrypt.genSaltSync(10);
+    const passwordHash = bcrypt.hashSync(password, salt);
+
+    const defaultAvatar = role === 'teacher'
+      ? 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80'
+      : (role === 'admin'
+        ? 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=300&q=80'
+        : 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=300&q=80');
+
+    const insert = db.prepare(`
+      INSERT INTO users (name, email, password_hash, role, phone, avatar_url, status)
+      VALUES (?, ?, ?, ?, ?, ?, 'active')
+    `).run(name.trim(), email.toLowerCase().trim(), passwordHash, role, phone || null, defaultAvatar);
+
+    const userId = insert.lastInsertRowid;
+
+    if (role === 'student') {
+      db.prepare(`
+        INSERT INTO student_profiles (user_id, grade_level, school, learning_goals, target_subjects)
+        VALUES (?, ?, ?, 'Achieve academic mastery & excellence.', ?)
+      `).run(userId, grade_level || 'Grade 11', school || 'Aviora Academy', subjects || 'Mathematics');
+    } else if (role === 'teacher') {
+      const defaultSchedule = JSON.stringify({
+        Monday: ['09:00 - 12:00', '14:00 - 17:00'],
+        Wednesday: ['09:00 - 12:00', '14:00 - 17:00'],
+        Friday: ['09:00 - 15:00']
+      });
+      const parsedSubjects = subjects ? subjects.split(',').map(s => s.trim()) : ['Mathematics', 'Science'];
+      const appRes = db.prepare(`
+        INSERT INTO teacher_applications (
+          user_id, headline, highest_degree, institution, graduation_year,
+          years_experience, subjects, grade_levels, hourly_rate, bio,
+          teaching_philosophy, availability_schedule, status, admin_notes, reviewed_by, reviewed_at
+        ) VALUES (?, ?, ?, ?, 2022, 3, ?, ?, ?, 'Faculty educator at Aviora Education.', 'Rigorous foundational mastery.', ?, 'approved', 'Directly approved by Administrator.', ?, CURRENT_TIMESTAMP)
+      `).run(
+        userId,
+        headline || 'Academic Subject Specialist',
+        highest_degree || 'Master of Science',
+        institution || 'University Faculty',
+        JSON.stringify(parsedSubjects),
+        JSON.stringify(['High School', 'College / Undergraduate']),
+        parseFloat(hourly_rate) || 50.0,
+        defaultSchedule,
+        req.user.id
+      );
+
+      // Also create active tutor profile
+      db.prepare(`
+        INSERT INTO tutor_profiles (
+          user_id, application_id, headline, bio, highest_degree,
+          institution, years_experience, subjects, grade_levels,
+          hourly_rate, rating, reviews_count, total_sessions,
+          availability_schedule, is_featured, is_active
+        ) VALUES (?, ?, ?, 'Faculty educator at Aviora Education.', ?, ?, 3, ?, ?, ?, 5.0, 0, 0, ?, 0, 1)
+      `).run(
+        userId,
+        appRes.lastInsertRowid,
+        headline || 'Academic Subject Specialist',
+        highest_degree || 'Master of Science',
+        institution || 'University Faculty',
+        JSON.stringify(parsedSubjects),
+        JSON.stringify(['High School', 'College / Undergraduate']),
+        parseFloat(hourly_rate) || 50.0,
+        defaultSchedule
+      );
+    }
+
+    res.status(201).json({
+      message: `${role.charAt(0).toUpperCase() + role.slice(1)} account created successfully.`,
+      user: { id: userId, name: name.trim(), email: email.toLowerCase().trim(), role, status: 'active' }
+    });
+  } catch (error) {
+    console.error('Admin create user error:', error);
+    res.status(500).json({ error: 'Failed to create user account: ' + error.message });
   }
 });
 

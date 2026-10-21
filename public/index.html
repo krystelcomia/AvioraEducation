@@ -2269,6 +2269,12 @@
             <span>Dashboard Overview</span>
           </div>
 
+          <div class="admin-nav-item" data-section="users">
+            <span>👥</span>
+            <span>All User Accounts</span>
+            <span class="admin-nav-badge" id="admin-users-badge" style="background: var(--gold-600); display: none;">0</span>
+          </div>
+
           <div class="admin-nav-item" data-section="applications">
             <span>📝</span>
             <span>Teacher Applications</span>
@@ -2281,7 +2287,7 @@
           </div>
 
           <div class="admin-nav-item" data-section="students">
-            <span>👥</span>
+            <span>👨‍🎓</span>
             <span>Student Accounts</span>
           </div>
 
@@ -2303,13 +2309,29 @@
             <div class="admin-section-header">
               <div>
                 <h1 class="admin-title">Academic Platform Overview</h1>
-                <p style="font-size: 0.9rem; color: var(--charcoal-400);">Real-time database metrics, pending teacher verifications, and tutoring activity.</p>
+                <p style="font-size: 0.9rem; color: var(--charcoal-400);">Real-time connected database metrics, registered accounts, pending teacher verifications, and platform activity.</p>
               </div>
               <button class="btn btn-outline-gold btn-sm" onclick="Admin.loadDashboardMetrics()">↻ Refresh Metrics</button>
             </div>
 
             <!-- Summary Cards with Real DB Counts -->
             <div class="admin-metrics-grid">
+              <div class="admin-stat-card">
+                <div class="admin-stat-val text-gold" id="m-total-users">0</div>
+                <div class="admin-stat-label">Total Registered Accounts</div>
+              </div>
+              <div class="admin-stat-card">
+                <div class="admin-stat-val" style="color: var(--gold-700);" id="m-students">0</div>
+                <div class="admin-stat-label">Student Accounts</div>
+              </div>
+              <div class="admin-stat-card">
+                <div class="admin-stat-val" style="color: #10B981;" id="m-teachers">0</div>
+                <div class="admin-stat-label">Registered Teachers</div>
+              </div>
+              <div class="admin-stat-card">
+                <div class="admin-stat-val" style="color: #DC2626;" id="m-admins">0</div>
+                <div class="admin-stat-label">System Administrators</div>
+              </div>
               <div class="admin-stat-card">
                 <div class="admin-stat-val text-gold" id="m-approved-tutors">0</div>
                 <div class="admin-stat-label">Approved Faculty Tutors</div>
@@ -2319,16 +2341,8 @@
                 <div class="admin-stat-label">Pending Applications</div>
               </div>
               <div class="admin-stat-card">
-                <div class="admin-stat-val" id="m-students">0</div>
-                <div class="admin-stat-label">Active Student Accounts</div>
-              </div>
-              <div class="admin-stat-card">
-                <div class="admin-stat-val" id="m-teachers">0</div>
-                <div class="admin-stat-label">Registered Teachers</div>
-              </div>
-              <div class="admin-stat-card">
                 <div class="admin-stat-val" id="m-requests">0</div>
-                <div class="admin-stat-label">Total Tutoring Requests</div>
+                <div class="admin-stat-label">Tutoring Requests</div>
               </div>
               <div class="admin-stat-card">
                 <div class="admin-stat-val" style="color: var(--success);" id="m-volume">$0.00</div>
@@ -2341,7 +2355,7 @@
               <div class="chart-card">
                 <div class="chart-header">
                   <h3 class="chart-title">Tutoring Requests by Academic Subject</h3>
-                  <span class="badge-gold">Real DB Analytics</span>
+                  <span class="badge-gold">Live DB Analytics</span>
                 </div>
                 <div id="chart-subjects-container">
                   <!-- Rendered via JS -->
@@ -2361,12 +2375,58 @@
 
             <!-- Recent Activity Stream -->
             <div class="data-table-container" style="padding: 1.75rem 2rem;">
-              <h3 style="font-size: 1.15rem; color: var(--white); margin-bottom: 1rem;">Recent Platform Audit Log</h3>
+              <h3 style="font-size: 1.15rem; color: var(--charcoal-900); margin-bottom: 1rem;">Recent Platform Audit Log</h3>
               <div id="admin-recent-activity-list">
                 <!-- Rendered via JS -->
               </div>
             </div>
           </div><!-- END PANEL 1 -->
+
+
+          <!-- PANEL 2: ALL USER ACCOUNTS DIRECTORY -->
+          <div id="admin-panel-users" class="admin-view-panel" style="display: none;">
+            <div class="admin-section-header">
+              <div>
+                <h1 class="admin-title">All User Accounts Directory</h1>
+                <p style="font-size: 0.9rem; color: var(--charcoal-400);">Unified connected database of all registered students, teachers, and system administrators.</p>
+              </div>
+              <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+                <button class="btn btn-primary btn-sm" onclick="Admin.openCreateUserModal()">+ Create New Account</button>
+                <button class="btn btn-outline-gold btn-sm" onclick="Admin.loadUsers(Admin.currentRoleFilter)">↻ Refresh</button>
+              </div>
+            </div>
+
+            <div class="data-table-container">
+              <div class="table-toolbar">
+                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;" id="admin-role-filter-group">
+                  <button class="user-filter-btn active" data-role="all">All Accounts (<span id="count-all-users">0</span>)</button>
+                  <button class="user-filter-btn" data-role="student">Students (<span id="count-student-users">0</span>)</button>
+                  <button class="user-filter-btn" data-role="teacher">Teachers (<span id="count-teacher-users">0</span>)</button>
+                  <button class="user-filter-btn" data-role="admin">Administrators (<span id="count-admin-users">0</span>)</button>
+                </div>
+                <div>
+                  <input type="text" id="admin-user-search" class="admin-search-input" placeholder="🔍 Search name or email..." />
+                </div>
+              </div>
+              <div style="overflow-x: auto;">
+                <table class="admin-table">
+                  <thead>
+                    <tr>
+                      <th>Account / User</th>
+                      <th>System Role</th>
+                      <th>Academic Profile / Credentials</th>
+                      <th>Date Registered</th>
+                      <th>Account Status</th>
+                      <th style="text-align: right;">Management Action</th>
+                    </tr>
+                  </thead>
+                  <tbody id="admin-users-table-body">
+                    <!-- Populated via admin.js -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div><!-- END PANEL USERS -->
 
 
           <!-- PANEL 2: TEACHER APPLICATIONS REVIEW -->
@@ -3069,6 +3129,103 @@
         <button class="btn btn-secondary btn-sm" id="admin-action-reject-btn">Reject with Note</button>
         <button class="btn btn-primary btn-sm" id="admin-action-approve-btn">✓ Approve & Publish Tutor</button>
       </div>
+    </div>
+  </div>
+
+
+  <!-- =========================================
+       MODAL: ADMIN CREATE USER ACCOUNT
+       ========================================= -->
+  <div class="modal-overlay" id="admin-create-user-modal">
+    <div class="modal-card" style="max-width: 580px; background: #FFFFFF; border: 1.5px solid rgba(198, 138, 40, 0.35);">
+      <div class="modal-header">
+        <h3 class="modal-title text-gold">Create New User Account</h3>
+        <button class="modal-close-btn" id="admin-create-user-modal-close">✕</button>
+      </div>
+      <form id="admin-create-user-form">
+        <div class="modal-body" style="color: var(--charcoal-900);">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div class="form-group">
+              <label class="form-label" style="color: var(--charcoal-900); font-weight: 600;">Full Name *</label>
+              <input type="text" id="admin-new-user-name" class="form-control" placeholder="e.g. Eleanor Vance" required />
+            </div>
+            <div class="form-group">
+              <label class="form-label" style="color: var(--charcoal-900); font-weight: 600;">Email Address *</label>
+              <input type="email" id="admin-new-user-email" class="form-control" placeholder="user@aviora.edu" required />
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div class="form-group">
+              <label class="form-label" style="color: var(--charcoal-900); font-weight: 600;">Password *</label>
+              <input type="password" id="admin-new-user-password" class="form-control" placeholder="Min. 8 characters" required />
+            </div>
+            <div class="form-group">
+              <label class="form-label" style="color: var(--charcoal-900); font-weight: 600;">Account Role *</label>
+              <select id="admin-new-user-role" class="form-control" required>
+                <option value="student" selected>🎓 Student</option>
+                <option value="teacher">👨‍🏫 Teacher / Tutor</option>
+                <option value="admin">🛡️ System Administrator</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" style="color: var(--charcoal-900); font-weight: 600;">Phone Number (Optional)</label>
+            <input type="text" id="admin-new-user-phone" class="form-control" placeholder="+1 (555) 000-0000" />
+          </div>
+
+          <!-- Student-specific fields -->
+          <div id="admin-new-user-student-fields">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+              <div class="form-group">
+                <label class="form-label" style="color: var(--charcoal-900); font-weight: 600;">Grade Level</label>
+                <input type="text" id="admin-new-user-grade" class="form-control" placeholder="e.g. Grade 11 - High School" value="Grade 11 - High School" />
+              </div>
+              <div class="form-group">
+                <label class="form-label" style="color: var(--charcoal-900); font-weight: 600;">School / Institution</label>
+                <input type="text" id="admin-new-user-school" class="form-control" placeholder="e.g. St. Claire Academy" value="Aviora Academy" />
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" style="color: var(--charcoal-900); font-weight: 600;">Target Subjects</label>
+              <input type="text" id="admin-new-user-student-subjects" class="form-control" placeholder="Calculus, Chemistry" value="Mathematics, Science" />
+            </div>
+          </div>
+
+          <!-- Teacher-specific fields -->
+          <div id="admin-new-user-teacher-fields" style="display: none;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+              <div class="form-group">
+                <label class="form-label" style="color: var(--charcoal-900); font-weight: 600;">Headline / Title</label>
+                <input type="text" id="admin-new-user-headline" class="form-control" placeholder="e.g. PhD in Mathematics | Oxford" />
+              </div>
+              <div class="form-group">
+                <label class="form-label" style="color: var(--charcoal-900); font-weight: 600;">Hourly Rate ($/hr)</label>
+                <input type="number" id="admin-new-user-rate" class="form-control" placeholder="55" value="55" min="20" max="300" />
+              </div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+              <div class="form-group">
+                <label class="form-label" style="color: var(--charcoal-900); font-weight: 600;">Highest Degree</label>
+                <input type="text" id="admin-new-user-degree" class="form-control" placeholder="M.S. in Applied Mathematics" value="Master of Science" />
+              </div>
+              <div class="form-group">
+                <label class="form-label" style="color: var(--charcoal-900); font-weight: 600;">Institution</label>
+                <input type="text" id="admin-new-user-institution" class="form-control" placeholder="University Faculty" value="Aviora Faculty" />
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" style="color: var(--charcoal-900); font-weight: 600;">Subjects Taught (comma separated)</label>
+              <input type="text" id="admin-new-user-teacher-subjects" class="form-control" placeholder="Calculus AB/BC, Statistics" value="Calculus, Mathematics" />
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary btn-sm" id="admin-create-user-modal-cancel">Cancel</button>
+          <button type="submit" class="btn btn-primary btn-sm" id="admin-create-user-submit-btn">Save &amp; Create Account</button>
+        </div>
+      </form>
     </div>
   </div>
 

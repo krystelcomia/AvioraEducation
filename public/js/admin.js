@@ -4,6 +4,8 @@
 
 const Admin = {
   currentSection: 'overview',
+  users: [],
+  currentRoleFilter: 'all',
   applications: [],
   tutors: [],
   students: [],
@@ -23,6 +25,25 @@ const Admin = {
         this.switchSection(section);
       });
     });
+
+    // Role filter buttons for All User Accounts
+    document.querySelectorAll('.user-filter-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        document.querySelectorAll('.user-filter-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        const role = btn.dataset.role;
+        this.currentRoleFilter = role;
+        this.loadUsers(role);
+      });
+    });
+
+    // Real-time user search filter
+    const userSearchInput = document.getElementById('admin-user-search');
+    if (userSearchInput) {
+      userSearchInput.addEventListener('input', (e) => {
+        this.filterUsersBySearch(e.target.value);
+      });
+    }
 
     // Application filter buttons
     document.querySelectorAll('.app-filter-btn').forEach(btn => {
@@ -57,6 +78,36 @@ const Admin = {
     if (rejectBtn) {
       rejectBtn.addEventListener('click', () => this.handleReviewDecision('rejected'));
     }
+
+    // Create User Modal Events
+    const createUserClose = document.getElementById('admin-create-user-modal-close');
+    const createUserCancel = document.getElementById('admin-create-user-modal-cancel');
+    const createUserModal = document.getElementById('admin-create-user-modal');
+    if (createUserClose) createUserClose.addEventListener('click', () => this.closeCreateUserModal());
+    if (createUserCancel) createUserCancel.addEventListener('click', () => this.closeCreateUserModal());
+    if (createUserModal) {
+      createUserModal.addEventListener('click', (e) => {
+        if (e.target === createUserModal) this.closeCreateUserModal();
+      });
+    }
+
+    // Role select change in Create User Modal
+    const roleSelect = document.getElementById('admin-new-user-role');
+    if (roleSelect) {
+      roleSelect.addEventListener('change', (e) => {
+        const val = e.target.value;
+        const studentFields = document.getElementById('admin-new-user-student-fields');
+        const teacherFields = document.getElementById('admin-new-user-teacher-fields');
+        if (studentFields) studentFields.style.display = val === 'student' ? 'block' : 'none';
+        if (teacherFields) teacherFields.style.display = val === 'teacher' ? 'block' : 'none';
+      });
+    }
+
+    // Create User Form Submit
+    const createUserForm = document.getElementById('admin-create-user-form');
+    if (createUserForm) {
+      createUserForm.addEventListener('submit', (e) => this.handleCreateUserSubmit(e));
+    }
   },
 
   switchSection(section) {
@@ -80,6 +131,8 @@ const Admin = {
     // Load section specific data
     if (section === 'overview') {
       this.loadDashboardMetrics();
+    } else if (section === 'users') {
+      this.loadUsers(this.currentRoleFilter || 'all');
     } else if (section === 'applications') {
       this.loadApplications('pending');
     } else if (section === 'tutors') {
@@ -99,13 +152,37 @@ const Admin = {
       const data = await API.getAdminDashboard();
       const m = data.metrics || {};
 
-      // Fill Metric Cards
-      document.getElementById('m-students').textContent = m.totalStudents || 0;
-      document.getElementById('m-teachers').textContent = m.totalTeachers || 0;
-      document.getElementById('m-approved-tutors').textContent = m.approvedTutors || 0;
-      document.getElementById('m-pending-apps').textContent = m.pendingApps || 0;
-      document.getElementById('m-requests').textContent = m.totalRequests || 0;
-      document.getElementById('m-volume').textContent = `$${m.platformVolume?.toFixed(2) || '0.00'}`;
+      // Fill Metric Cards with 100% accurate connected DB figures
+      const totalUsersEl = document.getElementById('m-total-users');
+      if (totalUsersEl) totalUsersEl.textContent = m.totalUsers || 0;
+
+      const studentsEl = document.getElementById('m-students');
+      if (studentsEl) studentsEl.textContent = m.totalStudents || 0;
+
+      const teachersEl = document.getElementById('m-teachers');
+      if (teachersEl) teachersEl.textContent = m.totalTeachers || 0;
+
+      const adminsEl = document.getElementById('m-admins');
+      if (adminsEl) adminsEl.textContent = m.totalAdmins || 0;
+
+      const approvedTutorsEl = document.getElementById('m-approved-tutors');
+      if (approvedTutorsEl) approvedTutorsEl.textContent = m.approvedTutors || 0;
+
+      const pendingAppsEl = document.getElementById('m-pending-apps');
+      if (pendingAppsEl) pendingAppsEl.textContent = m.pendingApps || 0;
+
+      const requestsEl = document.getElementById('m-requests');
+      if (requestsEl) requestsEl.textContent = m.totalRequests || 0;
+
+      const volumeEl = document.getElementById('m-volume');
+      if (volumeEl) volumeEl.textContent = `$${m.platformVolume?.toFixed(2) || '0.00'}`;
+
+      // Update User Badge in sidebar
+      const usersBadge = document.getElementById('admin-users-badge');
+      if (usersBadge) {
+        usersBadge.textContent = m.totalUsers || 0;
+        usersBadge.style.display = 'inline-block';
+      }
 
       // Update Pending Badge in sidebar
       const pendingBadge = document.getElementById('admin-pending-badge');
@@ -141,10 +218,10 @@ const Admin = {
           return `
             <div style="margin-bottom: 0.85rem;">
               <div style="display: flex; justify-content: space-between; font-size: 0.825rem; margin-bottom: 0.25rem;">
-                <span style="color: var(--white); font-weight: 600;">${s.subject}</span>
-                <span style="color: var(--gold-300);">${s.count} requests</span>
+                <span style="color: var(--charcoal-900); font-weight: 600;">${s.subject}</span>
+                <span style="color: var(--gold-800); font-weight: 700;">${s.count} requests</span>
               </div>
-              <div style="height: 8px; background: rgba(255,255,255,0.08); border-radius: 4px; overflow: hidden;">
+              <div style="height: 8px; background: rgba(0,0,0,0.06); border-radius: 4px; overflow: hidden;">
                 <div style="height: 100%; width: ${pct}%; background: var(--gradient-gold); border-radius: 4px;"></div>
               </div>
             </div>
@@ -167,9 +244,9 @@ const Admin = {
               rejected: '#EF4444'
             };
             return `
-              <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: var(--radius-md); padding: 1.25rem 0.75rem;">
+              <div style="background: rgba(0,0,0,0.02); border: 1px solid rgba(0,0,0,0.08); border-radius: var(--radius-md); padding: 1.25rem 0.75rem;">
                 <div style="font-size: 1.75rem; font-weight: 800; color: ${colors[st]}; font-family: var(--font-heading);">${count}</div>
-                <div style="font-size: 0.75rem; text-transform: uppercase; color: var(--charcoal-400); margin-top: 0.25rem;">${st}</div>
+                <div style="font-size: 0.75rem; text-transform: uppercase; color: var(--charcoal-500); margin-top: 0.25rem; font-weight: 600;">${st}</div>
               </div>
             `;
           }).join('')}
@@ -187,23 +264,252 @@ const Admin = {
       return;
     }
 
-    container.innerHTML = activity.map(a => `
-      <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.85rem 0; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 0.875rem;">
-        <div style="display: flex; align-items: center; gap: 0.75rem;">
-          <span style="font-size: 1.2rem;">${a.type === 'application' ? '📝' : '🎓'}</span>
-          <div>
-            <strong style="color: var(--white);">${a.user_name}</strong>
-            <span style="color: var(--charcoal-400);"> — ${a.type === 'application' ? 'Teacher Application' : 'Tutoring Request for ' + a.info}</span>
+    container.innerHTML = activity.map(a => {
+      let icon = '🎓';
+      let desc = '';
+      if (a.type === 'registration') {
+        icon = '👤';
+        desc = `Registered new user account (${a.info})`;
+      } else if (a.type === 'application') {
+        icon = '📝';
+        desc = `Teacher Application submitted: ${a.info || 'Educator'}`;
+      } else {
+        icon = '🗓️';
+        desc = `Tutoring Session booked for ${a.info}`;
+      }
+      return `
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.85rem 0; border-bottom: 1px solid rgba(0,0,0,0.06); font-size: 0.875rem;">
+          <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <span style="font-size: 1.25rem;">${icon}</span>
+            <div>
+              <strong style="color: var(--charcoal-900);">${a.user_name}</strong>
+              <span style="color: var(--text-secondary);"> — ${desc}</span>
+            </div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <span class="status-pill ${a.status}">${a.status}</span>
+            <span style="font-size: 0.75rem; color: var(--text-secondary);">${new Date(a.created_at).toLocaleDateString()}</span>
           </div>
         </div>
-        <div style="display: flex; align-items: center; gap: 0.75rem;">
-          <span class="status-pill ${a.status}">${a.status}</span>
-          <span style="font-size: 0.75rem; color: var(--charcoal-500);">${new Date(a.created_at).toLocaleDateString()}</span>
-        </div>
-      </div>
-    `).join('');
+      `;
+    }).join('');
   },
 
+  /* ========================================================
+     ALL USER ACCOUNTS (STUDENTS, TEACHERS, ADMINS)
+     ======================================================== */
+  async loadUsers(role = 'all') {
+    try {
+      this.currentRoleFilter = role;
+      const data = await API.getAdminUsers(role);
+      this.users = data.users || [];
+
+      // Update counters in role filter buttons
+      const allData = role === 'all' ? this.users : (await API.getAdminUsers('all')).users || [];
+      const countAll = allData.length;
+      const countStudent = allData.filter(u => u.role === 'student').length;
+      const countTeacher = allData.filter(u => u.role === 'teacher').length;
+      const countAdmin = allData.filter(u => u.role === 'admin').length;
+
+      const cAll = document.getElementById('count-all-users');
+      const cStu = document.getElementById('count-student-users');
+      const cTea = document.getElementById('count-teacher-users');
+      const cAdm = document.getElementById('count-admin-users');
+
+      if (cAll) cAll.textContent = countAll;
+      if (cStu) cStu.textContent = countStudent;
+      if (cTea) cTea.textContent = countTeacher;
+      if (cAdm) cAdm.textContent = countAdmin;
+
+      this.renderUsersTable(this.users);
+    } catch (err) {
+      console.error('Failed to load admin users:', err);
+      showToast('Failed to load user accounts: ' + err.message, 'error');
+    }
+  },
+
+  filterUsersBySearch(query) {
+    const q = (query || '').trim().toLowerCase();
+    if (!q) {
+      this.renderUsersTable(this.users);
+      return;
+    }
+    const filtered = this.users.filter(u => 
+      u.name.toLowerCase().includes(q) ||
+      u.email.toLowerCase().includes(q) ||
+      u.role.toLowerCase().includes(q) ||
+      (u.school && u.school.toLowerCase().includes(q)) ||
+      (u.institution && u.institution.toLowerCase().includes(q)) ||
+      (u.teacher_headline && u.teacher_headline.toLowerCase().includes(q))
+    );
+    this.renderUsersTable(filtered);
+  },
+
+  renderUsersTable(userList) {
+    const tbody = document.getElementById('admin-users-table-body');
+    if (!tbody) return;
+
+    if (!userList || userList.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="6" style="text-align: center; padding: 3rem;">
+            <div class="empty-state">
+              <div class="empty-icon">👥</div>
+              <h4 class="empty-title">No User Accounts Found</h4>
+              <p class="empty-desc">No accounts found matching the selected filter criteria.</p>
+            </div>
+          </td>
+        </tr>
+      `;
+      return;
+    }
+
+    tbody.innerHTML = userList.map(u => {
+      let roleIcon = '🎓';
+      let roleClass = 'student';
+      let roleLabel = 'Student';
+      let detailsHtml = '';
+
+      if (u.role === 'teacher') {
+        roleIcon = '👨‍🏫';
+        roleClass = 'teacher';
+        roleLabel = 'Teacher / Tutor';
+        detailsHtml = `
+          <div style="font-weight: 600; color: var(--charcoal-900); font-size: 0.85rem;">${u.highest_degree || u.teacher_headline || 'Educator Specialist'}</div>
+          <div style="font-size: 0.775rem; color: var(--text-secondary);">${u.institution || 'Aviora Faculty'} • ${u.application_status === 'approved' ? '✓ Verified' : (u.application_status || 'Pending')}</div>
+        `;
+      } else if (u.role === 'admin') {
+        roleIcon = '🛡️';
+        roleClass = 'admin';
+        roleLabel = 'Administrator';
+        detailsHtml = `
+          <div style="font-weight: 600; color: #DC2626; font-size: 0.85rem;">System Super-Administrator</div>
+          <div style="font-size: 0.775rem; color: var(--text-secondary);">Full Platform &amp; Database Authority</div>
+        `;
+      } else {
+        detailsHtml = `
+          <div style="font-weight: 600; color: var(--charcoal-900); font-size: 0.85rem;">${u.grade_level || 'Grade 11 - High School'}</div>
+          <div style="font-size: 0.775rem; color: var(--text-secondary);">${u.school || 'High School'} • ${u.student_requests || 0} sessions</div>
+        `;
+      }
+
+      const dateStr = u.created_at ? new Date(u.created_at).toLocaleDateString(undefined, {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      }) : 'Active';
+
+      const isProtectedAdmin = u.role === 'admin';
+
+      return `
+        <tr>
+          <td>
+            <div class="user-cell">
+              <img src="${u.avatar_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=100&q=80'}" class="user-cell-avatar" />
+              <div>
+                <div class="user-cell-name">${u.name}</div>
+                <div class="user-cell-email">${u.email}</div>
+                ${u.phone ? `<div style="font-size: 0.725rem; color: var(--text-secondary);">📞 ${u.phone}</div>` : ''}
+              </div>
+            </div>
+          </td>
+          <td>
+            <span class="role-badge ${roleClass}">${roleIcon} ${roleLabel}</span>
+          </td>
+          <td>
+            ${detailsHtml}
+          </td>
+          <td>
+            <div style="font-size: 0.84rem; color: var(--charcoal-900); font-weight: 500;">${dateStr}</div>
+            <div style="font-size: 0.725rem; color: var(--text-secondary);">ID: #${u.id}</div>
+          </td>
+          <td>
+            <span class="status-pill ${u.status}">${u.status}</span>
+          </td>
+          <td style="text-align: right;">
+            ${isProtectedAdmin ? `
+              <span style="font-size: 0.8rem; color: var(--text-secondary); font-style: italic;">Protected</span>
+            ` : `
+              <button class="btn ${u.status === 'active' ? 'btn-secondary' : 'btn-outline-gold'} btn-sm" onclick="Admin.toggleUserStatus(${u.id}, '${u.status === 'active' ? 'suspended' : 'active'}', true)">
+                ${u.status === 'active' ? 'Suspend' : 'Activate'}
+              </button>
+            `}
+          </td>
+        </tr>
+      `;
+    }).join('');
+  },
+
+  openCreateUserModal() {
+    const modal = document.getElementById('admin-create-user-modal');
+    if (modal) {
+      modal.classList.add('active');
+      document.body.style.overflow = 'hidden';
+    }
+  },
+
+  closeCreateUserModal() {
+    const modal = document.getElementById('admin-create-user-modal');
+    if (modal) {
+      modal.classList.remove('active');
+      document.body.style.overflow = '';
+      document.getElementById('admin-create-user-form')?.reset();
+    }
+  },
+
+  async handleCreateUserSubmit(e) {
+    e.preventDefault();
+    const name = document.getElementById('admin-new-user-name')?.value.trim();
+    const email = document.getElementById('admin-new-user-email')?.value.trim();
+    const password = document.getElementById('admin-new-user-password')?.value;
+    const role = document.getElementById('admin-new-user-role')?.value;
+    const phone = document.getElementById('admin-new-user-phone')?.value.trim();
+
+    if (!name || !email || !password || !role) {
+      showToast('Please fill out all required fields.', 'error');
+      return;
+    }
+
+    const payload = { name, email, password, role, phone };
+
+    if (role === 'student') {
+      payload.grade_level = document.getElementById('admin-new-user-grade')?.value.trim();
+      payload.school = document.getElementById('admin-new-user-school')?.value.trim();
+      payload.subjects = document.getElementById('admin-new-user-student-subjects')?.value.trim();
+    } else if (role === 'teacher') {
+      payload.headline = document.getElementById('admin-new-user-headline')?.value.trim();
+      payload.hourly_rate = parseFloat(document.getElementById('admin-new-user-rate')?.value) || 50;
+      payload.highest_degree = document.getElementById('admin-new-user-degree')?.value.trim();
+      payload.institution = document.getElementById('admin-new-user-institution')?.value.trim();
+      payload.subjects = document.getElementById('admin-new-user-teacher-subjects')?.value.trim();
+    }
+
+    const submitBtn = document.getElementById('admin-create-user-submit-btn');
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Saving to Database...';
+    }
+
+    try {
+      const res = await API.createAdminUser(payload);
+      showToast(res.message || 'Account successfully created and saved to database.', 'success');
+      this.closeCreateUserModal();
+      await this.loadUsers(this.currentRoleFilter || 'all');
+      await this.loadDashboardMetrics();
+      if (role === 'teacher') await Tutors.fetchTutors();
+    } catch (err) {
+      showToast(err.message, 'error');
+    } finally {
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Save & Create Account';
+      }
+    }
+  },
+
+  /* ========================================================
+     TEACHER APPLICATIONS
+     ======================================================== */
   async loadApplications(status = 'all') {
     try {
       const data = await API.getAdminApplications(status);
@@ -245,23 +551,23 @@ const Admin = {
           </div>
         </td>
         <td>
-          <div style="font-weight: 600; color: var(--white);">${app.highest_degree || 'Degree'}</div>
-          <div style="font-size: 0.775rem; color: var(--gold-300);">${app.institution || 'University'} (${app.years_experience} yrs exp)</div>
+          <div style="font-weight: 600; color: var(--charcoal-900);">${app.highest_degree || 'Degree'}</div>
+          <div style="font-size: 0.775rem; color: var(--gold-800);">${app.institution || 'University'} (${app.years_experience} yrs exp)</div>
         </td>
         <td>
-          <div style="font-size: 0.8rem; color: var(--charcoal-200); max-width: 180px;">
+          <div style="font-size: 0.8rem; color: var(--charcoal-700); max-width: 180px;">
             ${(app.subjects || []).slice(0, 2).join(', ')} ${(app.subjects || []).length > 2 ? `+${app.subjects.length - 2}` : ''}
           </div>
         </td>
         <td>
-          <span style="font-weight: 700; color: var(--white);">$${app.hourly_rate}/hr</span>
+          <span style="font-weight: 700; color: var(--charcoal-900);">$${app.hourly_rate}/hr</span>
         </td>
         <td>
           <span class="status-pill ${app.status}">${app.status}</span>
         </td>
         <td>
           <div style="display: flex; gap: 0.4rem; justify-content: flex-end;">
-            <button class="btn btn-secondary btn-sm" onclick="Admin.inspectApplication(${app.id})">Review & Verify</button>
+            <button class="btn btn-secondary btn-sm" onclick="Admin.inspectApplication(${app.id})">Review &amp; Verify</button>
             ${app.status === 'pending' ? `
               <button class="btn btn-primary btn-sm" onclick="Admin.quickApprove(${app.id})">Approve</button>
             ` : ''}
@@ -288,49 +594,49 @@ const Admin = {
         <div style="display: flex; gap: 1.25rem; align-items: center; margin-bottom: 1.5rem;">
           <img src="${app.avatar_url}" style="width: 70px; height: 70px; border-radius: var(--radius-md); object-fit: cover; border: 2px solid var(--gold-500);" />
           <div>
-            <h3 style="color: var(--white); font-size: 1.3rem;">${app.name}</h3>
-            <p style="color: var(--gold-300); font-size: 0.875rem;">${app.email} • ${app.phone || 'No phone provided'}</p>
+            <h3 style="color: var(--charcoal-900); font-size: 1.3rem;">${app.name}</h3>
+            <p style="color: var(--text-secondary); font-size: 0.875rem;">${app.email} • ${app.phone || 'No phone provided'}</p>
             <span class="status-pill ${app.status}" style="margin-top: 0.4rem;">${app.status}</span>
           </div>
         </div>
 
-        <div style="background: rgba(0,0,0,0.25); border-radius: var(--radius-md); padding: 1.25rem; margin-bottom: 1.25rem;">
-          <h4 style="color: var(--white); margin-bottom: 0.5rem; font-size: 0.95rem;">Academic Qualifications</h4>
-          <p style="font-size: 0.875rem; color: var(--charcoal-200); margin-bottom: 0.35rem;">
+        <div style="background: rgba(0,0,0,0.03); border: 1px solid rgba(0,0,0,0.08); border-radius: var(--radius-md); padding: 1.25rem; margin-bottom: 1.25rem;">
+          <h4 style="color: var(--charcoal-900); margin-bottom: 0.5rem; font-size: 0.95rem;">Academic Qualifications</h4>
+          <p style="font-size: 0.875rem; color: var(--charcoal-700); margin-bottom: 0.35rem;">
             🎓 <strong>Degree:</strong> ${app.highest_degree} (${app.graduation_year || 'N/A'})
           </p>
-          <p style="font-size: 0.875rem; color: var(--charcoal-200); margin-bottom: 0.35rem;">
+          <p style="font-size: 0.875rem; color: var(--charcoal-700); margin-bottom: 0.35rem;">
             🏛️ <strong>Institution:</strong> ${app.institution}
           </p>
-          <p style="font-size: 0.875rem; color: var(--charcoal-200);">
+          <p style="font-size: 0.875rem; color: var(--charcoal-700);">
             ⏱️ <strong>Experience:</strong> ${app.years_experience} years • <strong>Target Rate:</strong> $${app.hourly_rate}/hr
           </p>
         </div>
 
         <div style="margin-bottom: 1.25rem;">
-          <h4 style="color: var(--white); margin-bottom: 0.35rem; font-size: 0.95rem;">Subjects & Grade Levels</h4>
-          <p style="color: var(--gold-300); font-size: 0.85rem; margin-bottom: 0.25rem;">${(app.subjects || []).join(', ')}</p>
-          <p style="color: var(--charcoal-400); font-size: 0.8rem;">Grade Levels: ${(app.grade_levels || []).join(', ')}</p>
+          <h4 style="color: var(--charcoal-900); margin-bottom: 0.35rem; font-size: 0.95rem;">Subjects &amp; Grade Levels</h4>
+          <p style="color: var(--gold-800); font-size: 0.85rem; font-weight: 600; margin-bottom: 0.25rem;">${(app.subjects || []).join(', ')}</p>
+          <p style="color: var(--text-secondary); font-size: 0.8rem;">Grade Levels: ${(app.grade_levels || []).join(', ')}</p>
         </div>
 
         <div style="margin-bottom: 1.25rem;">
-          <h4 style="color: var(--white); margin-bottom: 0.35rem; font-size: 0.95rem;">Applicant Bio</h4>
-          <p style="color: var(--charcoal-300); font-size: 0.875rem; line-height: 1.5;">${app.bio || 'None provided.'}</p>
+          <h4 style="color: var(--charcoal-900); margin-bottom: 0.35rem; font-size: 0.95rem;">Applicant Bio</h4>
+          <p style="color: var(--charcoal-700); font-size: 0.875rem; line-height: 1.5;">${app.bio || 'None provided.'}</p>
         </div>
 
         <div style="margin-bottom: 1.25rem;">
-          <h4 style="color: var(--white); margin-bottom: 0.35rem; font-size: 0.95rem;">Uploaded Credential Document</h4>
+          <h4 style="color: var(--charcoal-900); margin-bottom: 0.35rem; font-size: 0.95rem;">Uploaded Credential Document</h4>
           ${app.credentials_file ? `
-            <div style="display: flex; align-items: center; gap: 0.75rem; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); padding: 0.75rem 1rem; border-radius: var(--radius-md);">
+            <div style="display: flex; align-items: center; gap: 0.75rem; background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.3); padding: 0.75rem 1rem; border-radius: var(--radius-md);">
               <span style="font-size: 1.25rem;">📄</span>
               <div style="flex: 1;">
                 <div style="font-size: 0.85rem; font-weight: 600; color: #10B981;">${app.credentials_filename || 'Verified_Academic_Diploma.pdf'}</div>
-                <div style="font-size: 0.75rem; color: var(--charcoal-400);">Official credential file submitted for verification</div>
+                <div style="font-size: 0.75rem; color: var(--text-secondary);">Official credential file submitted for verification</div>
               </div>
               <a href="${app.credentials_file}" target="_blank" class="btn btn-outline-gold btn-sm">Inspect File</a>
             </div>
           ` : `
-            <p style="color: var(--charcoal-400); font-size: 0.85rem;">Standard verified document cleared via institutional portal.</p>
+            <p style="color: var(--text-secondary); font-size: 0.85rem;">Standard verified document cleared via institutional portal.</p>
           `}
         </div>
       `;
@@ -392,6 +698,9 @@ const Admin = {
     }
   },
 
+  /* ========================================================
+     FACULTY TUTORS
+     ======================================================== */
   async loadTutors() {
     try {
       const data = await API.getAdminTutors();
@@ -418,15 +727,15 @@ const Admin = {
           </div>
         </td>
         <td>
-          <div style="font-size: 0.85rem; color: var(--gold-300);">${t.headline || 'Tutor Specialist'}</div>
-          <div style="font-size: 0.775rem; color: var(--charcoal-400);">${t.institution}</div>
+          <div style="font-size: 0.85rem; color: var(--gold-800); font-weight: 600;">${t.headline || 'Tutor Specialist'}</div>
+          <div style="font-size: 0.775rem; color: var(--text-secondary);">${t.institution}</div>
         </td>
         <td>
           <div style="font-size: 0.85rem; color: #F59E0B; font-weight: 700;">★ ${t.rating.toFixed(1)} (${t.reviews_count})</div>
-          <div style="font-size: 0.775rem; color: var(--charcoal-400);">${t.total_sessions} completed</div>
+          <div style="font-size: 0.775rem; color: var(--text-secondary);">${t.total_sessions} completed</div>
         </td>
         <td>
-          <strong style="color: var(--white);">$${t.hourly_rate}/hr</strong>
+          <strong style="color: var(--charcoal-900);">$${t.hourly_rate}/hr</strong>
         </td>
         <td>
           <span class="status-pill ${t.is_active === 1 ? 'active' : 'inactive'}">
@@ -454,6 +763,9 @@ const Admin = {
     }
   },
 
+  /* ========================================================
+     STUDENT ACCOUNTS DIRECTORY
+     ======================================================== */
   async loadStudents() {
     try {
       const data = await API.getAdminStudents();
@@ -480,12 +792,12 @@ const Admin = {
           </div>
         </td>
         <td>
-          <div style="font-size: 0.85rem; color: var(--white);">${s.grade_level || 'Grade 11'}</div>
-          <div style="font-size: 0.775rem; color: var(--charcoal-400);">${s.school || 'High School'}</div>
+          <div style="font-size: 0.85rem; color: var(--charcoal-900); font-weight: 600;">${s.grade_level || 'Grade 11'}</div>
+          <div style="font-size: 0.775rem; color: var(--text-secondary);">${s.school || 'High School'}</div>
         </td>
         <td>
-          <div style="font-size: 0.85rem; color: var(--white); font-weight: 600;">${s.request_count} sessions</div>
-          <div style="font-size: 0.75rem; color: var(--gold-300);">${s.completed_count} completed</div>
+          <div style="font-size: 0.85rem; color: var(--charcoal-900); font-weight: 600;">${s.request_count} sessions</div>
+          <div style="font-size: 0.75rem; color: var(--gold-800);">${s.completed_count} completed</div>
         </td>
         <td>
           <span class="status-pill ${s.status}">${s.status}</span>
@@ -499,7 +811,7 @@ const Admin = {
     `).join('');
   },
 
-  async toggleUserStatus(userId, newStatus) {
+  async toggleUserStatus(userId, newStatus, reloadAllUsers = false) {
     showConfirm(
       'Update Account Status',
       `Are you sure you want to change this user status to ${newStatus}?`,
@@ -507,7 +819,12 @@ const Admin = {
         try {
           const res = await API.updateUserStatus(userId, { status: newStatus });
           showToast(res.message, 'success');
-          await this.loadStudents();
+          if (reloadAllUsers) {
+            await this.loadUsers(this.currentRoleFilter || 'all');
+          } else {
+            await this.loadStudents();
+          }
+          await this.loadDashboardMetrics();
         } catch (err) {
           showToast(err.message, 'error');
         }
@@ -515,6 +832,9 @@ const Admin = {
     );
   },
 
+  /* ========================================================
+     PLATFORM REQUESTS AUDIT
+     ======================================================== */
   async loadRequests() {
     try {
       const data = await API.getAdminRequests();
@@ -532,22 +852,22 @@ const Admin = {
     tbody.innerHTML = this.requests.map(r => `
       <tr>
         <td>
-          <strong style="color: var(--white);">${r.student_name}</strong>
-          <div style="font-size: 0.75rem; color: var(--charcoal-400);">${r.student_email}</div>
+          <strong style="color: var(--charcoal-900);">${r.student_name}</strong>
+          <div style="font-size: 0.75rem; color: var(--text-secondary);">${r.student_email}</div>
         </td>
         <td>
-          <strong style="color: var(--gold-300);">${r.tutor_name}</strong>
-          <div style="font-size: 0.75rem; color: var(--charcoal-400);">${r.tutor_email}</div>
+          <strong style="color: var(--gold-800);">${r.tutor_name}</strong>
+          <div style="font-size: 0.75rem; color: var(--text-secondary);">${r.tutor_email}</div>
         </td>
         <td>
-          <strong style="color: var(--white);">${r.subject}</strong>
+          <strong style="color: var(--charcoal-900);">${r.subject}</strong>
         </td>
         <td>
           <div>🗓️ ${r.requested_date}</div>
-          <div style="font-size: 0.75rem; color: var(--charcoal-400);">⏰ ${r.requested_time} (${r.duration_hours}h)</div>
+          <div style="font-size: 0.75rem; color: var(--text-secondary);">⏰ ${r.requested_time} (${r.duration_hours}h)</div>
         </td>
         <td>
-          <span style="font-weight: 700; color: var(--white);">$${r.total_amount.toFixed(2)}</span>
+          <span style="font-weight: 700; color: var(--charcoal-900);">$${r.total_amount.toFixed(2)}</span>
         </td>
         <td>
           <span class="status-pill ${r.status}">${r.status}</span>

@@ -284,3 +284,75 @@ input:checked + .slider:before {
     grid-template-columns: 1fr;
   }
 }
+
+/* User Role Badges */
+.role-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.65rem;
+  border-radius: var(--radius-full);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.role-badge.student {
+  background: rgba(198, 138, 40, 0.12);
+  color: var(--gold-800);
+  border: 1px solid rgba(198, 138, 40, 0.35);
+}
+
+.role-badge.teacher {
+  background: rgba(16, 185, 129, 0.12);
+  color: #065F46;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.role-badge.admin {
+  background: rgba(220, 38, 38, 0.12);
+  color: #991B1B;
+  border: 1px solid rgba(220, 38, 38, 0.3);
+}
+
+/* User filter buttons */
+.user-filter-btn {
+  padding: 0.45rem 1rem;
+  border-radius: var(--radius-md);
+  background: #FFFFFF;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  color: var(--text-secondary);
+  font-size: 0.825rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.user-filter-btn:hover {
+  border-color: var(--gold-500);
+  color: var(--charcoal-900);
+}
+
+.user-filter-btn.active {
+  background: var(--gold-600);
+  border-color: var(--gold-600);
+  color: #FFFFFF;
+}
+
+.admin-search-input {
+  padding: 0.5rem 1rem 0.5rem 2.25rem;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  background: #FFFFFF;
+  font-size: 0.85rem;
+  color: var(--charcoal-900);
+  width: 260px;
+  outline: none;
+  transition: border-color var(--transition-fast);
+}
+
+.admin-search-input:focus {
+  border-color: var(--gold-500);
+  box-shadow: 0 0 0 3px rgba(198, 138, 40, 0.15);
+}

@@ -1608,82 +1608,161 @@
          ======================================= -->
     <div id="view-student-portal" class="app-page-view" style="display: none;">
       <div class="container portal-wrapper">
+        <!-- Portal Header -->
         <div class="portal-header">
           <div class="portal-user-meta">
             <img src="/assets/favicon.png" alt="Student Avatar" class="portal-avatar-lg" id="student-display-avatar" />
             <div>
               <h1 class="portal-title">Student Dashboard</h1>
-              <p class="portal-subtitle">Welcome back, <strong id="student-display-name" style="color: var(--white);">Student</strong>! Manage your active tutoring requests and learning path.</p>
+              <p class="portal-subtitle">Welcome back, <strong id="student-display-name" style="color: var(--charcoal-900);">Student</strong>! <span id="student-grade-badge" style="display: inline-block; margin-left: 0.5rem; font-size: 0.8rem; font-weight: 700; color: var(--gold-800); background: rgba(198, 138, 40, 0.12); padding: 0.2rem 0.65rem; border-radius: 999px;">Active Student</span></p>
             </div>
           </div>
-          <div>
-            <a href="#tutors" class="btn btn-primary btn-sm">+ Find New Tutor</a>
+          <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
+            <a href="#tutors" class="btn btn-primary btn-sm">+ Book New Lesson</a>
+            <a href="#subscriptions" class="btn btn-outline-gold btn-sm">💳 Subscription Plans</a>
           </div>
         </div>
 
-        <!-- Student Stats Cards -->
-        <div class="stats-cards-grid">
-          <div class="stat-widget">
-            <div class="stat-widget-icon">📚</div>
-            <div class="stat-widget-info">
-              <h3 id="student-stat-total">0</h3>
-              <p>Total Sessions Requested</p>
+        <!-- Dashboard Sub-Navigation Bar -->
+        <div class="dashboard-sub-nav">
+          <button type="button" class="dash-nav-pill active" onclick="Student.scrollToSection('overview', event)">📊 Overview</button>
+          <button type="button" class="dash-nav-pill" onclick="Student.scrollToSection('schedule', event)">🗓️ Schedule</button>
+          <button type="button" class="dash-nav-pill" onclick="Student.scrollToSection('lessons', event)">📚 Lessons</button>
+          <button type="button" class="dash-nav-pill" onclick="Student.scrollToSection('history', event)">📜 History</button>
+          <button type="button" class="dash-nav-pill" onclick="Student.scrollToSection('tutors', event)">👨‍🏫 My Tutors</button>
+          <button type="button" class="dash-nav-pill" onclick="Student.scrollToSection('subscription', event)">💳 Subscription</button>
+          <button type="button" class="dash-nav-pill" onclick="Student.scrollToSection('profile', event)">👤 Profile &amp; Goals</button>
+        </div>
+
+        <!-- 1. OVERVIEW & STATS -->
+        <div id="student-overview-section">
+          <!-- Student Stats Cards Grid -->
+          <div class="stats-cards-grid">
+            <div class="stat-widget">
+              <div class="stat-widget-icon">🗓️</div>
+              <div class="stat-widget-info">
+                <h3 id="student-stat-upcoming" style="color: var(--gold-600);">0</h3>
+                <p>Upcoming Confirmed</p>
+              </div>
+            </div>
+            <div class="stat-widget">
+              <div class="stat-widget-icon">⏳</div>
+              <div class="stat-widget-info">
+                <h3 id="student-stat-pending" style="color: var(--warning);">0</h3>
+                <p>Pending Tutor Acceptance</p>
+              </div>
+            </div>
+            <div class="stat-widget">
+              <div class="stat-widget-icon">✓</div>
+              <div class="stat-widget-info">
+                <h3 id="student-stat-completed" style="color: var(--success);">0</h3>
+                <p>Completed Lessons</p>
+              </div>
+            </div>
+            <div class="stat-widget">
+              <div class="stat-widget-icon">⏱️</div>
+              <div class="stat-widget-info">
+                <h3 id="student-stat-hours" style="color: var(--charcoal-900);">0</h3>
+                <p>Hours Learned</p>
+              </div>
+            </div>
+            <div class="stat-widget">
+              <div class="stat-widget-icon">💎</div>
+              <div class="stat-widget-info">
+                <h3 id="student-stat-sub-hours" style="color: var(--gold-700);">0 hrs</h3>
+                <p id="student-stat-sub-label">Plan Balance</p>
+              </div>
             </div>
           </div>
-          <div class="stat-widget">
-            <div class="stat-widget-icon">⏳</div>
-            <div class="stat-widget-info">
-              <h3 id="student-stat-pending" style="color: var(--warning);">0</h3>
-              <p>Pending Tutor Acceptance</p>
-            </div>
-          </div>
-          <div class="stat-widget">
-            <div class="stat-widget-icon">🗓️</div>
-            <div class="stat-widget-info">
-              <h3 id="student-stat-upcoming" style="color: var(--gold-400);">0</h3>
-              <p>Upcoming Confirmed</p>
-            </div>
-          </div>
-          <div class="stat-widget">
-            <div class="stat-widget-icon">✓</div>
-            <div class="stat-widget-info">
-              <h3 id="student-stat-completed" style="color: var(--success);">0</h3>
-              <p>Completed Sessions</p>
-            </div>
+
+          <!-- Spotlight: Next Upcoming Lesson -->
+          <div id="student-spotlight-container">
+            <!-- Populated dynamically via student.js -->
           </div>
         </div>
 
-        <!-- Student Requests Filter Tabs -->
-        <div class="portal-tabs-nav">
-          <button class="portal-tab-btn student-filter-tab active" data-status="all">All Sessions</button>
-          <button class="portal-tab-btn student-filter-tab" data-status="pending">Pending</button>
-          <button class="portal-tab-btn student-filter-tab" data-status="accepted">Upcoming</button>
-          <button class="portal-tab-btn student-filter-tab" data-status="completed">Completed</button>
-        </div>
-
-        <!-- Requests Cards Container -->
-        <div class="requests-card-list" id="student-requests-container">
-          <!-- Populated dynamically via student.js -->
-        </div>
-
-        <!-- My Tutors Section -->
-        <div class="data-table-container" style="margin-top: 3.5rem; padding: 2.5rem;" id="student-my-tutors-section">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+        <!-- 2. SCHEDULE & UPCOMING TIMELINE -->
+        <div class="dash-section-box" id="student-schedule-section">
+          <div class="dash-section-header">
             <div>
-              <h3 style="font-size: 1.3rem; color: var(--charcoal-900); margin-bottom: 0.4rem;">My Tutors &amp; Mentors</h3>
-              <p style="font-size: 0.875rem; color: var(--text-secondary); margin: 0;">Verified faculty and educators you have booked sessions with.</p>
+              <h3>🗓️ Class Schedule &amp; Calendar</h3>
+              <p>Your chronological agenda of confirmed upcoming classes and pending appointments. Note: All classes are maximum 50 minutes of focused instruction.</p>
+            </div>
+            <a href="#tutors" class="btn btn-outline-gold btn-sm">+ Schedule a Class</a>
+          </div>
+          <div class="schedule-list" id="student-schedule-container">
+            <!-- Populated dynamically via student.js -->
+          </div>
+        </div>
+
+        <!-- 3. ALL LESSONS & BOOKINGS HUB -->
+        <div class="dash-section-box" id="student-lessons-section">
+          <div class="dash-section-header">
+            <div>
+              <h3>📚 All Lessons &amp; Booking Requests</h3>
+              <p>Filter through all your requested sessions, inspect details, manage pending requests, or contact your instructor.</p>
+            </div>
+            <div class="portal-tabs-nav" style="margin-bottom: 0; border-bottom: none;">
+              <button class="portal-tab-btn student-filter-tab active" data-status="all">All</button>
+              <button class="portal-tab-btn student-filter-tab" data-status="accepted">Upcoming</button>
+              <button class="portal-tab-btn student-filter-tab" data-status="pending">Pending</button>
+              <button class="portal-tab-btn student-filter-tab" data-status="completed">Completed</button>
+            </div>
+          </div>
+          <div class="requests-card-list" id="student-requests-container">
+            <!-- Populated dynamically via student.js -->
+          </div>
+        </div>
+
+        <!-- 4. LESSON HISTORY & RECORDS -->
+        <div class="dash-section-box" id="student-history-section">
+          <div class="dash-section-header">
+            <div>
+              <h3>📜 Lesson History &amp; Academic Records</h3>
+              <p>Review your completed tutoring sessions, total hours studied, instructor feedback notes, and your submitted reviews.</p>
+            </div>
+          </div>
+          <div class="history-list" id="student-history-container">
+            <!-- Populated dynamically via student.js -->
+          </div>
+        </div>
+
+        <!-- 5. MY TUTORS & MENTORS -->
+        <div class="dash-section-box" id="student-my-tutors-section">
+          <div class="dash-section-header">
+            <div>
+              <h3>👨‍🏫 My Tutors &amp; Mentors</h3>
+              <p>Verified faculty and specialist educators you have worked with. Message them anytime or book follow-up sessions.</p>
             </div>
             <a href="#tutors" class="btn btn-outline-gold btn-sm">+ Find Another Specialist</a>
           </div>
           <div class="tutors-grid" id="student-connected-tutors-grid" style="grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.25rem;">
-            <!-- Rendered dynamically via student.js -->
+            <!-- Populated dynamically via student.js -->
           </div>
         </div>
 
-        <!-- Student Profile Settings Card -->
-        <div class="data-table-container" style="margin-top: 3.5rem; padding: 2.5rem;" id="student-profile-section">
-          <h3 style="font-size: 1.3rem; color: var(--charcoal-900); margin-bottom: 0.5rem;">Student Profile & Academic Goals</h3>
-          <p style="font-size: 0.875rem; color: var(--charcoal-400); margin-bottom: 2rem;">Keep your school details and target subjects updated so tutors can prepare personalized materials for your sessions.</p>
+        <!-- 6. SUBSCRIPTION & BALANCE OVERVIEW -->
+        <div class="dash-section-box" id="student-sub-summary-section">
+          <div class="dash-section-header">
+            <div>
+              <h3>💳 Subscription &amp; Hourly Balance</h3>
+              <p>Inspect your active package, remaining hours, and personalized benefits.</p>
+            </div>
+            <a href="#subscriptions" class="btn btn-outline-gold btn-sm">Full Subscription Details →</a>
+          </div>
+          <div id="student-sub-summary-container">
+            <!-- Populated dynamically via student.js -->
+          </div>
+        </div>
+
+        <!-- 7. STUDENT PROFILE & ACADEMIC GOALS -->
+        <div class="dash-section-box" id="student-profile-section">
+          <div class="dash-section-header">
+            <div>
+              <h3>👤 Student Profile &amp; Academic Goals</h3>
+              <p>Keep your school details and target subjects updated so tutors can prepare personalized materials for your 50-minute sessions.</p>
+            </div>
+          </div>
 
           <form id="student-profile-form">
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem;">

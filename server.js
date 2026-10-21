@@ -903,10 +903,13 @@ app.get('/api/student/dashboard', authenticateToken, requireRole('student'), (re
         u.name as tutor_name,
         u.avatar_url as tutor_avatar,
         tp.headline as tutor_headline,
-        tp.id as tutor_profile_id
+        tp.id as tutor_profile_id,
+        rev.rating as review_rating,
+        rev.comment as review_comment
       FROM tutoring_requests tr
       JOIN users u ON tr.tutor_id = u.id
       LEFT JOIN tutor_profiles tp ON tp.user_id = u.id
+      LEFT JOIN reviews rev ON rev.request_id = tr.id
       WHERE tr.student_id = ?
       ORDER BY tr.created_at DESC
     `).all(studentId);
@@ -915,10 +918,17 @@ app.get('/api/student/dashboard', authenticateToken, requireRole('student'), (re
       total_requests: requests.length,
       pending: requests.filter(r => r.status === 'pending').length,
       upcoming: requests.filter(r => r.status === 'accepted').length,
-      completed: requests.filter(r => r.status === 'completed').length
+      completed: requests.filter(r => r.status === 'completed').length,
+      total_hours: requests.filter(r => r.status === 'completed').reduce((acc, r) => acc + (r.duration_hours || 0), 0)
     };
 
-    res.json({ stats, requests });
+    const activeSub = db.prepare(`
+      SELECT * FROM student_subscriptions
+      WHERE user_id = ? AND status = 'active'
+      ORDER BY id DESC LIMIT 1
+    `).get(studentId);
+
+    res.json({ stats, requests, subscription: activeSub || null });
   } catch (error) {
     console.error('Student dashboard error:', error);
     res.status(500).json({ error: 'Failed to load student dashboard.' });

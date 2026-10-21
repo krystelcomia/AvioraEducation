@@ -852,15 +852,12 @@ const Auth = {
       // Configure Header Navigation Links
       if (mainNavLinks) {
         if (user.role === 'student') {
-          // Exactly as requested: "Home," "About," "Subscription," "Lessons," "My Tutors," "History," "Schedule," and "Dashboard"
+          // Streamlined navigation: Lessons, History, and Schedule are seamlessly accessible on the comprehensive Student Dashboard
           mainNavLinks.innerHTML = `
             <li><a href="#home" class="nav-link" id="nav-link-home">Home</a></li>
             <li><a href="#about" class="nav-link" id="nav-link-about">About</a></li>
             <li><a href="#subscriptions" class="nav-link" id="nav-link-subscription">Subscription</a></li>
-            <li><a href="#student-lessons" class="nav-link" id="nav-link-lessons">Lessons</a></li>
             <li><a href="#student-tutors" class="nav-link" id="nav-link-my-tutors">My Tutors</a></li>
-            <li><a href="#student-history" class="nav-link" id="nav-link-history">History</a></li>
-            <li><a href="#student-schedule" class="nav-link" id="nav-link-schedule">Schedule</a></li>
             <li><a href="#student-portal" class="nav-link" id="nav-link-dashboard">Dashboard</a></li>
           `;
         } else if (user.role === 'teacher') {

@@ -85,7 +85,12 @@ const Router = {
   updateActiveNav() {
     const hash = window.location.hash || '#home';
     document.querySelectorAll('.nav-link').forEach(link => {
-      link.classList.toggle('active', link.getAttribute('href') === hash);
+      const href = link.getAttribute('href');
+      let isActive = (href === hash);
+      if (!isActive && href === '#student-portal' && ['#student-portal', '#student-lessons', '#student-schedule', '#student-history'].includes(hash)) {
+        isActive = true;
+      }
+      link.classList.toggle('active', isActive);
     });
   },
 
@@ -222,36 +227,29 @@ const Router = {
         document.querySelectorAll('.student-filter-tab').forEach(t => t.classList.toggle('active', t.dataset.status === 'all'));
         await Student.loadDashboard();
         setTimeout(() => {
-          const el = document.getElementById('student-requests-container');
-          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          Student.scrollToSection('lessons');
         }, 80);
       } else if (hash === '#student-tutors') {
         await Student.loadDashboard();
         setTimeout(() => {
-          const el = document.getElementById('student-my-tutors-section');
-          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          Student.scrollToSection('tutors');
         }, 80);
       } else if (hash === '#student-history') {
         Student.activeTab = 'completed';
         document.querySelectorAll('.student-filter-tab').forEach(t => t.classList.toggle('active', t.dataset.status === 'completed'));
         await Student.loadDashboard();
         setTimeout(() => {
-          const el = document.getElementById('student-requests-container');
-          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          Student.scrollToSection('history');
         }, 80);
       } else if (hash === '#student-schedule') {
-        Student.activeTab = 'accepted';
-        document.querySelectorAll('.student-filter-tab').forEach(t => t.classList.toggle('active', t.dataset.status === 'accepted'));
         await Student.loadDashboard();
         setTimeout(() => {
-          const el = document.getElementById('student-requests-container');
-          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          Student.scrollToSection('schedule');
         }, 80);
       } else if (hash === '#student-profile') {
         await Student.loadDashboard();
         setTimeout(() => {
-          const el = document.getElementById('student-profile-section') || document.getElementById('student-profile-form');
-          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          Student.scrollToSection('profile');
         }, 80);
       } else {
         window.scrollTo({ top: 0, behavior: 'smooth' });

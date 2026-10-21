@@ -328,3 +328,215 @@
   padding: 2.5rem;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
 }
+
+/* =========================================
+   COMPREHENSIVE STUDENT DASHBOARD STYLES
+   ========================================= */
+.dashboard-sub-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  overflow-x: auto;
+  padding: 0.5rem 0.25rem 1.25rem 0.25rem;
+  margin-bottom: 2rem;
+  scrollbar-width: thin;
+}
+
+.dash-nav-pill {
+  white-space: nowrap;
+  padding: 0.6rem 1.15rem;
+  border-radius: 9999px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--charcoal-700);
+  background: #FFFFFF;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+  text-decoration: none;
+  transition: all var(--transition-fast);
+  cursor: pointer;
+}
+
+.dash-nav-pill:hover {
+  color: var(--gold-800);
+  border-color: rgba(198, 138, 40, 0.4);
+  transform: translateY(-1px);
+}
+
+.dash-nav-pill.active {
+  color: #FFFFFF;
+  background: var(--gradient-gold);
+  border-color: transparent;
+  box-shadow: 0 4px 14px rgba(198, 138, 40, 0.25);
+}
+
+.dash-section-box {
+  background: #FFFFFF;
+  border: 1px solid rgba(198, 138, 40, 0.22);
+  border-radius: var(--radius-xl);
+  padding: 2.25rem 2.5rem;
+  margin-bottom: 3rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+}
+
+.dash-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1.75rem;
+}
+
+.dash-section-header h3 {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: var(--charcoal-900);
+  margin-bottom: 0.35rem;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.dash-section-header p {
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+/* Spotlight Card for Next Upcoming Session */
+.spotlight-session-card {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(251, 244, 226, 0.5) 100%);
+  border: 2px solid rgba(198, 138, 40, 0.4);
+  border-radius: var(--radius-xl);
+  padding: 2rem 2.5rem;
+  margin-bottom: 2.5rem;
+  box-shadow: 0 6px 24px rgba(198, 138, 40, 0.08);
+  position: relative;
+  overflow: hidden;
+}
+
+.spotlight-session-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 6px;
+  height: 100%;
+  background: var(--gradient-gold);
+}
+
+.spotlight-session-grid {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 2rem;
+  align-items: center;
+}
+
+@media (max-width: 900px) {
+  .spotlight-session-grid {
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+  }
+}
+
+/* Schedule Timeline Cards */
+.schedule-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+}
+
+.schedule-card {
+  background: #FFFFFF;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem 1.75rem;
+  display: grid;
+  grid-template-columns: 140px 1.5fr 1fr auto;
+  align-items: center;
+  gap: 1.5rem;
+  transition: all var(--transition-fast);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.03);
+}
+
+.schedule-card:hover {
+  border-color: rgba(198, 138, 40, 0.35);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.05);
+}
+
+.schedule-date-badge {
+  background: rgba(198, 138, 40, 0.08);
+  border: 1px solid rgba(198, 138, 40, 0.2);
+  border-radius: var(--radius-md);
+  padding: 0.75rem 0.5rem;
+  text-align: center;
+}
+
+.schedule-date-badge .day-num {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--gold-800);
+  line-height: 1;
+}
+
+.schedule-date-badge .day-name {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--charcoal-600);
+  text-transform: uppercase;
+  margin-top: 0.2rem;
+}
+
+@media (max-width: 960px) {
+  .schedule-card {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+}
+
+/* History Cards */
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+}
+
+.history-card {
+  background: #FFFFFF;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem 1.75rem;
+  display: grid;
+  grid-template-columns: auto 1.5fr 1fr auto;
+  align-items: center;
+  gap: 1.5rem;
+  transition: all var(--transition-fast);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.03);
+}
+
+.history-card:hover {
+  border-color: rgba(198, 138, 40, 0.3);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.05);
+}
+
+@media (max-width: 960px) {
+  .history-card {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+}
+
+/* Subscription summary card in dashboard */
+.sub-summary-widget {
+  background: linear-gradient(135deg, rgba(251, 244, 226, 0.4) 0%, rgba(255, 255, 255, 0.95) 100%);
+  border: 1px solid rgba(198, 138, 40, 0.25);
+  border-radius: var(--radius-lg);
+  padding: 1.75rem 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+}
+

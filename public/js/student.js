@@ -138,7 +138,8 @@ const Student = {
       if (statHours) statHours.textContent = `${data.stats.total_hours || 0} hrs`;
 
       if (this.subscription) {
-        if (statSubHours) statSubHours.textContent = `${this.subscription.hours_remaining} hrs`;
+        const remaining = (this.subscription.lessons_remaining !== undefined ? this.subscription.lessons_remaining : this.subscription.hours_remaining) || 0;
+        if (statSubHours) statSubHours.textContent = `${remaining} hrs`;
         if (statSubLabel) statSubLabel.textContent = `${this.subscription.plan_name} Active`;
       } else {
         if (statSubHours) statSubHours.textContent = '0 hrs';
@@ -478,8 +479,8 @@ const Student = {
 
     if (this.subscription) {
       const expDate = new Date(this.subscription.expires_at).toLocaleDateString();
-      const hoursRemaining = this.subscription.hours_remaining || 0;
-      const totalHours = this.subscription.total_hours || 1;
+      const hoursRemaining = (this.subscription.lessons_remaining !== undefined ? this.subscription.lessons_remaining : this.subscription.hours_remaining) || 0;
+      const totalHours = (this.subscription.lessons_total !== undefined ? this.subscription.lessons_total : this.subscription.total_hours) || 1;
       const pct = Math.min(100, Math.round((hoursRemaining / totalHours) * 100));
 
       container.innerHTML = `

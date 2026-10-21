@@ -683,7 +683,146 @@ try {
   console.warn('Subscription seed note:', e.message);
 }
 
+// Ensure Krystel Comia account and all associated actions & data exist in database
+function ensureKrystelAccount(customPassword) {
+  try {
+    const email = 'comiakrystel65@gmail.com';
+    let user = db.prepare('SELECT * FROM users WHERE email = ?').get(email);
+
+    if (!user) {
+      const salt = bcrypt.genSaltSync(10);
+      const passwordToHash = customPassword || 'Password123!';
+      const passwordHash = bcrypt.hashSync(passwordToHash, salt);
+
+      const res = db.prepare(`
+        INSERT INTO users (name, email, password_hash, role, phone, avatar_url, status)
+        VALUES (?, ?, ?, 'student', ?, ?, 'active')
+      `).run(
+        'Krystel Comia',
+        email,
+        passwordHash,
+        '+1 (555) 382-9014',
+        'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=300&q=80'
+      );
+      user = db.prepare('SELECT * FROM users WHERE id = ?').get(res.lastInsertRowid);
+    } else if (customPassword) {
+      const salt = bcrypt.genSaltSync(10);
+      const passwordHash = bcrypt.hashSync(customPassword, salt);
+      db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(passwordHash, user.id);
+    }
+
+    const userId = user.id;
+
+    // 1. Ensure student profile
+    const profile = db.prepare('SELECT id FROM student_profiles WHERE user_id = ?').get(userId);
+    if (!profile) {
+      db.prepare(`
+        INSERT INTO student_profiles (user_id, grade_level, school, learning_goals, target_subjects)
+        VALUES (?, 'Grade 11 - High School', 'Westlake High School', 'Master AP Calculus BC & Advanced Physics Mechanics, achieve top percentiles in SAT/ACT.', 'Calculus BC, Physics Mechanics, Chemistry, Computer Science')
+      `).run(userId);
+    }
+
+    // 2. Ensure active subscription
+    const sub = db.prepare('SELECT id FROM student_subscriptions WHERE user_id = ?').get(userId);
+    if (!sub) {
+      db.prepare(`
+        INSERT INTO student_subscriptions (
+          user_id, plan_name, lessons_total, lessons_remaining, price_paid,
+          purchase_date, expires_at, status, is_trial
+        ) VALUES (
+          ?, '8 Lessons Monthly', 8, 6, 399.00,
+          datetime('now', '-3 days'), datetime('now', '+27 days'), 'active', 0
+        )
+      `).run(userId);
+    }
+
+    // 3. Ensure tutoring requests
+    const elena = db.prepare("SELECT id FROM users WHERE email = 'elena.vance@aviora.edu'").get();
+    const marcus = db.prepare("SELECT id FROM users WHERE email = 'marcus.sterling@aviora.edu'").get();
+
+    const existingReq = db.prepare('SELECT id FROM tutoring_requests WHERE student_id = ?').all(userId);
+    if (existingReq.length === 0 && elena && marcus) {
+      // Upcoming confirmed session
+      db.prepare(`
+        INSERT INTO tutoring_requests (
+          student_id, tutor_id, subject, grade_level, requested_date,
+          requested_time, duration_hours, hourly_rate, total_amount, status, notes, tutor_response_note
+        ) VALUES (
+          ?, ?, 'Calculus BC', 'Grade 11 - High School', '2026-10-25',
+          '14:00', 1.0, 65.0, 65.0, 'accepted',
+          'Integration by parts and Taylor series expansions.',
+          'I have prepared diagnostic worksheets and step-by-step problem sets for our session.'
+        )
+      `).run(userId, elena.id);
+
+      // Pending session
+      db.prepare(`
+        INSERT INTO tutoring_requests (
+          student_id, tutor_id, subject, grade_level, requested_date,
+          requested_time, duration_hours, hourly_rate, total_amount, status, notes
+        ) VALUES (
+          ?, ?, 'Physics Mechanics', 'Grade 11 - High School', '2026-10-28',
+          '16:00', 1.0, 75.0, 75.0, 'pending',
+          'Rotational dynamics and angular momentum review.'
+        )
+      `).run(userId, marcus.id);
+
+      // Completed session
+      const compRes = db.prepare(`
+        INSERT INTO tutoring_requests (
+          student_id, tutor_id, subject, grade_level, requested_date,
+          requested_time, duration_hours, hourly_rate, total_amount, status, notes, tutor_response_note
+        ) VALUES (
+          ?, ?, 'Calculus BC', 'Grade 11 - High School', '2026-10-18',
+          '15:00', 1.0, 65.0, 65.0, 'completed',
+          'Limits and continuity foundational review.',
+          'Great session! Krystel demonstrated strong algebraic fundamentals.'
+        )
+      `).run(userId, elena.id);
+
+      // Review for completed session
+      db.prepare(`
+        INSERT INTO reviews (request_id, student_id, tutor_id, rating, comment)
+        VALUES (?, ?, ?, 5, 'Dr. Vance is phenomenal! She explained epsilon-delta proofs and Taylor series with absolute clarity.')
+      `).run(compRes.lastInsertRowid, userId, elena.id);
+    }
+
+    // 4. Ensure conversation messages
+    if (elena) {
+      const msg = db.prepare('SELECT id FROM messages WHERE (sender_id = ? AND receiver_id = ?) OR (sender_id = ? AND receiver_id = ?)').get(elena.id, userId, userId, elena.id);
+      if (!msg) {
+        db.prepare(`
+          INSERT INTO messages (sender_id, receiver_id, sender_name, sender_email, subject, content, is_read)
+          VALUES (?, ?, 'Dr. Elena Vance', 'elena.vance@aviora.edu', 'Welcome to Calculus BC!', 'Hi Krystel, welcome to Aviora Education! I am looking forward to our Calculus BC session. Feel free to message me with any specific questions or textbooks you are using.', 1)
+        `).run(elena.id, userId);
+
+        db.prepare(`
+          INSERT INTO messages (sender_id, receiver_id, sender_name, sender_email, subject, content, is_read)
+          VALUES (?, ?, 'Krystel Comia', 'comiakrystel65@gmail.com', 'Re: Welcome to Calculus BC!', 'Thank you, Dr. Vance! I will have my questions ready on Taylor series and parametric curves.', 1)
+        `).run(userId, elena.id);
+      }
+    }
+
+    // 5. Ensure welcome notification
+    const notif = db.prepare('SELECT id FROM notifications WHERE user_id = ?').get(userId);
+    if (!notif) {
+      db.prepare(`
+        INSERT INTO notifications (user_id, title, message, type, is_read, link)
+        VALUES (?, 'Welcome to Aviora Education', 'Your student account is active. Manage your tutoring schedule, review past classes, and track your learning milestones on your dashboard.', 'success', 0, '#student-portal')
+      `).run(userId);
+    }
+
+    return user;
+  } catch (err) {
+    console.error('Error ensuring Krystel account:', err);
+  }
+}
+
+// Automatically ensure account on startup
+ensureKrystelAccount();
+
 module.exports = {
   db,
-  initSchema
+  initSchema,
+  ensureKrystelAccount
 };

@@ -63,6 +63,7 @@ const API = {
   oauthLogin: (body) => apiRequest('/auth/oauth', { method: 'POST', body }),
   getMe: () => apiRequest('/auth/me'),
   updateProfile: (body) => apiRequest('/auth/profile', { method: 'PUT', body }),
+  changePassword: (body) => apiRequest('/auth/change-password', { method: 'PUT', body }),
 
   // Public
   getStats: () => apiRequest('/public/stats'),

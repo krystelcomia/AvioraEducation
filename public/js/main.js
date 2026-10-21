@@ -87,7 +87,10 @@ const Router = {
     document.querySelectorAll('.nav-link').forEach(link => {
       const href = link.getAttribute('href');
       let isActive = (href === hash);
-      if (!isActive && href === '#student-portal' && ['#student-portal', '#book-lesson', '#student-lessons', '#student-schedule', '#student-history', '#student-tutors', '#student-profile'].includes(hash)) {
+      if (!isActive && href === '#student-portal' && ['#student-portal', '#book-lesson', '#student-lessons', '#student-schedule', '#student-history', '#student-tutors'].includes(hash)) {
+        isActive = true;
+      }
+      if (!isActive && (href === '#student-profile' || href === '#profile' || link.id === 'nav-user-profile-btn') && (hash === '#student-profile' || hash === '#profile')) {
         isActive = true;
       }
       if (!isActive && href === '#tutors' && (hash === '#tutors' || hash.startsWith('#tutor-profile'))) {
@@ -226,7 +229,20 @@ const Router = {
       if (view) view.style.display = 'block';
       window.scrollTo({ top: 0, behavior: 'smooth' });
       await Tutors.fetchTutors();
-    } else if (hash === '#student-portal' || hash === '#student-lessons' || hash === '#student-tutors' || hash === '#student-history' || hash === '#student-schedule' || hash === '#student-profile') {
+    } else if (hash === '#student-profile' || hash === '#profile') {
+      const user = Auth.currentUser;
+      if (!user) {
+        showToast('Please sign in to access your profile and settings.', 'info');
+        window.location.hash = '#login';
+        return;
+      }
+      const view = document.getElementById('view-student-profile');
+      if (view) view.style.display = 'block';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      if (typeof Profile !== 'undefined' && Profile.loadProfilePage) {
+        await Profile.loadProfilePage();
+      }
+    } else if (hash === '#student-portal' || hash === '#student-lessons' || hash === '#student-tutors' || hash === '#student-history' || hash === '#student-schedule') {
       const view = document.getElementById('view-student-portal');
       if (view) view.style.display = 'block';
 
@@ -253,11 +269,6 @@ const Router = {
         await Student.loadDashboard();
         setTimeout(() => {
           Student.scrollToSection('schedule');
-        }, 80);
-      } else if (hash === '#student-profile') {
-        await Student.loadDashboard();
-        setTimeout(() => {
-          Student.scrollToSection('profile');
         }, 80);
       } else {
         window.scrollTo({ top: 0, behavior: 'smooth' });

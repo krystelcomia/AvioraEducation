@@ -79,14 +79,17 @@ const Student = {
 
   scrollToSection(section, e) {
     if (e && e.preventDefault) e.preventDefault();
+    if (section === 'profile') {
+      window.location.hash = '#student-profile';
+      return;
+    }
 
     const map = {
       overview: 'student-overview-section',
       schedule: 'student-schedule-section',
       lessons: 'student-lessons-section',
       history: 'student-history-section',
-      tutors: 'student-my-tutors-section',
-      profile: 'student-profile-section'
+      tutors: 'student-my-tutors-section'
     };
 
     const targetId = map[section];

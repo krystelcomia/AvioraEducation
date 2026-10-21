@@ -102,3 +102,105 @@
   --max-width: 100%;
   --header-height: 86px;
 }
+
+/* =========================================
+   AVIORA EDUCATION - DARK MODE PALETTE
+   ========================================= */
+[data-theme="dark"] {
+  --bg-main: #0E1015;
+  --bg-surface: #161920;
+  --bg-surface-alt: #1D212B;
+  --bg-surface-elevated: #1F232E;
+  --border-color: rgba(255, 255, 255, 0.09);
+  --border-color-strong: rgba(255, 255, 255, 0.16);
+  --border-gold: rgba(216, 170, 60, 0.35);
+
+  --cream-bg: #0E1015;
+  --cream-50: #161920;
+  --cream-100: #1D212B;
+  --cream-200: #252B38;
+  --cream-300: #333B4A;
+  --cream-400: #465166;
+  --white: #161920;
+
+  --text-primary: #F3F4F6;
+  --text-secondary: #9CA3AF;
+  --text-muted: #6B7280;
+
+  --charcoal-950: #FFFFFF;
+  --charcoal-900: #F3F4F6;
+  --charcoal-850: #E5E7EB;
+  --charcoal-800: #D1D5DB;
+  --charcoal-700: #9CA3AF;
+  --charcoal-600: #9CA3AF;
+  --charcoal-500: #6B7280;
+  --charcoal-400: #9CA3AF;
+  --charcoal-300: #D1D5DB;
+  --charcoal-200: #E5E7EB;
+  --charcoal-100: #F3F4F6;
+
+  --gradient-dark: linear-gradient(180deg, #161920 0%, #0E1015 100%);
+  --gradient-dark-card: linear-gradient(145deg, #1A1E26 0%, #14171E 100%);
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 6px 20px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 16px 36px rgba(0, 0, 0, 0.6);
+}
+
+[data-theme="dark"] body {
+  background-color: var(--bg-main) !important;
+  color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .site-header {
+  background: rgba(14, 16, 21, 0.94) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+[data-theme="dark"] .portal-header,
+[data-theme="dark"] .dash-section-box,
+[data-theme="dark"] .stat-widget,
+[data-theme="dark"] .book-lesson-col,
+[data-theme="dark"] .profile-card-box,
+[data-theme="dark"] .settings-card-box,
+[data-theme="dark"] .tutor-profile-main,
+[data-theme="dark"] .tutor-booking-sidebar,
+[data-theme="dark"] .sub-plan-card,
+[data-theme="dark"] .tutor-card,
+[data-theme="dark"] .tutor-picker-item,
+[data-theme="dark"] .payment-method-card {
+  background: var(--bg-surface) !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .form-control {
+  background-color: #11141A !important;
+  border-color: rgba(255, 255, 255, 0.14) !important;
+  color: #F9FAFB !important;
+}
+
+[data-theme="dark"] .form-label {
+  color: #E5E7EB !important;
+}
+
+[data-theme="dark"] .booking-calendar-box,
+[data-theme="dark"] .payment-summary-box,
+[data-theme="dark"] .booking-sub-card {
+  background: #12151C !important;
+  border-color: rgba(198, 138, 40, 0.25) !important;
+}
+
+[data-theme="dark"] .cal-day-cell {
+  background: #1A1E26 !important;
+  color: #E5E7EB !important;
+}
+[data-theme="dark"] .calendar-nav-btn {
+  background: #1A1E26 !important;
+  color: #E5E7EB !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+}
+[data-theme="dark"] .cal-day-cell.available {
+  background: #1A1E26 !important;
+  border-color: rgba(198, 138, 40, 0.45) !important;
+}
+

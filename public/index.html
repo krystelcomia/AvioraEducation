@@ -1945,59 +1945,287 @@
           </div>
         </div>
 
-        <!-- 6. STUDENT PROFILE & ACADEMIC GOALS -->
-        <div class="dash-section-box" id="student-profile-section">
-          <div class="dash-section-header">
-            <div>
-              <h3>👤 Student Profile &amp; Academic Goals</h3>
-              <p>Keep your school details and target subjects updated so tutors can prepare personalized materials for your 50-minute sessions.</p>
+      </div>
+    </div><!-- END VIEW 3: STUDENT PORTAL -->
+
+
+    <!-- =======================================
+         VIEW: DEDICATED STUDENT PROFILE & SETTINGS PAGE
+         ======================================= -->
+    <div id="view-student-profile" class="app-page-view" style="display: none; padding-top: calc(var(--header-height) + 1.25rem); padding-bottom: 2rem;">
+      <div class="container" style="padding-top: 0; padding-bottom: 0;">
+
+        <!-- Breadcrumb & Hero Header -->
+        <div style="margin-bottom: 1.25rem;">
+          <a href="#student-portal" style="font-size: 0.85rem; color: var(--gold-800); font-weight: 700; text-decoration: none; display: inline-flex; align-items: center; gap: 0.35rem; margin-bottom: 0.5rem;">
+            <span>←</span> Back to Dashboard
+          </a>
+          <div class="portal-header" style="margin-bottom: 1rem; border-bottom: none; padding: 1.75rem 2.25rem;">
+            <div class="portal-user-meta" style="gap: 1.5rem;">
+              <img src="/assets/favicon.png" alt="Student Profile Avatar" class="portal-avatar-lg" id="profile-hero-avatar" style="width: 76px; height: 76px; border: 3px solid var(--gold-500); box-shadow: 0 4px 14px rgba(198, 138, 40, 0.25);" />
+              <div>
+                <div style="display: flex; align-items: center; gap: 0.65rem; flex-wrap: wrap;">
+                  <h1 class="portal-title" id="profile-hero-name" style="margin: 0; font-size: 2rem;">Student Profile</h1>
+                  <span id="profile-hero-grade-badge" class="badge-gold" style="font-size: 0.8rem;">Grade 11 - High School</span>
+                  <span id="profile-hero-sub-badge" class="badge-gold" style="font-size: 0.8rem;">💎 Active Plan</span>
+                </div>
+                <p class="portal-subtitle" style="margin-top: 0.35rem; margin-bottom: 0;">
+                  <span id="profile-hero-email" style="font-weight: 600; color: var(--charcoal-900);">student@aviora.edu</span> • Verified Student Account
+                </p>
+              </div>
+            </div>
+            <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
+              <a href="#student-subscriptions" class="btn btn-outline-gold btn-sm">Manage Subscription</a>
+              <a href="#book-lesson" class="btn btn-primary btn-sm">+ Book New Lesson</a>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2-Column Responsive Grid: Profile on Left, Settings on Right -->
+        <div class="profile-page-grid">
+          
+          <!-- LEFT COLUMN: Profile & Academic Information -->
+          <div class="profile-card-box">
+            <div class="profile-card-header">
+              <h3 class="profile-card-title">👤 Student Profile &amp; Academic Goals</h3>
+              <p class="profile-card-sub">Keep your academic details, target subjects, and learning goals updated for your 50-minute mentorship sessions.</p>
+            </div>
+
+            <!-- Profile Form -->
+            <form id="profile-page-form" style="display: flex; flex-direction: column; flex: 1;">
+              
+              <!-- Avatar Selector Row -->
+              <div style="background: rgba(198, 138, 40, 0.05); border: 1px dashed rgba(198, 138, 40, 0.3); border-radius: var(--radius-md); padding: 1rem; margin-bottom: 1.25rem;">
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                  <img src="/assets/favicon.png" id="profile-page-avatar-display" alt="Current Avatar" style="width: 56px; height: 56px; border-radius: 50%; object-fit: cover; border: 2px solid var(--gold-500);" />
+                  <div style="flex: 1; min-width: 0;">
+                    <div style="font-size: 0.85rem; font-weight: 700; color: var(--charcoal-900); margin-bottom: 0.2rem;">Profile Avatar</div>
+                    <div style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.4rem;">Select a verified scholar avatar preset or paste an image URL:</div>
+                    <div class="avatar-presets-bar">
+                      <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80" class="avatar-preset-thumb" data-avatar-url="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80" alt="Preset 1" title="Scholar 1" />
+                      <img src="https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&w=150&q=80" class="avatar-preset-thumb" data-avatar-url="https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&w=150&q=80" alt="Preset 2" title="Scholar 2" />
+                      <img src="https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=150&q=80" class="avatar-preset-thumb" data-avatar-url="https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=150&q=80" alt="Preset 3" title="Scholar 3" />
+                      <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80" class="avatar-preset-thumb" data-avatar-url="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80" alt="Preset 4" title="Scholar 4" />
+                      <img src="/assets/favicon.png" class="avatar-preset-thumb" data-avatar-url="/assets/favicon.png" alt="Aviora Crest" title="Aviora Crest" />
+                    </div>
+                  </div>
+                </div>
+                <div style="margin-top: 0.75rem;">
+                  <input type="url" id="profile-avatar-url" class="form-control" placeholder="Or enter custom avatar image URL (https://...)" style="font-size: 0.8rem; padding: 0.45rem 0.75rem;" />
+                </div>
+              </div>
+
+              <!-- Personal Information Fields -->
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                <div class="form-group" style="margin-bottom: 0;">
+                  <label class="form-label" style="font-weight: 700; font-size: 0.82rem;">Full Name</label>
+                  <input type="text" id="profile-name" class="form-control" required />
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                  <label class="form-label" style="font-weight: 700; font-size: 0.82rem;">Email Address</label>
+                  <input type="email" id="profile-email" class="form-control" readonly disabled style="opacity: 0.7; cursor: not-allowed;" title="Primary login email cannot be modified" />
+                </div>
+              </div>
+
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                <div class="form-group" style="margin-bottom: 0;">
+                  <label class="form-label" style="font-weight: 700; font-size: 0.82rem;">Phone Contact</label>
+                  <input type="tel" id="profile-phone" class="form-control" placeholder="+1 (555) 000-0000" />
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                  <label class="form-label" style="font-weight: 700; font-size: 0.82rem;">Current Grade Level</label>
+                  <select id="profile-grade" class="form-control">
+                    <option value="Grade 9 - High School">Grade 9 - High School</option>
+                    <option value="Grade 10 - High School">Grade 10 - High School</option>
+                    <option value="Grade 11 - High School">Grade 11 - High School</option>
+                    <option value="Grade 12 - High School">Grade 12 - High School</option>
+                    <option value="College Freshman">College Freshman</option>
+                    <option value="College Sophomore">College Sophomore</option>
+                    <option value="College Junior / Senior">College Junior / Senior</option>
+                    <option value="Graduate / Pre-Med">Graduate / Pre-Med</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="form-group" style="margin-bottom: 1rem;">
+                <label class="form-label" style="font-weight: 700; font-size: 0.82rem;">School / Institution Name</label>
+                <input type="text" id="profile-school" class="form-control" placeholder="e.g. Westlake High School or Stanford University" />
+              </div>
+
+              <div class="form-group" style="margin-bottom: 1rem;">
+                <label class="form-label" style="font-weight: 700; font-size: 0.82rem;">Primary Learning Goals</label>
+                <textarea id="profile-goals" class="form-control" rows="3" placeholder="e.g. Master AP Calculus BC integral test, prepare for SAT/ACT math section, build data structures portfolio..."></textarea>
+              </div>
+
+              <div class="form-group" style="margin-bottom: 1.5rem;">
+                <label class="form-label" style="font-weight: 700; font-size: 0.82rem;">Target Subjects of Interest</label>
+                <input type="text" id="profile-subjects" class="form-control" placeholder="e.g. Calculus BC, Physics Mechanics, Python, Organic Chemistry" />
+              </div>
+
+              <button type="submit" id="btn-save-profile" class="btn btn-primary btn-lg" style="margin-top: auto; width: 100%; justify-content: center; font-weight: 700;">
+                Save Profile Changes
+              </button>
+            </form>
+          </div>
+
+          <!-- RIGHT COLUMN: Settings & Customization -->
+          <div class="profile-card-box">
+            <div class="profile-card-header">
+              <h3 class="profile-card-title">⚙️ Settings &amp; Preferences</h3>
+              <p class="profile-card-sub">Configure display themes, internationalization, session notifications, and account security.</p>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 1.5rem; flex: 1;">
+              
+              <!-- 1. Theme / Dark Mode -->
+              <div>
+                <label class="form-label" style="font-weight: 700; font-size: 0.85rem; margin-bottom: 0.5rem; display: block;">
+                  Appearance Theme
+                </label>
+                <div class="theme-picker-cards">
+                  <div class="theme-picker-card active" id="theme-card-light">
+                    <div class="theme-picker-card-left">
+                      <span style="font-size: 1.25rem;">☀️</span>
+                      <div>
+                        <div class="theme-picker-title">Light Mode</div>
+                        <div class="theme-picker-desc">Warm cream &amp; gold</div>
+                      </div>
+                    </div>
+                    <span style="font-size: 0.9rem; color: var(--gold-600); font-weight: 800;">✓</span>
+                  </div>
+
+                  <div class="theme-picker-card" id="theme-card-dark">
+                    <div class="theme-picker-card-left">
+                      <span style="font-size: 1.25rem;">🌙</span>
+                      <div>
+                        <div class="theme-picker-title">Dark Mode</div>
+                        <div class="theme-picker-desc">Obsidian &amp; luxury gold</div>
+                      </div>
+                    </div>
+                    <span style="font-size: 0.9rem; color: var(--gold-600); font-weight: 800;">✓</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 2. Language Selection & Timezone -->
+              <div style="border-top: 1px solid rgba(0,0,0,0.06); padding-top: 1.25rem;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                  <div class="form-group" style="margin-bottom: 0;">
+                    <label class="form-label" style="font-weight: 700; font-size: 0.82rem;">Language</label>
+                    <select id="profile-language-select" class="form-control">
+                      <option value="en-US">🇺🇸 English (US)</option>
+                      <option value="es-ES">🇪🇸 Español</option>
+                      <option value="fr-FR">🇫🇷 Français</option>
+                      <option value="de-DE">🇩🇪 Deutsch</option>
+                      <option value="zh-CN">🇨🇳 中文 (Mandarin)</option>
+                      <option value="ja-JP">🇯🇵 日本語</option>
+                      <option value="fil-PH">🇵🇭 Filipino (Tagalog)</option>
+                    </select>
+                  </div>
+                  <div class="form-group" style="margin-bottom: 0;">
+                    <label class="form-label" style="font-weight: 700; font-size: 0.82rem;">Preferred Timezone</label>
+                    <select id="profile-timezone-select" class="form-control">
+                      <option value="America/New_York">America/New_York (EST)</option>
+                      <option value="America/Chicago">America/Chicago (CST)</option>
+                      <option value="America/Denver">America/Denver (MST)</option>
+                      <option value="America/Los_Angeles">America/Los_Angeles (PST)</option>
+                      <option value="Europe/London">Europe/London (GMT/BST)</option>
+                      <option value="Europe/Paris">Europe/Paris (CET)</option>
+                      <option value="Asia/Manila">Asia/Manila (PHT)</option>
+                      <option value="Asia/Tokyo">Asia/Tokyo (JST)</option>
+                      <option value="UTC">UTC (Coordinated Time)</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 3. Notification Toggles -->
+              <div style="border-top: 1px solid rgba(0,0,0,0.06); padding-top: 1.25rem;">
+                <label class="form-label" style="font-weight: 700; font-size: 0.85rem; margin-bottom: 0.35rem; display: block;">
+                  Notification Preferences
+                </label>
+                
+                <div class="setting-switch-row">
+                  <div class="setting-switch-info">
+                    <div class="setting-switch-title">🔔 3-Hour Lesson Reminders</div>
+                    <div class="setting-switch-desc">Receive reminder alert 3 hours prior to scheduled 50-minute class</div>
+                  </div>
+                  <label class="switch-control">
+                    <input type="checkbox" id="notif-lessons" checked />
+                    <span class="switch-slider"></span>
+                  </label>
+                </div>
+
+                <div class="setting-switch-row">
+                  <div class="setting-switch-info">
+                    <div class="setting-switch-title">📅 Calendar Sync Alerts</div>
+                    <div class="setting-switch-desc">Notify when a tutor confirms, reschedules, or updates session details</div>
+                  </div>
+                  <label class="switch-control">
+                    <input type="checkbox" id="notif-calendar" checked />
+                    <span class="switch-slider"></span>
+                  </label>
+                </div>
+
+                <div class="setting-switch-row">
+                  <div class="setting-switch-info">
+                    <div class="setting-switch-title">💬 Direct Educator Messages</div>
+                    <div class="setting-switch-desc">Instant alerts when an assigned educator sends study notes or messages</div>
+                  </div>
+                  <label class="switch-control">
+                    <input type="checkbox" id="notif-messages" checked />
+                    <span class="switch-slider"></span>
+                  </label>
+                </div>
+
+                <div class="setting-switch-row">
+                  <div class="setting-switch-info">
+                    <div class="setting-switch-title">📊 Weekly Academic Digest</div>
+                    <div class="setting-switch-desc">Receive weekly performance summaries and remaining lesson credit updates</div>
+                  </div>
+                  <label class="switch-control">
+                    <input type="checkbox" id="notif-reports" />
+                    <span class="switch-slider"></span>
+                  </label>
+                </div>
+              </div>
+
+              <!-- 4. Account Security & Password -->
+              <div style="border-top: 1px solid rgba(0,0,0,0.06); padding-top: 1.25rem; margin-top: auto;">
+                <label class="form-label" style="font-weight: 700; font-size: 0.85rem; margin-bottom: 0.35rem; display: block;">
+                  🔒 Account Security &amp; Password
+                </label>
+                
+                <form id="profile-password-form">
+                  <div style="display: grid; grid-template-columns: 1fr; gap: 0.75rem; margin-bottom: 0.85rem;">
+                    <div class="form-group" style="margin-bottom: 0;">
+                      <label class="form-label" style="font-size: 0.78rem;">Current Password</label>
+                      <input type="password" id="profile-curr-password" class="form-control" placeholder="••••••••" required />
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+                      <div class="form-group" style="margin-bottom: 0;">
+                        <label class="form-label" style="font-size: 0.78rem;">New Password</label>
+                        <input type="password" id="profile-new-password" class="form-control" placeholder="Min 6 characters" required />
+                      </div>
+                      <div class="form-group" style="margin-bottom: 0;">
+                        <label class="form-label" style="font-size: 0.78rem;">Confirm Password</label>
+                        <input type="password" id="profile-confirm-password" class="form-control" placeholder="Repeat new password" required />
+                      </div>
+                    </div>
+                  </div>
+                  <button type="submit" id="btn-save-password" class="btn btn-outline-gold btn-sm" style="width: 100%; justify-content: center; font-weight: 700;">
+                    Update Password
+                  </button>
+                </form>
+              </div>
+
             </div>
           </div>
 
-          <form id="student-profile-form">
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem;">
-              <div class="form-group">
-                <label class="form-label">Full Name</label>
-                <input type="text" id="sp-name" class="form-control" required />
-              </div>
-              <div class="form-group">
-                <label class="form-label">Phone Contact</label>
-                <input type="text" id="sp-phone" class="form-control" />
-              </div>
-              <div class="form-group">
-                <label class="form-label">Current Grade Level</label>
-                <select id="sp-grade" class="form-control">
-                  <option value="Grade 9 - High School">Grade 9 - High School</option>
-                  <option value="Grade 10 - High School">Grade 10 - High School</option>
-                  <option value="Grade 11 - High School">Grade 11 - High School</option>
-                  <option value="Grade 12 - High School">Grade 12 - High School</option>
-                  <option value="College Freshman">College Freshman</option>
-                  <option value="College Sophomore">College Sophomore</option>
-                  <option value="College Junior / Senior">College Junior / Senior</option>
-                  <option value="Graduate / Pre-Med">Graduate / Pre-Med</option>
-                </select>
-              </div>
-              <div class="form-group">
-                <label class="form-label">School / Institution Name</label>
-                <input type="text" id="sp-school" class="form-control" placeholder="e.g. Westlake High School" />
-              </div>
-            </div>
-
-            <div class="form-group">
-              <label class="form-label">Primary Learning Goals</label>
-              <textarea id="sp-goals" class="form-control" rows="2" placeholder="e.g. Boost AP Calculus score to 5, master Python algorithms..."></textarea>
-            </div>
-
-            <div class="form-group">
-              <label class="form-label">Target Subjects of Interest</label>
-              <input type="text" id="sp-subjects" class="form-control" placeholder="e.g. Calculus BC, Physics Mechanics, Python" />
-            </div>
-
-            <button type="submit" class="btn btn-primary btn-sm">Save Profile Changes</button>
-          </form>
         </div>
+
       </div>
-    </div><!-- END VIEW 3: STUDENT -->
+    </div><!-- END VIEW: DEDICATED STUDENT PROFILE PAGE -->
 
 
     <!-- =======================================
@@ -3751,6 +3979,7 @@
   <script src="/js/student.js"></script>
   <script src="/js/book-lesson.js"></script>
   <script src="/js/subscription.js"></script>
+  <script src="/js/profile.js"></script>
   <script src="/js/teacher.js"></script>
   <script src="/js/admin.js"></script>
   <script src="/js/main.js"></script>

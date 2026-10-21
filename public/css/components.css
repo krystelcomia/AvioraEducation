@@ -1775,5 +1775,194 @@
   color: var(--charcoal-500);
 }
 
+/* =========================================
+   DEDICATED PROFILE & SETTINGS PAGE
+   ========================================= */
+.profile-page-grid {
+  display: grid;
+  grid-template-columns: 1.15fr 1fr;
+  gap: 1.5rem;
+  align-items: stretch;
+}
+@media (max-width: 992px) {
+  .profile-page-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.profile-card-box {
+  background: #FFFFFF;
+  border: 1px solid rgba(198, 138, 40, 0.25);
+  border-radius: var(--radius-xl);
+  padding: 1.75rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.profile-card-header {
+  margin-bottom: 1.25rem;
+  padding-bottom: 0.85rem;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+[data-theme="dark"] .profile-card-header {
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
+.profile-card-title {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--charcoal-900);
+  margin: 0 0 0.25rem 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.profile-card-sub {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+/* Theme Toggle Selector Cards */
+.theme-picker-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+.theme-picker-card {
+  border: 1.5px solid rgba(0, 0, 0, 0.12);
+  border-radius: var(--radius-md);
+  padding: 0.85rem 1rem;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  background: #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+[data-theme="dark"] .theme-picker-card {
+  background: #11141A;
+  border-color: rgba(255, 255, 255, 0.12);
+}
+.theme-picker-card:hover {
+  border-color: var(--gold-600);
+  background: rgba(198, 138, 40, 0.04);
+}
+.theme-picker-card.active {
+  border-color: var(--gold-600) !important;
+  background: rgba(198, 138, 40, 0.08) !important;
+  box-shadow: 0 0 0 2px var(--gold-600);
+}
+.theme-picker-card-left {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+.theme-picker-title {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--charcoal-900);
+}
+.theme-picker-desc {
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+}
+
+/* Switch Row Toggle */
+.setting-switch-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.65rem 0;
+}
+.setting-switch-info {
+  flex: 1;
+}
+.setting-switch-title {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--charcoal-900);
+  margin-bottom: 0.15rem;
+}
+.setting-switch-desc {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  line-height: 1.35;
+}
+
+/* Modern Toggle Switch */
+.switch-control {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+  flex-shrink: 0;
+}
+.switch-control input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.switch-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #D1D5DB;
+  transition: .3s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 999px;
+}
+.switch-slider:before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: .3s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 50%;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+.switch-control input:checked + .switch-slider {
+  background-color: var(--gold-600);
+}
+.switch-control input:checked + .switch-slider:before {
+  transform: translateX(20px);
+}
+
+/* Avatar Presets Bar */
+.avatar-presets-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 0.5rem;
+}
+.avatar-preset-thumb {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  object-fit: cover;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: all var(--transition-fast);
+}
+.avatar-preset-thumb:hover {
+  transform: scale(1.1);
+  border-color: var(--gold-500);
+}
+.avatar-preset-thumb.selected {
+  border-color: var(--gold-600);
+  box-shadow: 0 0 0 2px var(--gold-600);
+}
+
+
 
 

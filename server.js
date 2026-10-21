@@ -494,6 +494,41 @@ app.put('/api/auth/profile', authenticateToken, (req, res) => {
   }
 });
 
+// Change Password
+app.put('/api/auth/change-password', authenticateToken, (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    const userId = req.user.id;
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ error: 'Current password and new password are required.' });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ error: 'New password must be at least 6 characters long.' });
+    }
+
+    const user = db.prepare('SELECT * FROM users WHERE id = ?').get(userId);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found.' });
+    }
+
+    const isValid = bcrypt.compareSync(currentPassword, user.password_hash);
+    if (!isValid) {
+      return res.status(400).json({ error: 'Incorrect current password. Please verify and try again.' });
+    }
+
+    const salt = bcrypt.genSaltSync(10);
+    const newHash = bcrypt.hashSync(newPassword, salt);
+    db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(newHash, userId);
+
+    return res.json({ message: 'Password updated successfully.' });
+  } catch (error) {
+    console.error('Change password error:', error);
+    return res.status(500).json({ error: 'Failed to update password.' });
+  }
+});
+
 // ==========================================
 // PUBLIC PLATFORM & TUTOR DIRECTORY ROUTES
 // ==========================================

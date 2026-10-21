@@ -87,7 +87,6 @@ const Student = {
       lessons: 'student-lessons-section',
       history: 'student-history-section',
       tutors: 'student-my-tutors-section',
-      subscription: 'student-sub-summary-section',
       profile: 'student-profile-section'
     };
 
@@ -152,7 +151,6 @@ const Student = {
       this.renderRequestsList();
       this.renderHistory();
       this.renderConnectedTutors();
-      this.renderSubscriptionSummary();
       this.loadProfileForm();
     } catch (err) {
       console.error('Failed to load student dashboard:', err);
@@ -470,56 +468,6 @@ const Student = {
           </div>
         </div>
       `).join('');
-    }
-  },
-
-  renderSubscriptionSummary() {
-    const container = document.getElementById('student-sub-summary-container');
-    if (!container) return;
-
-    if (this.subscription) {
-      const expDate = new Date(this.subscription.expires_at).toLocaleDateString();
-      const hoursRemaining = (this.subscription.lessons_remaining !== undefined ? this.subscription.lessons_remaining : this.subscription.hours_remaining) || 0;
-      const totalHours = (this.subscription.lessons_total !== undefined ? this.subscription.lessons_total : this.subscription.total_hours) || 1;
-      const pct = Math.min(100, Math.round((hoursRemaining / totalHours) * 100));
-
-      container.innerHTML = `
-        <div class="sub-summary-widget">
-          <div>
-            <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.35rem;">
-              <span class="badge-gold" style="font-size: 0.78rem;">ACTIVE SUBSCRIPTION</span>
-              <h4 style="font-size: 1.25rem; color: var(--charcoal-900); font-weight: 800; margin: 0;">${this.subscription.plan_name}</h4>
-            </div>
-            <p style="font-size: 0.88rem; color: var(--text-secondary); margin: 0;">
-              You have <strong>${hoursRemaining} hours remaining</strong> of ${totalHours} hours total • Valid until <strong>${expDate}</strong>
-            </p>
-            <div style="width: 280px; max-width: 100%; height: 8px; background: rgba(0,0,0,0.08); border-radius: 999px; overflow: hidden; margin-top: 0.6rem;">
-              <div style="width: ${pct}%; height: 100%; background: var(--gradient-gold); border-radius: 999px;"></div>
-            </div>
-          </div>
-
-          <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
-            <a href="#subscriptions" class="btn btn-primary btn-sm">Upgrade or Renew →</a>
-            <a href="#student-subscriptions" class="btn btn-outline-gold btn-sm">Analytics &amp; Invoices</a>
-          </div>
-        </div>
-      `;
-    } else {
-      container.innerHTML = `
-        <div class="sub-summary-widget">
-          <div>
-            <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.35rem;">
-              <span style="font-size: 0.78rem; background: rgba(0,0,0,0.08); padding: 0.2rem 0.5rem; border-radius: 999px; font-weight: 700;">FREE PLAN</span>
-              <h4 style="font-size: 1.15rem; color: var(--charcoal-900); font-weight: 800; margin: 0;">Pay-Per-Session Account</h4>
-            </div>
-            <p style="font-size: 0.88rem; color: var(--text-secondary); margin: 0;">
-              Unlock significant discounts, priority tutor booking, and verified exam prep by subscribing to an Aviora monthly tier.
-            </p>
-          </div>
-
-          <a href="#subscriptions" class="btn btn-primary btn-sm">Explore Monthly Plans →</a>
-        </div>
-      `;
     }
   },
 

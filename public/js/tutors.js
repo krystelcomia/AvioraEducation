@@ -79,16 +79,67 @@ const Tutors = {
       });
     }
 
-    // Booking form duration change (cost calculation)
-    const durationSelect = document.getElementById('booking-duration');
-    if (durationSelect) {
-      durationSelect.addEventListener('change', () => this.updateBookingCost());
+    // Calendar Navigation
+    const prevMonthBtn = document.getElementById('cal-prev-month');
+    if (prevMonthBtn) {
+      prevMonthBtn.addEventListener('click', () => {
+        this.calMonth--;
+        if (this.calMonth < 0) {
+          this.calMonth = 11;
+          this.calYear--;
+        }
+        this.renderCalendar();
+      });
     }
 
-    // Booking Form Submit
-    const bookingForm = document.getElementById('booking-form');
-    if (bookingForm) {
-      bookingForm.addEventListener('submit', (e) => this.handleBookingSubmit(e));
+    const nextMonthBtn = document.getElementById('cal-next-month');
+    if (nextMonthBtn) {
+      nextMonthBtn.addEventListener('click', () => {
+        this.calMonth++;
+        if (this.calMonth > 11) {
+          this.calMonth = 0;
+          this.calYear++;
+        }
+        this.renderCalendar();
+      });
+    }
+
+    // Step 1 -> Step 2
+    const gotoPayBtn = document.getElementById('btn-goto-payment');
+    if (gotoPayBtn) {
+      gotoPayBtn.addEventListener('click', () => this.goToPaymentStep());
+    }
+
+    // Step 2 -> Step 1
+    const backBtn = document.getElementById('btn-back-to-calendar');
+    if (backBtn) {
+      backBtn.addEventListener('click', () => this.showStep(1));
+    }
+
+    // Payment Method Selections
+    const paySubCard = document.getElementById('pay-method-sub-card');
+    if (paySubCard) {
+      paySubCard.addEventListener('click', () => {
+        if (!this.studentSubscription || this.studentSubscription.lessons_remaining <= 0) return;
+        const opt = document.getElementById('pay-opt-subscription');
+        if (opt) opt.checked = true;
+        this.selectPaymentMethod('subscription');
+      });
+    }
+
+    const payCardCard = document.getElementById('pay-method-card-card');
+    if (payCardCard) {
+      payCardCard.addEventListener('click', () => {
+        const opt = document.getElementById('pay-opt-card');
+        if (opt) opt.checked = true;
+        this.selectPaymentMethod('card');
+      });
+    }
+
+    // Confirm Payment & Booking
+    const confirmPayBtn = document.getElementById('btn-confirm-payment');
+    if (confirmPayBtn) {
+      confirmPayBtn.addEventListener('click', () => this.handlePaymentSubmit());
     }
   },
 
@@ -98,6 +149,7 @@ const Tutors = {
       this.allTutors = data.tutors || [];
       this.renderFeaturedTutors();
       this.renderDirectoryTutors(this.allTutors);
+      await this.renderTutorsSubBanner();
     } catch (err) {
       console.error('Failed to load tutors:', err);
     }
@@ -914,14 +966,21 @@ const Tutors = {
     }
   },
 
-  openBookingModal(tutorId) {
+  studentSubscription: null,
+  calYear: new Date().getFullYear(),
+  calMonth: new Date().getMonth(),
+  selectedDate: null,
+  selectedTime: null,
+  paymentMethod: 'subscription',
+
+  async openBookingModal(tutorId) {
     const user = Auth.currentUser;
 
     if (!user) {
       if (tutorId) {
         sessionStorage.setItem('pending_booking_tutor_id', tutorId);
       }
-      showToast('Please create an account to book your tutoring session.', 'info');
+      showToast('Please create an account or sign in to book your tutoring session.', 'info');
       if (typeof Auth !== 'undefined' && Auth.closeModal) {
         Auth.closeModal();
       }
@@ -936,49 +995,127 @@ const Tutors = {
       return;
     }
 
-    const tutor = this.allTutors.find(t => t.id == tutorId);
+    const tutor = this.allTutors.find(t => t.id == tutorId) || this.allTutors[0];
     if (!tutor) {
       showToast('Tutor not found.', 'error');
       return;
     }
 
     this.selectedTutor = tutor;
+    this.selectedDate = null;
+    this.selectedTime = null;
+    this.paymentMethod = 'subscription';
 
     const modal = document.getElementById('booking-modal');
     const tutorHeader = document.getElementById('booking-tutor-header');
     const subjectSelect = document.getElementById('booking-subject-select');
-    const dateInput = document.getElementById('booking-date');
+    const subCard = document.getElementById('booking-subscription-status-card');
 
     if (!modal) return;
 
+    // 1. Fetch Student Subscription Status to display in modal
+    try {
+      const subRes = await API.getStudentSubscription();
+      this.studentSubscription = subRes.activeSubscription || null;
+    } catch (err) {
+      this.studentSubscription = null;
+    }
+
+    // 2. Render Subscription Status Card inside booking modal
+    if (subCard) {
+      if (this.studentSubscription && this.studentSubscription.status === 'active') {
+        const remaining = this.studentSubscription.lessons_remaining;
+        const total = this.studentSubscription.lessons_total;
+        const hasCredits = remaining > 0;
+        subCard.className = 'booking-sub-card';
+        subCard.innerHTML = `
+          <div class="booking-sub-meta">
+            <div class="booking-sub-icon">💎</div>
+            <div>
+              <div class="booking-sub-title">Active Subscription: ${this.studentSubscription.plan_name}</div>
+              <div class="booking-sub-desc">
+                <strong>${remaining}</strong> of ${total} lessons remaining • Valid until ${this.studentSubscription.formatted_expires_at || 'cycle end'}
+              </div>
+            </div>
+          </div>
+          <div class="booking-sub-badge ${hasCredits ? 'active' : 'empty'}">
+            <span>${hasCredits ? '● Active' : '○ 0 Credits'}</span>
+            <span>(${remaining} remaining)</span>
+          </div>
+        `;
+      } else {
+        subCard.className = 'booking-sub-card inactive';
+        subCard.innerHTML = `
+          <div class="booking-sub-meta">
+            <div class="booking-sub-icon">💳</div>
+            <div>
+              <div class="booking-sub-title">No Active Subscription Plan</div>
+              <div class="booking-sub-desc">
+                0 lesson credits available. Sessions are billed at $${tutor.hourly_rate.toFixed(2)}/50 min standard rate.
+              </div>
+            </div>
+          </div>
+          <div class="booking-sub-badge empty">
+            <span>○ Standard Billing</span>
+          </div>
+        `;
+      }
+    }
+
+    // 3. Render Tutor Header inside booking modal
     if (tutorHeader) {
       tutorHeader.innerHTML = `
-        <div style="display: flex; align-items: center; gap: 1rem;">
-          <img src="${tutor.avatar_url}" style="width: 50px; height: 50px; border-radius: var(--radius-md); object-fit: cover; border: 1.5px solid var(--gold-500);" />
-          <div>
-            <h4 style="color: var(--white); font-size: 1.1rem;">${tutor.name}</h4>
-            <p style="color: var(--gold-300); font-size: 0.85rem;">$${tutor.hourly_rate} / hour • Max 50 min class</p>
+        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+          <div style="display: flex; align-items: center; gap: 1rem;">
+            <img src="${tutor.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80'}" style="width: 52px; height: 52px; border-radius: var(--radius-md); object-fit: cover; border: 2px solid var(--gold-500);" />
+            <div>
+              <h4 style="color: var(--charcoal-950); font-size: 1.15rem; margin: 0 0 0.2rem 0;">${tutor.name}</h4>
+              <p style="color: var(--gold-800); font-size: 0.85rem; font-weight: 600; margin: 0;">${tutor.headline || tutor.institution || 'Verified Educator'} • $${tutor.hourly_rate}/hour</p>
+            </div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <label style="font-size: 0.8rem; font-weight: 600; color: var(--charcoal-600);">Switch Tutor:</label>
+            <select id="booking-tutor-switcher" class="form-control" style="width: auto; padding: 0.35rem 0.65rem; font-size: 0.82rem;">
+              ${this.allTutors.map(t => `<option value="${t.id}" ${t.id === tutor.id ? 'selected' : ''}>${t.name} ($${t.hourly_rate}/hr)</option>`).join('')}
+            </select>
           </div>
         </div>
       `;
+
+      const switcher = document.getElementById('booking-tutor-switcher');
+      if (switcher) {
+        switcher.addEventListener('change', (e) => {
+          this.openBookingModal(e.target.value);
+        });
+      }
     }
 
-    // Populate Subjects
+    // 4. Populate Subjects for Selected Tutor
     if (subjectSelect) {
       subjectSelect.innerHTML = (tutor.subjects || []).map(s => `
         <option value="${s}">${s}</option>
       `).join('');
     }
 
-    // Set default date to tomorrow
-    if (dateInput) {
-      const tomorrow = new Date();
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      dateInput.min = tomorrow.toISOString().split('T')[0];
-      dateInput.value = tomorrow.toISOString().split('T')[0];
-    }
+    // 5. Reset to Step 1 & Initialize Calendar
+    this.showStep(1);
 
-    this.updateBookingCost();
+    const now = new Date();
+    this.calYear = now.getFullYear();
+    this.calMonth = now.getMonth();
+    this.renderCalendar();
+
+    // 6. Reset Slots Container & Button
+    const slotsContainer = document.getElementById('booking-slots-container');
+    if (slotsContainer) {
+      slotsContainer.innerHTML = '<div style="color: var(--charcoal-500); font-size: 0.85rem; grid-column: 1 / -1; padding: 0.5rem 0;">Please select an available date on the calendar above.</div>';
+    }
+    const dateLabel = document.getElementById('booking-selected-date-label');
+    if (dateLabel) dateLabel.textContent = 'Please pick an available date above';
+
+    const gotoPayBtn = document.getElementById('btn-goto-payment');
+    if (gotoPayBtn) gotoPayBtn.disabled = true;
+
     modal.classList.add('active');
     document.body.style.overflow = 'hidden';
   },
@@ -991,57 +1128,380 @@ const Tutors = {
     }
   },
 
-  updateBookingCost() {
-    if (!this.selectedTutor) return;
-    const duration = parseFloat(document.getElementById('booking-duration')?.value || '1.0');
-    const total = duration * this.selectedTutor.hourly_rate;
-    const costDisplay = document.getElementById('booking-total-cost');
-    if (costDisplay) {
-      costDisplay.textContent = `$${total.toFixed(2)}`;
+  showStep(step) {
+    const step1 = document.getElementById('booking-step-schedule');
+    const step2 = document.getElementById('booking-step-payment');
+    const title = document.getElementById('booking-modal-title');
+    const subtitle = document.getElementById('booking-step-subtitle');
+
+    if (step === 1) {
+      if (step1) step1.style.display = 'block';
+      if (step2) step2.style.display = 'none';
+      if (title) title.textContent = 'Book Tutoring Session';
+      if (subtitle) subtitle.textContent = 'Step 1 of 2: Select Date & Available 50-Min Slot';
+    } else {
+      if (step1) step1.style.display = 'none';
+      if (step2) step2.style.display = 'block';
+      if (title) title.textContent = 'Complete Payment & Confirmation';
+      if (subtitle) subtitle.textContent = 'Step 2 of 2: Review Booking & Select Payment Method';
     }
   },
 
-  async handleBookingSubmit(e) {
-    e.preventDefault();
-    if (!this.selectedTutor) return;
+  renderCalendar() {
+    const grid = document.getElementById('cal-days-grid');
+    const label = document.getElementById('cal-month-label');
+    if (!grid) return;
 
-    const subject = document.getElementById('booking-subject-select').value;
-    const requested_date = document.getElementById('booking-date').value;
-    const requested_time = document.getElementById('booking-time').value;
-    const duration_hours = parseFloat(document.getElementById('booking-duration').value);
-    const notes = document.getElementById('booking-notes').value.trim();
-    const submitBtn = e.target.querySelector('button[type="submit"]');
+    const monthDate = new Date(this.calYear, this.calMonth, 1);
+    if (label) {
+      label.textContent = monthDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    }
 
-    if (!requested_date || !requested_time) {
-      showToast('Please select a preferred date and time slot.', 'error');
+    grid.innerHTML = '';
+
+    const firstDayIndex = monthDate.getDay();
+    const daysInMonth = new Date(this.calYear, this.calMonth + 1, 0).getDate();
+
+    // Tutor availability schedule lookup
+    const sched = this.selectedTutor?.availability_schedule || {
+      Monday: ['09:00 - 12:00', '14:00 - 17:00'],
+      Tuesday: ['10:00 - 13:00', '15:00 - 18:00'],
+      Wednesday: ['09:00 - 12:00', '14:00 - 17:00'],
+      Thursday: ['13:00 - 18:00'],
+      Friday: ['09:00 - 15:00']
+    };
+
+    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+    // Today at midnight
+    const now = new Date();
+    const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+
+    // Blank cells before month starts
+    for (let i = 0; i < firstDayIndex; i++) {
+      const blank = document.createElement('div');
+      blank.className = 'cal-day-cell other-month';
+      grid.appendChild(blank);
+    }
+
+    // Days in current month
+    for (let day = 1; day <= daysInMonth; day++) {
+      const cellDate = new Date(this.calYear, this.calMonth, day);
+      const cellTime = cellDate.getTime();
+      const dayOfWeekName = dayNames[cellDate.getDay()];
+      const isPast = cellTime < todayMidnight;
+      const isToday = cellTime === todayMidnight;
+
+      // Check if tutor works this day of week
+      const hasTutorSchedule = !!(sched[dayOfWeekName] && sched[dayOfWeekName].length > 0);
+      const isAvailable = !isPast && hasTutorSchedule;
+
+      const dateStr = `${this.calYear}-${String(this.calMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      const isSelected = this.selectedDate === dateStr;
+
+      const cell = document.createElement('button');
+      cell.type = 'button';
+      cell.className = 'cal-day-cell';
+      cell.textContent = day;
+
+      if (isToday) cell.classList.add('is-today');
+
+      if (!isAvailable) {
+        cell.classList.add('disabled');
+        cell.disabled = true;
+      } else {
+        cell.classList.add('available');
+        if (isSelected) cell.classList.add('selected');
+
+        cell.addEventListener('click', () => {
+          this.selectCalendarDate(dateStr);
+        });
+      }
+
+      grid.appendChild(cell);
+    }
+  },
+
+  selectCalendarDate(dateStr) {
+    this.selectedDate = dateStr;
+    this.selectedTime = null;
+
+    // Highlight selected cell
+    this.renderCalendar();
+
+    // Format date header
+    const parsedDate = new Date(dateStr + 'T00:00:00');
+    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const dayName = dayNames[parsedDate.getDay()];
+    const dateFormatted = parsedDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+
+    const label = document.getElementById('booking-selected-date-label');
+    if (label) label.textContent = dateFormatted;
+
+    // Generate 50-minute time slots
+    const sched = this.selectedTutor?.availability_schedule || {};
+    const blocks = sched[dayName] || ['09:00 - 12:00', '14:00 - 17:00'];
+    const slots = [];
+
+    blocks.forEach(b => {
+      const parts = b.split('-').map(s => s.trim());
+      if (parts.length === 2) {
+        const startH = parseInt(parts[0].split(':')[0], 10);
+        const endH = parseInt(parts[1].split(':')[0], 10);
+        for (let h = startH; h < endH; h++) {
+          const slotStart = `${String(h).padStart(2, '0')}:00`;
+          const slotEnd = `${String(h).padStart(2, '0')}:50`;
+          slots.push({
+            start: slotStart,
+            end: slotEnd,
+            key: `${slotStart} - ${slotEnd}`,
+            hour: h
+          });
+        }
+      }
+    });
+
+    const slotsContainer = document.getElementById('booking-slots-container');
+    const gotoPayBtn = document.getElementById('btn-goto-payment');
+    if (gotoPayBtn) gotoPayBtn.disabled = true;
+
+    if (!slotsContainer) return;
+
+    if (slots.length === 0) {
+      slotsContainer.innerHTML = '<div style="color: var(--charcoal-500); font-size: 0.85rem; grid-column: 1 / -1;">No slots scheduled on this day.</div>';
       return;
     }
 
+    slotsContainer.innerHTML = '';
+    const now = Date.now();
+
+    slots.forEach(slot => {
+      // Check 3-hour notice rule
+      const slotDateTime = new Date(`${dateStr}T${slot.start}:00`).getTime();
+      const isUnder3Hours = (slotDateTime - now) < (3 * 60 * 60 * 1000);
+
+      // 12-hour format label
+      const h = slot.hour;
+      const ampm = h >= 12 ? 'PM' : 'AM';
+      const h12 = h % 12 === 0 ? 12 : h % 12;
+      const displayLabel = `${String(h12).padStart(2, '0')}:00 - ${String(h12).padStart(2, '0')}:50 ${ampm}`;
+
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'slot-pill-btn';
+      if (isUnder3Hours) {
+        btn.disabled = true;
+        btn.innerHTML = `<span>${displayLabel}</span><span class="slot-sub" style="color: var(--danger); font-size: 0.65rem;">&lt; 3h notice</span>`;
+      } else {
+        btn.innerHTML = `<span>${displayLabel}</span><span class="slot-sub">50 min class</span>`;
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.slot-pill-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          this.selectedTime = slot.key;
+          if (gotoPayBtn) gotoPayBtn.disabled = false;
+        });
+      }
+      slotsContainer.appendChild(btn);
+    });
+  },
+
+  goToPaymentStep() {
+    if (!this.selectedDate || !this.selectedTime) {
+      showToast('Please choose an available date and 50-minute time slot.', 'warning');
+      return;
+    }
+
+    const subject = document.getElementById('booking-subject-select')?.value || 'Tutoring Session';
+    const parsedDate = new Date(this.selectedDate + 'T00:00:00');
+    const dateFormatted = parsedDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+
+    // Populate order summary
+    document.getElementById('pay-summary-tutor').textContent = `${this.selectedTutor.name} (${this.selectedTutor.highest_degree || 'Verified Educator'})`;
+    document.getElementById('pay-summary-subject').textContent = subject;
+    document.getElementById('pay-summary-datetime').textContent = `${dateFormatted} • ${this.selectedTime}`;
+    document.getElementById('pay-summary-amount').textContent = `$${this.selectedTutor.hourly_rate.toFixed(2)}`;
+    document.getElementById('pay-card-amount-label').textContent = `$${this.selectedTutor.hourly_rate.toFixed(2)}`;
+
+    // Configure Payment Choices based on Subscription Status
+    const subOption = document.getElementById('pay-opt-subscription');
+    const cardOption = document.getElementById('pay-opt-card');
+    const subCardBox = document.getElementById('pay-method-sub-card');
+    const cardCardBox = document.getElementById('pay-method-card-card');
+    const subDesc = document.getElementById('pay-sub-credit-desc');
+    const cardInputs = document.getElementById('payment-card-inputs');
+    const payText = document.getElementById('btn-pay-text');
+
+    const hasActiveCredits = this.studentSubscription &&
+                             this.studentSubscription.status === 'active' &&
+                             this.studentSubscription.lessons_remaining > 0;
+
+    if (hasActiveCredits) {
+      const remaining = this.studentSubscription.lessons_remaining;
+      if (subOption) {
+        subOption.disabled = false;
+        subOption.checked = true;
+      }
+      if (cardOption) cardOption.checked = false;
+      this.paymentMethod = 'subscription';
+
+      if (subCardBox) {
+        subCardBox.classList.add('selected');
+        subCardBox.classList.remove('disabled');
+      }
+      if (cardCardBox) cardCardBox.classList.remove('selected');
+
+      if (subDesc) {
+        subDesc.textContent = `Deduct 1 lesson from your active plan (${remaining} lessons remaining) — $0.00 due today`;
+      }
+      if (cardInputs) cardInputs.style.display = 'none';
+      if (payText) payText.textContent = 'Confirm Booking (Use 1 Lesson Credit)';
+    } else {
+      if (subOption) {
+        subOption.disabled = true;
+        subOption.checked = false;
+      }
+      if (cardOption) cardOption.checked = true;
+      this.paymentMethod = 'card';
+
+      if (subCardBox) {
+        subCardBox.classList.add('disabled');
+        subCardBox.classList.remove('selected');
+      }
+      if (cardCardBox) cardCardBox.classList.add('selected');
+
+      if (subDesc) subDesc.textContent = 'No subscription lesson credits remaining on your account.';
+      if (cardInputs) cardInputs.style.display = 'block';
+      if (payText) payText.textContent = `Pay $${this.selectedTutor.hourly_rate.toFixed(2)} & Confirm Lesson`;
+    }
+
+    this.showStep(2);
+  },
+
+  selectPaymentMethod(method) {
+    this.paymentMethod = method;
+    const subCardBox = document.getElementById('pay-method-sub-card');
+    const cardCardBox = document.getElementById('pay-method-card-card');
+    const cardInputs = document.getElementById('payment-card-inputs');
+    const payText = document.getElementById('btn-pay-text');
+
+    if (method === 'subscription') {
+      if (subCardBox) subCardBox.classList.add('selected');
+      if (cardCardBox) cardCardBox.classList.remove('selected');
+      if (cardInputs) cardInputs.style.display = 'none';
+      if (payText) payText.textContent = 'Confirm Booking (Use 1 Lesson Credit)';
+    } else {
+      if (subCardBox) subCardBox.classList.remove('selected');
+      if (cardCardBox) cardCardBox.classList.add('selected');
+      if (cardInputs) cardInputs.style.display = 'block';
+      if (payText) payText.textContent = `Pay $${this.selectedTutor.hourly_rate.toFixed(2)} & Confirm Lesson`;
+    }
+  },
+
+  async handlePaymentSubmit() {
+    if (!this.selectedTutor || !this.selectedDate || !this.selectedTime) {
+      showToast('Missing booking details. Please try again.', 'error');
+      return;
+    }
+
+    const subject = document.getElementById('booking-subject-select')?.value;
+    const notes = document.getElementById('booking-notes')?.value.trim() || '';
+    const submitBtn = document.getElementById('btn-confirm-payment');
+
+    if (this.paymentMethod === 'card') {
+      const cardNum = document.getElementById('pay-card-number')?.value.trim();
+      const cardName = document.getElementById('pay-card-name')?.value.trim();
+      if (!cardNum || !cardName) {
+        showToast('Please enter your cardholder name and card number.', 'warning');
+        return;
+      }
+    }
+
     try {
-      submitBtn.disabled = true;
-      submitBtn.textContent = 'Submitting Request...';
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span>Processing Payment &amp; Reservation...</span>';
+      }
 
       const payload = {
         tutor_user_id: this.selectedTutor.user_id,
         subject,
-        requested_date,
-        requested_time,
-        duration_hours,
-        notes
+        requested_date: this.selectedDate,
+        requested_time: this.selectedTime,
+        duration_hours: 1.0,
+        notes,
+        payment_method: this.paymentMethod
       };
 
       const res = await API.createRequest(payload);
       this.closeBookingModal();
       showToast(res.message, 'success');
 
-      // Prompt navigation to Student Dashboard
+      // Refresh student dashboard if on dashboard
+      if (typeof Student !== 'undefined' && Student.loadDashboard) {
+        await Student.loadDashboard();
+      }
+
+      // Navigate to student portal to view confirmed booking
       window.location.hash = '#student-portal';
       Router.handleRoute();
     } catch (err) {
       showToast(err.message, 'error');
     } finally {
-      submitBtn.disabled = false;
-      submitBtn.textContent = 'Confirm Tutoring Request';
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<span id="btn-pay-text">Confirm &amp; Complete Payment</span>';
+      }
+    }
+  },
+
+  async renderTutorsSubBanner() {
+    const banner = document.getElementById('tutors-student-sub-banner');
+    if (!banner) return;
+
+    const user = Auth.currentUser;
+    if (!user || user.role !== 'student') {
+      banner.style.display = 'none';
+      return;
+    }
+
+    try {
+      const res = await API.getStudentSubscription();
+      const sub = res.activeSubscription;
+      if (sub && sub.status === 'active') {
+        banner.className = 'booking-sub-card';
+        banner.style.display = 'flex';
+        banner.innerHTML = `
+          <div class="booking-sub-meta">
+            <div class="booking-sub-icon">💎</div>
+            <div>
+              <div class="booking-sub-title">Your Subscription Status: Active • ${sub.plan_name}</div>
+              <div class="booking-sub-desc">
+                You have <strong>${sub.lessons_remaining}</strong> of ${sub.lessons_total} lessons remaining (Valid until ${sub.formatted_expires_at || 'cycle end'}). Select any educator below to schedule!
+              </div>
+            </div>
+          </div>
+          <div class="booking-sub-badge active">
+            <span>● ${sub.lessons_remaining} Lesson Credits</span>
+          </div>
+        `;
+      } else {
+        banner.className = 'booking-sub-card inactive';
+        banner.style.display = 'flex';
+        banner.innerHTML = `
+          <div class="booking-sub-meta">
+            <div class="booking-sub-icon">📚</div>
+            <div>
+              <div class="booking-sub-title">Choose Your Tutor</div>
+              <div class="booking-sub-desc">
+                Select an educator below to book a 50-minute session, or check out our <a href="#subscriptions" style="color: var(--gold-800); font-weight: 700; text-decoration: underline;">Subscription Packages</a> for bundled lesson savings.
+              </div>
+            </div>
+          </div>
+          <a href="#subscriptions" class="btn btn-outline-gold btn-sm">Explore Plans</a>
+        `;
+      }
+    } catch (e) {
+      banner.style.display = 'none';
     }
   }
 };

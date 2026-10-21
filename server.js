@@ -1217,16 +1217,27 @@ app.post('/api/student/subscription/purchase', authenticateToken, requireRole('s
 // Student sends a tutoring request
 app.post('/api/student/requests', authenticateToken, requireRole('student'), (req, res) => {
   try {
-    const { tutor_user_id, subject, grade_level, requested_date, requested_time, duration_hours, notes } = req.body;
+    const { tutor_user_id, subject, grade_level, requested_date, requested_time, duration_hours, notes, payment_method } = req.body;
     const studentId = req.user.id;
 
     if (!tutor_user_id || !subject || !requested_date || !requested_time) {
       return res.status(400).json({ error: 'Please provide tutor, subject, date, and preferred time slot.' });
     }
 
+    const tutorUser = db.prepare('SELECT name FROM users WHERE id = ?').get(tutor_user_id);
     const tutorProfile = db.prepare('SELECT hourly_rate, is_active FROM tutor_profiles WHERE user_id = ?').get(tutor_user_id);
     if (!tutorProfile || !tutorProfile.is_active) {
       return res.status(400).json({ error: 'Selected tutor is not currently accepting requests.' });
+    }
+
+    // Minimum 3 hours notice requirement
+    const timeStart = (requested_time.split(' - ')[0] || requested_time).trim();
+    const requestedDateTime = new Date(`${requested_date}T${timeStart.length === 5 ? timeStart : timeStart.padStart(5, '0')}:00`);
+    if (!isNaN(requestedDateTime.getTime())) {
+      const diffHours = (requestedDateTime.getTime() - Date.now()) / (1000 * 60 * 60);
+      if (diffHours < 3) {
+        return res.status(400).json({ error: 'Bookings require at least 3 hours advance notice before class start time.' });
+      }
     }
 
     const requestedDuration = parseFloat(duration_hours) || 1.0;
@@ -1234,13 +1245,39 @@ app.post('/api/student/requests', authenticateToken, requireRole('student'), (re
       return res.status(400).json({ error: 'All subjects are a maximum of 50 minutes of class.' });
     }
     const duration = Math.min(requestedDuration, 1.0);
-    const totalAmount = duration * tutorProfile.hourly_rate;
+    const calculatedAmount = duration * tutorProfile.hourly_rate;
+
+    let finalPaymentMethod = payment_method === 'subscription' ? 'subscription' : 'card';
+    let remainingCreditsAfter = null;
+
+    if (finalPaymentMethod === 'subscription') {
+      const activeSub = db.prepare(`
+        SELECT * FROM student_subscriptions
+        WHERE user_id = ? AND status = 'active' AND lessons_remaining > 0
+        ORDER BY id DESC LIMIT 1
+      `).get(studentId);
+
+      if (!activeSub) {
+        return res.status(400).json({ error: 'No active subscription lessons remaining. Please choose Card payment or renew your subscription package.' });
+      }
+
+      const newRemaining = activeSub.lessons_remaining - 1;
+      const newStatus = newRemaining === 0 ? 'exhausted' : 'active';
+
+      db.prepare(`
+        UPDATE student_subscriptions
+        SET lessons_remaining = ?, status = ?
+        WHERE id = ?
+      `).run(newRemaining, newStatus, activeSub.id);
+
+      remainingCreditsAfter = newRemaining;
+    }
 
     const insert = db.prepare(`
       INSERT INTO tutoring_requests (
         student_id, tutor_id, subject, grade_level, requested_date,
-        requested_time, duration_hours, hourly_rate, total_amount, status, notes
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?)
+        requested_time, duration_hours, hourly_rate, total_amount, status, notes, payment_method
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?)
     `);
 
     const result = insert.run(
@@ -1252,8 +1289,9 @@ app.post('/api/student/requests', authenticateToken, requireRole('student'), (re
       requested_time,
       duration,
       tutorProfile.hourly_rate,
-      totalAmount,
-      notes || ''
+      finalPaymentMethod === 'subscription' ? 0.00 : calculatedAmount,
+      notes || '',
+      finalPaymentMethod
     );
 
     // Notify tutor
@@ -1263,12 +1301,28 @@ app.post('/api/student/requests', authenticateToken, requireRole('student'), (re
     `).run(
       tutor_user_id,
       'New Tutoring Request Received',
-      `${req.user.name} requested a ${subject} tutoring session on ${requested_date}.`
+      `${req.user.name} booked a ${subject} tutoring session on ${requested_date} (${requested_time}). Payment: ${finalPaymentMethod === 'subscription' ? 'Subscription Credit Applied' : 'Paid via Card'}.`
+    );
+
+    // Notify student confirmation
+    const paymentMsg = finalPaymentMethod === 'subscription'
+      ? `1 subscription lesson credit was applied ($0.00 charged). You have ${remainingCreditsAfter} lesson${remainingCreditsAfter === 1 ? '' : 's'} remaining.`
+      : `Payment of $${calculatedAmount.toFixed(2)} was processed successfully via Card.`;
+
+    db.prepare(`
+      INSERT INTO notifications (user_id, title, message, type, link)
+      VALUES (?, ?, ?, 'booking', '#student-portal')
+    `).run(
+      studentId,
+      'Tutoring Session Confirmed',
+      `Your 50-minute ${subject} session with ${tutorUser?.name || 'your tutor'} on ${requested_date} at ${requested_time} has been submitted! ${paymentMsg}`
     );
 
     res.status(201).json({
-      message: 'Tutoring request sent successfully! The tutor will review and respond shortly.',
-      requestId: result.lastInsertRowid
+      message: `Tutoring lesson scheduled successfully! ${paymentMsg}`,
+      requestId: result.lastInsertRowid,
+      paymentMethod: finalPaymentMethod,
+      remainingLessons: remainingCreditsAfter
     });
   } catch (error) {
     console.error('Create tutoring request error:', error);

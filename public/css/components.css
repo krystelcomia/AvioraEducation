@@ -1341,3 +1341,302 @@
   }
 }
 
+/* =========================================
+   INTERACTIVE TUTOR BOOKING CALENDAR & PAYMENT
+   ========================================= */
+.booking-sub-card {
+  background: linear-gradient(135deg, rgba(198, 138, 40, 0.12), rgba(245, 237, 222, 0.6));
+  border: 1.5px solid rgba(198, 138, 40, 0.35);
+  border-radius: var(--radius-md);
+  padding: 1rem 1.25rem;
+  margin-bottom: 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.booking-sub-card.inactive {
+  background: rgba(0, 0, 0, 0.03);
+  border-color: rgba(0, 0, 0, 0.1);
+}
+.booking-sub-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+.booking-sub-icon {
+  font-size: 1.75rem;
+  line-height: 1;
+}
+.booking-sub-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--charcoal-900);
+  margin-bottom: 0.2rem;
+}
+.booking-sub-desc {
+  font-size: 0.82rem;
+  color: var(--charcoal-600);
+}
+.booking-sub-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.booking-sub-badge.active {
+  background: rgba(16, 185, 129, 0.12);
+  color: #065F46;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+.booking-sub-badge.empty {
+  background: rgba(239, 68, 68, 0.1);
+  color: #991B1B;
+  border: 1px solid rgba(239, 68, 68, 0.25);
+}
+
+/* Calendar Card */
+.booking-calendar-box {
+  background: #FAF8F5;
+  border: 1px solid rgba(198, 138, 40, 0.25);
+  border-radius: var(--radius-md);
+  padding: 1.25rem;
+  margin-bottom: 1.25rem;
+}
+.calendar-nav-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+.calendar-month-label {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--charcoal-950);
+  font-family: var(--font-heading);
+}
+.calendar-nav-btn {
+  background: #FFFFFF;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: var(--radius-sm);
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--charcoal-800);
+  transition: all var(--transition-fast);
+}
+.calendar-nav-btn:hover {
+  background: var(--gold-600);
+  color: #FFFFFF;
+  border-color: var(--gold-600);
+}
+.calendar-grid-header {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  text-align: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--charcoal-500);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.5rem;
+}
+.calendar-days-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+}
+.cal-day-cell {
+  aspect-ratio: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  background: #FFFFFF;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--charcoal-800);
+  cursor: pointer;
+  position: relative;
+  transition: all var(--transition-fast);
+  padding: 2px;
+}
+.cal-day-cell.other-month {
+  color: var(--charcoal-300);
+  background: transparent;
+  cursor: default;
+  pointer-events: none;
+}
+.cal-day-cell.disabled {
+  color: var(--charcoal-300);
+  background: rgba(0,0,0,0.02);
+  cursor: not-allowed;
+  pointer-events: none;
+}
+.cal-day-cell.available {
+  border-color: rgba(198, 138, 40, 0.4);
+  background: #FFFFFF;
+}
+.cal-day-cell.available:hover {
+  background: rgba(198, 138, 40, 0.12);
+  border-color: var(--gold-600);
+  transform: translateY(-1px);
+}
+.cal-day-cell.available::after {
+  content: '';
+  position: absolute;
+  bottom: 4px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--gold-600);
+}
+.cal-day-cell.selected {
+  background: var(--gold-600) !important;
+  color: #FFFFFF !important;
+  border-color: var(--gold-700) !important;
+  font-weight: 800;
+  box-shadow: 0 4px 10px rgba(198, 138, 40, 0.35);
+}
+.cal-day-cell.selected::after {
+  background: #FFFFFF !important;
+}
+.cal-day-cell.is-today {
+  box-shadow: inset 0 0 0 1.5px var(--gold-500);
+}
+
+/* Time Slots Grid */
+.booking-slots-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 0.65rem;
+  margin-top: 0.75rem;
+}
+.slot-pill-btn {
+  background: #FFFFFF;
+  border: 1.5px solid rgba(0, 0, 0, 0.12);
+  border-radius: var(--radius-sm);
+  padding: 0.65rem 0.45rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--charcoal-800);
+  text-align: center;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+}
+.slot-pill-btn .slot-sub {
+  font-size: 0.68rem;
+  color: var(--charcoal-500);
+  font-weight: 500;
+}
+.slot-pill-btn:hover:not(:disabled) {
+  border-color: var(--gold-600);
+  background: rgba(198, 138, 40, 0.08);
+  color: var(--gold-800);
+}
+.slot-pill-btn.active {
+  background: var(--gold-600) !important;
+  color: #FFFFFF !important;
+  border-color: var(--gold-700) !important;
+  box-shadow: 0 4px 10px rgba(198, 138, 40, 0.3);
+}
+.slot-pill-btn.active .slot-sub {
+  color: rgba(255, 255, 255, 0.85);
+}
+.slot-pill-btn:disabled {
+  background: rgba(0,0,0,0.03);
+  color: var(--charcoal-400);
+  border-color: rgba(0,0,0,0.06);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* Payment Step Elements */
+.payment-summary-box {
+  background: #FAF8F5;
+  border: 1px solid rgba(198, 138, 40, 0.25);
+  border-radius: var(--radius-md);
+  padding: 1.25rem;
+  margin-bottom: 1.25rem;
+}
+.payment-summary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.45rem 0;
+  border-bottom: 1px dashed rgba(0, 0, 0, 0.08);
+  font-size: 0.88rem;
+}
+.payment-summary-row:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+.payment-method-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+.payment-method-card {
+  border: 1.5px solid rgba(0, 0, 0, 0.12);
+  border-radius: var(--radius-md);
+  padding: 1rem 1.25rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: all var(--transition-fast);
+  background: #FFFFFF;
+}
+.payment-method-card:hover {
+  border-color: var(--gold-600);
+  background: rgba(198, 138, 40, 0.03);
+}
+.payment-method-card.selected {
+  border-color: var(--gold-600);
+  background: rgba(198, 138, 40, 0.08);
+  box-shadow: 0 0 0 2px var(--gold-600);
+}
+.payment-method-card.disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  background: rgba(0, 0, 0, 0.02);
+}
+.payment-method-left {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+.payment-method-title {
+  font-weight: 700;
+  font-size: 0.92rem;
+  color: var(--charcoal-900);
+}
+.payment-method-sub {
+  font-size: 0.78rem;
+  color: var(--charcoal-600);
+}
+.payment-inputs-group {
+  background: #FFFFFF;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: var(--radius-md);
+  padding: 1.25rem;
+  margin-bottom: 1.25rem;
+}
+
+

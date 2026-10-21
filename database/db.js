@@ -161,6 +161,10 @@ function initSchema() {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
   `);
+
+  try {
+    db.prepare("ALTER TABLE tutoring_requests ADD COLUMN payment_method TEXT DEFAULT 'card'").run();
+  } catch (e) {}
 }
 
 function seedData() {

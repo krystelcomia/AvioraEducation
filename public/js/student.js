@@ -128,11 +128,11 @@ const Student = {
 
       if (this.subscription) {
         const remaining = (this.subscription.lessons_remaining !== undefined ? this.subscription.lessons_remaining : this.subscription.hours_remaining) || 0;
-        if (statSubHours) statSubHours.textContent = `${remaining} hrs`;
-        if (statSubLabel) statSubLabel.textContent = `${this.subscription.plan_name} Active`;
+        if (statSubHours) statSubHours.textContent = `${remaining} lesson${remaining === 1 ? '' : 's'}`;
+        if (statSubLabel) statSubLabel.textContent = `${this.subscription.plan_name} (Active)`;
       } else {
-        if (statSubHours) statSubHours.textContent = '0 hrs';
-        if (statSubLabel) statSubLabel.textContent = 'Free Account';
+        if (statSubHours) statSubHours.textContent = '0 lessons';
+        if (statSubLabel) statSubLabel.textContent = 'No Active Plan';
       }
 
       // Render comprehensive sub-components

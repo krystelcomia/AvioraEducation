@@ -224,18 +224,12 @@
   border: 1px solid rgba(198, 138, 40, 0.3);
   border-radius: var(--radius-xl);
   padding: 2.25rem 2.5rem;
-  margin-bottom: 2.5rem;
+  margin-bottom: 3rem;
   box-shadow: 0 6px 24px rgba(0, 0, 0, 0.05);
-  display: grid;
-  grid-template-columns: 1.4fr 1fr;
-  gap: 2.5rem;
-  align-items: center;
 }
 
 @media (max-width: 900px) {
   .sub-active-banner-card {
-    grid-template-columns: 1fr;
-    gap: 1.75rem;
     padding: 1.75rem;
   }
 }
@@ -259,7 +253,7 @@
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 1.5rem;
-  margin-bottom: 3.5rem;
+  margin-bottom: 2.5rem;
 }
 
 @media (max-width: 1024px) {

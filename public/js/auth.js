@@ -852,12 +852,12 @@ const Auth = {
       // Configure Header Navigation Links
       if (mainNavLinks) {
         if (user.role === 'student') {
-          // Streamlined navigation: Lessons, History, and Schedule are seamlessly accessible on the comprehensive Student Dashboard
+          // Student navigation: Tutors links to the full teacher/tutor directory where all educators can be found
           mainNavLinks.innerHTML = `
             <li><a href="#home" class="nav-link" id="nav-link-home">Home</a></li>
             <li><a href="#about" class="nav-link" id="nav-link-about">About</a></li>
             <li><a href="#subscriptions" class="nav-link" id="nav-link-subscription">Subscription</a></li>
-            <li><a href="#student-tutors" class="nav-link" id="nav-link-my-tutors">My Tutors</a></li>
+            <li><a href="#tutors" class="nav-link" id="nav-link-tutors">Tutors</a></li>
             <li><a href="#student-portal" class="nav-link" id="nav-link-dashboard">Dashboard</a></li>
           `;
         } else if (user.role === 'teacher') {

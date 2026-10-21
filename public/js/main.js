@@ -87,7 +87,10 @@ const Router = {
     document.querySelectorAll('.nav-link').forEach(link => {
       const href = link.getAttribute('href');
       let isActive = (href === hash);
-      if (!isActive && href === '#student-portal' && ['#student-portal', '#student-lessons', '#student-schedule', '#student-history'].includes(hash)) {
+      if (!isActive && href === '#student-portal' && ['#student-portal', '#student-lessons', '#student-schedule', '#student-history', '#student-tutors', '#student-profile'].includes(hash)) {
+        isActive = true;
+      }
+      if (!isActive && href === '#tutors' && (hash === '#tutors' || hash.startsWith('#tutor-profile'))) {
         isActive = true;
       }
       link.classList.toggle('active', isActive);

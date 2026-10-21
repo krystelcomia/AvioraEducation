@@ -79,7 +79,6 @@ const Student = {
 
   scrollToSection(section, e) {
     if (e && e.preventDefault) e.preventDefault();
-    document.querySelectorAll('.dash-nav-pill').forEach(p => p.classList.remove('active'));
 
     const map = {
       overview: 'student-overview-section',
@@ -89,15 +88,6 @@ const Student = {
       tutors: 'student-my-tutors-section',
       profile: 'student-profile-section'
     };
-
-    if (e && e.currentTarget) {
-      e.currentTarget.classList.add('active');
-    } else {
-      const activePill = Array.from(document.querySelectorAll('.dash-nav-pill')).find(p => 
-        p.getAttribute('onclick')?.includes(`'${section}'`)
-      );
-      if (activePill) activePill.classList.add('active');
-    }
 
     const targetId = map[section];
     if (targetId) {

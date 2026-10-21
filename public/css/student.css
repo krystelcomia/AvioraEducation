@@ -332,44 +332,6 @@
 /* =========================================
    COMPREHENSIVE STUDENT DASHBOARD STYLES
    ========================================= */
-.dashboard-sub-nav {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  overflow-x: auto;
-  padding: 0.5rem 0.25rem 1.25rem 0.25rem;
-  margin-bottom: 2rem;
-  scrollbar-width: thin;
-}
-
-.dash-nav-pill {
-  white-space: nowrap;
-  padding: 0.6rem 1.15rem;
-  border-radius: 9999px;
-  font-size: 0.88rem;
-  font-weight: 600;
-  color: var(--charcoal-700);
-  background: #FFFFFF;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
-  text-decoration: none;
-  transition: all var(--transition-fast);
-  cursor: pointer;
-}
-
-.dash-nav-pill:hover {
-  color: var(--gold-800);
-  border-color: rgba(198, 138, 40, 0.4);
-  transform: translateY(-1px);
-}
-
-.dash-nav-pill.active {
-  color: #FFFFFF;
-  background: var(--gradient-gold);
-  border-color: transparent;
-  box-shadow: 0 4px 14px rgba(198, 138, 40, 0.25);
-}
-
 .dash-section-box {
   background: #FFFFFF;
   border: 1px solid rgba(198, 138, 40, 0.22);

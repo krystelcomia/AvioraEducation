@@ -1110,13 +1110,14 @@ app.get('/api/student/subscription', authenticateToken, requireRole('student'), 
     const packages = [
       {
         key: 'trial',
-        name: 'Single Paid Trial Lesson',
+        name: 'One-Time Free Trial Lesson',
         lessons: 1,
-        price: 39.00,
-        unitPrice: 39.00,
+        price: 0.00,
+        unitPrice: 0.00,
         validity: '14 Days',
-        badge: 'Introductory Paid Trial',
-        description: 'Discounted introductory trial lesson to experience 1-on-1 mentorship with any verified Aviora educator.',
+        badge: 'Free (1-Time Offer)',
+        duration_minutes: 30,
+        description: 'Complimentary 30-minute diagnostic session with an accredited tutor to evaluate fit and establish your roadmap.',
         is_trial: true,
         trial_used: trialUsed
       },
@@ -1129,6 +1130,7 @@ app.get('/api/student/subscription', authenticateToken, requireRole('student'), 
         savings: 'Save $40 vs standard hourly',
         validity: '1 Month (30 Days)',
         badge: 'Starter Package',
+        duration_minutes: 50,
         description: 'Ideal for weekly check-ins, targeted exam revision, and coursework clarification.',
         is_popular: false
       },
@@ -1142,6 +1144,7 @@ app.get('/api/student/subscription', authenticateToken, requireRole('student'), 
         validity: '1 Month (30 Days)',
         badge: 'Most Popular',
         is_popular: true,
+        duration_minutes: 50,
         description: 'Our premier bi-weekly intensive mentorship package. Most popular among competitive high school and college scholars.'
       },
       {
@@ -1153,6 +1156,7 @@ app.get('/api/student/subscription', authenticateToken, requireRole('student'), 
         savings: 'Save $240 vs standard hourly',
         validity: '1 Month (30 Days)',
         badge: 'Best Value',
+        duration_minutes: 50,
         description: 'Comprehensive 3-sessions/week immersion for Olympiad, MCAT, AP/IB diploma, or Ivy League admissions preparation.',
         is_popular: false
       }
@@ -1163,14 +1167,14 @@ app.get('/api/student/subscription', authenticateToken, requireRole('student'), 
       upfront_payment: 'Upfront Payment Required: All lesson packages must be paid in full upfront before tutoring session slots can be confirmed on the calendar.',
       validity: '1-Month Validity Window: All 4, 8, and 12-lesson packages are valid for exactly 30 calendar days from the date of purchase. Sessions not scheduled within this 30-day period expire automatically.',
       flexible_dates: 'Student-Determined Schedule: All lesson dates, times, and tutor selections are freely scheduled by the student through the tutor live availability calendar.',
-      one_time_trial: '1-Time Paid Trial Limit: The discounted introductory trial lesson ($39) is a paid trial and can only be used once per student account.',
+      one_time_trial: 'Free 1-Time Trial Lesson ($0): The trial is a one-time offer for $0 covering a single 30-minute lesson. Once a student has used it, this option is no longer available.',
       reschedule: '3-Hour Rescheduling Notice: Students may reschedule any booked session with at least 3 hours advance notice before the class without forfeiting the lesson credit.',
-      class_duration: 'Class Duration Limit: All subjects are a maximum of 50 minutes of class.'
+      class_duration: 'Class Duration: Trial lessons are 30 minutes in length. All standard subscription subjects are a maximum of 50 minutes of class.'
     };
 
     res.json({
       activeSubscription: subscriptionData,
-      totalSpending: Math.max(totalSpending, 399.00),
+      totalSpending: Math.max(totalSpending, 0.00),
       trialUsed,
       mostStudiedSubjects,
       preferredTutors,
@@ -1183,17 +1187,17 @@ app.get('/api/student/subscription', authenticateToken, requireRole('student'), 
   }
 });
 
-// Student Purchases / Activates a Subscription Package
+// Student Purchases / Activates a Subscription Package & Schedules with Tutor
 app.post('/api/student/subscription/purchase', authenticateToken, requireRole('student'), (req, res) => {
   try {
     const studentId = req.user.id;
-    const { package_key } = req.body;
+    const { package_key, tutor_id, lessons_with_tutor, subject, scheduled_date, scheduled_time, notes } = req.body;
 
     const packageMap = {
-      'trial': { name: 'Single Paid Trial Lesson', lessons: 1, price: 39.00, days: 14, is_trial: 1 },
-      '4_lessons': { name: '4 Lessons Monthly', lessons: 4, price: 220.00, days: 30, is_trial: 0 },
-      '8_lessons': { name: '8 Lessons Monthly', lessons: 8, price: 399.00, days: 30, is_trial: 0 },
-      '12_lessons': { name: '12 Lessons Monthly', lessons: 12, price: 540.00, days: 30, is_trial: 0 }
+      'trial': { name: 'One-Time Free Trial Lesson', lessons: 1, price: 0.00, days: 14, is_trial: 1, duration_minutes: 30 },
+      '4_lessons': { name: 'Starter Tier: 4 Lessons', lessons: 4, price: 220.00, days: 30, is_trial: 0, duration_minutes: 50 },
+      '8_lessons': { name: 'Mastery Tier: 8 Lessons', lessons: 8, price: 399.00, days: 30, is_trial: 0, duration_minutes: 50 },
+      '12_lessons': { name: 'Honors Tier: 12 Lessons', lessons: 12, price: 540.00, days: 30, is_trial: 0, duration_minutes: 50 }
     };
 
     const selectedPkg = packageMap[package_key];
@@ -1204,15 +1208,91 @@ app.post('/api/student/subscription/purchase', authenticateToken, requireRole('s
     if (selectedPkg.is_trial) {
       const trialCheck = db.prepare('SELECT id FROM student_subscriptions WHERE user_id = ? AND is_trial = 1').get(studentId);
       if (trialCheck) {
-        return res.status(400).json({ error: 'Paid trial lessons can only be used once per student account.' });
+        return res.status(400).json({ error: 'The trial is a one-time offer for $0 and has already been used by this account.' });
       }
+    }
+
+    let tutorUser = null;
+    let tutorProfile = null;
+    let allocatedLessons = selectedPkg.lessons;
+
+    if (tutor_id) {
+      tutorUser = db.prepare('SELECT id, name FROM users WHERE id = ?').get(tutor_id);
+      tutorProfile = db.prepare('SELECT hourly_rate, is_active, subjects FROM tutor_profiles WHERE user_id = ?').get(tutor_id);
+      if (!tutorUser || !tutorProfile || !tutorProfile.is_active) {
+        return res.status(400).json({ error: 'Selected educator is not currently active.' });
+      }
+
+      if (selectedPkg.is_trial) {
+        allocatedLessons = 1;
+      } else {
+        const parsedCount = parseInt(lessons_with_tutor, 10);
+        allocatedLessons = !isNaN(parsedCount) ? Math.min(Math.max(1, parsedCount), selectedPkg.lessons) : selectedPkg.lessons;
+      }
+    }
+
+    let hasScheduledLesson = false;
+    let finalRemainingLessons = selectedPkg.lessons;
+
+    if (tutor_id && scheduled_date && scheduled_time) {
+      // 3-hour notice check
+      const timeStart = (scheduled_time.split(' - ')[0] || scheduled_time).trim();
+      const requestedDateTime = new Date(`${scheduled_date}T${timeStart.length === 5 ? timeStart : timeStart.padStart(5, '0')}:00`);
+      if (!isNaN(requestedDateTime.getTime())) {
+        const diffHours = (requestedDateTime.getTime() - Date.now()) / (1000 * 60 * 60);
+        if (diffHours < 3) {
+          return res.status(400).json({ error: 'Bookings require at least 3 hours advance notice before class start time.' });
+        }
+      }
+
+      const lessonDurationHours = selectedPkg.is_trial ? 0.5 : (50 / 60);
+      const chosenSubject = subject || (tutorProfile?.subjects ? tutorProfile.subjects.split(',')[0].trim() : 'General Tutoring');
+
+      const insertSession = db.prepare(`
+        INSERT INTO tutoring_requests (
+          student_id, tutor_id, subject, grade_level, requested_date,
+          requested_time, duration_hours, hourly_rate, total_amount, status, notes, payment_method
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0.00, 'accepted', ?, ?)
+      `);
+
+      const sessionNotes = notes 
+        ? `${notes} (Enrolled in ${selectedPkg.name} - ${allocatedLessons} lesson${allocatedLessons > 1 ? 's' : ''} planned with ${tutorUser.name})`
+        : (selectedPkg.is_trial 
+            ? 'One-Time Free Trial Lesson (30 Minutes)' 
+            : `Enrolled via ${selectedPkg.name} (${allocatedLessons} lesson${allocatedLessons > 1 ? 's' : ''} allocated with ${tutorUser.name})`);
+
+      insertSession.run(
+        studentId,
+        tutor_id,
+        chosenSubject,
+        'High School',
+        scheduled_date,
+        scheduled_time,
+        lessonDurationHours,
+        tutorProfile.hourly_rate,
+        sessionNotes,
+        selectedPkg.is_trial ? 'free_trial' : 'subscription'
+      );
+
+      hasScheduledLesson = true;
+      finalRemainingLessons = Math.max(0, selectedPkg.lessons - 1);
+
+      // Notify tutor
+      db.prepare(`
+        INSERT INTO notifications (user_id, title, message, type, link)
+        VALUES (?, ?, ?, 'booking', '/#teacher-requests')
+      `).run(
+        tutor_id,
+        'New Session Scheduled',
+        `${req.user.name} scheduled a ${selectedPkg.duration_minutes}-minute ${chosenSubject} session for ${scheduled_date} (${scheduled_time}) via ${selectedPkg.name}.`
+      );
     }
 
     // Deactivate previous active subscription if exists
     db.prepare("UPDATE student_subscriptions SET status = 'exhausted' WHERE user_id = ? AND status = 'active'").run(studentId);
 
     // Insert new subscription
-    const insert = db.prepare(`
+    const insertSub = db.prepare(`
       INSERT INTO student_subscriptions (
         user_id, plan_name, lessons_total, lessons_remaining, price_paid,
         purchase_date, expires_at, status, is_trial
@@ -1222,29 +1302,41 @@ app.post('/api/student/subscription/purchase', authenticateToken, requireRole('s
       )
     `);
 
-    insert.run(
+    insertSub.run(
       studentId,
       selectedPkg.name,
       selectedPkg.lessons,
-      selectedPkg.lessons,
+      finalRemainingLessons,
       selectedPkg.price,
       selectedPkg.days,
       selectedPkg.is_trial
     );
 
-    // Notification
+    // Notification for student
+    const studentNotifMsg = hasScheduledLesson
+      ? `Your ${selectedPkg.name} is confirmed! 1 lesson (${selectedPkg.duration_minutes} min) is scheduled with ${tutorUser?.name || 'your tutor'} on ${scheduled_date} at ${scheduled_time}. Remaining lessons: ${finalRemainingLessons}.`
+      : `Your ${selectedPkg.name} ($${selectedPkg.price.toFixed(2)}) has been successfully activated with ${selectedPkg.lessons} lessons valid for ${selectedPkg.days} days.`;
+
     db.prepare(`
       INSERT INTO notifications (user_id, title, message, type, link)
       VALUES (?, ?, ?, 'subscription', '#subscriptions')
     `).run(
       studentId,
-      'Subscription Activated',
-      `Your ${selectedPkg.name} ($${selectedPkg.price}) has been successfully activated with ${selectedPkg.lessons} lessons valid for ${selectedPkg.days} days.`
+      selectedPkg.is_trial ? 'Free Trial Activated & Scheduled' : 'Subscription Activated',
+      studentNotifMsg
     );
 
     res.status(201).json({
-      message: `Successfully enrolled in ${selectedPkg.name}! Your ${selectedPkg.lessons} lessons are now available for scheduling.`,
-      plan: selectedPkg.name
+      success: true,
+      message: hasScheduledLesson
+        ? (selectedPkg.is_trial 
+            ? `Your free 30-minute trial lesson with ${tutorUser?.name || 'your tutor'} on ${scheduled_date} at ${scheduled_time} is confirmed!` 
+            : `Successfully enrolled in ${selectedPkg.name}! Your lesson with ${tutorUser?.name || 'your tutor'} on ${scheduled_date} at ${scheduled_time} is confirmed (${finalRemainingLessons} remaining lesson${finalRemainingLessons === 1 ? '' : 's'}).`)
+        : `Successfully enrolled in ${selectedPkg.name}! Your ${selectedPkg.lessons} lessons are now available for scheduling.`,
+      plan: selectedPkg.name,
+      remainingLessons: finalRemainingLessons,
+      isTrial: selectedPkg.is_trial === 1,
+      hasScheduledLesson
     });
   } catch (error) {
     console.error('Purchase subscription error:', error);

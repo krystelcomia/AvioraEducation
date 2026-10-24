@@ -1526,7 +1526,8 @@
   overflow-y: auto;
   padding-right: 0.25rem;
 }
-.slot-pill-btn {
+.slot-pill-btn,
+.booking-slot-btn {
   background: #FFFFFF;
   border: 1.5px solid rgba(0, 0, 0, 0.12);
   border-radius: var(--radius-sm);
@@ -1542,26 +1543,35 @@
   align-items: center;
   gap: 0.15rem;
 }
-.slot-pill-btn .slot-sub {
+.slot-pill-btn .slot-sub,
+.booking-slot-btn .slot-sub {
   font-size: 0.68rem;
   color: var(--charcoal-500);
   font-weight: 500;
 }
-.slot-pill-btn:hover:not(:disabled) {
+.slot-pill-btn:hover:not(:disabled),
+.booking-slot-btn:hover:not(:disabled) {
   border-color: var(--gold-600);
   background: rgba(198, 138, 40, 0.08);
   color: var(--gold-800);
 }
-.slot-pill-btn.active {
+.slot-pill-btn.active,
+.slot-pill-btn.selected,
+.booking-slot-btn.active,
+.booking-slot-btn.selected {
   background: var(--gold-600) !important;
   color: #FFFFFF !important;
   border-color: var(--gold-700) !important;
   box-shadow: 0 4px 10px rgba(198, 138, 40, 0.3);
 }
-.slot-pill-btn.active .slot-sub {
+.slot-pill-btn.active .slot-sub,
+.slot-pill-btn.selected .slot-sub,
+.booking-slot-btn.active .slot-sub,
+.booking-slot-btn.selected .slot-sub {
   color: rgba(255, 255, 255, 0.85);
 }
-.slot-pill-btn:disabled {
+.slot-pill-btn:disabled,
+.booking-slot-btn:disabled {
   background: rgba(0,0,0,0.03);
   color: var(--charcoal-400);
   border-color: rgba(0,0,0,0.06);

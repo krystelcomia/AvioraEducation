@@ -2331,35 +2331,35 @@
         <!-- 3. Aviora Subscription Offers & Packages -->
         <div style="margin-bottom: 1.5rem;">
           <span class="badge-gold">Monthly Membership Options</span>
-          <h2 style="font-family: var(--font-heading); font-size: 1.65rem; font-weight: 800; color: var(--charcoal-900); margin-top: 0.35rem; margin-bottom: 0.35rem;">Aviora Subscription Packages &amp; Paid Trial</h2>
+          <h2 style="font-family: var(--font-heading); font-size: 1.65rem; font-weight: 800; color: var(--charcoal-900); margin-top: 0.35rem; margin-bottom: 0.35rem;">Aviora Subscription Packages &amp; Free Trial</h2>
           <p style="color: var(--text-secondary); font-size: 0.9rem; max-width: 820px;">
-            Choose from Aviora’s curated lesson packages for 4, 8, or 12 lessons. All subscriptions are valid for one month, with dates and times fully determined by the student. Paid trial lessons are also available for first-time evaluation (strictly 1-time use).
+            Choose from Aviora’s curated lesson packages for 4, 8, or 12 lessons. All subscriptions are valid for one month, with dates and times fully determined by the student. Free 30-minute trial lessons are also available for first-time evaluation ($0, strictly 1-time use).
           </p>
         </div>
 
         <div class="sub-packages-grid">
-          <!-- Package 0: Paid Trial -->
+          <!-- Package 0: Free Trial -->
           <div class="sub-package-card">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
               <span class="badge-gold" id="badge-trial-status">Available (1-Time Use)</span>
               <span style="font-size: 1.1rem;">🧪</span>
             </div>
-            <h3 style="font-family: var(--font-heading); font-size: 1.25rem; font-weight: 800; color: var(--charcoal-900); margin-bottom: 0.25rem;">Paid Trial Lesson</h3>
+            <h3 style="font-family: var(--font-heading); font-size: 1.25rem; font-weight: 800; color: var(--charcoal-900); margin-bottom: 0.25rem;">Free Trial Lesson</h3>
             <div style="margin: 0.75rem 0 1rem 0;">
-              <span style="font-size: 2.1rem; font-weight: 800; color: var(--charcoal-900); font-family: var(--font-heading);">$39</span>
+              <span style="font-size: 2.1rem; font-weight: 800; color: var(--charcoal-900); font-family: var(--font-heading);">$0</span>
               <span style="font-size: 0.82rem; color: var(--text-secondary);"> / one-time</span>
             </div>
             <p style="font-size: 0.82rem; color: var(--text-secondary); margin-bottom: 1.25rem; line-height: 1.5;">
-              Diagnostic 50-minute trial session with an accredited tutor to evaluate fit and establish your roadmap.
+              Complimentary 30-minute diagnostic session with an accredited tutor to evaluate fit and establish your roadmap.
             </p>
             <ul style="list-style: none; padding: 0; margin: 0 0 1.5rem 0; font-size: 0.82rem; color: var(--charcoal-800); line-height: 1.7; flex: 1;">
-              <li>✓ <strong>1 Full 50-Min Lesson</strong></li>
-              <li>✓ <strong>Paid Trial</strong> (Strictly 1-time limit)</li>
+              <li>✓ <strong>1 Single 30-Min Lesson</strong></li>
+              <li>✓ <strong>Free Trial</strong> (Strictly 1-time offer for $0)</li>
               <li>✓ Student determines date &amp; time</li>
               <li>✓ Academic diagnostic assessment</li>
-              <li>✓ No ongoing obligation</li>
+              <li>✓ No payment or obligation</li>
             </ul>
-            <button id="btn-buy-trial" class="btn btn-outline-gold btn-sm" onclick="StudentSub.buyPackage('trial')" style="width: 100%; font-weight: 700;">Book Paid Trial ($39)</button>
+            <button id="btn-buy-trial" class="btn btn-outline-gold btn-sm" onclick="StudentSub.openEnrollmentModal('trial')" style="width: 100%; font-weight: 700;">Book Free Trial ($0)</button>
           </div>
 
           <!-- Package 1: 4 Lessons -->
@@ -2383,7 +2383,7 @@
               <li>✓ Upfront payment requirement</li>
               <li>✓ Progress feedback &amp; lesson logs</li>
             </ul>
-            <button class="btn btn-outline-gold btn-sm" onclick="StudentSub.buyPackage('4_lessons')" style="width: 100%; font-weight: 700;">Enroll in 4 Lessons</button>
+            <button class="btn btn-outline-gold btn-sm" onclick="StudentSub.openEnrollmentModal('4_lessons')" style="width: 100%; font-weight: 700;">Enroll in 4 Lessons</button>
           </div>
 
           <!-- Package 2: 8 Lessons (Popular) -->
@@ -2411,7 +2411,7 @@
               <li>✓ Priority faculty schedule reservations</li>
               <li>✓ Comprehensive diagnostic milestones</li>
             </ul>
-            <button class="btn btn-primary btn-sm" onclick="StudentSub.buyPackage('8_lessons')" style="width: 100%; font-weight: 700;">Enroll in 8 Lessons</button>
+            <button class="btn btn-primary btn-sm" onclick="StudentSub.openEnrollmentModal('8_lessons')" style="width: 100%; font-weight: 700;">Enroll in 8 Lessons</button>
           </div>
 
           <!-- Package 3: 12 Lessons -->
@@ -2436,7 +2436,7 @@
               <li>✓ Multi-subject flexibility &amp; VIP priority</li>
               <li>✓ Full exam simulation &amp; capstone review</li>
             </ul>
-            <button class="btn btn-outline-gold btn-sm" onclick="StudentSub.buyPackage('12_lessons')" style="width: 100%; font-weight: 700;">Enroll in 12 Lessons</button>
+            <button class="btn btn-outline-gold btn-sm" onclick="StudentSub.openEnrollmentModal('12_lessons')" style="width: 100%; font-weight: 700;">Enroll in 12 Lessons</button>
           </div>
         </div>
 
@@ -2457,7 +2457,7 @@
             <div style="border-left: 3px solid var(--gold-500); padding-left: 1rem;">
               <h4 style="font-weight: 700; color: var(--charcoal-900); font-size: 0.95rem; margin-bottom: 0.35rem;">1. Strict No-Refund Policy</h4>
               <p style="font-size: 0.84rem; color: var(--text-secondary); line-height: 1.55; margin: 0;">
-                All subscription packages (4, 8, or 12 lessons) and paid trial bookings are <strong>strictly non-refundable</strong> once purchased or activated. Fees cannot be prorated, refunded, or credited back for unused portions.
+                All subscription packages (4, 8, or 12 lessons) and trial enrollments are <strong>strictly non-refundable</strong> once purchased or activated. Fees cannot be prorated, refunded, or credited back for unused portions.
               </p>
             </div>
 
@@ -2483,9 +2483,9 @@
             </div>
 
             <div style="border-left: 3px solid var(--gold-500); padding-left: 1rem;">
-              <h4 style="font-weight: 700; color: var(--charcoal-900); font-size: 0.95rem; margin-bottom: 0.35rem;">5. Paid Trial Lesson — Strictly 1-Time Use</h4>
+              <h4 style="font-weight: 700; color: var(--charcoal-900); font-size: 0.95rem; margin-bottom: 0.35rem;">5. Free Trial Lesson ($0) — Strictly 1-Time Use</h4>
               <p style="font-size: 0.84rem; color: var(--text-secondary); line-height: 1.55; margin: 0;">
-                Trial lessons are paid at the rate of $39 and are <strong>strictly limited to one single trial per registered student</strong>. Repeated purchases of trial lessons are restricted by platform validation.
+                The trial is a one-time offer for $0 covering a single 30-minute lesson and is <strong>strictly limited to one single trial per registered student</strong>. Once a student has used it, this option is no longer available. Repeated claims of trial lessons are restricted by platform validation.
               </p>
             </div>
 
@@ -2499,7 +2499,7 @@
             <div style="border-left: 3px solid var(--gold-500); padding-left: 1rem;">
               <h4 style="font-weight: 700; color: var(--charcoal-900); font-size: 0.95rem; margin-bottom: 0.35rem;">7. Class Duration Limit</h4>
               <p style="font-size: 0.84rem; color: var(--text-secondary); line-height: 1.55; margin: 0;">
-                <strong>Note: All subjects are a maximum of 50 minutes of class</strong> per session to ensure focused, high-retention learning.
+                <strong>Note: Trial lessons are 30 minutes in length. All standard subscription subjects are a maximum of 50 minutes of class</strong> per session to ensure focused, high-retention learning.
               </p>
             </div>
           </div>
@@ -3677,6 +3677,182 @@
             </button>
           </div>
         </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- =========================================
+       MODAL: SUBSCRIPTION ENROLLMENT & TUTOR SCHEDULING
+       ========================================= -->
+  <div class="modal-overlay" id="sub-enrollment-modal">
+    <div class="modal-card" style="max-width: 780px; max-height: 90vh; display: flex; flex-direction: column;">
+      <div class="modal-header" style="background: linear-gradient(135deg, #FAF7F2 0%, #F5EFE6 100%); border-bottom: 1px solid rgba(198, 138, 40, 0.2); padding: 1.25rem 1.75rem;">
+        <div>
+          <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
+            <span class="badge-gold" id="sub-enroll-badge">Plan Enrollment</span>
+            <span style="font-size: 0.8rem; color: var(--text-secondary);" id="sub-enroll-step-tag">Step 1: Tutor &amp; Schedule Selection</span>
+          </div>
+          <h3 class="modal-title text-gold" id="sub-enroll-modal-title" style="font-size: 1.35rem; margin: 0;">Subscription Enrollment &amp; Tutor Scheduling</h3>
+        </div>
+        <button class="modal-close-btn" id="sub-enroll-modal-close" onclick="StudentSub.closeEnrollmentModal()">✕</button>
+      </div>
+
+      <div class="modal-body" style="overflow-y: auto; flex: 1; padding: 1.5rem 1.75rem;">
+        
+        <!-- Chosen Plan Banner -->
+        <div id="sub-enroll-plan-banner" style="background: linear-gradient(135deg, rgba(198, 138, 40, 0.08) 0%, rgba(212, 160, 68, 0.15) 100%); border: 1.5px solid rgba(198, 138, 40, 0.35); border-radius: var(--radius-md); padding: 1rem 1.25rem; margin-bottom: 1.35rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+          <div>
+            <div style="font-size: 0.75rem; text-transform: uppercase; font-weight: 700; color: var(--gold-800); letter-spacing: 0.05em;">Selected Subscription Plan</div>
+            <div id="sub-enroll-plan-name" style="font-family: var(--font-heading); font-size: 1.25rem; font-weight: 800; color: var(--charcoal-950);">Starter Tier: 4 Lessons</div>
+            <div id="sub-enroll-plan-meta" style="font-size: 0.82rem; color: var(--charcoal-700); margin-top: 0.15rem;">
+              4 Lessons • 50 Minutes each • Valid for 1 Month (30 Days)
+            </div>
+          </div>
+          <div style="text-align: right;">
+            <div style="font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 600;">Plan Total</div>
+            <div id="sub-enroll-plan-price" style="font-size: 1.6rem; font-weight: 800; color: var(--gold-700); font-family: var(--font-heading);">$220.00</div>
+          </div>
+        </div>
+
+        <!-- 1. Select Educator -->
+        <div class="form-group" style="margin-bottom: 1.25rem;">
+          <label class="form-label" style="font-weight: 700; color: var(--charcoal-900); display: flex; justify-content: space-between; align-items: center;">
+            <span>1. Select an Accredited Aviora Tutor</span>
+            <span style="font-size: 0.75rem; font-weight: 500; color: var(--text-secondary);">Choose your faculty instructor</span>
+          </label>
+          <select id="sub-enroll-tutor-select" class="form-control" style="font-weight: 600; font-size: 0.95rem; border: 1.5px solid rgba(198, 138, 40, 0.35);" onchange="StudentSub.onTutorSelected(this.value)">
+            <!-- Populated via subscription.js -->
+          </select>
+        </div>
+
+        <!-- Selected Tutor Preview Card -->
+        <div id="sub-enroll-tutor-preview" style="display: flex; align-items: center; gap: 1rem; background: #FFFFFF; border: 1px solid var(--border-light); border-radius: var(--radius-md); padding: 0.85rem 1rem; margin-bottom: 1.25rem; box-shadow: var(--shadow-sm);">
+          <img id="sub-enroll-tutor-avatar" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80" style="width: 52px; height: 52px; border-radius: 50%; object-fit: cover; border: 2px solid var(--gold-400);" />
+          <div style="flex: 1;">
+            <div style="display: flex; align-items: center; gap: 0.4rem;">
+              <strong id="sub-enroll-tutor-name" style="color: var(--charcoal-950); font-size: 0.98rem;">Select a Tutor</strong>
+              <span class="badge-gold" style="font-size: 0.68rem; padding: 0.15rem 0.45rem;">Verified Faculty</span>
+            </div>
+            <div id="sub-enroll-tutor-headline" style="font-size: 0.82rem; color: var(--text-secondary); margin-top: 0.15rem;">Faculty Specialist</div>
+          </div>
+          <div style="text-align: right;">
+            <div id="sub-enroll-tutor-rating" style="font-size: 0.85rem; font-weight: 700; color: var(--gold-700);">★ 5.0</div>
+            <div style="font-size: 0.75rem; color: var(--text-secondary);">Included in Plan</div>
+          </div>
+        </div>
+
+        <!-- 2. Determine Number of Lessons with This Tutor -->
+        <div class="form-group" style="margin-bottom: 1.25rem; background: rgba(0,0,0,0.02); padding: 1rem; border-radius: var(--radius-md); border: 1px solid rgba(0,0,0,0.06);">
+          <label class="form-label" style="font-weight: 700; color: var(--charcoal-900); display: flex; justify-content: space-between; align-items: center;">
+            <span>2. Determine Lessons with this Educator</span>
+            <span id="sub-enroll-total-plan-tag" style="font-size: 0.75rem; font-weight: 600; color: var(--gold-700);">Plan includes 4 lessons</span>
+          </label>
+          <div style="display: flex; gap: 0.75rem; align-items: center;">
+            <select id="sub-enroll-lesson-count" class="form-control" style="font-weight: 700; font-size: 1rem; width: 180px; border: 1.5px solid rgba(198, 138, 40, 0.35);" onchange="StudentSub.onAllocationChanged(this.value)">
+              <!-- Populated dynamically (1 to N) -->
+            </select>
+            <div id="sub-enroll-allocation-note" style="font-size: 0.82rem; color: var(--charcoal-700); line-height: 1.4; flex: 1;">
+              Allocating lessons with this educator based on your chosen subscription tier.
+            </div>
+          </div>
+        </div>
+
+        <!-- 3. Subject Selection -->
+        <div class="form-group" style="margin-bottom: 1.25rem;">
+          <label class="form-label" style="font-weight: 700; color: var(--charcoal-900);">3. Subject for Instruction</label>
+          <select id="sub-enroll-subject-select" class="form-control" required>
+            <!-- Populated from selected tutor's disciplines -->
+          </select>
+        </div>
+
+        <!-- 4. Schedule Preferred Date & Time -->
+        <div style="margin-bottom: 1.25rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+            <label class="form-label" style="font-weight: 700; color: var(--charcoal-900); margin-bottom: 0;">
+              4. Schedule Preferred Date &amp; Time (Educator Availability)
+            </label>
+            <span id="sub-enroll-slot-duration-badge" class="badge-gold" style="font-size: 0.72rem;">50-Min Class</span>
+          </div>
+
+          <!-- Calendar Navigator -->
+          <div class="booking-calendar-box" style="margin-bottom: 1rem;">
+            <div class="calendar-nav-bar">
+              <button type="button" class="calendar-nav-btn" id="sub-cal-prev-month" onclick="StudentSub.prevCalMonth()" title="Previous Month">‹</button>
+              <div class="calendar-month-label" id="sub-cal-month-label">October 2026</div>
+              <button type="button" class="calendar-nav-btn" id="sub-cal-next-month" onclick="StudentSub.nextCalMonth()" title="Next Month">›</button>
+            </div>
+
+            <div class="calendar-grid-header">
+              <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+            </div>
+
+            <div class="calendar-days-grid" id="sub-cal-days-grid">
+              <!-- Dynamically populated via subscription.js -->
+            </div>
+
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 0.85rem; font-size: 0.75rem; color: var(--charcoal-500); padding-top: 0.65rem; border-top: 1px dashed rgba(0,0,0,0.08);">
+              <div style="display: flex; gap: 0.85rem; align-items: center;">
+                <span style="display: inline-flex; align-items: center; gap: 0.3rem;"><span style="width: 7px; height: 7px; border-radius: 50%; background: var(--gold-600); display: inline-block;"></span> Educator Available</span>
+                <span style="display: inline-flex; align-items: center; gap: 0.3rem;"><span style="width: 7px; height: 7px; border-radius: 2px; background: var(--charcoal-300); display: inline-block;"></span> Unavailable</span>
+              </div>
+              <span style="font-weight: 600; color: var(--gold-700);">⏱️ Minimum 3-hour notice</span>
+            </div>
+          </div>
+
+          <!-- Time Slots Container -->
+          <div style="margin-bottom: 1rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+              <label class="form-label" style="font-weight: 700; color: var(--charcoal-900); margin-bottom: 0;">Available Time Slots for Selected Date:</label>
+              <span id="sub-enroll-selected-date-label" style="font-size: 0.825rem; font-weight: 700; color: var(--gold-700);">Please click an available date on the calendar</span>
+            </div>
+            <div id="sub-enroll-slots-container" class="booking-slots-grid">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Optional Notes -->
+        <div class="form-group" style="margin-bottom: 1.25rem;">
+          <label class="form-label" style="font-weight: 700; color: var(--charcoal-900);">Learning Objectives or Problem Sets (Optional)</label>
+          <textarea id="sub-enroll-notes" class="form-control" rows="2" placeholder="e.g. Diagnostic assessment on AP Physics kinematics and problem sets..."></textarea>
+        </div>
+
+        <!-- Order Summary Box -->
+        <div class="payment-summary-box" style="margin-bottom: 1.25rem; background: #FAF7F2; border: 1.5px solid rgba(198, 138, 40, 0.25); border-radius: var(--radius-md); padding: 1.15rem;">
+          <h4 style="font-size: 0.95rem; font-weight: 700; color: var(--charcoal-950); margin: 0 0 0.65rem 0;">Enrollment &amp; Booking Summary</h4>
+          <div class="payment-summary-row" style="display: flex; justify-content: space-between; font-size: 0.84rem; margin-bottom: 0.35rem;">
+            <span style="color: var(--charcoal-600);">Plan Selected:</span>
+            <strong id="sub-summary-plan-text" style="color: var(--charcoal-900);">-</strong>
+          </div>
+          <div class="payment-summary-row" style="display: flex; justify-content: space-between; font-size: 0.84rem; margin-bottom: 0.35rem;">
+            <span style="color: var(--charcoal-600);">Educator:</span>
+            <strong id="sub-summary-tutor-text" style="color: var(--charcoal-900);">-</strong>
+          </div>
+          <div class="payment-summary-row" style="display: flex; justify-content: space-between; font-size: 0.84rem; margin-bottom: 0.35rem;">
+            <span style="color: var(--charcoal-600);">Lesson Allocation:</span>
+            <strong id="sub-summary-alloc-text" style="color: var(--charcoal-900);">-</strong>
+          </div>
+          <div class="payment-summary-row" style="display: flex; justify-content: space-between; font-size: 0.84rem; margin-bottom: 0.35rem;">
+            <span style="color: var(--charcoal-600);">First Lesson Schedule:</span>
+            <strong id="sub-summary-schedule-text" style="color: var(--charcoal-900);">-</strong>
+          </div>
+          <div class="payment-summary-row" style="display: flex; justify-content: space-between; font-size: 0.84rem; margin-bottom: 0.35rem;">
+            <span style="color: var(--charcoal-600);">Session Duration:</span>
+            <strong id="sub-summary-duration-text" style="color: var(--gold-700);">50 Minutes</strong>
+          </div>
+          <div class="payment-summary-row" style="display: flex; justify-content: space-between; font-size: 1.05rem; padding-top: 0.65rem; margin-top: 0.45rem; border-top: 1.5px solid rgba(0,0,0,0.1);">
+            <strong style="color: var(--charcoal-950);">Total Due Now:</strong>
+            <strong id="sub-summary-amount-text" style="color: var(--gold-700); font-size: 1.3rem;">$0.00</strong>
+          </div>
+        </div>
+
+        <!-- Action Button -->
+        <button type="button" class="btn btn-primary" id="btn-sub-enroll-submit" onclick="StudentSub.confirmEnrollment()" style="width: 100%; justify-content: center; padding: 0.9rem; font-weight: 700; font-size: 1rem;" disabled>
+          <span id="sub-enroll-btn-label">Confirm Enrollment &amp; Schedule Lesson</span>
+          <span>→</span>
+        </button>
+
       </div>
     </div>
   </div>

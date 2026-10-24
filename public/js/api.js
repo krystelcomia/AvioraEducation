@@ -76,7 +76,7 @@ const API = {
   // Student
   getStudentDashboard: () => apiRequest('/student/dashboard'),
   getStudentSubscription: () => apiRequest('/student/subscription'),
-  purchaseSubscription: (package_key) => apiRequest('/student/subscription/purchase', { method: 'POST', body: { package_key } }),
+  purchaseSubscription: (payload) => apiRequest('/student/subscription/purchase', { method: 'POST', body: typeof payload === 'string' ? { package_key: payload } : payload }),
   createRequest: (body) => apiRequest('/student/requests', { method: 'POST', body }),
   cancelRequest: (id) => apiRequest(`/student/requests/${id}/cancel`, { method: 'POST' }),
   submitReview: (id, body) => apiRequest(`/student/requests/${id}/review`, { method: 'POST', body }),

@@ -174,6 +174,7 @@ const Student = {
     }
 
     const nextSession = upcomingSessions[0];
+    const is30Min = nextSession.duration_hours === 0.5 || nextSession.payment_method === 'free_trial';
     container.innerHTML = `
       <div class="spotlight-session-card">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.5rem;">
@@ -181,7 +182,7 @@ const Student = {
             Next Scheduled Class
           </span>
           <span style="font-size: 0.82rem; color: var(--gold-800); font-weight: 700;">
-            ⏱️ 50-Minute Tailored Session
+            ⏱️ ${is30Min ? '30-Minute Trial Session' : '50-Minute Tailored Session'}
           </span>
         </div>
 
@@ -200,7 +201,7 @@ const Student = {
               ${nextSession.tutor_headline ? ` • <span style="color: var(--text-muted); font-size: 0.82rem;">${nextSession.tutor_headline}</span>` : ''}
             </p>
             <div style="font-size: 0.88rem; color: var(--gold-900); font-weight: 700;">
-              🗓️ ${nextSession.requested_date} &nbsp;•&nbsp; ⏰ ${nextSession.requested_time} (50 mins)
+              🗓️ ${nextSession.requested_date} &nbsp;•&nbsp; ⏰ ${nextSession.requested_time} (${is30Min ? '30 mins' : '50 mins'})
             </div>
             ${nextSession.notes ? `<p style="font-size: 0.82rem; color: var(--text-secondary); margin-top: 0.4rem;"><strong>Topic Focus:</strong> ${escapeHtmlStr(nextSession.notes)}</p>` : ''}
             ${nextSession.tutor_response_note ? `<p style="font-size: 0.82rem; color: var(--gold-700); margin-top: 0.2rem; font-style: italic;"><strong>Instructor Note:</strong> "${escapeHtmlStr(nextSession.tutor_response_note)}"</p>` : ''}
@@ -269,7 +270,7 @@ const Student = {
 
           <div style="font-size: 0.88rem; color: var(--charcoal-900);">
             <div style="font-weight: 700;">⏰ ${r.requested_time}</div>
-            <div style="font-size: 0.78rem; color: var(--gold-800); font-weight: 600;">50-Minute Class</div>
+            <div style="font-size: 0.78rem; color: var(--gold-800); font-weight: 600;">${(r.duration_hours === 0.5 || r.payment_method === 'free_trial') ? '30-Minute Trial Class' : '50-Minute Class'}</div>
           </div>
 
           <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">

@@ -21,6 +21,7 @@ const VirtualRoom = {
   isVideoOff: false,
   isScreenSharing: false,
   isChatOpen: false,
+  postClassRating: 5,
 
   // ICE Servers for WebRTC peer connection
   rtcConfig: {
@@ -292,7 +293,7 @@ const VirtualRoom = {
   },
 
   /**
-   * Automatic call end when 50 minutes elapse
+   * Automatic call end when 50 minutes elapse or class is concluded
    */
   async onTimerExpired() {
     console.log('50-minute class duration has elapsed. Concluding virtual room.');
@@ -309,13 +310,212 @@ const VirtualRoom = {
       }
     }
 
-    // Display conclusion overlay
-    const overlay = document.getElementById('vroom-ended-overlay');
-    if (overlay) {
-      overlay.style.display = 'flex';
-    }
+    // Display conclusion & post-class rating overlay
+    this.showPostClassOverlay();
 
     showToast('The 50-minute class duration has concluded. The call has automatically ended.', 'info');
+  },
+
+  /**
+   * Display post-class rating overlay: allows students to rate tutor up to 5 stars
+   */
+  showPostClassOverlay() {
+    const overlay = document.getElementById('vroom-ended-overlay');
+    if (!overlay) return;
+    overlay.style.display = 'flex';
+
+    const studentView = document.getElementById('vroom-ended-student-view');
+    const tutorView = document.getElementById('vroom-ended-tutor-view');
+    const successView = document.getElementById('vroom-ended-success-view');
+
+    if (successView) successView.style.display = 'none';
+
+    const isStudent = (this.currentUserRole === 'student');
+
+    if (isStudent && studentView) {
+      if (tutorView) tutorView.style.display = 'none';
+      studentView.style.display = 'block';
+
+      const session = this.sessionData?.session || {};
+      const tutorNameEl = document.getElementById('vroom-rate-tutor-name');
+      const tutorNameEl2 = document.getElementById('vroom-rate-tutor-name-2');
+      const tutorAvatarEl = document.getElementById('vroom-rate-tutor-avatar');
+      const tutorHeadlineEl = document.getElementById('vroom-rate-tutor-headline');
+      const subjectBadge = document.getElementById('vroom-rate-subject-badge');
+
+      if (tutorNameEl) tutorNameEl.textContent = session.tutor_name || 'Educator';
+      if (tutorNameEl2) tutorNameEl2.textContent = session.tutor_name || 'Educator';
+      if (tutorAvatarEl) tutorAvatarEl.src = session.tutor_avatar || '/assets/favicon.png';
+      if (tutorHeadlineEl) tutorHeadlineEl.textContent = session.tutor_headline || 'Aviora Faculty Specialist';
+      if (subjectBadge) subjectBadge.textContent = `${session.subject || 'Academic Mentorship'} • 50-Min Class`;
+
+      const commentInput = document.getElementById('vroom-rating-comment');
+      if (commentInput) commentInput.value = '';
+
+      const submitBtn = document.getElementById('vroom-submit-review-btn');
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = `Submit Rating &amp; Reflect on Profile →`;
+      }
+
+      this.setPostClassRating(5);
+      this.renderPostClassStars();
+    } else if (tutorView) {
+      if (studentView) studentView.style.display = 'none';
+      tutorView.style.display = 'block';
+    }
+  },
+
+  /**
+   * Render interactive 5-star rating selector
+   */
+  renderPostClassStars() {
+    const row = document.getElementById('vroom-star-row');
+    if (!row) return;
+
+    row.innerHTML = [1, 2, 3, 4, 5].map(starNum => `
+      <button type="button" 
+        class="vroom-star-btn ${starNum <= this.postClassRating ? '' : 'inactive'}" 
+        data-star="${starNum}" 
+        onclick="VirtualRoom.setPostClassRating(${starNum})" 
+        onmouseenter="VirtualRoom.previewPostClassRating(${starNum})" 
+        onmouseleave="VirtualRoom.restorePostClassRating()" 
+        title="${starNum} Star${starNum > 1 ? 's' : ''}">
+        ${Icons.star(30)}
+      </button>
+    `).join('');
+  },
+
+  /**
+   * Set selected rating (1-5 stars)
+   */
+  setPostClassRating(rating) {
+    this.postClassRating = Math.max(1, Math.min(5, parseInt(rating) || 5));
+
+    const captions = {
+      1: '1.0 — Needs Improvement',
+      2: '2.0 — Fair Mentorship',
+      3: '3.0 — Good Experience',
+      4: '4.0 — Very Good Session',
+      5: '5.0 — Outstanding Mentorship'
+    };
+
+    const captionEl = document.getElementById('vroom-rating-caption');
+    if (captionEl) {
+      captionEl.textContent = captions[this.postClassRating] || `${this.postClassRating}.0 Stars`;
+    }
+
+    const starBtns = document.querySelectorAll('#vroom-star-row .vroom-star-btn');
+    starBtns.forEach((btn, idx) => {
+      if (idx < this.postClassRating) {
+        btn.classList.remove('inactive');
+      } else {
+        btn.classList.add('inactive');
+      }
+    });
+  },
+
+  previewPostClassRating(rating) {
+    const starBtns = document.querySelectorAll('#vroom-star-row .vroom-star-btn');
+    starBtns.forEach((btn, idx) => {
+      if (idx < rating) {
+        btn.classList.remove('inactive');
+      } else {
+        btn.classList.add('inactive');
+      }
+    });
+
+    const captions = {
+      1: '1.0 — Needs Improvement',
+      2: '2.0 — Fair Mentorship',
+      3: '3.0 — Good Experience',
+      4: '4.0 — Very Good Session',
+      5: '5.0 — Outstanding Mentorship'
+    };
+    const captionEl = document.getElementById('vroom-rating-caption');
+    if (captionEl) {
+      captionEl.textContent = captions[rating] || `${rating}.0 Stars`;
+    }
+  },
+
+  restorePostClassRating() {
+    this.setPostClassRating(this.postClassRating);
+  },
+
+  /**
+   * Submit post-class rating and update tutor's profile
+   */
+  async submitPostClassRating() {
+    if (!this.activeSessionId) return;
+
+    const rating = this.postClassRating || 5;
+    const commentEl = document.getElementById('vroom-rating-comment');
+    const comment = commentEl ? commentEl.value.trim() : '';
+    const submitBtn = document.getElementById('vroom-submit-review-btn');
+
+    try {
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = `Publishing Rating to Profile...`;
+      }
+
+      const res = await API.submitReview(this.activeSessionId, { rating, comment });
+
+      // Update session data to reflect review
+      if (this.sessionData && this.sessionData.session) {
+        this.sessionData.session.has_reviewed = true;
+        this.sessionData.session.review_rating = rating;
+        this.sessionData.session.review_comment = comment;
+      }
+
+      // Switch to success view
+      const studentView = document.getElementById('vroom-ended-student-view');
+      const successView = document.getElementById('vroom-ended-success-view');
+      const successStarsText = document.getElementById('vroom-success-stars-text');
+      const successTutorName = document.getElementById('vroom-success-tutor-name');
+
+      if (studentView) studentView.style.display = 'none';
+      if (successView) successView.style.display = 'block';
+
+      if (successStarsText) {
+        successStarsText.innerHTML = `${Icons.star(16)} ${rating}-Star Rating (${rating}.0)`;
+      }
+      if (successTutorName) {
+        successTutorName.textContent = this.sessionData?.session?.tutor_name || 'your educator';
+      }
+
+      showToast(res.message || 'Rating submitted! Reflected on tutor\'s profile.', 'success');
+
+      // Refresh student dashboard and tutor profile cache in background
+      if (typeof Student !== 'undefined' && Student.init) {
+        Student.init();
+      }
+    } catch (err) {
+      console.error('Failed to submit post-class review:', err);
+      showToast(err.message || 'Failed to submit review.', 'error');
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = `Submit Rating &amp; Reflect on Profile →`;
+      }
+    }
+  },
+
+  /**
+   * Navigate directly to tutor's profile to view the reflected rating and reviews
+   */
+  async goToTutorProfile() {
+    const tutorProfileId = this.sessionData?.session?.tutor_profile_id || this.sessionData?.session?.tutor_id;
+    this.stopAllMediaTracks();
+    this.closeModal('virtual-room-modal');
+
+    if (tutorProfileId) {
+      window.location.hash = `#tutor-profile?id=${tutorProfileId}`;
+      if (typeof Tutors !== 'undefined' && Tutors.loadFullProfilePage) {
+        await Tutors.loadFullProfilePage(tutorProfileId);
+      }
+    } else {
+      window.location.hash = '#tutors';
+    }
   },
 
   /**

@@ -159,6 +159,34 @@ const Student = {
       .sort((a, b) => (a.requested_date + ' ' + a.requested_time).localeCompare(b.requested_date + ' ' + b.requested_time));
 
     if (upcomingSessions.length === 0) {
+      const pendingReview = this.requests.find(r => (r.status === 'completed' || r.room_status === 'ended') && !r.review_rating);
+      if (pendingReview) {
+        container.innerHTML = `
+          <div class="spotlight-session-card" style="border: 1.5px solid var(--gold-500); background: linear-gradient(135deg, #FFFFFF 0%, rgba(198, 138, 40, 0.05) 100%);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
+              <span style="font-size: 0.76rem; font-weight: 800; color: #FFFFFF; background: var(--gold-600); padding: 0.25rem 0.75rem; border-radius: 999px; text-transform: uppercase; letter-spacing: 0.05em;">
+                ★ Rate Your Educator
+              </span>
+              <span style="font-size: 0.8rem; color: var(--gold-800); font-weight: 700;">
+                Session Completed
+              </span>
+            </div>
+            <div class="spotlight-session-grid">
+              <img src="${pendingReview.tutor_avatar || '/assets/favicon.png'}" style="width: 64px; height: 64px; border-radius: 50%; object-fit: cover; border: 2.5px solid var(--gold-500);" />
+              <div>
+                <h3 style="font-size: 1.15rem; color: var(--charcoal-900); font-weight: 800; margin: 0 0 0.25rem 0;">${pendingReview.subject} Class Concluded</h3>
+                <p style="font-size: 0.88rem; color: var(--charcoal-700); margin: 0 0 0.3rem 0;">How was your class with <strong>${pendingReview.tutor_name}</strong>? Rate up to 5 stars to update their verified profile.</p>
+                <div style="font-size: 0.8rem; color: var(--text-muted);">${pendingReview.requested_date} • 50-minute virtual session</div>
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 0.5rem; justify-content: center;">
+                <button class="btn btn-primary btn-sm" onclick="Student.openReviewModal(${pendingReview.id}, '${escapeQuotes(pendingReview.tutor_name)}', '${escapeQuotes(pendingReview.subject)}')">${Icons.star(14)} Rate Tutor (★ 1-5)</button>
+              </div>
+            </div>
+          </div>
+        `;
+        return;
+      }
+
       container.innerHTML = `
         <div class="spotlight-session-card" style="border-style: dashed; background: #FFFFFF;">
           <div class="spotlight-session-grid">
@@ -343,10 +371,10 @@ const Student = {
 
         <div class="request-actions-col">
           <span class="status-pill ${r.status}">${r.status}</span>
-          ${r.status === 'accepted' ? `
+          ${(r.status === 'accepted' && r.room_status !== 'ended') ? `
             <button class="btn btn-primary btn-sm" onclick="VirtualRoom.joinRoom(${r.id}, 'student')" style="${r.room_status === 'open' ? 'background: #10B981; border-color: #10B981;' : ''}">${Icons.video(14)} ${r.room_status === 'open' ? 'Enter Virtual Room (Live)' : 'Virtual Room'}</button>
           ` : ''}
-          ${(r.status === 'pending' || r.status === 'accepted') ? `
+          ${(r.status === 'pending' || (r.status === 'accepted' && r.room_status !== 'ended')) ? `
             <button class="btn btn-outline-gold btn-sm" onclick="Tutors.openMessageModal(${r.tutor_id})">${Icons.message(14)} Message</button>
             ${this.canCancelSession(r) ? `
               <button class="btn btn-secondary btn-sm" onclick="Student.cancelRequest(${r.id})" title="Cancel booking (Allowed up to 3 hours before class)">Cancel</button>
@@ -354,11 +382,11 @@ const Student = {
               <button class="btn btn-secondary btn-sm" style="opacity: 0.55; cursor: not-allowed;" onclick="showToast('Cancel booking is only applicable at least 3 hours before the class.', 'warning')" title="Cancel booking is only applicable at least 3 hours before class">Cancel (&lt;3h)</button>
             `}
           ` : ''}
-          ${r.status === 'completed' ? `
+          ${(r.status === 'completed' || r.room_status === 'ended') ? `
             ${r.review_rating ? `
               <span style="font-size: 0.82rem; color: #F59E0B; font-weight: 700; display: inline-flex; align-items: center; gap: 0.25rem;">${Icons.star(13)} ${r.review_rating}/5</span>
             ` : `
-              <button class="btn btn-outline-gold btn-sm" onclick="Student.openReviewModal(${r.id}, '${escapeQuotes(r.tutor_name)}', '${escapeQuotes(r.subject)}')">${Icons.star(12)} Review</button>
+              <button class="btn btn-outline-gold btn-sm" onclick="Student.openReviewModal(${r.id}, '${escapeQuotes(r.tutor_name)}', '${escapeQuotes(r.subject)}')">${Icons.star(12)} Rate Tutor (★ 1-5)</button>
             `}
           ` : ''}
         </div>
@@ -371,7 +399,7 @@ const Student = {
     if (!container) return;
 
     const completedSessions = this.requests
-      .filter(r => r.status === 'completed')
+      .filter(r => r.status === 'completed' || r.room_status === 'ended')
       .sort((a, b) => (b.requested_date + ' ' + b.requested_time).localeCompare(a.requested_date + ' ' + a.requested_time));
 
     if (completedSessions.length === 0) {
@@ -419,7 +447,7 @@ const Student = {
               ${r.review_comment ? `<p style="font-size: 0.78rem; color: var(--charcoal-700); margin-top: 0.2rem; font-style: italic;">"${escapeHtmlStr(r.review_comment)}"</p>` : ''}
             </div>
           ` : `
-            <button class="btn btn-outline-gold btn-sm" onclick="Student.openReviewModal(${r.id}, '${escapeQuotes(r.tutor_name)}', '${escapeQuotes(r.subject)}')">${Icons.star(12)} Write Review</button>
+            <button class="btn btn-outline-gold btn-sm" onclick="Student.openReviewModal(${r.id}, '${escapeQuotes(r.tutor_name)}', '${escapeQuotes(r.subject)}')">${Icons.star(12)} Rate Tutor (★ 1-5)</button>
           `}
         </div>
       </div>
@@ -551,11 +579,12 @@ const Student = {
     const title = document.getElementById('review-modal-title');
     const commentInput = document.getElementById('review-comment');
 
-    if (title) title.textContent = `Review ${tutorName} (${subject})`;
+    if (title) title.textContent = `Rate & Review ${tutorName} (${subject})`;
     if (commentInput) commentInput.value = '';
 
     // Reset stars to 5
-    document.getElementById('review-rating-val').value = 5;
+    const valInput = document.getElementById('review-rating-val');
+    if (valInput) valInput.value = 5;
     document.querySelectorAll('.star-picker-icon').forEach(s => s.style.color = '#F59E0B');
 
     if (modal) {
@@ -576,23 +605,39 @@ const Student = {
     e.preventDefault();
     if (!this.currentReviewRequestId) return;
 
-    const rating = parseInt(document.getElementById('review-rating-val').value);
-    const comment = document.getElementById('review-comment').value.trim();
+    const valEl = document.getElementById('review-rating-val');
+    const rating = valEl ? (parseInt(valEl.value) || 5) : 5;
+    const commentEl = document.getElementById('review-comment');
+    const comment = commentEl ? commentEl.value.trim() : '';
     const submitBtn = e.target.querySelector('button[type="submit"]');
 
     try {
-      submitBtn.disabled = true;
-      submitBtn.textContent = 'Submitting Feedback...';
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Publishing Rating to Profile...';
+      }
 
       const res = await API.submitReview(this.currentReviewRequestId, { rating, comment });
       this.closeReviewModal();
-      showToast(res.message, 'success');
+      showToast(res.message || 'Review submitted! Reflected on tutor\'s profile.', 'success');
       await this.loadDashboard();
+
+      // Refresh tutor profile if viewed or in directory
+      if (typeof Tutors !== 'undefined') {
+        const tid = res.tutor_profile_id || res.tutor_id;
+        if (tid && window.location.hash.includes('tutor-profile')) {
+          await Tutors.loadFullProfilePage(tid);
+        } else if (Tutors.fetchTutors) {
+          Tutors.fetchTutors();
+        }
+      }
     } catch (err) {
-      showToast(err.message, 'error');
+      showToast(err.message || 'Failed to submit review.', 'error');
     } finally {
-      submitBtn.disabled = false;
-      submitBtn.textContent = 'Submit Review';
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Submit Review';
+      }
     }
   },
 

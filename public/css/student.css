@@ -758,14 +758,54 @@
   position: absolute;
   inset: 0;
   background: rgba(11, 15, 25, 0.96);
-  backdrop-filter: blur(10px);
+  backdrop-filter: blur(12px);
   z-index: 100;
   display: none;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   text-align: center;
-  padding: 2rem;
+  padding: 1.5rem;
+  overflow-y: auto;
 }
+
+.vroom-rating-box {
+  background: rgba(17, 24, 39, 0.95);
+  border: 1px solid rgba(198, 138, 40, 0.35);
+  border-radius: 16px;
+  padding: 2rem;
+  max-width: 520px;
+  width: 100%;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
+  text-align: center;
+  animation: vroomFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes vroomFadeIn {
+  from { opacity: 0; transform: translateY(14px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.vroom-star-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0.35rem;
+  color: #F59E0B;
+  transition: transform 0.15s ease, color 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+}
+
+.vroom-star-btn:hover {
+  transform: scale(1.22);
+}
+
+.vroom-star-btn.inactive {
+  color: #4B5563;
+}
+
 
 

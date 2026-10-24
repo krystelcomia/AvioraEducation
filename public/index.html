@@ -4420,18 +4420,100 @@
         </button>
       </div>
 
-      <!-- 50-Minute Expired Auto-End Overlay -->
+      <!-- 50-Minute Expired Auto-End / Post-Class Rating Overlay -->
       <div class="vroom-ended-overlay" id="vroom-ended-overlay">
-        <div style="width: 80px; height: 80px; border-radius: 50%; background: rgba(198, 138, 40, 0.15); border: 2px solid var(--gold-500); display: flex; align-items: center; justify-content: center; margin-bottom: 1.5rem; color: var(--gold-400);">
-          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+        <!-- Student Post-Class Rating View -->
+        <div class="vroom-rating-box" id="vroom-ended-student-view" style="display: none;">
+          <div style="display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.3rem 0.85rem; border-radius: 999px; background: rgba(198, 138, 40, 0.2); border: 1px solid var(--gold-500); color: var(--gold-400); font-size: 0.76rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.85rem;">
+            <span>★</span>
+            <span>50-Minute Class Concluded</span>
+          </div>
+
+          <h2 style="font-family: var(--font-heading); color: #FFFFFF; font-size: 1.55rem; font-weight: 800; margin-bottom: 0.3rem;">
+            Rate Your Tutor: <span id="vroom-rate-tutor-name" style="color: var(--gold-400);">Educator</span>
+          </h2>
+          <p style="color: var(--charcoal-300); font-size: 0.86rem; margin-bottom: 1.15rem; line-height: 1.45;">
+            Your feedback directly reflects on their verified educator profile and helps the Aviora learning community.
+          </p>
+
+          <!-- Tutor Snippet Card -->
+          <div style="display: flex; align-items: center; gap: 0.85rem; background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); padding: 0.75rem 1rem; border-radius: 12px; margin-bottom: 1.15rem; text-align: left;">
+            <img id="vroom-rate-tutor-avatar" src="/assets/favicon.png" style="width: 46px; height: 46px; border-radius: 50%; object-fit: cover; border: 2px solid var(--gold-500);" alt="Tutor" />
+            <div style="flex: 1; min-width: 0;">
+              <div style="color: #FFFFFF; font-weight: 700; font-size: 0.95rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" id="vroom-rate-tutor-name-2">Educator</div>
+              <div style="color: var(--gold-400); font-size: 0.78rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" id="vroom-rate-tutor-headline">Aviora Faculty Specialist</div>
+              <div style="color: var(--charcoal-400); font-size: 0.74rem;" id="vroom-rate-subject-badge">Calculus BC</div>
+            </div>
+          </div>
+
+          <!-- Star Rating Selector (Up to 5 stars) -->
+          <div style="margin-bottom: 1.15rem;">
+            <label style="display: block; color: var(--charcoal-300); font-size: 0.8rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 0.35rem;">
+              Select Rating (Up to 5 Stars)
+            </label>
+            <div id="vroom-star-row" style="display: flex; justify-content: center; gap: 0.4rem; margin-bottom: 0.35rem;">
+              <!-- Dynamically populated 5 stars -->
+            </div>
+            <div id="vroom-rating-caption" style="color: var(--gold-400); font-size: 0.88rem; font-weight: 700;">
+              5.0 — Outstanding Mentorship
+            </div>
+          </div>
+
+          <!-- Review Comment Textarea -->
+          <div style="margin-bottom: 1.25rem; text-align: left;">
+            <label for="vroom-rating-comment" style="display: block; color: var(--charcoal-300); font-size: 0.8rem; font-weight: 600; margin-bottom: 0.35rem;">
+              Review Feedback for Tutor's Profile:
+            </label>
+            <textarea id="vroom-rating-comment" rows="3" style="width: 100%; box-sizing: border-box; background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 8px; color: #FFFFFF; padding: 0.65rem 0.85rem; font-size: 0.85rem; line-height: 1.4; resize: vertical;" placeholder="How was your tutor's explanation, pacing, and approach?"></textarea>
+          </div>
+
+          <!-- Actions -->
+          <div style="display: flex; flex-direction: column; gap: 0.55rem;">
+            <button type="button" class="btn btn-primary" id="vroom-submit-review-btn" onclick="VirtualRoom.submitPostClassRating()" style="width: 100%; padding: 0.75rem; font-weight: 700; font-size: 0.95rem;">
+              Submit Rating &amp; Reflect on Profile →
+            </button>
+            <button type="button" class="btn btn-secondary" onclick="VirtualRoom.leaveRoom()" style="background: transparent; border-color: rgba(255, 255, 255, 0.15); color: var(--charcoal-400); font-size: 0.85rem;">
+              Skip &amp; Return to Dashboard
+            </button>
+          </div>
         </div>
-        <h2 style="font-family: var(--font-heading); color: #FFFFFF; font-size: 1.85rem; font-weight: 800; margin-bottom: 0.5rem;">50-Minute Class Concluded</h2>
-        <p style="color: var(--charcoal-300); font-size: 0.95rem; max-width: 480px; line-height: 1.6; margin-bottom: 2rem;">
-          The allocated 50-minute virtual classroom duration has elapsed and the call has automatically ended. All camera and audio streams have been closed.
-        </p>
-        <button type="button" class="btn btn-primary" onclick="VirtualRoom.leaveRoom()" style="padding: 0.75rem 2rem; font-size: 0.95rem;">
-          Return to Dashboard →
-        </button>
+
+        <!-- Student Rating Success Confirmation View -->
+        <div class="vroom-rating-box" id="vroom-ended-success-view" style="display: none;">
+          <div style="width: 64px; height: 64px; border-radius: 50%; background: rgba(16, 185, 129, 0.2); border: 2px solid #10B981; color: #10B981; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.15rem auto;">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+          </div>
+          <h2 style="font-family: var(--font-heading); color: #FFFFFF; font-size: 1.55rem; font-weight: 800; margin-bottom: 0.4rem;">
+            Rating Published!
+          </h2>
+          <p style="color: var(--charcoal-300); font-size: 0.9rem; line-height: 1.55; margin-bottom: 1.5rem;">
+            Your <span id="vroom-success-stars-text" style="color: #F59E0B; font-weight: 700;">5-Star Rating</span> has been submitted. It is now proudly reflected on <strong id="vroom-success-tutor-name" style="color: #FFFFFF;">your educator's</strong> public profile and reviews list!
+          </p>
+          <div style="display: flex; flex-direction: column; gap: 0.55rem;">
+            <button type="button" class="btn btn-primary" onclick="VirtualRoom.goToTutorProfile()" style="width: 100%; padding: 0.75rem; font-weight: 700;">
+              View Tutor's Updated Profile →
+            </button>
+            <button type="button" class="btn btn-secondary" onclick="VirtualRoom.leaveRoom()" style="background: transparent; border-color: rgba(255, 255, 255, 0.15); color: var(--charcoal-400);">
+              Back to Student Dashboard
+            </button>
+          </div>
+        </div>
+
+        <!-- Tutor Class Concluded View -->
+        <div class="vroom-rating-box" id="vroom-ended-tutor-view" style="display: none;">
+          <div style="width: 72px; height: 72px; border-radius: 50%; background: rgba(198, 138, 40, 0.15); border: 2px solid var(--gold-500); display: flex; align-items: center; justify-content: center; margin: 0 auto 1.25rem auto; color: var(--gold-400);">
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+          </div>
+          <h2 style="font-family: var(--font-heading); color: #FFFFFF; font-size: 1.6rem; font-weight: 800; margin-bottom: 0.5rem;">
+            50-Minute Class Concluded
+          </h2>
+          <p style="color: var(--charcoal-300); font-size: 0.92rem; line-height: 1.6; margin-bottom: 1.75rem;">
+            The allocated 50-minute virtual classroom duration has elapsed and the call has automatically ended. All camera and audio streams have been closed. Thank you for mentoring with Aviora!
+          </p>
+          <button type="button" class="btn btn-primary" onclick="VirtualRoom.leaveRoom()" style="padding: 0.75rem 2rem; font-size: 0.95rem;">
+            Return to Dashboard →
+          </button>
+        </div>
       </div>
     </div>
   </div>

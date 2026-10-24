@@ -823,7 +823,7 @@ app.get('/api/tutors', (req, res) => {
 app.get('/api/tutors/:id', (req, res) => {
   try {
     const tutorId = req.params.id;
-    const tutor = db.prepare(`
+    let tutor = db.prepare(`
       SELECT 
         tp.*,
         u.name,
@@ -833,6 +833,19 @@ app.get('/api/tutors/:id', (req, res) => {
       JOIN users u ON tp.user_id = u.id
       WHERE tp.id = ? AND tp.is_active = 1 AND u.status = 'active'
     `).get(tutorId);
+
+    if (!tutor) {
+      tutor = db.prepare(`
+        SELECT 
+          tp.*,
+          u.name,
+          u.avatar_url,
+          u.email
+        FROM tutor_profiles tp
+        JOIN users u ON tp.user_id = u.id
+        WHERE tp.user_id = ? AND tp.is_active = 1 AND u.status = 'active'
+      `).get(tutorId);
+    }
 
     if (!tutor) {
       return res.status(404).json({ error: 'Tutor not found or profile is currently inactive.' });
@@ -1698,6 +1711,13 @@ app.post('/api/student/requests/:id/review', authenticateToken, requireRole('stu
       VALUES (?, ?, ?, ?, ?)
     `).run(requestId, studentId, request.tutor_id, rating, comment || '');
 
+    // Ensure session is marked completed and room status is ended
+    db.prepare(`
+      UPDATE tutoring_requests 
+      SET status = 'completed', room_status = 'ended', updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `).run(requestId);
+
     // Recalculate tutor's average rating & review count
     const stats = db.prepare(`
       SELECT AVG(rating) as avg_rating, COUNT(*) as count 
@@ -1706,13 +1726,41 @@ app.post('/api/student/requests/:id/review', authenticateToken, requireRole('stu
 
     const roundedRating = Math.round(stats.avg_rating * 10) / 10;
 
+    // Recalculate total completed sessions for tutor
+    const sessionStats = db.prepare(`
+      SELECT COUNT(*) as completed_count 
+      FROM tutoring_requests 
+      WHERE tutor_id = ? AND status = 'completed'
+    `).get(request.tutor_id);
+
     db.prepare(`
       UPDATE tutor_profiles 
-      SET rating = ?, reviews_count = ?, updated_at = CURRENT_TIMESTAMP 
+      SET rating = ?, reviews_count = ?, total_sessions = MAX(total_sessions, ?), updated_at = CURRENT_TIMESTAMP 
       WHERE user_id = ?
-    `).run(roundedRating, stats.count, request.tutor_id);
+    `).run(roundedRating, stats.count, sessionStats?.completed_count || 1, request.tutor_id);
 
-    res.json({ message: 'Review submitted with thanks! Your feedback helps the Aviora learning community.' });
+    // Fetch tutor profile and student user for notification & UI navigation
+    const student = db.prepare('SELECT name FROM users WHERE id = ?').get(studentId);
+    const tutorProfile = db.prepare('SELECT id FROM tutor_profiles WHERE user_id = ?').get(request.tutor_id);
+
+    // Send in-app notification to the tutor
+    db.prepare(`
+      INSERT INTO notifications (user_id, title, message, type, link)
+      VALUES (?, ?, ?, 'review', '#teacher-portal')
+    `).run(
+      request.tutor_id,
+      'New Student Rating & Review Received!',
+      `${student?.name || 'Your student'} gave you a ${rating}-star rating for ${request.subject}. It is now proudly reflected on your public tutor profile!`
+    );
+
+    res.json({
+      success: true,
+      message: 'Review submitted with thanks! Your feedback is now reflected on the tutor\'s profile.',
+      rating: roundedRating,
+      reviews_count: stats.count,
+      tutor_id: request.tutor_id,
+      tutor_profile_id: tutorProfile?.id || request.tutor_id
+    });
   } catch (error) {
     console.error('Submit review error:', error);
     res.status(500).json({ error: 'Failed to submit review.' });
@@ -1969,11 +2017,17 @@ app.get('/api/sessions/:id/room', authenticateToken, (req, res) => {
         tu.name as tutor_name,
         tu.email as tutor_email,
         tu.avatar_url as tutor_avatar,
-        tp.headline as tutor_headline
+        tp.headline as tutor_headline,
+        tp.id as tutor_profile_id,
+        tp.rating as tutor_rating,
+        tp.reviews_count as tutor_reviews_count,
+        rev.rating as review_rating,
+        rev.comment as review_comment
       FROM tutoring_requests tr
       JOIN users su ON tr.student_id = su.id
       JOIN users tu ON tr.tutor_id = tu.id
       LEFT JOIN tutor_profiles tp ON tp.user_id = tu.id
+      LEFT JOIN reviews rev ON rev.request_id = tr.id
       WHERE tr.id = ?
     `).get(requestId);
 
@@ -1997,10 +2051,10 @@ app.get('/api/sessions/:id/room', authenticateToken, (req, res) => {
       elapsedSeconds = Math.max(0, Math.floor((Date.now() - startedAtMs) / 1000));
       remainingSeconds = Math.max(0, totalDurationSeconds - elapsedSeconds);
 
-      // Auto-end call if time has elapsed
+      // Auto-end call and mark session completed if time has elapsed
       if (remainingSeconds <= 0 && roomStatus === 'open') {
         roomStatus = 'ended';
-        db.prepare("UPDATE tutoring_requests SET room_status = 'ended', updated_at = CURRENT_TIMESTAMP WHERE id = ?").run(requestId);
+        db.prepare("UPDATE tutoring_requests SET room_status = 'ended', status = 'completed', updated_at = CURRENT_TIMESTAMP WHERE id = ?").run(requestId);
       }
     }
 
@@ -2022,6 +2076,12 @@ app.get('/api/sessions/:id/room', authenticateToken, (req, res) => {
         tutor_name: request.tutor_name,
         tutor_avatar: request.tutor_avatar,
         tutor_headline: request.tutor_headline,
+        tutor_profile_id: request.tutor_profile_id,
+        tutor_rating: request.tutor_rating,
+        tutor_reviews_count: request.tutor_reviews_count,
+        has_reviewed: !!request.review_rating,
+        review_rating: request.review_rating,
+        review_comment: request.review_comment
       },
       room_status: roomStatus,
       room_started_at: request.room_started_at,
@@ -2121,7 +2181,7 @@ app.post('/api/sessions/:id/room/end', authenticateToken, (req, res) => {
 
     db.prepare(`
       UPDATE tutoring_requests
-      SET room_status = 'ended', updated_at = CURRENT_TIMESTAMP
+      SET room_status = 'ended', status = 'completed', updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
     `).run(requestId);
 

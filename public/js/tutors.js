@@ -361,15 +361,15 @@ const Tutors = {
               <div class="tutor-review-author">
                 <div class="tutor-review-avatar">${(r.student_name || 'S').charAt(0)}</div>
                 <div>
-                  <div style="font-weight: 700; color: var(--charcoal-950); font-size: 0.925rem;">${r.student_name}</div>
+                  <div style="font-weight: 700; color: var(--charcoal-950); font-size: 0.925rem;">${escapeHtmlStr(r.student_name || 'Verified Student')}</div>
                   <div style="font-size: 0.76rem; color: var(--text-muted);">${r.created_at ? new Date(r.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : 'Verified Student'}</div>
                 </div>
               </div>
               <div style="color: #F59E0B; display: inline-flex; align-items: center; gap: 2px;">
-                ${Array.from({length: Math.round(r.rating || 5)}).map(() => Icons.star(13)).join('')} <span style="font-size: 0.8rem; color: var(--text-muted); font-weight: normal; margin-left: 4px;">(${r.rating}.0)</span>
+                ${Array.from({length: Math.min(5, Math.max(1, Math.round(r.rating || 5)))}).map(() => Icons.star(13)).join('')} <span style="font-size: 0.8rem; color: var(--text-muted); font-weight: normal; margin-left: 4px;">(${r.rating}.0)</span>
               </div>
             </div>
-            <p class="tutor-review-comment">"${r.comment}"</p>
+            <p class="tutor-review-comment">"${escapeHtmlStr(r.comment || 'Outstanding academic guidance and support.')}"</p>
           </div>
         `).join('');
       } else {

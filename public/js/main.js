@@ -75,7 +75,7 @@ function showConfirm(title, message, onConfirm) {
 
 // Router
 const Router = {
-  routes: ['#home', '#about', '#tutors', '#aviora-buddy', '#how-it-works', '#book-now', '#book-lesson', '#subscriptions', '#student-subscriptions', '#login', '#signup', '#student-portal', '#student-lessons', '#student-tutors', '#student-history', '#student-schedule', '#student-profile', '#teacher-portal', '#admin-portal'],
+  routes: ['#home', '#about', '#tutors', '#aviora-buddy', '#buddy', '#how-it-works', '#book-now', '#book-lesson', '#subscriptions', '#student-subscriptions', '#login', '#signup', '#student-portal', '#student-lessons', '#student-tutors', '#student-history', '#student-schedule', '#student-profile', '#teacher-portal', '#admin-portal'],
 
   init() {
     window.addEventListener('hashchange', () => this.handleRoute());
@@ -87,16 +87,16 @@ const Router = {
     document.querySelectorAll('.nav-link').forEach(link => {
       const href = link.getAttribute('href');
       let isActive = (href === hash);
-      if (!isActive && href === '#student-portal' && ['#student-portal', '#book-lesson', '#student-lessons', '#student-schedule', '#student-history', '#student-tutors'].includes(hash)) {
+      if (!isActive && href === '#student-portal' && ['#student-portal', '#student-lessons', '#student-schedule', '#student-history', '#student-tutors'].includes(hash)) {
         isActive = true;
       }
       if (!isActive && (href === '#student-profile' || href === '#profile' || link.id === 'nav-user-profile-btn') && (hash === '#student-profile' || hash === '#profile')) {
         isActive = true;
       }
-      if (!isActive && href === '#tutors' && (hash === '#tutors' || hash.startsWith('#tutor-profile'))) {
+      if (!isActive && href === '#tutors' && (hash === '#tutors' || hash.startsWith('#tutor-profile') || hash.startsWith('#book-lesson') || hash.startsWith('#book-now'))) {
         isActive = true;
       }
-      if (!isActive && href === '#aviora-buddy' && hash.startsWith('#aviora-buddy')) {
+      if (!isActive && (href === '#aviora-buddy' || href === '#buddy') && (hash.startsWith('#aviora-buddy') || hash.startsWith('#buddy'))) {
         isActive = true;
       }
       link.classList.toggle('active', isActive);
@@ -187,17 +187,13 @@ const Router = {
         if (view) view.style.display = 'block';
         window.scrollTo(0, 0);
       }
-    } else if (hash === '#book-now' || hash === '#book-lesson' || hash.startsWith('#book-lesson')) {
-      const queryStr = window.location.hash.includes('?') ? window.location.hash.split('?')[1] : '';
-      const params = new URLSearchParams(queryStr);
-      const tutorId = params.get('tutorId') || params.get('id');
-      if (tutorId && typeof Tutors !== 'undefined') {
-        await Tutors.openBookingModal(tutorId);
-      } else {
-        window.location.hash = '#tutors';
-        showToast('Please select a faculty educator to book your 50-minute session.', 'info');
+    } else if (hash === '#book-now' || hash === '#book-lesson' || hash.startsWith('#book-lesson') || hash.startsWith('#book-now')) {
+      const view = document.getElementById('view-book-lesson');
+      if (view) view.style.display = 'block';
+      window.scrollTo(0, 0);
+      if (typeof BookLesson !== 'undefined' && BookLesson.loadPage) {
+        await BookLesson.loadPage();
       }
-      return;
     } else if (hash === '#login') {
       const view = document.getElementById('view-login');
       if (view) view.style.display = 'block';
@@ -221,7 +217,7 @@ const Router = {
       if (view) view.style.display = 'block';
       window.scrollTo(0, 0);
       await Tutors.fetchTutors();
-    } else if (hash === '#aviora-buddy' || hash.startsWith('#aviora-buddy')) {
+    } else if (hash === '#aviora-buddy' || hash.startsWith('#aviora-buddy') || hash === '#buddy' || hash.startsWith('#buddy')) {
       const view = document.getElementById('view-aviora-buddy');
       if (view) view.style.display = 'block';
       window.scrollTo(0, 0);
@@ -429,6 +425,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   Student.init();
   Teacher.init();
   Admin.init();
+  if (typeof BookLesson !== 'undefined' && BookLesson.setupEventListeners) {
+    BookLesson.setupEventListeners();
+  }
 
   // Initialize Real-Time Analytics & Student Work Showcase
   initRealTimeAnalytics();

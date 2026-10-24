@@ -19,6 +19,9 @@ const BookLesson = {
   },
 
   setupEventListeners() {
+    if (this._eventsInitialized) return;
+    this._eventsInitialized = true;
+
     // Calendar month nav
     const prevBtn = document.getElementById('page-cal-prev');
     if (prevBtn) {
@@ -118,7 +121,7 @@ const BookLesson = {
     let preselectedId = null;
     if (hashParts.length > 1) {
       const params = new URLSearchParams(hashParts[1]);
-      preselectedId = params.get('tutor_id');
+      preselectedId = params.get('tutor_id') || params.get('tutorId') || params.get('id');
     }
 
     let defaultTutor = this.allTutors[0];

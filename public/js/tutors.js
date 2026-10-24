@@ -995,130 +995,17 @@ const Tutors = {
       return;
     }
 
-    const tutor = this.allTutors.find(t => t.id == tutorId) || this.allTutors[0];
-    if (!tutor) {
-      showToast('Tutor not found.', 'error');
-      return;
-    }
-
-    this.selectedTutor = tutor;
-    this.selectedDate = null;
-    this.selectedTime = null;
-    this.paymentMethod = 'subscription';
-
-    const modal = document.getElementById('booking-modal');
-    const tutorHeader = document.getElementById('booking-tutor-header');
-    const subjectSelect = document.getElementById('booking-subject-select');
-    const subCard = document.getElementById('booking-subscription-status-card');
-
-    if (!modal) return;
-
-    // 1. Fetch Student Subscription Status to display in modal
-    try {
-      const subRes = await API.getStudentSubscription();
-      this.studentSubscription = subRes.activeSubscription || null;
-    } catch (err) {
-      this.studentSubscription = null;
-    }
-
-    // 2. Render Subscription Status Card inside booking modal
-    if (subCard) {
-      if (this.studentSubscription && this.studentSubscription.status === 'active') {
-        const remaining = this.studentSubscription.lessons_remaining;
-        const total = this.studentSubscription.lessons_total;
-        const hasCredits = remaining > 0;
-        subCard.className = 'booking-sub-card';
-        subCard.innerHTML = `
-          <div class="booking-sub-meta">
-            <div class="booking-sub-icon">${Icons.gem(20)}</div>
-            <div>
-              <div class="booking-sub-title">Active Subscription: ${this.studentSubscription.plan_name}</div>
-              <div class="booking-sub-desc">
-                <strong>${remaining}</strong> of ${total} lessons remaining • Valid until ${this.studentSubscription.formatted_expires_at || 'cycle end'}
-              </div>
-            </div>
-          </div>
-          <div class="booking-sub-badge ${hasCredits ? 'active' : 'empty'}">
-            <span>${hasCredits ? '● Active' : '○ 0 Credits'}</span>
-            <span>(${remaining} remaining)</span>
-          </div>
-        `;
-      } else {
-        subCard.className = 'booking-sub-card inactive';
-        subCard.innerHTML = `
-          <div class="booking-sub-meta">
-            <div class="booking-sub-icon">${Icons.creditCard(20)}</div>
-            <div>
-              <div class="booking-sub-title">No Active Subscription Plan</div>
-              <div class="booking-sub-desc">
-                0 lesson credits available. Sessions are billed at $${tutor.hourly_rate.toFixed(2)}/50 min standard rate.
-              </div>
-            </div>
-          </div>
-          <div class="booking-sub-badge empty">
-            <span>○ Standard Billing</span>
-          </div>
-        `;
+    this.closeMessageModal();
+    const targetHash = tutorId ? `#book-lesson?tutor_id=${tutorId}` : '#book-lesson';
+    if (window.location.hash === targetHash) {
+      if (typeof BookLesson !== 'undefined' && BookLesson.loadPage) {
+        await BookLesson.loadPage();
       }
+    } else {
+      window.location.hash = targetHash;
     }
+    window.scrollTo(0, 0);
 
-    // 3. Render Tutor Header inside booking modal
-    if (tutorHeader) {
-      tutorHeader.innerHTML = `
-        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
-          <div style="display: flex; align-items: center; gap: 1rem;">
-            <img src="${tutor.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80'}" style="width: 52px; height: 52px; border-radius: var(--radius-md); object-fit: cover; border: 2px solid var(--gold-500);" />
-            <div>
-              <h4 style="color: var(--charcoal-950); font-size: 1.15rem; margin: 0 0 0.2rem 0;">${tutor.name}</h4>
-              <p style="color: var(--gold-800); font-size: 0.85rem; font-weight: 600; margin: 0;">${tutor.headline || tutor.institution || 'Verified Educator'} • $${tutor.hourly_rate}/hour</p>
-            </div>
-          </div>
-          <div style="display: flex; align-items: center; gap: 0.5rem;">
-            <label style="font-size: 0.8rem; font-weight: 600; color: var(--charcoal-600);">Switch Tutor:</label>
-            <select id="booking-tutor-switcher" class="form-control" style="width: auto; padding: 0.35rem 0.65rem; font-size: 0.82rem;">
-              ${this.allTutors.map(t => `<option value="${t.id}" ${t.id === tutor.id ? 'selected' : ''}>${t.name} ($${t.hourly_rate}/hr)</option>`).join('')}
-            </select>
-          </div>
-        </div>
-      `;
-
-      const switcher = document.getElementById('booking-tutor-switcher');
-      if (switcher) {
-        switcher.addEventListener('change', (e) => {
-          this.openBookingModal(e.target.value);
-        });
-      }
-    }
-
-    // 4. Populate Subjects for Selected Tutor
-    if (subjectSelect) {
-      subjectSelect.innerHTML = (tutor.subjects || []).map(s => `
-        <option value="${s}">${s}</option>
-      `).join('');
-    }
-
-    // 5. Reset to Step 1 & Initialize Calendar
-    this.showStep(1);
-
-    const now = new Date();
-    this.calYear = now.getFullYear();
-    this.calMonth = now.getMonth();
-    this.renderCalendar();
-
-    // 6. Reset Slots Container & Button
-    const slotsContainer = document.getElementById('booking-slots-container');
-    if (slotsContainer) {
-      slotsContainer.innerHTML = '<div style="color: var(--charcoal-500); font-size: 0.85rem; grid-column: 1 / -1; padding: 0.5rem 0;">Please select an available date on the calendar above.</div>';
-    }
-    const dateLabel = document.getElementById('booking-selected-date-label');
-    if (dateLabel) dateLabel.textContent = 'Please pick an available date above';
-
-    const gotoPayBtn = document.getElementById('btn-goto-payment');
-    if (gotoPayBtn) gotoPayBtn.disabled = true;
-
-    modal.classList.add('active');
-    document.body.style.overflow = 'hidden';
-  },
 
   closeBookingModal() {
     const modal = document.getElementById('booking-modal');

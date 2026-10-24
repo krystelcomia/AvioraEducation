@@ -101,5 +101,14 @@ const API = {
 
   // Notifications
   getNotifications: () => apiRequest('/notifications'),
-  markNotificationsRead: () => apiRequest('/notifications/mark-read', { method: 'POST' })
+  markNotificationsRead: () => apiRequest('/notifications/mark-read', { method: 'POST' }),
+
+  // Virtual Room
+  getRoomDetails: (id) => apiRequest(`/sessions/${id}/room`),
+  openRoom: (id) => apiRequest(`/sessions/${id}/room/open`, { method: 'POST' }),
+  endRoom: (id) => apiRequest(`/sessions/${id}/room/end`, { method: 'POST' }),
+  getRoomMessages: (id) => apiRequest(`/sessions/${id}/room/messages`),
+  sendRoomMessage: (id, body) => apiRequest(`/sessions/${id}/room/messages`, { method: 'POST', body }),
+  sendRoomSignal: (id, body) => apiRequest(`/sessions/${id}/room/signal`, { method: 'POST', body }),
+  getRoomSignals: (id, since = 0) => apiRequest(`/sessions/${id}/room/signal?since=${since}`)
 };

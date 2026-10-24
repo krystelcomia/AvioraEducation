@@ -229,6 +229,11 @@ const Teacher = {
               <button class="btn btn-secondary btn-sm" onclick="Teacher.updateStatus(${r.id}, 'declined')">Decline</button>
             ` : ''}
             ${r.status === 'accepted' ? `
+              ${r.room_status === 'open' ? `
+                <button class="btn btn-primary btn-sm" onclick="VirtualRoom.joinRoom(${r.id}, 'tutor')" style="background: #10B981; border-color: #10B981;">${Icons.video(14)} Enter Room (Live)</button>
+              ` : `
+                <button class="btn btn-primary btn-sm" onclick="VirtualRoom.openRoomAsTutor(${r.id})">${Icons.video(14)} Open Virtual Room</button>
+              `}
               <button class="btn btn-outline-gold btn-sm" onclick="Teacher.updateStatus(${r.id}, 'completed')">Mark Completed</button>
             ` : ''}
           </div>

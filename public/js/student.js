@@ -211,7 +211,7 @@ const Student = {
 
           <div style="display: flex; flex-direction: column; gap: 0.6rem; min-width: 170px;">
             <button class="btn btn-outline-gold btn-sm" onclick="Tutors.openMessageModal(${nextSession.tutor_id})">${Icons.message(14)} Message Tutor</button>
-            <button class="btn btn-primary btn-sm" onclick="showToast('Classroom link is active 10 minutes prior to session start.', 'info')">${Icons.video(14)} Virtual Room</button>
+            <button class="btn btn-primary btn-sm" onclick="VirtualRoom.joinRoom(${nextSession.id}, 'student')" style="${nextSession.room_status === 'open' ? 'background: #10B981; border-color: #10B981;' : ''}">${Icons.video(14)} ${nextSession.room_status === 'open' ? 'Enter Virtual Room (Live)' : 'Virtual Room'}</button>
             <button class="btn btn-secondary btn-sm" style="font-size: 0.78rem;" onclick="Student.cancelRequest(${nextSession.id})">Cancel Booking</button>
           </div>
         </div>
@@ -276,6 +276,9 @@ const Student = {
           </div>
 
           <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+            ${r.status === 'accepted' ? `
+              <button class="btn btn-primary btn-sm" onclick="VirtualRoom.joinRoom(${r.id}, 'student')" style="${r.room_status === 'open' ? 'background: #10B981; border-color: #10B981;' : ''}">${Icons.video(14)} ${r.room_status === 'open' ? 'Enter Virtual Room (Live)' : 'Virtual Room'}</button>
+            ` : ''}
             <button class="btn btn-outline-gold btn-sm" onclick="Tutors.openMessageModal(${r.tutor_id})">${Icons.message(14)} Message</button>
             ${r.status === 'pending' ? `
               <button class="btn btn-secondary btn-sm" onclick="Student.cancelRequest(${r.id})">Cancel</button>
@@ -336,6 +339,7 @@ const Student = {
             <button class="btn btn-secondary btn-sm" onclick="Student.cancelRequest(${r.id})">Cancel</button>
           ` : ''}
           ${r.status === 'accepted' ? `
+            <button class="btn btn-primary btn-sm" onclick="VirtualRoom.joinRoom(${r.id}, 'student')" style="${r.room_status === 'open' ? 'background: #10B981; border-color: #10B981;' : ''}">${Icons.video(14)} ${r.room_status === 'open' ? 'Enter Room' : 'Virtual Room'}</button>
             <button class="btn btn-outline-gold btn-sm" onclick="Tutors.openMessageModal(${r.tutor_id})">${Icons.message(14)} Message</button>
           ` : ''}
           ${r.status === 'completed' ? `

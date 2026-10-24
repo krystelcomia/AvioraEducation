@@ -502,3 +502,270 @@
   gap: 1.5rem;
 }
 
+/* =========================================
+   VIRTUAL CLASSROOM & CALL UI STYLES
+   ========================================= */
+
+.vroom-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 14, 23, 0.92);
+  backdrop-filter: blur(12px);
+  z-index: 10000;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.vroom-overlay.active {
+  display: flex;
+}
+
+.vroom-window {
+  width: 100%;
+  max-width: 1240px;
+  height: 92vh;
+  max-height: 860px;
+  background: #0B0F19;
+  border: 1.5px solid rgba(198, 138, 40, 0.35);
+  border-radius: var(--radius-xl);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.7), 0 0 40px rgba(198, 138, 40, 0.15);
+  position: relative;
+}
+
+.vroom-header {
+  padding: 1rem 1.5rem;
+  background: #111827;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.vroom-timer-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(198, 138, 40, 0.15);
+  border: 1px solid rgba(198, 138, 40, 0.4);
+  color: var(--gold-400);
+  font-family: var(--font-heading);
+  font-weight: 800;
+  font-size: 1.05rem;
+  padding: 0.45rem 1rem;
+  border-radius: 999px;
+  letter-spacing: 0.04em;
+  transition: all 0.3s ease;
+}
+
+.vroom-pulse-dot {
+  width: 9px;
+  height: 9px;
+  background: #10B981;
+  border-radius: 50%;
+  box-shadow: 0 0 10px #10B981;
+  animation: vroomPulse 2s infinite;
+}
+
+@keyframes vroomPulse {
+  0% { transform: scale(0.9); opacity: 0.8; }
+  50% { transform: scale(1.3); opacity: 1; }
+  100% { transform: scale(0.9); opacity: 0.8; }
+}
+
+.vroom-stage {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+  position: relative;
+  background: #0B0F19;
+}
+
+.vroom-video-grid {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  padding: 1.25rem;
+  overflow-y: auto;
+}
+
+@media (max-width: 860px) {
+  .vroom-video-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.vroom-video-card {
+  position: relative;
+  background: #131A2A;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 280px;
+  box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.5);
+}
+
+.vroom-video-card video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  position: absolute;
+  inset: 0;
+}
+
+.vroom-avatar-fallback {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.85rem;
+  z-index: 1;
+}
+
+.vroom-avatar-fallback img {
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid var(--gold-500);
+  box-shadow: 0 0 25px rgba(198, 138, 40, 0.25);
+}
+
+.vroom-card-label {
+  position: absolute;
+  bottom: 0.85rem;
+  left: 0.85rem;
+  background: rgba(11, 15, 25, 0.75);
+  backdrop-filter: blur(8px);
+  padding: 0.35rem 0.75rem;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #FFFFFF;
+  font-size: 0.8rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  z-index: 2;
+}
+
+.vroom-chat-drawer {
+  width: 320px;
+  background: #111827;
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+  display: none;
+  flex-direction: column;
+}
+
+.vroom-chat-header {
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #FFFFFF;
+  font-weight: 700;
+  font-size: 0.88rem;
+}
+
+.vroom-chat-list {
+  flex: 1;
+  padding: 1rem;
+  overflow-y: auto;
+}
+
+.vroom-chat-form {
+  padding: 0.75rem 1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  gap: 0.5rem;
+}
+
+.vroom-chat-input {
+  flex: 1;
+  background: #1F2937;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: var(--radius-sm);
+  color: #FFFFFF;
+  padding: 0.45rem 0.75rem;
+  font-size: 0.82rem;
+}
+
+.vroom-chat-input:focus {
+  outline: none;
+  border-color: var(--gold-500);
+}
+
+.vroom-controls-bar {
+  padding: 0.85rem 1.5rem;
+  background: #111827;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.vroom-ctrl-btn {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.08);
+  color: #FFFFFF;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.vroom-ctrl-btn:hover {
+  background: rgba(255, 255, 255, 0.18);
+  transform: translateY(-2px);
+}
+
+.vroom-btn-danger {
+  background: #EF4444 !important;
+  border-color: #EF4444 !important;
+  color: #FFFFFF !important;
+  padding: 0 1.25rem !important;
+  width: auto !important;
+  border-radius: 999px !important;
+  font-weight: 700 !important;
+  font-size: 0.85rem !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 0.4rem !important;
+}
+
+.vroom-btn-danger:hover {
+  background: #DC2626 !important;
+}
+
+.vroom-ended-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(11, 15, 25, 0.96);
+  backdrop-filter: blur(10px);
+  z-index: 100;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 2rem;
+}
+
+

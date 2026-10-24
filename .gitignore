@@ -8,3 +8,5 @@ Thumbs.db
 .env.local
 database/aviora.db-wal
 database/aviora.db-shm
+*.sqlite
+database.sqlite

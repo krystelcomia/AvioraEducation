@@ -1909,6 +1909,280 @@ app.post('/api/teacher/requests/:id/status', authenticateToken, requireRole('tea
 });
 
 // ==========================================
+// VIRTUAL CLASSROOM / CALL ROUTES
+// ==========================================
+
+// In-memory WebRTC signaling cache
+const roomSignals = new Map();
+
+// Get Virtual Room Details & Access State
+app.get('/api/sessions/:id/room', authenticateToken, (req, res) => {
+  try {
+    const requestId = req.params.id;
+    const userId = req.user.id;
+    const userRole = req.user.role;
+
+    const request = db.prepare(`
+      SELECT 
+        tr.*,
+        su.name as student_name,
+        su.email as student_email,
+        su.avatar_url as student_avatar,
+        tu.name as tutor_name,
+        tu.email as tutor_email,
+        tu.avatar_url as tutor_avatar,
+        tp.headline as tutor_headline
+      FROM tutoring_requests tr
+      JOIN users su ON tr.student_id = su.id
+      JOIN users tu ON tr.tutor_id = tu.id
+      LEFT JOIN tutor_profiles tp ON tp.user_id = tu.id
+      WHERE tr.id = ?
+    `).get(requestId);
+
+    if (!request) {
+      return res.status(404).json({ error: 'Tutoring session not found.' });
+    }
+
+    if (userId !== request.student_id && userId !== request.tutor_id && userRole !== 'admin') {
+      return res.status(403).json({ error: 'You do not have access to this virtual room.' });
+    }
+
+    const durationMinutes = (request.duration_hours === 0.5 || request.payment_method === 'free_trial') ? 30 : 50;
+    const totalDurationSeconds = durationMinutes * 60;
+
+    let roomStatus = request.room_status || 'closed';
+    let elapsedSeconds = 0;
+    let remainingSeconds = totalDurationSeconds;
+
+    if (request.room_started_at) {
+      const startedAtMs = new Date(request.room_started_at).getTime();
+      elapsedSeconds = Math.max(0, Math.floor((Date.now() - startedAtMs) / 1000));
+      remainingSeconds = Math.max(0, totalDurationSeconds - elapsedSeconds);
+
+      // Auto-end call if time has elapsed
+      if (remainingSeconds <= 0 && roomStatus === 'open') {
+        roomStatus = 'ended';
+        db.prepare("UPDATE tutoring_requests SET room_status = 'ended', updated_at = CURRENT_TIMESTAMP WHERE id = ?").run(requestId);
+      }
+    }
+
+    const isOpen = (roomStatus === 'open' && remainingSeconds > 0);
+
+    res.json({
+      session: {
+        id: request.id,
+        subject: request.subject,
+        grade_level: request.grade_level,
+        status: request.status,
+        requested_date: request.requested_date,
+        requested_time: request.requested_time,
+        notes: request.notes,
+        student_id: request.student_id,
+        student_name: request.student_name,
+        student_avatar: request.student_avatar,
+        tutor_id: request.tutor_id,
+        tutor_name: request.tutor_name,
+        tutor_avatar: request.tutor_avatar,
+        tutor_headline: request.tutor_headline,
+      },
+      room_status: roomStatus,
+      room_started_at: request.room_started_at,
+      duration_minutes: durationMinutes,
+      total_duration_seconds: totalDurationSeconds,
+      elapsed_seconds: elapsedSeconds,
+      remaining_seconds: remainingSeconds,
+      is_open: isOpen,
+      current_user_role: (userId === request.tutor_id) ? 'tutor' : (userId === request.student_id ? 'student' : userRole)
+    });
+  } catch (error) {
+    console.error('Get virtual room error:', error);
+    res.status(500).json({ error: 'Failed to retrieve virtual room data.' });
+  }
+});
+
+// Tutor Opens Virtual Room (Begins Class)
+app.post('/api/sessions/:id/room/open', authenticateToken, (req, res) => {
+  try {
+    const requestId = req.params.id;
+    const userId = req.user.id;
+    const userRole = req.user.role;
+
+    const request = db.prepare(`
+      SELECT tr.*, tu.name as tutor_name, su.name as student_name
+      FROM tutoring_requests tr
+      JOIN users tu ON tr.tutor_id = tu.id
+      JOIN users su ON tr.student_id = su.id
+      WHERE tr.id = ?
+    `).get(requestId);
+
+    if (!request) {
+      return res.status(404).json({ error: 'Tutoring session not found.' });
+    }
+
+    if (userId !== request.tutor_id && userRole !== 'admin') {
+      return res.status(403).json({ error: 'Only the assigned tutor can open the virtual room to start the class.' });
+    }
+
+    if (request.status !== 'accepted') {
+      return res.status(400).json({ error: 'Virtual room can only be opened for confirmed sessions.' });
+    }
+
+    let startedAt = request.room_started_at;
+    if (!startedAt || request.room_status === 'ended') {
+      startedAt = new Date().toISOString();
+      db.prepare(`
+        UPDATE tutoring_requests 
+        SET room_status = 'open', room_started_at = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+      `).run(startedAt, requestId);
+    } else {
+      db.prepare(`
+        UPDATE tutoring_requests 
+        SET room_status = 'open', updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+      `).run(requestId);
+    }
+
+    // Notify the student that room has been opened
+    db.prepare(`
+      INSERT INTO notifications (user_id, title, message, type, link)
+      VALUES (?, ?, ?, 'booking', '#student-portal')
+    `).run(
+      request.student_id,
+      'Virtual Classroom is Live!',
+      `${request.tutor_name} has opened the virtual room for your ${request.subject} class. Click to connect now!`
+    );
+
+    res.json({
+      success: true,
+      message: 'Virtual room opened successfully. Class is now live!',
+      room_status: 'open',
+      room_started_at: startedAt
+    });
+  } catch (error) {
+    console.error('Open virtual room error:', error);
+    res.status(500).json({ error: 'Failed to open virtual room.' });
+  }
+});
+
+// End Virtual Room (Call concludes)
+app.post('/api/sessions/:id/room/end', authenticateToken, (req, res) => {
+  try {
+    const requestId = req.params.id;
+    const userId = req.user.id;
+    const userRole = req.user.role;
+
+    const request = db.prepare('SELECT * FROM tutoring_requests WHERE id = ?').get(requestId);
+    if (!request) {
+      return res.status(404).json({ error: 'Tutoring session not found.' });
+    }
+
+    if (userId !== request.student_id && userId !== request.tutor_id && userRole !== 'admin') {
+      return res.status(403).json({ error: 'Unauthorized to end this room.' });
+    }
+
+    db.prepare(`
+      UPDATE tutoring_requests
+      SET room_status = 'ended', updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `).run(requestId);
+
+    res.json({ success: true, message: 'Virtual room session ended.' });
+  } catch (error) {
+    console.error('End virtual room error:', error);
+    res.status(500).json({ error: 'Failed to end virtual room.' });
+  }
+});
+
+// In-Room Messages (Live Chat)
+app.get('/api/sessions/:id/room/messages', authenticateToken, (req, res) => {
+  try {
+    const requestId = req.params.id;
+    const userId = req.user.id;
+    const userRole = req.user.role;
+
+    const request = db.prepare('SELECT student_id, tutor_id FROM tutoring_requests WHERE id = ?').get(requestId);
+    if (!request || (userId !== request.student_id && userId !== request.tutor_id && userRole !== 'admin')) {
+      return res.status(403).json({ error: 'Unauthorized.' });
+    }
+
+    const messages = db.prepare(`
+      SELECT * FROM virtual_room_messages
+      WHERE request_id = ?
+      ORDER BY id ASC
+    `).all(requestId);
+
+    res.json({ messages });
+  } catch (error) {
+    console.error('Get room messages error:', error);
+    res.status(500).json({ error: 'Failed to get messages.' });
+  }
+});
+
+app.post('/api/sessions/:id/room/messages', authenticateToken, (req, res) => {
+  try {
+    const requestId = req.params.id;
+    const userId = req.user.id;
+    const userRole = req.user.role;
+    const { message } = req.body;
+
+    if (!message || !message.trim()) {
+      return res.status(400).json({ error: 'Message cannot be empty.' });
+    }
+
+    const request = db.prepare('SELECT student_id, tutor_id FROM tutoring_requests WHERE id = ?').get(requestId);
+    if (!request || (userId !== request.student_id && userId !== request.tutor_id && userRole !== 'admin')) {
+      return res.status(403).json({ error: 'Unauthorized.' });
+    }
+
+    const senderRole = (userId === request.tutor_id) ? 'tutor' : 'student';
+
+    const insert = db.prepare(`
+      INSERT INTO virtual_room_messages (request_id, sender_id, sender_name, sender_role, message)
+      VALUES (?, ?, ?, ?, ?)
+    `).run(requestId, userId, req.user.name, senderRole, message.trim());
+
+    res.status(201).json({
+      success: true,
+      message: {
+        id: insert.lastInsertRowid,
+        request_id: requestId,
+        sender_id: userId,
+        sender_name: req.user.name,
+        sender_role: senderRole,
+        message: message.trim(),
+        created_at: new Date().toISOString()
+      }
+    });
+  } catch (error) {
+    console.error('Post room message error:', error);
+    res.status(500).json({ error: 'Failed to post message.' });
+  }
+});
+
+// In-Room WebRTC Signals
+app.post('/api/sessions/:id/room/signal', authenticateToken, (req, res) => {
+  const requestId = String(req.params.id);
+  const userId = req.user.id;
+  const { signal } = req.body;
+  if (!roomSignals.has(requestId)) {
+    roomSignals.set(requestId, []);
+  }
+  const signals = roomSignals.get(requestId);
+  signals.push({ fromId: userId, signal, timestamp: Date.now() });
+  if (signals.length > 50) signals.shift();
+  res.json({ success: true });
+});
+
+app.get('/api/sessions/:id/room/signal', authenticateToken, (req, res) => {
+  const requestId = String(req.params.id);
+  const userId = req.user.id;
+  const since = parseInt(req.query.since || '0', 10);
+  const signals = (roomSignals.get(requestId) || []).filter(s => s.fromId !== userId && s.timestamp > since);
+  res.json({ signals });
+});
+
+// ==========================================
 // CREATIVE ADMINISTRATOR DASHBOARD ROUTES
 // ==========================================
 

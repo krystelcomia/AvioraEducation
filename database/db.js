@@ -110,6 +110,8 @@ function initSchema() {
       status TEXT DEFAULT 'pending' CHECK(status IN ('pending', 'accepted', 'declined', 'completed', 'cancelled')),
       notes TEXT,
       tutor_response_note TEXT,
+      room_status TEXT DEFAULT 'closed',
+      room_started_at DATETIME,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
@@ -160,10 +162,26 @@ function initSchema() {
       is_read INTEGER DEFAULT 0,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
+
+    CREATE TABLE IF NOT EXISTS virtual_room_messages (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      request_id INTEGER NOT NULL REFERENCES tutoring_requests(id) ON DELETE CASCADE,
+      sender_id INTEGER NOT NULL REFERENCES users(id),
+      sender_name TEXT NOT NULL,
+      sender_role TEXT NOT NULL,
+      message TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
   `);
 
   try {
     db.prepare("ALTER TABLE tutoring_requests ADD COLUMN payment_method TEXT DEFAULT 'card'").run();
+  } catch (e) {}
+  try {
+    db.prepare("ALTER TABLE tutoring_requests ADD COLUMN room_status TEXT DEFAULT 'closed'").run();
+  } catch (e) {}
+  try {
+    db.prepare("ALTER TABLE tutoring_requests ADD COLUMN room_started_at DATETIME").run();
   } catch (e) {}
 }
 

@@ -175,7 +175,7 @@ const StudentSub = {
         Auth.closeModal();
       }
       window.location.hash = '#login';
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      window.scrollTo(0, 0);
       return;
     }
 
@@ -258,7 +258,7 @@ const StudentSub = {
         Auth.closeModal();
       }
       window.location.hash = '#login';
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      window.scrollTo(0, 0);
       return;
     }
 
@@ -617,9 +617,7 @@ const StudentSub = {
     this.syncActiveLessonCalendar();
 
     if (schedSection) {
-      setTimeout(() => {
-        schedSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-      }, 60);
+      schedSection.scrollIntoView({ behavior: 'instant', block: 'nearest' });
     }
   },
 

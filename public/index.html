@@ -1136,143 +1136,186 @@
           <div class="step-card">
             <span class="step-number-badge">03</span>
             <h3 class="step-title">Set Rates & Conduct Mentorship</h3>
-            <p class="step-desc">Set your own hourly rates, configure your teaching schedule, accept booking requests from motivated students, and enjoy guaranteed secure disbursements.</p>
+            <p class="step-desc">Set your own hourly rates, configure your teaching schedule, accept booking requests        <!-- Discover Subscription Plans CTA Banner inside How It Works -->
+        <div style="background: linear-gradient(135deg, rgba(198, 138, 40, 0.08) 0%, rgba(26, 26, 26, 0.03) 100%); border: 1.5px solid var(--border-light); border-radius: 16px; padding: 2.5rem; text-align: center; margin-bottom: 3.5rem;">
+          <span class="badge-gold">Structured Learning Packages</span>
+          <h3 style="font-size: 1.85rem; font-weight: 700; color: var(--charcoal-900); margin: 0.5rem 0 0.85rem;">Ready to Begin Your Mentorship Journey?</h3>
+          <p style="max-width: 620px; margin: 0 auto 1.5rem; color: var(--text-secondary); font-size: 1rem;">
+            Explore our flexible pay-as-you-go sessions or structured memberships designed to accelerate academic performance and test scores.
+          </p>
+          <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+            <a href="#subscriptions" class="btn btn-primary">View Subscription Plans →</a>
+            <a href="#tutors" class="btn btn-secondary">Browse Verified Faculty</a>
           </div>
         </div>
 
-        <!-- SECTION: SUBSCRIPTIONS & MEMBERSHIP PLANS -->
-        <div style="margin-bottom: 4.5rem;" id="subscriptions-section">
-          <div style="text-align: center; margin-bottom: 2.5rem;">
-            <span class="badge-gold">Membership & Packages</span>
-            <h2 class="section-title" style="margin-top: 0.5rem; font-size: 2.2rem;">Flexible Subscription & Session Plans</h2>
-            <p class="section-desc" style="max-width: 680px; margin: 0 auto; color: var(--text-secondary);">
-              Choose between complete Pay-As-You-Go flexibility or structured monthly memberships with bundled tutoring hours and priority tutor matching.
-            </p>
+        <!-- FAQ Section on Process & Experience -->
+        <div style="background: var(--bg-surface); border: 1px solid var(--border-light); border-radius: 16px; padding: 2.5rem; box-shadow: var(--shadow-sm);">
+          <div style="text-align: center; margin-bottom: 2rem;">
+            <h3 style="font-size: 1.5rem; font-weight: 700; color: var(--charcoal-900); margin-bottom: 0.5rem;">Frequently Asked Questions</h3>
+            <p style="color: var(--text-secondary); font-size: 0.9rem;">Everything you need to know about scheduling, interactive classes, and tutor matchmaking.</p>
           </div>
 
-          <div class="pricing-grid">
-            <!-- Plan 1: Flexible Pay-As-You-Go -->
-            <div class="pricing-card">
-              <div class="pricing-card-header">
-                <span class="badge-gold" style="font-size: 0.72rem;">Flexible</span>
-                <h3 class="pricing-plan-name">Pay-As-You-Go</h3>
-                <div class="pricing-price-wrap">
-                  <span class="pricing-amount">$0</span>
-                  <span class="pricing-period">/ month fee</span>
-                </div>
-                <p class="pricing-desc">Perfect for students who need targeted assistance before major exams or occasional coursework tune-ups.</p>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.75rem;">
+            <div style="padding: 1rem; border-left: 2px solid var(--gold-500);">
+              <h4 style="font-size: 1rem; font-weight: 600; color: var(--charcoal-900); margin-bottom: 0.4rem;">How does 1-on-1 session matchmaking work?</h4>
+              <p style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.6; margin: 0;">You can browse verified Stanford, Harvard, MIT, and Columbia faculty by subject, reviews, and real-time calendar availability to select your ideal match.</p>
+            </div>
+            <div style="padding: 1rem; border-left: 2px solid var(--gold-500);">
+              <h4 style="font-size: 1rem; font-weight: 600; color: var(--charcoal-900); margin-bottom: 0.4rem;">What happens during an Aviora mentorship session?</h4>
+              <p style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.6; margin: 0;">Sessions are conducted in our high-definition interactive classroom with real-time collaborative whiteboards, screen sharing, and recorded playback for exam review.</p>
+            </div>
+            <div style="padding: 1rem; border-left: 2px solid var(--gold-500);">
+              <h4 style="font-size: 1rem; font-weight: 600; color: var(--charcoal-900); margin-bottom: 0.4rem;">What is the 100% Satisfaction Guarantee?</h4>
+              <p style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.6; margin: 0;">If your first lesson doesn't meet expectations, we will either reassign you to another top-tier educator or credit your balance in full.</p>
+            </div>
+            <div style="padding: 1rem; border-left: 2px solid var(--gold-500);">
+              <h4 style="font-size: 1rem; font-weight: 600; color: var(--charcoal-900); margin-bottom: 0.4rem;">How are tutors vetted and verified?</h4>
+              <p style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.6; margin: 0;">Every tutor undergoes comprehensive transcript audits, identity checks, and teaching demonstrations conducted by our Academic Governance Board.</p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div><!-- END VIEW: HOW IT WORKS -->
+
+
+    <!-- =======================================
+         VIEW: SUBSCRIPTION (DEDICATED PAGE)
+         ======================================= -->
+    <div id="view-subscriptions" class="app-page-view" style="display: none; padding-top: calc(var(--header-height) + 2.5rem); padding-bottom: 5rem;">
+      <div class="container">
+        <!-- Section Header -->
+        <div class="section-header" style="text-align: center; margin-bottom: 3rem;">
+          <span class="badge-gold">Membership &amp; Packages</span>
+          <h1 class="portal-title" style="margin-top: 0.5rem; font-size: 2.75rem;">Subscription &amp; Session Plans</h1>
+          <p class="section-desc" style="max-width: 720px; margin: 0 auto; color: var(--text-secondary); font-size: 1.05rem;">
+            Choose between complete Pay-As-You-Go flexibility or structured monthly memberships with bundled tutoring hours and priority tutor matching.
+          </p>
+        </div>
+
+        <div class="pricing-grid" style="margin-bottom: 4.5rem;">
+          <!-- Plan 1: Flexible Pay-As-You-Go -->
+          <div class="pricing-card">
+            <div class="pricing-card-header">
+              <span class="badge-gold" style="font-size: 0.72rem;">Flexible</span>
+              <h3 class="pricing-plan-name">Pay-As-You-Go</h3>
+              <div class="pricing-price-wrap">
+                <span class="pricing-amount">$0</span>
+                <span class="pricing-period">/ month fee</span>
               </div>
-
-              <ul class="pricing-features">
-                <li class="pricing-feature-item">
-                  <span class="pricing-check">✓</span>
-                  <span>Direct hourly booking at tutor's posted rate</span>
-                </li>
-                <li class="pricing-feature-item">
-                  <span class="pricing-check">✓</span>
-                  <span>Access to complete verified tutor directory</span>
-                </li>
-                <li class="pricing-feature-item">
-                  <span class="pricing-check">✓</span>
-                  <span>Instant booking confirmation & messaging</span>
-                </li>
-                <li class="pricing-feature-item">
-                  <span class="pricing-check">✓</span>
-                  <span>Session recordings & whiteboard summaries</span>
-                </li>
-                <li class="pricing-feature-item">
-                  <span class="pricing-check">✓</span>
-                  <span>Standard customer support</span>
-                </li>
-              </ul>
-
-              <a href="#tutors" class="btn btn-outline-gold pricing-card-btn">Browse Tutors Now</a>
+              <p class="pricing-desc">Perfect for students who need targeted assistance before major exams or occasional coursework tune-ups.</p>
             </div>
 
-            <!-- Plan 2: Scholar Monthly (Featured) -->
-            <div class="pricing-card featured">
-              <span class="pricing-badge-popular">Most Popular</span>
-              <div class="pricing-card-header">
-                <span class="badge-gold" style="font-size: 0.72rem;">Consistent Growth</span>
-                <h3 class="pricing-plan-name">Scholar Membership</h3>
-                <div class="pricing-price-wrap">
-                  <span class="pricing-amount">$199</span>
-                  <span class="pricing-period">/ month</span>
-                </div>
-                <p class="pricing-desc">Ideal for students seeking regular weekly mentorship with discounted session bundles and diagnostic progress tracking.</p>
+            <ul class="pricing-features">
+              <li class="pricing-feature-item">
+                <span class="pricing-check">✓</span>
+                <span>Direct hourly booking at tutor's posted rate</span>
+              </li>
+              <li class="pricing-feature-item">
+                <span class="pricing-check">✓</span>
+                <span>Access to complete verified tutor directory</span>
+              </li>
+              <li class="pricing-feature-item">
+                <span class="pricing-check">✓</span>
+                <span>Instant booking confirmation &amp; messaging</span>
+              </li>
+              <li class="pricing-feature-item">
+                <span class="pricing-check">✓</span>
+                <span>Session recordings &amp; whiteboard summaries</span>
+              </li>
+              <li class="pricing-feature-item">
+                <span class="pricing-check">✓</span>
+                <span>Standard customer support</span>
+              </li>
+            </ul>
+
+            <a href="#tutors" class="btn btn-outline-gold pricing-card-btn">Browse Tutors Now</a>
+          </div>
+
+          <!-- Plan 2: Scholar Monthly (Featured) -->
+          <div class="pricing-card featured">
+            <span class="pricing-badge-popular">Most Popular</span>
+            <div class="pricing-card-header">
+              <span class="badge-gold" style="font-size: 0.72rem;">Consistent Growth</span>
+              <h3 class="pricing-plan-name">Scholar Membership</h3>
+              <div class="pricing-price-wrap">
+                <span class="pricing-amount">$199</span>
+                <span class="pricing-period">/ month</span>
               </div>
-
-              <ul class="pricing-features">
-                <li class="pricing-feature-item">
-                  <span class="pricing-check">✓</span>
-                  <span><strong>4 hours</strong> of verified 1-on-1 tutoring included ($240 value)</span>
-                </li>
-                <li class="pricing-feature-item">
-                  <span class="pricing-check">✓</span>
-                  <span><strong>15% discount</strong> on all additional tutoring hours</span>
-                </li>
-                <li class="pricing-feature-item">
-                  <span class="pricing-check">✓</span>
-                  <span>Priority booking with Top 5% tutors</span>
-                </li>
-                <li class="pricing-feature-item">
-                  <span class="pricing-check">✓</span>
-                  <span>Monthly diagnostic academic progress reports</span>
-                </li>
-                <li class="pricing-feature-item">
-                  <span class="pricing-check">✓</span>
-                  <span>Dedicated Academic Concierge advisor</span>
-                </li>
-              </ul>
-
-              <button type="button" class="btn btn-primary pricing-card-btn" onclick="StudentSub.purchasePlan('scholar')">Enroll in Scholar Plan</button>
+              <p class="pricing-desc">Ideal for students seeking regular weekly mentorship with discounted session bundles and diagnostic progress tracking.</p>
             </div>
 
-            <!-- Plan 3: Honors Intensive -->
-            <div class="pricing-card">
-              <div class="pricing-card-header">
-                <span class="badge-gold" style="font-size: 0.72rem;">Comprehensive Mastery</span>
-                <h3 class="pricing-plan-name">Honors Intensive</h3>
-                <div class="pricing-price-wrap">
-                  <span class="pricing-amount">$379</span>
-                  <span class="pricing-period">/ month</span>
-                </div>
-                <p class="pricing-desc">Designed for rigorous collegiate admissions prep, AP/IB diploma candidates, and standardized test mastery.</p>
+            <ul class="pricing-features">
+              <li class="pricing-feature-item">
+                <span class="pricing-check">✓</span>
+                <span><strong>4 hours</strong> of verified 1-on-1 tutoring included ($240 value)</span>
+              </li>
+              <li class="pricing-feature-item">
+                <span class="pricing-check">✓</span>
+                <span><strong>15% discount</strong> on all additional tutoring hours</span>
+              </li>
+              <li class="pricing-feature-item">
+                <span class="pricing-check">✓</span>
+                <span>Priority booking with Top 5% tutors</span>
+              </li>
+              <li class="pricing-feature-item">
+                <span class="pricing-check">✓</span>
+                <span>Monthly diagnostic academic progress reports</span>
+              </li>
+              <li class="pricing-feature-item">
+                <span class="pricing-check">✓</span>
+                <span>Dedicated Academic Concierge advisor</span>
+              </li>
+            </ul>
+
+            <button type="button" class="btn btn-primary pricing-card-btn" onclick="StudentSub.purchasePlan('scholar')">Enroll in Scholar Plan</button>
+          </div>
+
+          <!-- Plan 3: Honors Intensive -->
+          <div class="pricing-card">
+            <div class="pricing-card-header">
+              <span class="badge-gold" style="font-size: 0.72rem;">Comprehensive Mastery</span>
+              <h3 class="pricing-plan-name">Honors Intensive</h3>
+              <div class="pricing-price-wrap">
+                <span class="pricing-amount">$379</span>
+                <span class="pricing-period">/ month</span>
               </div>
-
-              <ul class="pricing-features">
-                <li class="pricing-feature-item">
-                  <span class="pricing-check">✓</span>
-                  <span><strong>8 hours</strong> of elite 1-on-1 tutoring included ($520 value)</span>
-                </li>
-                <li class="pricing-feature-item">
-                  <span class="pricing-check">✓</span>
-                  <span><strong>25% discount</strong> on all additional tutoring hours</span>
-                </li>
-                <li class="pricing-feature-item">
-                  <span class="pricing-check">✓</span>
-                  <span>Direct matching with Ivy & PhD-level faculty</span>
-                </li>
-                <li class="pricing-feature-item">
-                  <span class="pricing-check">✓</span>
-                  <span>Bespoke syllabus design & weekly diagnostic review</span>
-                </li>
-                <li class="pricing-feature-item">
-                  <span class="pricing-check">✓</span>
-                  <span>24/7 priority homework help via academic channel</span>
-                </li>
-              </ul>
-
-              <button type="button" class="btn btn-outline-gold pricing-card-btn" onclick="StudentSub.purchasePlan('honors')">Enroll in Honors Plan</button>
+              <p class="pricing-desc">Designed for rigorous collegiate admissions prep, AP/IB diploma candidates, and standardized test mastery.</p>
             </div>
+
+            <ul class="pricing-features">
+              <li class="pricing-feature-item">
+                <span class="pricing-check">✓</span>
+                <span><strong>8 hours</strong> of elite 1-on-1 tutoring included ($520 value)</span>
+              </li>
+              <li class="pricing-feature-item">
+                <span class="pricing-check">✓</span>
+                <span><strong>25% discount</strong> on all additional tutoring hours</span>
+              </li>
+              <li class="pricing-feature-item">
+                <span class="pricing-check">✓</span>
+                <span>Direct matching with Ivy &amp; PhD-level faculty</span>
+              </li>
+              <li class="pricing-feature-item">
+                <span class="pricing-check">✓</span>
+                <span>Bespoke syllabus design &amp; weekly diagnostic review</span>
+              </li>
+              <li class="pricing-feature-item">
+                <span class="pricing-check">✓</span>
+                <span>24/7 priority homework help via academic channel</span>
+              </li>
+            </ul>
+
+            <button type="button" class="btn btn-outline-gold pricing-card-btn" onclick="StudentSub.purchasePlan('honors')">Enroll in Honors Plan</button>
           </div>
         </div>
 
         <!-- FAQ Section on Process & Billing -->
         <div style="background: var(--bg-surface); border: 1px solid var(--border-light); border-radius: 16px; padding: 2.5rem; box-shadow: var(--shadow-sm);">
           <div style="text-align: center; margin-bottom: 2rem;">
-            <h3 style="font-size: 1.5rem; font-weight: 700; color: var(--charcoal-900); margin-bottom: 0.5rem;">Frequently Asked Questions</h3>
-            <p style="color: var(--text-secondary); font-size: 0.9rem;">Everything you need to know about billing, scheduling, and tutor matchmaking.</p>
+            <h3 style="font-size: 1.5rem; font-weight: 700; color: var(--charcoal-900); margin-bottom: 0.5rem;">Billing &amp; Subscription FAQ</h3>
+            <p style="color: var(--text-secondary); font-size: 0.9rem;">Everything you need to know about billing, plan switching, and lesson scheduling.</p>
           </div>
 
           <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.75rem;">
@@ -1296,7 +1339,7 @@
         </div>
 
       </div>
-    </div><!-- END VIEW: HOW IT WORKS -->
+    </div><!-- END VIEW: SUBSCRIPTIONS -->
 
 
     <!-- =======================================

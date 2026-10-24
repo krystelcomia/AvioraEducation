@@ -799,7 +799,7 @@ const Auth = {
       const strengthBox = document.getElementById(isPage ? 'page-password-strength-box' : 'modal-password-strength-box');
       if (strengthBox) {
         strengthBox.style.borderColor = 'rgba(239, 68, 68, 0.7)';
-        strengthBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        strengthBox.scrollIntoView({ behavior: 'instant', block: 'center' });
       }
       return;
     }

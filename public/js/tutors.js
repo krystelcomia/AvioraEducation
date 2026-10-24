@@ -986,7 +986,7 @@ const Tutors = {
       }
       this.closeMessageModal();
       window.location.hash = '#signup';
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      window.scrollTo(0, 0);
       return;
     }
 

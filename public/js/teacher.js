@@ -150,7 +150,7 @@ const Teacher = {
       formSec.style.display = formSec.style.display === 'none' ? 'block' : 'none';
       if (formSec.style.display === 'block') {
         this.populateApplicationForm();
-        formSec.scrollIntoView({ behavior: 'smooth' });
+        formSec.scrollIntoView({ behavior: 'instant' });
       }
     }
   },
@@ -283,7 +283,7 @@ const Teacher = {
       const res = await API.submitTeacherApplication(formData);
       showToast(res.message, 'success');
       await this.loadTeacherView();
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      window.scrollTo(0, 0);
     } catch (err) {
       showToast(err.message, 'error');
     } finally {

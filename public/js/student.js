@@ -96,7 +96,7 @@ const Student = {
     if (targetId) {
       const el = document.getElementById(targetId);
       if (el) {
-        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        el.scrollIntoView({ behavior: 'instant', block: 'start' });
       }
     }
   },

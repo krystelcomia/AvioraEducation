@@ -155,42 +155,37 @@ const Router = {
     // Update Nav Active state
     this.updateActiveNav();
 
-    // Show appropriate page view
+    // Show appropriate page view directly
     if (hash === '#about') {
       const view = document.getElementById('view-about');
       if (view) view.style.display = 'block';
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      window.scrollTo(0, 0);
     } else if (hash === '#contact' || hash === '#about-contact') {
       const view = document.getElementById('view-about');
       if (view) view.style.display = 'block';
-      setTimeout(() => {
-        const contactSec = document.getElementById('contact');
-        if (contactSec) contactSec.scrollIntoView({ behavior: 'smooth' });
-      }, 100);
+      const contactSec = document.getElementById('contact');
+      if (contactSec) {
+        contactSec.scrollIntoView({ behavior: 'instant', block: 'start' });
+      } else {
+        window.scrollTo(0, 0);
+      }
     } else if (hash === '#how-it-works') {
       const view = document.getElementById('view-how-it-works');
       if (view) view.style.display = 'block';
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      window.scrollTo(0, 0);
     } else if (hash === '#subscriptions' || hash === '#student-subscriptions') {
       const user = Auth.currentUser;
       if (user && user.role === 'student') {
         const studentSubView = document.getElementById('view-student-subscription');
         if (studentSubView) studentSubView.style.display = 'block';
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        window.scrollTo(0, 0);
         if (typeof StudentSub !== 'undefined' && StudentSub.loadSubscriptionHub) {
           await StudentSub.loadSubscriptionHub();
         }
       } else {
-        const view = document.getElementById('view-how-it-works');
+        const view = document.getElementById('view-subscriptions');
         if (view) view.style.display = 'block';
-        const subSection = document.getElementById('subscriptions-section');
-        if (subSection) {
-          setTimeout(() => {
-            subSection.scrollIntoView({ behavior: 'smooth' });
-          }, 80);
-        } else {
-          window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
+        window.scrollTo(0, 0);
       }
     } else if (hash === '#book-now' || hash === '#book-lesson' || hash.startsWith('#book-lesson')) {
       const user = (typeof Auth !== 'undefined' && Auth.currentUser);
@@ -205,15 +200,15 @@ const Router = {
     } else if (hash === '#login') {
       const view = document.getElementById('view-login');
       if (view) view.style.display = 'block';
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      window.scrollTo(0, 0);
     } else if (hash === '#signup') {
       const view = document.getElementById('view-signup');
       if (view) view.style.display = 'block';
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      window.scrollTo(0, 0);
     } else if (hash.startsWith('#tutor-profile')) {
       const view = document.getElementById('view-tutor-profile');
       if (view) view.style.display = 'block';
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      window.scrollTo(0, 0);
       const queryStr = window.location.hash.includes('?') ? window.location.hash.split('?')[1] : '';
       const params = new URLSearchParams(queryStr);
       const tutorId = params.get('id');
@@ -223,12 +218,12 @@ const Router = {
     } else if (hash === '#tutors') {
       const view = document.getElementById('view-tutors');
       if (view) view.style.display = 'block';
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      window.scrollTo(0, 0);
       await Tutors.fetchTutors();
     } else if (hash === '#aviora-buddy' || hash.startsWith('#aviora-buddy')) {
       const view = document.getElementById('view-aviora-buddy');
       if (view) view.style.display = 'block';
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      window.scrollTo(0, 0);
       if (typeof AvioraBuddy !== 'undefined' && AvioraBuddy.init) {
         await AvioraBuddy.init();
       }
@@ -241,57 +236,49 @@ const Router = {
       }
       const view = document.getElementById('view-student-profile');
       if (view) view.style.display = 'block';
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      window.scrollTo(0, 0);
       if (typeof Profile !== 'undefined' && Profile.loadProfilePage) {
         await Profile.loadProfilePage();
       }
     } else if (hash === '#student-portal' || hash === '#student-lessons' || hash === '#student-tutors' || hash === '#student-history' || hash === '#student-schedule') {
       const view = document.getElementById('view-student-portal');
       if (view) view.style.display = 'block';
+      window.scrollTo(0, 0);
 
       if (hash === '#student-lessons') {
         Student.activeTab = 'all';
         document.querySelectorAll('.student-filter-tab').forEach(t => t.classList.toggle('active', t.dataset.status === 'all'));
         await Student.loadDashboard();
-        setTimeout(() => {
-          Student.scrollToSection('lessons');
-        }, 80);
+        Student.scrollToSection('lessons');
       } else if (hash === '#student-tutors') {
         await Student.loadDashboard();
-        setTimeout(() => {
-          Student.scrollToSection('tutors');
-        }, 80);
+        Student.scrollToSection('tutors');
       } else if (hash === '#student-history') {
         Student.activeTab = 'completed';
         document.querySelectorAll('.student-filter-tab').forEach(t => t.classList.toggle('active', t.dataset.status === 'completed'));
         await Student.loadDashboard();
-        setTimeout(() => {
-          Student.scrollToSection('history');
-        }, 80);
+        Student.scrollToSection('history');
       } else if (hash === '#student-schedule') {
         await Student.loadDashboard();
-        setTimeout(() => {
-          Student.scrollToSection('schedule');
-        }, 80);
+        Student.scrollToSection('schedule');
       } else {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
         await Student.loadDashboard();
       }
     } else if (hash === '#teacher-portal') {
       const view = document.getElementById('view-teacher-portal');
       if (view) view.style.display = 'block';
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      window.scrollTo(0, 0);
       await Teacher.loadTeacherView();
     } else if (hash === '#admin-portal') {
       const view = document.getElementById('view-admin-portal');
       if (view) view.style.display = 'block';
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      window.scrollTo(0, 0);
       await Admin.loadDashboardMetrics();
     } else {
       // Default to Home
       const view = document.getElementById('view-home');
       if (view) view.style.display = 'block';
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      window.scrollTo(0, 0);
     }
   }
 };

@@ -272,10 +272,9 @@ const AvioraBuddy = {
       // Start chat polling
       this.startChatPoll(sessionId);
 
-      // Scroll smoothly to the arena
       const arena = document.getElementById('buddy-arena-section');
       if (arena) {
-        arena.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        arena.scrollIntoView({ behavior: 'instant', block: 'start' });
       }
     } catch (e) {
       console.warn('Select session error:', e);

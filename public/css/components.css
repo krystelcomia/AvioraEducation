@@ -2103,16 +2103,42 @@
   margin-top: 0.15rem;
 }
 
+.lesson-card-subject-picker {
+  margin: 0.35rem 0;
+  background: rgba(198, 138, 40, 0.06);
+  border: 1px solid rgba(198, 138, 40, 0.28);
+  border-radius: var(--radius-sm);
+  padding: 0.35rem 0.45rem;
+}
+
+.lesson-card-subject-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--gold-800);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin-bottom: 0.2rem;
+}
+
+.lesson-card-subject-hint {
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: var(--charcoal-600);
+  text-transform: none;
+}
+
 .lesson-card-subject-select {
   width: 100%;
-  font-size: 0.76rem;
+  font-size: 0.78rem;
   font-weight: 700;
-  color: var(--charcoal-900);
-  background: #FAF8F5;
-  border: 1.5px solid rgba(198, 138, 40, 0.35);
+  color: var(--charcoal-950);
+  background: #FFFFFF;
+  border: 1.5px solid rgba(198, 138, 40, 0.45);
   border-radius: var(--radius-sm);
   padding: 0.3rem 0.45rem;
-  margin-top: 0.15rem;
   cursor: pointer;
   outline: none;
   transition: all var(--transition-fast);
@@ -2122,6 +2148,12 @@
 .lesson-card-subject-select:hover {
   border-color: var(--gold-600);
   background: #FFFFFF;
+  box-shadow: 0 0 0 2px rgba(198, 138, 40, 0.15);
+}
+
+[data-theme="dark"] .lesson-card-subject-picker {
+  background: rgba(198, 138, 40, 0.1);
+  border-color: rgba(198, 138, 40, 0.3);
 }
 
 [data-theme="dark"] .lesson-card-subject-select {

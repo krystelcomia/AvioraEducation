@@ -3812,9 +3812,9 @@
         <div style="margin-bottom: 1.25rem;">
           <label class="form-label" style="font-weight: 700; color: var(--charcoal-900); display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
             <span>1. Select Faculty Educator</span>
-            <span style="font-size: 0.75rem; font-weight: 500; color: var(--text-secondary);">Customize subjects for each lesson below</span>
+            <span style="font-size: 0.75rem; font-weight: 500; color: var(--text-secondary);">Select educator &amp; customize topics per lesson below</span>
           </label>
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.75rem;">
+          <div style="display: grid; grid-template-columns: 1.15fr 0.85fr; gap: 0.85rem; margin-bottom: 0.75rem; align-items: start;">
             <div>
               <label style="font-size: 0.78rem; font-weight: 600; color: var(--charcoal-700); margin-bottom: 0.25rem; display: block;">Accredited Educator</label>
               <select id="sub-enroll-tutor-select" class="form-control" style="font-weight: 600; font-size: 0.9rem; border: 1.5px solid rgba(198, 138, 40, 0.35);" onchange="StudentSub.onTutorSelected(this.value)">
@@ -3822,10 +3822,13 @@
               </select>
             </div>
             <div>
-              <label style="font-size: 0.78rem; font-weight: 600; color: var(--charcoal-700); margin-bottom: 0.25rem; display: block;">Apply Subject to All Lessons (Optional)</label>
-              <select id="sub-enroll-subject-select" class="form-control" style="font-weight: 600; font-size: 0.9rem; border: 1.5px solid rgba(198, 138, 40, 0.35);" onchange="StudentSub.onApplySubjectToAll(this.value)">
-                <!-- Populated from selected tutor's disciplines -->
-              </select>
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem;">
+                <label style="font-size: 0.78rem; font-weight: 600; color: var(--charcoal-700); margin: 0;">Educator's Disciplines</label>
+                <span style="font-size: 0.7rem; color: var(--gold-700); font-weight: 600;">Pick topic per lesson</span>
+              </div>
+              <div id="sub-enroll-tutor-disciplines-tags" style="display: flex; flex-wrap: wrap; gap: 0.35rem; min-height: 38px; align-items: center; background: rgba(0,0,0,0.02); border: 1px dashed rgba(198, 138, 40, 0.3); border-radius: var(--radius-sm); padding: 0.35rem 0.5rem;">
+                <!-- Populated with tutor's disciplines badges -->
+              </div>
             </div>
           </div>
 
@@ -3850,12 +3853,12 @@
         <div style="margin-bottom: 1.35rem;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.45rem;">
             <label class="form-label" style="font-weight: 700; color: var(--charcoal-900); margin-bottom: 0;">
-              2. Select 4 Lessons, Subjects &amp; Respective Dates &amp; Times
+              2. Select 4 Lessons: Choose Topics &amp; Respective Dates &amp; Times
             </label>
             <span id="sub-enroll-lessons-progress-tag" class="badge-gold" style="font-size: 0.72rem; font-weight: 700;">0 of 4 Scheduled</span>
           </div>
           <div style="font-size: 0.8rem; color: var(--charcoal-600); margin-bottom: 0.75rem; line-height: 1.45;">
-            You can select different accredited subjects for each lesson under your chosen tutor, then pick respective dates and times.
+            Choose a different topic for each lesson using the dropdown on each card (e.g., <strong>Algebra for Lesson 1</strong>, <strong>Calculus for Lesson 2</strong>). Click any card to pick its date &amp; time.
           </div>
           
           <!-- 4 Interactive Lesson Tabs / Cards Grid -->
@@ -3874,8 +3877,8 @@
             </div>
             <div style="display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;">
               <div style="display: flex; align-items: center; gap: 0.35rem;">
-                <label style="font-size: 0.76rem; font-weight: 700; color: var(--charcoal-700); margin: 0;">Subject:</label>
-                <select id="sub-active-lesson-subject-select" class="form-control" style="padding: 0.2rem 0.5rem; font-size: 0.78rem; font-weight: 700; border: 1.5px solid rgba(198, 138, 40, 0.4); border-radius: var(--radius-sm); width: auto; height: auto;" onchange="StudentSub.onActiveLessonSubjectChanged(this.value)">
+                <label style="font-size: 0.76rem; font-weight: 700; color: var(--charcoal-700); margin: 0;">Topic:</label>
+                <select id="sub-active-lesson-subject-select" class="form-control" style="padding: 0.25rem 0.55rem; font-size: 0.8rem; font-weight: 700; border: 1.5px solid rgba(198, 138, 40, 0.4); border-radius: var(--radius-sm); width: auto; height: auto; background: #fff;" onchange="StudentSub.onActiveLessonSubjectChanged(this.value)">
                   <!-- Populated from current tutor's subjects -->
                 </select>
               </div>

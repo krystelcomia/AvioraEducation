@@ -202,6 +202,31 @@ const StudentSub = {
     return [tutor.subject || 'General Tutoring'];
   },
 
+  distributeSubjectsForLessons(subjects) {
+    if (!subjects || subjects.length === 0) return ['General Tutoring', 'General Tutoring', 'General Tutoring', 'General Tutoring'];
+    const hasAlgebra = subjects.find(s => /algebra/i.test(s));
+    const hasCalculus = subjects.find(s => /calculus/i.test(s));
+    
+    let list = [...subjects];
+    // If the educator teaches both Algebra and Calculus, place Algebra for lesson 1 and Calculus for lesson 2
+    if (hasAlgebra && hasCalculus) {
+      list = [hasAlgebra, hasCalculus, ...subjects.filter(s => s !== hasAlgebra && s !== hasCalculus)];
+    }
+    
+    return [0, 1, 2, 3].map(i => list[i % list.length]);
+  },
+
+  updateTutorDisciplines(tutor) {
+    const container = document.getElementById('sub-enroll-tutor-disciplines-tags');
+    if (!container || !tutor) return;
+    const subjects = this.getTutorSubjects(tutor);
+    container.innerHTML = subjects.map(s => `
+      <span class="badge-gold" style="font-size: 0.72rem; padding: 0.2rem 0.5rem; background: rgba(198, 138, 40, 0.1); border: 1.5px solid rgba(198, 138, 40, 0.35); font-weight: 700; display: inline-flex; align-items: center; gap: 0.25rem;">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> ${s}
+      </span>
+    `).join('');
+  },
+
   // OPEN INTERACTIVE SUBSCRIPTION & 4 LESSONS SCHEDULING STUDIO
   async openEnrollmentModal(packageKey = '4_lessons') {
     const user = typeof Auth !== 'undefined' ? Auth.currentUser : null;
@@ -257,16 +282,12 @@ const StudentSub = {
 
     // Tutor subjects
     const subjects = this.getTutorSubjects(this.selectedTutor);
-    const defaultSubject = subjects[0] || 'General Tutoring';
+    const distributedTopics = this.distributeSubjectsForLessons(subjects);
 
-    // Populate subject select in Section 1 (bulk apply)
-    const subjectSelect = document.getElementById('sub-enroll-subject-select');
-    if (subjectSelect) {
-      subjectSelect.innerHTML = subjects.map(s => `<option value="${s}">${s}</option>`).join('');
-      subjectSelect.value = defaultSubject;
-    }
+    // Render educator's accredited discipline badges
+    this.updateTutorDisciplines(this.selectedTutor);
 
-    // Initialize 4 lessons setup with educator's accredited subjects
+    // Initialize 4 lessons setup with distinct subjects under this tutor
     const tutorRate = Number(this.selectedTutor?.hourly_rate || 58);
     this.selectedLessons = [0, 1, 2, 3].map(i => ({
       index: i,
@@ -274,7 +295,7 @@ const StudentSub = {
       tutor_id: this.selectedTutor?.user_id || this.selectedTutor?.id || 1,
       tutor_name: this.selectedTutor?.name || 'Educator',
       tutor_avatar: this.selectedTutor?.avatar_url || this.selectedTutor?.avatar || '',
-      subject: subjects[i % subjects.length] || defaultSubject,
+      subject: distributedTopics[i] || subjects[0] || 'General Tutoring',
       hourly_rate: tutorRate,
       scheduled_date: null,
       scheduled_time: null
@@ -332,16 +353,10 @@ const StudentSub = {
     this.selectedTutor = tutor;
 
     this.updateTutorPreview(tutor);
+    this.updateTutorDisciplines(tutor);
 
     const subjects = this.getTutorSubjects(tutor);
-    const defaultSubject = subjects[0] || 'General Tutoring';
-
-    // Update bulk subjects dropdown in Section 1
-    const subjectSelect = document.getElementById('sub-enroll-subject-select');
-    if (subjectSelect) {
-      subjectSelect.innerHTML = subjects.map(s => `<option value="${s}">${s}</option>`).join('');
-      subjectSelect.value = defaultSubject;
-    }
+    const distributedTopics = this.distributeSubjectsForLessons(subjects);
 
     // Apply this tutor & rate to all 4 lessons, distributing accredited subjects
     const rate = Number(tutor.hourly_rate || 58);
@@ -350,7 +365,7 @@ const StudentSub = {
       l.tutor_id = tutorIdToSet;
       l.tutor_name = tutor.name;
       l.tutor_avatar = tutor.avatar_url || tutor.avatar;
-      l.subject = subjects[idx % subjects.length] || defaultSubject;
+      l.subject = distributedTopics[idx] || subjects[0] || 'General Tutoring';
       l.hourly_rate = rate;
     });
 
@@ -375,12 +390,24 @@ const StudentSub = {
   },
 
   setLessonSubject(lessonIdx, subject) {
-    if (lessonIdx < 0 || lessonIdx >= this.selectedLessons.length || !subject) return;
+    if (lessonIdx < 0 || lessonIdx >= this.selectedLessons.length) return;
+    
+    if (subject === '__custom__') {
+      const current = this.selectedLessons[lessonIdx].subject;
+      const customTopic = window.prompt(`Enter custom topic/subject for Lesson ${lessonIdx + 1}:`, current || '');
+      if (!customTopic || !customTopic.trim()) {
+        this.renderLessonTabs();
+        return;
+      }
+      subject = customTopic.trim();
+    }
+
     this.selectedLessons[lessonIdx].subject = subject;
     this.activeLessonIndex = lessonIdx;
     this.updateActiveLessonBanner();
     this.renderLessonTabs();
     this.updateSummary();
+    showToast(`Lesson ${lessonIdx + 1} topic set to "${subject}"`, 'info');
   },
 
   onActiveLessonSubjectChanged(subject) {
@@ -408,7 +435,11 @@ const StudentSub = {
 
     if (subjectSelectEl) {
       const subjects = this.getTutorSubjects(this.selectedTutor);
-      subjectSelectEl.innerHTML = subjects.map(s => `<option value="${s}" ${s === lesson.subject ? 'selected' : ''}>${s}</option>`).join('');
+      const allOptions = subjects.includes(lesson.subject) ? subjects : [lesson.subject, ...subjects];
+      subjectSelectEl.innerHTML = `
+        ${allOptions.map(s => `<option value="${s}" ${s === lesson.subject ? 'selected' : ''}>${s}</option>`).join('')}
+        <option value="__custom__">✏️ Custom Topic...</option>
+      `;
       subjectSelectEl.value = lesson.subject;
     }
   },
@@ -422,6 +453,7 @@ const StudentSub = {
     grid.innerHTML = this.selectedLessons.map((l, idx) => {
       const isActive = idx === this.activeLessonIndex;
       const isScheduled = !!(l.scheduled_date && l.scheduled_time);
+      const allOptions = subjects.includes(l.subject) ? subjects : [l.subject, ...subjects];
 
       return `
         <div class="sub-lesson-card ${isActive ? 'active' : ''}" onclick="StudentSub.setActiveLesson(${idx})">
@@ -437,10 +469,14 @@ const StudentSub = {
           <div style="min-width: 0;">
             <div class="lesson-card-tutor-name" title="${l.tutor_name}">${l.tutor_name}</div>
             
-            <div style="margin: 0.35rem 0;" onclick="event.stopPropagation()">
-              <label style="font-size: 0.68rem; font-weight: 700; color: var(--gold-800); text-transform: uppercase; letter-spacing: 0.03em; display: block; margin-bottom: 0.15rem;">Subject:</label>
-              <select class="lesson-card-subject-select" onchange="StudentSub.setLessonSubject(${idx}, this.value)" title="Change subject for Lesson ${idx + 1}">
-                ${subjects.map(s => `<option value="${s}" ${s === l.subject ? 'selected' : ''}>${s}</option>`).join('')}
+            <div class="lesson-card-subject-picker" onclick="event.stopPropagation()">
+              <div class="lesson-card-subject-label">
+                <span>Topic:</span>
+                <span class="lesson-card-subject-hint">Choose subject</span>
+              </div>
+              <select class="lesson-card-subject-select" onchange="StudentSub.setLessonSubject(${idx}, this.value)" title="Choose topic for Lesson ${idx + 1}">
+                ${allOptions.map(s => `<option value="${s}" ${s === l.subject ? 'selected' : ''}>${s}</option>`).join('')}
+                <option value="__custom__">✏️ Custom Topic...</option>
               </select>
             </div>
 

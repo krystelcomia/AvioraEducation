@@ -990,8 +990,14 @@ const Tutors = {
       return;
     }
 
+    if (user.role === 'student') {
+      showToast('Lesson booking is currently unavailable while subscription setups are being adjusted. Once your current subscription ends, you can re-subscribe and select your preferred lessons.', 'info');
+      window.location.hash = '#student-subscriptions';
+      return;
+    }
+
     if (user.role !== 'student') {
-      showToast('You are currently signed in as a ' + user.role + '. Please use a student account to book tutoring sessions.', 'warning');
+      showToast('You are currently signed in as a ' + user.role + '. Please use a student account to manage tutoring subscriptions.', 'warning');
       return;
     }
 

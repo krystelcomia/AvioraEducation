@@ -115,7 +115,7 @@ const StudentSub = {
               <div style="font-size: 0.78rem; color: var(--text-secondary);">${t.subject || 'Faculty'} • $${t.hourly_rate}/hr</div>
             </div>
           </div>
-          <button class="btn btn-outline-gold btn-sm" onclick="Tutors.openBookingModal(${t.id})" style="padding: 0.35rem 0.75rem; font-size: 0.75rem;">Rebook →</button>
+          <button class="btn btn-outline-gold btn-sm" onclick="Tutors.openMessageModal(${t.id})" style="padding: 0.35rem 0.75rem; font-size: 0.75rem; display: inline-flex; align-items: center; gap: 0.3rem;">${Icons.message(12)} Message</button>
         </div>
       `).join('');
     }

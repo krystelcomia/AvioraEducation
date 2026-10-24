@@ -454,9 +454,8 @@ const Student = {
             <span>Total Sessions: <strong style="color: var(--charcoal-900);">${t.sessionsCount}</strong></span>
             <span>Rate: <strong style="color: var(--gold-600);">$${t.hourly_rate}/hr</strong></span>
           </div>
-          <div style="display: flex; gap: 0.5rem;">
-            <button class="btn btn-outline-gold btn-sm" style="flex: 1;" onclick="Tutors.openMessageModal(${t.id})">${Icons.message(14)} Message</button>
-            <button class="btn btn-primary btn-sm" style="flex: 1;" onclick="Tutors.openBookingModal(${t.id})">Book Again →</button>
+          <div>
+            <button class="btn btn-outline-gold btn-sm" style="width: 100%; justify-content: center;" onclick="Tutors.openMessageModal(${t.id})">${Icons.message(14)} Message Tutor</button>
           </div>
         </div>
       `).join('');

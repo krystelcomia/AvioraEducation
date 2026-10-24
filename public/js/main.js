@@ -189,23 +189,16 @@ const Router = {
           window.scrollTo({ top: 0, behavior: 'smooth' });
         }
       }
-    } else if (hash === '#book-now') {
+    } else if (hash === '#book-now' || hash === '#book-lesson' || hash.startsWith('#book-lesson')) {
       const user = (typeof Auth !== 'undefined' && Auth.currentUser);
-      if (!user) {
-        showToast('Please create an account to book your tutoring session.', 'info');
-        window.location.hash = '#signup';
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-        return;
+      if (user && user.role === 'student') {
+        showToast('Lesson booking is currently unavailable while subscription setups are being adjusted. Once your current subscription ends, you can re-subscribe and select your preferred lessons.', 'info');
+        window.location.hash = '#student-subscriptions';
+      } else {
+        showToast('Lesson booking is currently unavailable while subscription setups are being adjusted. You can view our available subscription packages.', 'info');
+        window.location.hash = '#subscriptions';
       }
-      window.location.hash = '#book-lesson';
       return;
-    } else if (hash === '#book-lesson' || hash.startsWith('#book-lesson')) {
-      const view = document.getElementById('view-book-lesson');
-      if (view) view.style.display = 'block';
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      if (typeof BookLesson !== 'undefined' && BookLesson.init) {
-        await BookLesson.init();
-      }
     } else if (hash === '#login') {
       const view = document.getElementById('view-login');
       if (view) view.style.display = 'block';

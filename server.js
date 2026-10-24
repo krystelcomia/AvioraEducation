@@ -2304,6 +2304,361 @@ app.get('/api/sessions/:id/room/signal', authenticateToken, (req, res) => {
 });
 
 // ==========================================
+// AVIORA BUDDY API ROUTES (2-STUDENT CO-LEARNING & BATTLE STUDIO - $6)
+// ==========================================
+
+// Get All Buddy Sessions for Current User & Available Peers
+app.get('/api/buddy/sessions', authenticateToken, (req, res) => {
+  try {
+    const userId = req.user.id;
+    const userRole = req.user.role;
+
+    // Fetch buddy sessions where user is tutor, student1, or student2, or open lobby sessions
+    const sessions = db.prepare(`
+      SELECT 
+        bs.*,
+        t.name as tutor_name, t.avatar_url as tutor_avatar,
+        s1.name as student1_name, s1.avatar_url as student1_avatar,
+        s2.name as student2_name, s2.avatar_url as student2_avatar
+      FROM buddy_sessions bs
+      LEFT JOIN users t ON bs.tutor_id = t.id
+      LEFT JOIN users s1 ON bs.student1_id = s1.id
+      LEFT JOIN users s2 ON bs.student2_id = s2.id
+      WHERE bs.tutor_id = ? OR bs.student1_id = ? OR bs.student2_id = ? OR (bs.student2_id IS NULL AND bs.status = 'active')
+      ORDER BY bs.id DESC
+    `).all(userId, userId, userId);
+
+    // List of student peers for buddy matchmaking
+    const peers = db.prepare(`
+      SELECT u.id, u.name, u.avatar_url, sp.grade_level, sp.target_subjects
+      FROM users u
+      LEFT JOIN student_profiles sp ON u.id = sp.user_id
+      WHERE u.role = 'student' AND u.id != ? AND u.status = 'active'
+      LIMIT 15
+    `).all(userId);
+
+    // List of active tutors
+    const tutors = db.prepare(`
+      SELECT u.id, u.name, u.avatar_url, tp.hourly_rate, tp.headline, tp.subjects
+      FROM users u
+      JOIN tutor_profiles tp ON u.id = tp.user_id
+      WHERE u.role = 'teacher' AND tp.is_active = 1
+    `).all();
+
+    res.json({
+      success: true,
+      sessions,
+      peers,
+      tutors,
+      buddy_fee_per_student: 6.00
+    });
+  } catch (error) {
+    console.error('Get buddy sessions error:', error);
+    res.status(500).json({ error: 'Failed to retrieve Aviora Buddy sessions.' });
+  }
+});
+
+// Create an Aviora Buddy Session (Tutor-led or Peer-to-Peer - $6 flat fee per student)
+app.post('/api/buddy/create', authenticateToken, (req, res) => {
+  try {
+    const userId = req.user.id;
+    const userRole = req.user.role;
+    const {
+      session_type, // 'tutor_led' | 'peer_study'
+      tutor_id,
+      student1_id,
+      student2_id,
+      subject,
+      topic,
+      scheduled_date,
+      scheduled_time
+    } = req.body;
+
+    const sessionType = (session_type === 'tutor_led') ? 'tutor_led' : 'peer_study';
+    let assignedTutorId = null;
+    let s1 = userId;
+    let s2 = student2_id ? parseInt(student2_id, 10) : null;
+
+    if (sessionType === 'tutor_led') {
+      if (userRole === 'teacher') {
+        assignedTutorId = userId;
+        s1 = student1_id ? parseInt(student1_id, 10) : null;
+      } else {
+        // Student initiating a tutor-led session
+        assignedTutorId = tutor_id ? parseInt(tutor_id, 10) : null;
+        s1 = userId;
+      }
+
+      if (!assignedTutorId) {
+        return res.status(400).json({ error: 'Please select an accredited tutor for the tutor-led session.' });
+      }
+    } else {
+      // Peer study: two students on their own
+      s1 = userId;
+    }
+
+    if (!s1) {
+      return res.status(400).json({ error: 'Student 1 must be specified.' });
+    }
+
+    // Generate unique session code
+    let sessionCode = `BUDDY-${Math.floor(1000 + Math.random() * 9000)}`;
+    while (db.prepare('SELECT id FROM buddy_sessions WHERE session_code = ?').get(sessionCode)) {
+      sessionCode = `BUDDY-${Math.floor(1000 + Math.random() * 9000)}`;
+    }
+
+    const todayStr = new Date().toISOString().split('T')[0];
+    const finalDate = scheduled_date || todayStr;
+    const finalTime = scheduled_time || '16:00 - 16:50';
+    const finalSubject = (subject && subject.trim()) || (sessionType === 'tutor_led' ? 'Faculty Academic Mentorship & Quiz Bee' : 'Peer Collaborative Study & Quiz Bee');
+    const finalTopic = (topic && topic.trim()) || 'Concept Mastery, Equation Duel & Quiz Bee Challenge';
+
+    const insert = db.prepare(`
+      INSERT INTO buddy_sessions (
+        session_code, session_type, tutor_id, student1_id, student2_id,
+        subject, topic, scheduled_date, scheduled_time, fee_per_student, total_fee,
+        status, room_status, room_started_at
+      ) VALUES (
+        ?, ?, ?, ?, ?,
+        ?, ?, ?, ?, 6.00, 12.00,
+        'active', 'open', CURRENT_TIMESTAMP
+      )
+    `);
+
+    const result = insert.run(
+      sessionCode,
+      sessionType,
+      assignedTutorId,
+      s1,
+      s2,
+      finalSubject,
+      finalTopic,
+      finalDate,
+      finalTime
+    );
+
+    const newSessionId = result.lastInsertRowid;
+
+    // Send notifications
+    const s1User = db.prepare('SELECT name FROM users WHERE id = ?').get(s1);
+    const creatorName = req.user.name;
+
+    if (s2) {
+      db.prepare(`
+        INSERT INTO notifications (user_id, title, message, type, link)
+        VALUES (?, 'Aviora Buddy Invitation ($6)', ?, 'booking', '#aviora-buddy')
+      `).run(s2, `${creatorName} set up an Aviora Buddy session for two students: "${finalSubject}". Cost: $6. Code: ${sessionCode}`);
+    }
+
+    if (assignedTutorId && assignedTutorId !== userId) {
+      db.prepare(`
+        INSERT INTO notifications (user_id, title, message, type, link)
+        VALUES (?, 'New Aviora Buddy Class ($6/student)', ?, 'booking', '#aviora-buddy')
+      `).run(assignedTutorId, `${creatorName} booked a 2-student Aviora Buddy class for ${finalDate} (${finalTime}): "${finalSubject}".`);
+    }
+
+    // Add first chat announcement
+    db.prepare(`
+      INSERT INTO buddy_messages (session_id, sender_id, sender_name, sender_role, message)
+      VALUES (?, ?, ?, ?, ?)
+    `).run(
+      newSessionId,
+      userId,
+      req.user.name,
+      userRole === 'teacher' ? 'tutor' : 'student',
+      `Welcome to this Aviora Buddy session! Cost: $6 per student. Share code ${sessionCode} to invite your buddy.`
+    );
+
+    const created = db.prepare(`
+      SELECT 
+        bs.*,
+        t.name as tutor_name, t.avatar_url as tutor_avatar,
+        s1.name as student1_name, s1.avatar_url as student1_avatar,
+        s2.name as student2_name, s2.avatar_url as student2_avatar
+      FROM buddy_sessions bs
+      LEFT JOIN users t ON bs.tutor_id = t.id
+      LEFT JOIN users s1 ON bs.student1_id = s1.id
+      LEFT JOIN users s2 ON bs.student2_id = s2.id
+      WHERE bs.id = ?
+    `).get(newSessionId);
+
+    res.status(201).json({
+      success: true,
+      message: `Aviora Buddy session created successfully at $6! Code: ${sessionCode}`,
+      session: created
+    });
+  } catch (error) {
+    console.error('Create buddy session error:', error);
+    res.status(500).json({ error: 'Failed to create Aviora Buddy session.' });
+  }
+});
+
+// Join an Aviora Buddy Session using Code
+app.post('/api/buddy/join', authenticateToken, (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { session_code } = req.body;
+
+    if (!session_code || !session_code.trim()) {
+      return res.status(400).json({ error: 'Please enter a valid Aviora Buddy code.' });
+    }
+
+    const code = session_code.trim().toUpperCase();
+    const session = db.prepare('SELECT * FROM buddy_sessions WHERE session_code = ?').get(code);
+
+    if (!session) {
+      return res.status(404).json({ error: `Buddy session code "${code}" not found.` });
+    }
+
+    if (session.student1_id === userId || session.student2_id === userId || session.tutor_id === userId) {
+      return res.json({
+        success: true,
+        message: 'You are already a participant in this Aviora Buddy session!',
+        session_id: session.id,
+        session_code: session.session_code
+      });
+    }
+
+    // If slot 2 is open, attach current user as student 2
+    if (!session.student2_id) {
+      db.prepare(`
+        UPDATE buddy_sessions 
+        SET student2_id = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+      `).run(userId, session.id);
+
+      // Notify student 1
+      db.prepare(`
+        INSERT INTO notifications (user_id, title, message, type, link)
+        VALUES (?, 'Buddy Joined Your Session!', ?, 'info', '#aviora-buddy')
+      `).run(session.student1_id, `${req.user.name} joined your Aviora Buddy session (${session.session_code})! Cost: $6.`);
+
+      // Post message
+      db.prepare(`
+        INSERT INTO buddy_messages (session_id, sender_id, sender_name, sender_role, message)
+        VALUES (?, ?, ?, 'student', ?)
+      `).run(session.id, userId, req.user.name, `${req.user.name} has joined the Aviora Buddy session! Let the games begin! 🚀`);
+
+      return res.json({
+        success: true,
+        message: `Successfully joined Aviora Buddy session at $6! Welcome aboard.`,
+        session_id: session.id,
+        session_code: session.session_code
+      });
+    } else {
+      return res.status(400).json({ error: 'This Aviora Buddy session already has two students enrolled.' });
+    }
+  } catch (error) {
+    console.error('Join buddy session error:', error);
+    res.status(500).json({ error: 'Failed to join Aviora Buddy session.' });
+  }
+});
+
+// Get Single Buddy Session Details & Live State
+app.get('/api/buddy/session/:id', authenticateToken, (req, res) => {
+  try {
+    const sessionId = req.params.id;
+    const session = db.prepare(`
+      SELECT 
+        bs.*,
+        t.name as tutor_name, t.avatar_url as tutor_avatar,
+        s1.name as student1_name, s1.avatar_url as student1_avatar,
+        s2.name as student2_name, s2.avatar_url as student2_avatar
+      FROM buddy_sessions bs
+      LEFT JOIN users t ON bs.tutor_id = t.id
+      LEFT JOIN users s1 ON bs.student1_id = s1.id
+      LEFT JOIN users s2 ON bs.student2_id = s2.id
+      WHERE bs.id = ?
+    `).get(sessionId);
+
+    if (!session) {
+      return res.status(404).json({ error: 'Buddy session not found.' });
+    }
+
+    const messages = db.prepare(`
+      SELECT * FROM buddy_messages 
+      WHERE session_id = ? 
+      ORDER BY id ASC
+    `).all(sessionId);
+
+    res.json({
+      success: true,
+      session,
+      messages
+    });
+  } catch (error) {
+    console.error('Get single buddy session error:', error);
+    res.status(500).json({ error: 'Failed to retrieve session details.' });
+  }
+});
+
+// Post In-Session Chat Message
+app.post('/api/buddy/session/:id/message', authenticateToken, (req, res) => {
+  try {
+    const sessionId = req.params.id;
+    const userId = req.user.id;
+    const userRole = req.user.role;
+    const { message } = req.body;
+
+    if (!message || !message.trim()) {
+      return res.status(400).json({ error: 'Message cannot be empty.' });
+    }
+
+    const session = db.prepare('SELECT * FROM buddy_sessions WHERE id = ?').get(sessionId);
+    if (!session) {
+      return res.status(404).json({ error: 'Buddy session not found.' });
+    }
+
+    const role = (userRole === 'teacher' && session.tutor_id === userId) ? 'tutor' : 'student';
+
+    db.prepare(`
+      INSERT INTO buddy_messages (session_id, sender_id, sender_name, sender_role, message)
+      VALUES (?, ?, ?, ?, ?)
+    `).run(sessionId, userId, req.user.name, role, message.trim());
+
+    const messages = db.prepare(`
+      SELECT * FROM buddy_messages 
+      WHERE session_id = ? 
+      ORDER BY id ASC
+    `).all(sessionId);
+
+    res.json({ success: true, messages });
+  } catch (error) {
+    console.error('Post buddy message error:', error);
+    res.status(500).json({ error: 'Failed to send message.' });
+  }
+});
+
+// Update In-Session Game State / Scores
+app.post('/api/buddy/session/:id/game-score', authenticateToken, (req, res) => {
+  try {
+    const sessionId = req.params.id;
+    const { game_type, student1_score, student2_score, current_round, winner, streak } = req.body;
+
+    const gameState = JSON.stringify({
+      game_type: game_type || 'quiz_bee',
+      student1_score: student1_score || 0,
+      student2_score: student2_score || 0,
+      current_round: current_round || 1,
+      winner: winner || null,
+      streak: streak || 0,
+      updated_at: new Date().toISOString()
+    });
+
+    db.prepare(`
+      UPDATE buddy_sessions 
+      SET game_state = ?, updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `).run(gameState, sessionId);
+
+    res.json({ success: true, game_state: JSON.parse(gameState) });
+  } catch (error) {
+    console.error('Update buddy game score error:', error);
+    res.status(500).json({ error: 'Failed to update game score.' });
+  }
+});
+
+// ==========================================
 // CREATIVE ADMINISTRATOR DASHBOARD ROUTES
 // ==========================================
 

@@ -24,6 +24,7 @@
   <link rel="stylesheet" href="/css/student.css" />
   <link rel="stylesheet" href="/css/teacher.css" />
   <link rel="stylesheet" href="/css/admin.css" />
+  <link rel="stylesheet" href="/css/buddy.css" />
 </head>
 <body>
 
@@ -41,15 +42,14 @@
       </a>
 
       <!-- Main Navigation Links -->
-      <!-- Main Navigation Links -->
       <nav class="nav-menu">
         <ul class="nav-links" id="main-nav-links">
           <li><a href="#home" class="nav-link active" id="nav-link-home">Home</a></li>
           <li><a href="#about" class="nav-link" id="nav-link-about">About</a></li>
-          <li><a href="#tutors" class="nav-link" id="nav-link-tutors">Find Tutors</a></li>
+          <li><a href="#subscriptions" class="nav-link" id="nav-link-subscriptions">Subscription</a></li>
+          <li><a href="#tutors" class="nav-link" id="nav-link-tutors">Tutors</a></li>
+          <li><a href="#aviora-buddy" class="nav-link" id="nav-link-buddy">Aviora Buddy</a></li>
           <li><a href="#how-it-works" class="nav-link" id="nav-link-how">How It Works</a></li>
-          <li><a href="#book-now" class="nav-link" id="nav-link-book">Book Now</a></li>
-          <li><a href="#subscriptions" class="nav-link" id="nav-link-subscriptions">Subscriptions</a></li>
           <li id="nav-portal-links"></li>
         </ul>
       </nav>
@@ -2579,6 +2579,244 @@
 
 
     <!-- =======================================
+         VIEW: AVIORA BUDDY (2-STUDENT CO-LEARNING & BATTLE STUDIO - $6)
+         ======================================= -->
+    <div id="view-aviora-buddy" class="app-page-view" style="display: none; padding-top: calc(var(--header-height) + 2rem); padding-bottom: 5rem;">
+      <div class="container">
+
+        <!-- 1. HERO BANNER -->
+        <div class="buddy-hero-banner">
+          <div class="buddy-hero-grid">
+            <div>
+              <div class="buddy-pricing-pill">
+                <span>✦</span> $6 Flat Rate • 2 Students in One Class
+              </div>
+              <h1 style="font-family: var(--font-heading); font-size: 2.35rem; font-weight: 900; color: var(--charcoal-950); line-height: 1.15; margin-bottom: 0.85rem;">
+                Aviora <span class="text-gold">Buddy</span>
+              </h1>
+              <p style="color: var(--charcoal-700); font-size: 1.02rem; line-height: 1.6; margin-bottom: 1.75rem; max-width: 620px;">
+                Connect two students in a single dynamic classroom for only <strong>$6</strong>. Engage in fast-paced academic Quiz Bees, Math Equation Duels, Vocabulary Scrambles, Concept Memory Matching, collaborative whiteboard sketching, and live chat. Available for either a tutor to set up (tutor + 2 students) or students to initiate peer-to-peer!
+              </p>
+
+              <!-- Quick Launch Actions -->
+              <div style="display: flex; gap: 0.85rem; flex-wrap: wrap; align-items: center;">
+                <button type="button" class="btn btn-primary" onclick="AvioraBuddy.openPeerModal()" style="font-weight: 800; padding: 0.85rem 1.35rem;">
+                  <span>⚡ Launch Peer Buddy ($6)</span>
+                  <span>→</span>
+                </button>
+                <button type="button" class="btn btn-outline-gold" onclick="AvioraBuddy.openTutorModal()" style="font-weight: 700; padding: 0.85rem 1.25rem;">
+                  <span>🎓 Set Up Tutor-Led Class ($6/student)</span>
+                </button>
+                <button type="button" class="btn btn-secondary" onclick="AvioraBuddy.openJoinCodeModal()" style="font-weight: 700; padding: 0.85rem 1.15rem; background: #FFFFFF; border-color: rgba(0,0,0,0.15);">
+                  <span>🔑 Join with Code</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Right Visual Graphic Box -->
+            <div style="background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(10px); border: 1.5px solid rgba(198, 138, 40, 0.3); border-radius: 16px; padding: 1.75rem; box-shadow: var(--shadow-sm);">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
+                <span class="badge-gold" style="font-size: 0.72rem; font-weight: 800;">Duo Co-Learning Perks</span>
+                <span style="font-size: 0.8rem; font-weight: 700; color: #10B981;">● Live Interactive</span>
+              </div>
+
+              <div style="display: flex; flex-direction: column; gap: 0.75rem; font-size: 0.85rem; color: var(--charcoal-800); line-height: 1.5;">
+                <div style="display: flex; align-items: center; gap: 0.65rem;">
+                  <span style="width: 26px; height: 26px; border-radius: 50%; background: rgba(198, 138, 40, 0.15); color: var(--gold-700); display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 800;">✓</span>
+                  <span><strong>Cost: $6 Flat Rate</strong> — Shared peer pricing</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.65rem;">
+                  <span style="width: 26px; height: 26px; border-radius: 50%; background: rgba(198, 138, 40, 0.15); color: var(--gold-700); display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 800;">✓</span>
+                  <span><strong>2 Modes:</strong> Tutor-Led or Student Peer-to-Peer</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.65rem;">
+                  <span style="width: 26px; height: 26px; border-radius: 50%; background: rgba(198, 138, 40, 0.15); color: var(--gold-700); display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 800;">✓</span>
+                  <span><strong>Variety of Games:</strong> Quiz Bee, Math Duel, Vocab Sprint</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.65rem;">
+                  <span style="width: 26px; height: 26px; border-radius: 50%; background: rgba(198, 138, 40, 0.15); color: var(--gold-700); display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 800;">✓</span>
+                  <span><strong>Real-time Chat &amp; Whiteboard:</strong> Collaborate on equations</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. INTERACTIVE LIVE BATTLE ARENA & STUDIO -->
+        <div id="buddy-arena-section" class="buddy-arena-container">
+          <!-- Topbar -->
+          <div class="buddy-arena-topbar">
+            <div>
+              <div style="display: flex; align-items: center; gap: 0.65rem; margin-bottom: 0.25rem;">
+                <span class="badge-gold" id="buddy-arena-code-badge" style="font-size: 0.72rem; font-weight: 800;">Code: BUDDY-7482 • $6 Service</span>
+                <span style="font-size: 0.78rem; color: #10B981; font-weight: 700;">● Live 2-Student Arena</span>
+              </div>
+              <h3 id="buddy-arena-title" style="font-family: var(--font-heading); font-size: 1.35rem; font-weight: 800; color: #FFFFFF; margin: 0;">
+                AP Calculus BC &amp; Quiz Bee Duel
+              </h3>
+            </div>
+
+            <!-- Scoreboard -->
+            <div class="buddy-scoreboard">
+              <!-- Student 1 -->
+              <div class="buddy-player-chip">
+                <img id="buddy-player1-avatar" src="/assets/favicon.png" alt="Student 1" />
+                <div>
+                  <div id="buddy-player1-name" style="font-size: 0.82rem; font-weight: 700;">Lucas Taylor</div>
+                  <div id="buddy-player1-score" class="buddy-player-score">0</div>
+                </div>
+              </div>
+
+              <span class="buddy-vs-badge">VS</span>
+
+              <!-- Student 2 -->
+              <div class="buddy-player-chip">
+                <div>
+                  <div id="buddy-player2-name" style="font-size: 0.82rem; font-weight: 700; text-align: right;">Sophia Martinez</div>
+                  <div id="buddy-player2-score" class="buddy-player-score" style="text-align: right;">0</div>
+                </div>
+                <img id="buddy-player2-avatar" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80" alt="Student 2" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Game Tabs Navigation -->
+          <div class="buddy-arena-tabs">
+            <button type="button" class="buddy-tab-btn active" data-game="quiz_bee" onclick="AvioraBuddy.switchGameTab('quiz_bee')">
+              🐝 Quiz Bee Arena
+            </button>
+            <button type="button" class="buddy-tab-btn" data-game="math_duel" onclick="AvioraBuddy.switchGameTab('math_duel')">
+              🔢 Math Duel (Equation Sprint)
+            </button>
+            <button type="button" class="buddy-tab-btn" data-game="word_scramble" onclick="AvioraBuddy.switchGameTab('word_scramble')">
+              🔤 Vocabulary Scramble
+            </button>
+            <button type="button" class="buddy-tab-btn" data-game="concept_match" onclick="AvioraBuddy.switchGameTab('concept_match')">
+              🃏 Concept Match (Memory Tiles)
+            </button>
+            <button type="button" class="buddy-tab-btn" data-game="logic_quest" onclick="AvioraBuddy.switchGameTab('logic_quest')">
+              🧩 Logic &amp; Code Riddle
+            </button>
+            <button type="button" class="buddy-tab-btn" data-game="whiteboard" onclick="AvioraBuddy.switchGameTab('whiteboard')">
+              🎨 Shared Whiteboard
+            </button>
+            <button type="button" class="buddy-tab-btn" data-game="video_call" onclick="AvioraBuddy.switchGameTab('video_call')">
+              📹 Audio / Video Room
+            </button>
+          </div>
+
+          <!-- Main Body: Game Stage + Chat Sidebar -->
+          <div class="buddy-arena-body">
+            <!-- Stage -->
+            <div id="buddy-game-stage" class="buddy-game-stage">
+              <!-- Dynamically rendered via buddy.js -->
+            </div>
+
+            <!-- Chat Sidebar -->
+            <div class="buddy-sidebar">
+              <div class="buddy-chat-header">
+                <span>💬 Live Buddy Chat</span>
+                <span class="badge-gold" style="font-size: 0.68rem; padding: 0.15rem 0.45rem;">2 Students + Educator</span>
+              </div>
+
+              <!-- Message Stream -->
+              <div id="buddy-chat-messages-container" class="buddy-chat-messages">
+                <!-- Dynamically rendered -->
+              </div>
+
+              <!-- Quick Reaction Chips -->
+              <div class="buddy-quick-reactions">
+                <button type="button" class="reaction-chip" onclick="AvioraBuddy.sendReaction('💡 Brilliant answer!')">💡 Brilliant!</button>
+                <button type="button" class="reaction-chip" onclick="AvioraBuddy.sendReaction('🔥 Nice streak!')">🔥 Streak!</button>
+                <button type="button" class="reaction-chip" onclick="AvioraBuddy.sendReaction('🤔 Let’s double check this')">🤔 Double check</button>
+                <button type="button" class="reaction-chip" onclick="AvioraBuddy.sendReaction('🚀 Good Game!')">🚀 GG!</button>
+                <button type="button" class="reaction-chip" onclick="AvioraBuddy.sendReaction('👏 Superb speed!')">👏 Fast!</button>
+              </div>
+
+              <!-- Input Bar -->
+              <form onsubmit="event.preventDefault(); AvioraBuddy.sendChatMessage();" class="buddy-chat-input-bar">
+                <input type="text" id="buddy-chat-input" placeholder="Type a message or cheer..." autocomplete="off" />
+                <button type="submit" class="btn btn-primary btn-sm" style="font-weight: 700; padding: 0 0.85rem;">Send</button>
+              </form>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3. ACTIVE & SCHEDULED SESSIONS LIST -->
+        <div style="margin-bottom: 2rem;">
+          <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 0.5rem;">
+            <div>
+              <span class="badge-gold">Duo Study Sessions</span>
+              <h2 style="font-family: var(--font-heading); font-size: 1.6rem; font-weight: 800; color: var(--charcoal-900); margin: 0.35rem 0 0 0;">
+                Your Aviora Buddy Sessions
+              </h2>
+            </div>
+            <div style="font-size: 0.82rem; color: var(--text-secondary);">
+              Showing active &amp; open sessions ($6 fee)
+            </div>
+          </div>
+
+          <div id="buddy-my-sessions-list" class="buddy-feature-cards-grid">
+            <!-- Dynamically populated via buddy.js -->
+          </div>
+        </div>
+
+        <!-- 4. FEATURES & VARIETY OF GAMES SHOWCASE -->
+        <div style="background: var(--bg-surface); border: 1px solid var(--border-light); border-radius: 16px; padding: 2.5rem; box-shadow: var(--shadow-sm); margin-bottom: 2rem;">
+          <div style="text-align: center; max-width: 680px; margin: 0 auto 2.5rem auto;">
+            <span class="badge-gold">Curated Co-Learning System</span>
+            <h3 style="font-family: var(--font-heading); font-size: 1.65rem; font-weight: 800; color: var(--charcoal-900); margin: 0.5rem 0;">
+              A Variety of Educational Games &amp; Features
+            </h3>
+            <p style="color: var(--text-secondary); font-size: 0.92rem; line-height: 1.6; margin: 0;">
+              Aviora Buddy transforms standard lessons into interactive pair-based learning sessions at an accessible $6 cost.
+            </p>
+          </div>
+
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem;">
+            <!-- Feature 1 -->
+            <div style="border-left: 3px solid var(--gold-500); padding-left: 1rem;">
+              <div style="font-size: 1.5rem; margin-bottom: 0.4rem;">🐝</div>
+              <h4 style="font-weight: 700; color: var(--charcoal-900); font-size: 1rem; margin-bottom: 0.35rem;">Academic Quiz Bee</h4>
+              <p style="font-size: 0.84rem; color: var(--text-secondary); line-height: 1.55; margin: 0;">
+                Test subject mastery across Calculus, Classical Mechanics, Organic Chemistry, World History, and Computer Science with live points, streaks, and explanations.
+              </p>
+            </div>
+
+            <!-- Feature 2 -->
+            <div style="border-left: 3px solid var(--gold-500); padding-left: 1rem;">
+              <div style="font-size: 1.5rem; margin-bottom: 0.4rem;">🔢</div>
+              <h4 style="font-weight: 700; color: var(--charcoal-900); font-size: 1rem; margin-bottom: 0.35rem;">Math Duel &amp; Equation Sprint</h4>
+              <p style="font-size: 0.84rem; color: var(--text-secondary); line-height: 1.55; margin: 0;">
+                Race in rapid-fire mental arithmetic, algebraic solving, and calculus differentiation to sharpen speed, accuracy, and competitive confidence.
+              </p>
+            </div>
+
+            <!-- Feature 3 -->
+            <div style="border-left: 3px solid var(--gold-500); padding-left: 1rem;">
+              <div style="font-size: 1.5rem; margin-bottom: 0.4rem;">🃏</div>
+              <h4 style="font-weight: 700; color: var(--charcoal-900); font-size: 1rem; margin-bottom: 0.35rem;">Concept Match &amp; Vocab Scramble</h4>
+              <p style="font-size: 0.84rem; color: var(--text-secondary); line-height: 1.55; margin: 0;">
+                Unscramble SAT/ACT collegiate vocabulary and flip memory tiles to pair physics laws, molecular equations, and algorithmic complexity classes.
+              </p>
+            </div>
+
+            <!-- Feature 4 -->
+            <div style="border-left: 3px solid var(--gold-500); padding-left: 1rem;">
+              <div style="font-size: 1.5rem; margin-bottom: 0.4rem;">🎨</div>
+              <h4 style="font-weight: 700; color: var(--charcoal-900); font-size: 1rem; margin-bottom: 0.35rem;">Shared Whiteboard &amp; Live Chat</h4>
+              <p style="font-size: 0.84rem; color: var(--text-secondary); line-height: 1.55; margin: 0;">
+                Draw geometric proofs, sketch free-body diagrams, exchange quick motivational reactions, and communicate in real time throughout your 50-minute session.
+              </p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div><!-- END VIEW: AVIORA BUDDY -->
+
+
+    <!-- =======================================
          VIEW 4: TEACHER PORTAL & APPLICATION
          ======================================= -->
     <div id="view-teacher-portal" class="app-page-view" style="display: none;">
@@ -4519,6 +4757,146 @@
   </div>
 
 
+  <!-- =========================================
+       MODALS: AVIORA BUDDY SYSTEM ($6)
+       ========================================= -->
+
+  <!-- Modal 1: Tutor-Led Session Setup (Tutor + 2 Students - $6/student) -->
+  <div class="modal-overlay" id="modal-create-buddy-tutor">
+    <div class="modal-card" style="max-width: 580px;">
+      <div class="modal-header" style="background: linear-gradient(135deg, #FAF7F2 0%, #F5EFE6 100%); border-bottom: 1px solid rgba(198, 138, 40, 0.2); padding: 1.25rem 1.75rem;">
+        <div>
+          <span class="badge-gold" style="font-size: 0.72rem; font-weight: 800;">Tutor-Led Aviora Buddy</span>
+          <h3 class="modal-title text-gold" style="font-size: 1.25rem; margin-top: 0.25rem;">Set Up 2-Student Class with Tutor</h3>
+        </div>
+        <button class="modal-close-btn" onclick="AvioraBuddy.closeModal('modal-create-buddy-tutor')">✕</button>
+      </div>
+      <div class="modal-body" style="padding: 1.5rem 1.75rem;">
+        <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 1.25rem; line-height: 1.5;">
+          A tutor guides two students through collaborative instruction, Quiz Bee duels, and speed problem solving at <strong>$6 per student</strong>.
+        </p>
+
+        <form onsubmit="event.preventDefault(); AvioraBuddy.submitTutorSession();">
+          <div class="form-group" style="margin-bottom: 1rem;">
+            <label class="form-label" style="font-weight: 700;">Accredited Faculty Educator</label>
+            <select id="buddy-tutor-select" class="form-control" style="font-weight: 600;">
+              <!-- Populated via buddy.js -->
+            </select>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+            <div class="form-group">
+              <label class="form-label" style="font-weight: 700;">Student 1</label>
+              <select id="buddy-tutor-student1-select" class="form-control" style="font-weight: 600;">
+                <!-- Populated via buddy.js -->
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" style="font-weight: 700;">Student 2</label>
+              <select id="buddy-tutor-student2-select" class="form-control" style="font-weight: 600;">
+                <!-- Populated via buddy.js -->
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 1.25rem;">
+            <label class="form-label" style="font-weight: 700;">Subject / Core Topic</label>
+            <input type="text" id="buddy-tutor-subject" class="form-control" placeholder="e.g. AP Calculus BC: Derivatives &amp; Quiz Bee Duel" value="AP Calculus BC &amp; Quiz Bee Duel" required />
+          </div>
+
+          <div style="background: rgba(198, 138, 40, 0.08); border: 1.5px solid rgba(198, 138, 40, 0.25); border-radius: 10px; padding: 1rem; margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <div style="font-weight: 800; color: var(--charcoal-900); font-size: 0.95rem;">Aviora Buddy Fee:</div>
+              <div style="font-size: 0.78rem; color: var(--text-secondary);">$6.00 flat rate per student participant</div>
+            </div>
+            <div style="font-family: var(--font-heading); font-size: 1.35rem; font-weight: 900; color: var(--gold-700);">$6.00 / student</div>
+          </div>
+
+          <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center; font-weight: 700; padding: 0.85rem;">
+            Confirm &amp; Launch Tutor-Led Session ($6) →
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 2: Peer Buddy Setup (2 Students on their own - $6) -->
+  <div class="modal-overlay" id="modal-create-buddy-peer">
+    <div class="modal-card" style="max-width: 580px;">
+      <div class="modal-header" style="background: linear-gradient(135deg, #FAF7F2 0%, #F5EFE6 100%); border-bottom: 1px solid rgba(198, 138, 40, 0.2); padding: 1.25rem 1.75rem;">
+        <div>
+          <span class="badge-gold" style="font-size: 0.72rem; font-weight: 800;">Peer Aviora Buddy</span>
+          <h3 class="modal-title text-gold" style="font-size: 1.25rem; margin-top: 0.25rem;">Launch 2-Student Peer Study ($6)</h3>
+        </div>
+        <button class="modal-close-btn" onclick="AvioraBuddy.closeModal('modal-create-buddy-peer')">✕</button>
+      </div>
+      <div class="modal-body" style="padding: 1.5rem 1.75rem;">
+        <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 1.25rem; line-height: 1.5;">
+          Connect with a classmate or peer to play academic Quiz Bees, race in Math Duels, solve Vocabulary Scrambles, and chat in real-time.
+        </p>
+
+        <form onsubmit="event.preventDefault(); AvioraBuddy.submitPeerSession();">
+          <div class="form-group" style="margin-bottom: 1rem;">
+            <label class="form-label" style="font-weight: 700;">Select Study Peer (or Open Slot for Code Invite)</label>
+            <select id="buddy-peer-select" class="form-control" style="font-weight: 600;">
+              <!-- Populated via buddy.js -->
+            </select>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 1rem;">
+            <label class="form-label" style="font-weight: 700;">Subject</label>
+            <input type="text" id="buddy-peer-subject" class="form-control" placeholder="e.g. Physics Mechanics &amp; Math Sprint" value="Physics Mechanics &amp; Math Sprint" required />
+          </div>
+
+          <div class="form-group" style="margin-bottom: 1.25rem;">
+            <label class="form-label" style="font-weight: 700;">Key Focus / Challenge</label>
+            <input type="text" id="buddy-peer-topic" class="form-control" placeholder="e.g. Kinematics, Quiz Bee Battle &amp; Formulas" value="Kinematics, Quiz Bee Battle &amp; Formulas" />
+          </div>
+
+          <div style="background: rgba(198, 138, 40, 0.08); border: 1.5px solid rgba(198, 138, 40, 0.25); border-radius: 10px; padding: 1rem; margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <div style="font-weight: 800; color: var(--charcoal-900); font-size: 0.95rem;">Aviora Buddy Fee:</div>
+              <div style="font-size: 0.78rem; color: var(--text-secondary);">$6.00 flat service fee per student</div>
+            </div>
+            <div style="font-family: var(--font-heading); font-size: 1.35rem; font-weight: 900; color: var(--gold-700);">$6.00</div>
+          </div>
+
+          <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center; font-weight: 700; padding: 0.85rem;">
+            Launch Peer Session &amp; Generate Code ($6) →
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 3: Join Session via Buddy Code -->
+  <div class="modal-overlay" id="modal-join-buddy-code">
+    <div class="modal-card" style="max-width: 480px;">
+      <div class="modal-header" style="background: linear-gradient(135deg, #FAF7F2 0%, #F5EFE6 100%); border-bottom: 1px solid rgba(198, 138, 40, 0.2); padding: 1.25rem 1.75rem;">
+        <div>
+          <span class="badge-gold" style="font-size: 0.72rem; font-weight: 800;">Instant Passcode</span>
+          <h3 class="modal-title text-gold" style="font-size: 1.25rem; margin-top: 0.25rem;">Join with Buddy Code</h3>
+        </div>
+        <button class="modal-close-btn" onclick="AvioraBuddy.closeModal('modal-join-buddy-code')">✕</button>
+      </div>
+      <div class="modal-body" style="padding: 1.5rem 1.75rem; text-align: center;">
+        <div style="font-size: 2.2rem; margin-bottom: 0.5rem;">🔑</div>
+        <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 1.25rem; line-height: 1.5;">
+          Enter the unique 10-character code provided by your study buddy or tutor (e.g., <strong>BUDDY-7482</strong>). Cost is $6 to join.
+        </p>
+
+        <form onsubmit="event.preventDefault(); AvioraBuddy.submitJoinCode();">
+          <input type="text" id="input-buddy-join-code" class="form-control" placeholder="BUDDY-XXXX" maxlength="12" style="text-align: center; font-family: monospace; font-size: 1.35rem; font-weight: 900; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 1.25rem; border: 2px solid var(--gold-400);" required />
+
+          <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center; font-weight: 700; padding: 0.85rem;">
+            Join Aviora Buddy Session ($6) →
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+
   <!-- Toast Notification Container -->
   <div class="toast-container" id="toast-container"></div>
 
@@ -4533,6 +4911,7 @@
   <script src="/js/profile.js"></script>
   <script src="/js/teacher.js"></script>
   <script src="/js/admin.js"></script>
+  <script src="/js/buddy.js"></script>
   <script src="/js/virtual-room.js"></script>
   <script src="/js/main.js"></script>
 </body>

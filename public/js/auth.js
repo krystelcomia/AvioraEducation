@@ -887,12 +887,15 @@ const Auth = {
             <li><a href="#about" class="nav-link" id="nav-link-about">About</a></li>
             <li><a href="#subscriptions" class="nav-link" id="nav-link-subscription">Subscription</a></li>
             <li><a href="#tutors" class="nav-link" id="nav-link-tutors">Tutors</a></li>
+            <li><a href="#aviora-buddy" class="nav-link" id="nav-link-buddy">Aviora Buddy</a></li>
             <li><a href="#student-portal" class="nav-link" id="nav-link-dashboard">Dashboard</a></li>
           `;
         } else if (user.role === 'teacher') {
           mainNavLinks.innerHTML = `
             <li><a href="#home" class="nav-link" id="nav-link-home">Home</a></li>
             <li><a href="#about" class="nav-link" id="nav-link-about">About</a></li>
+            <li><a href="#tutors" class="nav-link" id="nav-link-tutors">Tutors</a></li>
+            <li><a href="#aviora-buddy" class="nav-link" id="nav-link-buddy">Aviora Buddy</a></li>
             <li><a href="#how-it-works" class="nav-link" id="nav-link-how">How It Works</a></li>
             <li><a href="#teacher-portal" class="nav-link" id="nav-link-teacher-portal">Teacher Portal</a></li>
           `;
@@ -900,6 +903,8 @@ const Auth = {
           mainNavLinks.innerHTML = `
             <li><a href="#home" class="nav-link" id="nav-link-home">Home</a></li>
             <li><a href="#about" class="nav-link" id="nav-link-about">About</a></li>
+            <li><a href="#tutors" class="nav-link" id="nav-link-tutors">Tutors</a></li>
+            <li><a href="#aviora-buddy" class="nav-link" id="nav-link-buddy">Aviora Buddy</a></li>
             <li><a href="#admin-portal" class="nav-link" id="nav-link-admin-portal">Admin Console</a></li>
           `;
         }
@@ -914,10 +919,10 @@ const Auth = {
         mainNavLinks.innerHTML = `
           <li><a href="#home" class="nav-link active" id="nav-link-home">Home</a></li>
           <li><a href="#about" class="nav-link" id="nav-link-about">About</a></li>
-          <li><a href="#tutors" class="nav-link" id="nav-link-tutors">Find Tutors</a></li>
+          <li><a href="#subscriptions" class="nav-link" id="nav-link-subscriptions">Subscription</a></li>
+          <li><a href="#tutors" class="nav-link" id="nav-link-tutors">Tutors</a></li>
+          <li><a href="#aviora-buddy" class="nav-link" id="nav-link-buddy">Aviora Buddy</a></li>
           <li><a href="#how-it-works" class="nav-link" id="nav-link-how">How It Works</a></li>
-          <li><a href="#book-now" class="nav-link" id="nav-link-book">Book Now</a></li>
-          <li><a href="#subscriptions" class="nav-link" id="nav-link-subscriptions">Subscriptions</a></li>
         `;
       }
     }

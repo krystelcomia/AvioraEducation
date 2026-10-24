@@ -172,6 +172,37 @@ function initSchema() {
       message TEXT NOT NULL,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
+
+    CREATE TABLE IF NOT EXISTS buddy_sessions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      session_code TEXT UNIQUE NOT NULL,
+      session_type TEXT NOT NULL CHECK(session_type IN ('tutor_led', 'peer_study')),
+      tutor_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      student1_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+      student2_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      subject TEXT NOT NULL,
+      topic TEXT,
+      scheduled_date TEXT NOT NULL,
+      scheduled_time TEXT NOT NULL,
+      fee_per_student REAL DEFAULT 6.00,
+      total_fee REAL DEFAULT 12.00,
+      game_state TEXT,
+      status TEXT DEFAULT 'active' CHECK(status IN ('pending', 'active', 'completed', 'cancelled')),
+      room_status TEXT DEFAULT 'open' CHECK(room_status IN ('closed', 'open', 'ended')),
+      room_started_at DATETIME,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS buddy_messages (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      session_id INTEGER NOT NULL REFERENCES buddy_sessions(id) ON DELETE CASCADE,
+      sender_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      sender_name TEXT NOT NULL,
+      sender_role TEXT NOT NULL,
+      message TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
   `);
 
   try {
@@ -836,11 +867,82 @@ function ensureKrystelAccount(customPassword) {
   }
 }
 
-// Automatically ensure account on startup
+function ensureBuddySeedData() {
+  try {
+    const existing = db.prepare('SELECT id FROM buddy_sessions LIMIT 1').get();
+    if (existing) return;
+
+    const elena = db.prepare('SELECT id FROM users WHERE email = ?').get('elena.vance@aviora.edu');
+    const lucas = db.prepare('SELECT id FROM users WHERE email = ?').get('student@aviora.edu');
+    const sophia = db.prepare('SELECT id FROM users WHERE email = ?').get('sophia.martinez@gmail.com');
+    const maya = db.prepare('SELECT id FROM users WHERE email = ?').get('maya.patel@gmail.com');
+
+    if (lucas && sophia && elena) {
+      // 1. Tutor-Led Aviora Buddy Session
+      const sess1 = db.prepare(`
+        INSERT INTO buddy_sessions (
+          session_code, session_type, tutor_id, student1_id, student2_id,
+          subject, topic, scheduled_date, scheduled_time, fee_per_student, total_fee,
+          status, room_status, room_started_at
+        ) VALUES (
+          'BUDDY-7482', 'tutor_led', ?, ?, ?,
+          'AP Calculus BC & Quiz Bee Duel', 'Derivatives, Limits & Math Speed Battle', '2026-10-26', '16:00 - 16:50',
+          6.00, 12.00, 'active', 'open', CURRENT_TIMESTAMP
+        )
+      `).run(elena.id, lucas.id, sophia.id);
+
+      db.prepare(`
+        INSERT INTO buddy_messages (session_id, sender_id, sender_name, sender_role, message)
+        VALUES (?, ?, 'Dr. Elena Vance', 'tutor', 'Welcome Lucas and Sophia to today’s Aviora Buddy session! We will do a 10-minute derivative review, followed by our Quiz Bee Championship and Equation Duel.')
+      `).run(sess1.lastInsertRowid, elena.id);
+
+      db.prepare(`
+        INSERT INTO buddy_messages (session_id, sender_id, sender_name, sender_role, message)
+        VALUES (?, ?, 'Lucas Taylor', 'student', 'Excited for the Quiz Bee! Ready when you are.')
+      `).run(sess1.lastInsertRowid, lucas.id);
+
+      db.prepare(`
+        INSERT INTO buddy_messages (session_id, sender_id, sender_name, sender_role, message)
+        VALUES (?, ?, 'Sophia Martinez', 'student', 'Let’s do this! Good luck Lucas 🚀')
+      `).run(sess1.lastInsertRowid, sophia.id);
+    }
+
+    if (lucas && maya) {
+      // 2. Peer Study Aviora Buddy Session
+      const sess2 = db.prepare(`
+        INSERT INTO buddy_sessions (
+          session_code, session_type, tutor_id, student1_id, student2_id,
+          subject, topic, scheduled_date, scheduled_time, fee_per_student, total_fee,
+          status, room_status, room_started_at
+        ) VALUES (
+          'BUDDY-9134', 'peer_study', NULL, ?, ?,
+          'Physics Mechanics & Vocab Sprint', 'Kinematics Equations & Concept Matching', '2026-10-27', '17:00 - 17:50',
+          6.00, 12.00, 'active', 'open', CURRENT_TIMESTAMP
+        )
+      `).run(lucas.id, maya.id);
+
+      db.prepare(`
+        INSERT INTO buddy_messages (session_id, sender_id, sender_name, sender_role, message)
+        VALUES (?, ?, 'Lucas Taylor', 'student', 'Hey Maya! Ready to tackle the physics kinematics problems together?')
+      `).run(sess2.lastInsertRowid, lucas.id);
+
+      db.prepare(`
+        INSERT INTO buddy_messages (session_id, sender_id, sender_name, sender_role, message)
+        VALUES (?, ?, 'Maya Patel', 'student', 'Hey Lucas! Yes, let’s do the Concept Match tiles first to warm up!')
+      `).run(sess2.lastInsertRowid, maya.id);
+    }
+  } catch (err) {
+    console.error('Error seeding buddy sessions:', err);
+  }
+}
+
+// Automatically ensure account and seed data on startup
 ensureKrystelAccount();
+ensureBuddySeedData();
 
 module.exports = {
   db,
   initSchema,
-  ensureKrystelAccount
+  ensureKrystelAccount,
+  ensureBuddySeedData
 };

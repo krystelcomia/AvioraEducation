@@ -75,7 +75,7 @@ function showConfirm(title, message, onConfirm) {
 
 // Router
 const Router = {
-  routes: ['#home', '#about', '#tutors', '#how-it-works', '#book-now', '#book-lesson', '#subscriptions', '#student-subscriptions', '#login', '#signup', '#student-portal', '#student-lessons', '#student-tutors', '#student-history', '#student-schedule', '#student-profile', '#teacher-portal', '#admin-portal'],
+  routes: ['#home', '#about', '#tutors', '#aviora-buddy', '#how-it-works', '#book-now', '#book-lesson', '#subscriptions', '#student-subscriptions', '#login', '#signup', '#student-portal', '#student-lessons', '#student-tutors', '#student-history', '#student-schedule', '#student-profile', '#teacher-portal', '#admin-portal'],
 
   init() {
     window.addEventListener('hashchange', () => this.handleRoute());
@@ -94,6 +94,9 @@ const Router = {
         isActive = true;
       }
       if (!isActive && href === '#tutors' && (hash === '#tutors' || hash.startsWith('#tutor-profile'))) {
+        isActive = true;
+      }
+      if (!isActive && href === '#aviora-buddy' && hash.startsWith('#aviora-buddy')) {
         isActive = true;
       }
       link.classList.toggle('active', isActive);
@@ -222,6 +225,13 @@ const Router = {
       if (view) view.style.display = 'block';
       window.scrollTo({ top: 0, behavior: 'smooth' });
       await Tutors.fetchTutors();
+    } else if (hash === '#aviora-buddy' || hash.startsWith('#aviora-buddy')) {
+      const view = document.getElementById('view-aviora-buddy');
+      if (view) view.style.display = 'block';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      if (typeof AvioraBuddy !== 'undefined' && AvioraBuddy.init) {
+        await AvioraBuddy.init();
+      }
     } else if (hash === '#student-profile' || hash === '#profile') {
       const user = Auth.currentUser;
       if (!user) {

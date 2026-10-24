@@ -710,12 +710,41 @@ const Auth = {
   async handleLogin(e, context = 'modal') {
     e.preventDefault();
     const isPage = context === 'page';
-    const email = document.getElementById(isPage ? 'page-login-email' : 'login-email').value.trim();
-    const password = document.getElementById(isPage ? 'page-login-password' : 'login-password').value;
+    const emailInput = document.getElementById(isPage ? 'page-login-email' : 'login-email');
+    const passwordInput = document.getElementById(isPage ? 'page-login-password' : 'login-password');
+    const email = emailInput ? emailInput.value.trim() : '';
+    const password = passwordInput ? passwordInput.value : '';
     const submitBtn = e.target.querySelector('button[type="submit"]');
 
-    if (!email || !password) {
-      showToast('Please enter both email and password.', 'error');
+    // Security check 1: Incomplete fields
+    if (!email && !password) {
+      showToast('Please enter both your email address and password.', 'error');
+      if (emailInput) emailInput.focus();
+      return;
+    }
+    if (!email) {
+      showToast('Email address is required.', 'error');
+      if (emailInput) emailInput.focus();
+      return;
+    }
+    if (!password) {
+      showToast('Password is required.', 'error');
+      if (passwordInput) passwordInput.focus();
+      return;
+    }
+
+    // Security check 2: Email completeness and formatting
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      showToast('Please enter a complete and valid email address (e.g. name@example.com).', 'error');
+      if (emailInput) emailInput.focus();
+      return;
+    }
+
+    // Security check 3: Password completeness
+    if (password.length < 6) {
+      showToast('Password is incomplete. Please enter your full password.', 'error');
+      if (passwordInput) passwordInput.focus();
       return;
     }
 
@@ -734,7 +763,7 @@ const Auth = {
 
       this.handlePostAuthRedirect(res.user);
     } catch (err) {
-      showToast(err.message, 'error');
+      showToast(err.message || 'Invalid email or password. Please verify your credentials.', 'error');
     } finally {
       submitBtn.disabled = false;
       submitBtn.textContent = 'Sign In to Aviora';

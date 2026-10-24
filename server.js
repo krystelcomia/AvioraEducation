@@ -268,39 +268,42 @@ app.post('/api/auth/register', (req, res) => {
 app.post('/api/auth/login', (req, res) => {
   try {
     const { email, password } = req.body;
-    if (!email || !password) {
-      return res.status(400).json({ error: 'Email and password are required.' });
+    
+    // Check for missing or incomplete inputs
+    if (!email || typeof email !== 'string' || !email.trim()) {
+      return res.status(400).json({ error: 'Email address is required.' });
+    }
+    if (!password || typeof password !== 'string' || !password.trim()) {
+      return res.status(400).json({ error: 'Password is required.' });
     }
 
     const cleanEmail = email.toLowerCase().trim();
-    let user = db.prepare('SELECT * FROM users WHERE email = ?').get(cleanEmail);
 
-    if (!user && cleanEmail === 'comiakrystel65@gmail.com') {
-      if (typeof ensureKrystelAccount === 'function') {
-        user = ensureKrystelAccount(password);
-      }
+    // Validate complete and valid email address structure
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(cleanEmail)) {
+      return res.status(400).json({ error: 'Please enter a complete and valid email address (e.g., name@example.com).' });
     }
 
+    // Validate complete password (minimum 6 characters)
+    if (password.length < 6) {
+      return res.status(400).json({ error: 'Password is incomplete. Please enter your full password.' });
+    }
+
+    // Lookup user in database
+    const user = db.prepare('SELECT * FROM users WHERE email = ?').get(cleanEmail);
     if (!user) {
-      return res.status(401).json({ error: 'Invalid email or password.' });
+      return res.status(401).json({ error: 'Invalid email or password. Please verify your credentials and try again.' });
     }
 
     if (user.status !== 'active') {
       return res.status(403).json({ error: 'Your account is deactivated or suspended. Please contact Aviora support.' });
     }
 
-    let validPassword = bcrypt.compareSync(password, user.password_hash);
-
-    // If owner account comiakrystel65@gmail.com logs in with their password, ensure successful login and sync password
-    if (!validPassword && cleanEmail === 'comiakrystel65@gmail.com') {
-      if (typeof ensureKrystelAccount === 'function') {
-        user = ensureKrystelAccount(password);
-        validPassword = true;
-      }
-    }
-
+    // Strict password verification using bcrypt
+    const validPassword = bcrypt.compareSync(password, user.password_hash);
     if (!validPassword) {
-      return res.status(401).json({ error: 'Invalid email or password.' });
+      return res.status(401).json({ error: 'Invalid email or password. Please verify your credentials and try again.' });
     }
 
     const token = jwt.sign(

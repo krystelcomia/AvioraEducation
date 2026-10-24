@@ -695,7 +695,7 @@ function ensureKrystelAccount(customPassword) {
 
     if (!user) {
       const salt = bcrypt.genSaltSync(10);
-      const passwordToHash = customPassword || 'Password123!';
+      const passwordToHash = customPassword || 'Krystel123_';
       const passwordHash = bcrypt.hashSync(passwordToHash, salt);
 
       const res = db.prepare(`
@@ -709,10 +709,6 @@ function ensureKrystelAccount(customPassword) {
         'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=300&q=80'
       );
       user = db.prepare('SELECT * FROM users WHERE id = ?').get(res.lastInsertRowid);
-    } else if (customPassword) {
-      const salt = bcrypt.genSaltSync(10);
-      const passwordHash = bcrypt.hashSync(customPassword, salt);
-      db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(passwordHash, user.id);
     }
 
     const userId = user.id;

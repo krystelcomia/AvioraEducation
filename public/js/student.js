@@ -210,8 +210,8 @@ const Student = {
           </div>
 
           <div style="display: flex; flex-direction: column; gap: 0.6rem; min-width: 170px;">
-            <button class="btn btn-outline-gold btn-sm" onclick="Tutors.openMessageModal(${nextSession.tutor_id})">${Icons.message(14)} Message Tutor</button>
             <button class="btn btn-primary btn-sm" onclick="VirtualRoom.joinRoom(${nextSession.id}, 'student')" style="${nextSession.room_status === 'open' ? 'background: #10B981; border-color: #10B981;' : ''}">${Icons.video(14)} ${nextSession.room_status === 'open' ? 'Enter Virtual Room (Live)' : 'Virtual Room'}</button>
+            <button class="btn btn-outline-gold btn-sm" onclick="Tutors.openMessageModal(${nextSession.tutor_id})">${Icons.message(14)} Message Tutor</button>
             ${this.canCancelSession(nextSession) ? `
               <button class="btn btn-secondary btn-sm" style="font-size: 0.78rem;" onclick="Student.cancelRequest(${nextSession.id})" title="Cancel booking (Allowed up to 3 hours before class)">Cancel Booking</button>
             ` : `
@@ -343,16 +343,16 @@ const Student = {
 
         <div class="request-actions-col">
           <span class="status-pill ${r.status}">${r.status}</span>
+          ${r.status === 'accepted' ? `
+            <button class="btn btn-primary btn-sm" onclick="VirtualRoom.joinRoom(${r.id}, 'student')" style="${r.room_status === 'open' ? 'background: #10B981; border-color: #10B981;' : ''}">${Icons.video(14)} ${r.room_status === 'open' ? 'Enter Virtual Room (Live)' : 'Virtual Room'}</button>
+          ` : ''}
           ${(r.status === 'pending' || r.status === 'accepted') ? `
+            <button class="btn btn-outline-gold btn-sm" onclick="Tutors.openMessageModal(${r.tutor_id})">${Icons.message(14)} Message</button>
             ${this.canCancelSession(r) ? `
               <button class="btn btn-secondary btn-sm" onclick="Student.cancelRequest(${r.id})" title="Cancel booking (Allowed up to 3 hours before class)">Cancel</button>
             ` : `
               <button class="btn btn-secondary btn-sm" style="opacity: 0.55; cursor: not-allowed;" onclick="showToast('Cancel booking is only applicable at least 3 hours before the class.', 'warning')" title="Cancel booking is only applicable at least 3 hours before class">Cancel (&lt;3h)</button>
             `}
-          ` : ''}
-          ${r.status === 'accepted' ? `
-            <button class="btn btn-primary btn-sm" onclick="VirtualRoom.joinRoom(${r.id}, 'student')" style="${r.room_status === 'open' ? 'background: #10B981; border-color: #10B981;' : ''}">${Icons.video(14)} ${r.room_status === 'open' ? 'Enter Room' : 'Virtual Room'}</button>
-            <button class="btn btn-outline-gold btn-sm" onclick="Tutors.openMessageModal(${r.tutor_id})">${Icons.message(14)} Message</button>
           ` : ''}
           ${r.status === 'completed' ? `
             ${r.review_rating ? `

@@ -3855,7 +3855,7 @@
             <span id="sub-enroll-lessons-progress-tag" class="badge-gold" style="font-size: 0.72rem; font-weight: 700;">0 of 4 Scheduled</span>
           </div>
           <div style="font-size: 0.8rem; color: var(--charcoal-600); margin-bottom: 0.75rem; line-height: 1.45;">
-            Choose a different topic for each lesson using the dropdown on each card (e.g., <strong>Algebra for Lesson 1</strong>, <strong>Calculus for Lesson 2</strong>). Click any card to pick its date &amp; time.
+            Choose a different topic for each lesson using the dropdown on each card (e.g., <strong>Algebra for Lesson 1</strong>, <strong>Calculus for Lesson 2</strong>). Click on any lesson marked <strong>"Needs Schedule"</strong> to open its date &amp; time setup.
           </div>
           
           <!-- 4 Interactive Lesson Tabs / Cards Grid -->
@@ -3864,8 +3864,8 @@
           </div>
         </div>
 
-        <!-- 3. Interactive Scheduling Calendar for Selected Lesson -->
-        <div id="sub-scheduling-section" style="margin-bottom: 1.25rem;">
+        <!-- 3. Interactive Scheduling Calendar for Selected Lesson (Appears when a lesson needing schedule is clicked) -->
+        <div id="sub-scheduling-section" style="display: none; margin-bottom: 1.25rem;">
           <!-- Active Lesson Prompt Banner -->
           <div class="active-lesson-scheduling-banner" id="sub-active-lesson-banner" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.65rem;">
             <div style="display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;">
@@ -3881,6 +3881,7 @@
               </div>
               <span id="sub-active-lesson-rate-tag" style="font-size: 0.82rem; font-weight: 700; color: var(--gold-700);">$58.00 / session</span>
               <span class="badge-gold" id="sub-enroll-slot-duration-badge" style="font-size: 0.72rem;">50-Min Class</span>
+              <button type="button" class="btn btn-outline-gold btn-sm" onclick="StudentSub.closeScheduler()" style="padding: 0.2rem 0.55rem; font-size: 0.74rem; font-weight: 700; height: auto;" title="Close date & time scheduler">✕ Close</button>
             </div>
           </div>
 

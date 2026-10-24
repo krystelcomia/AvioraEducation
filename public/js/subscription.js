@@ -301,21 +301,22 @@ const StudentSub = {
       scheduled_time: null
     }));
 
-    this.activeLessonIndex = 0;
+    this.isSchedulerOpen = false;
+    this.activeLessonIndex = -1;
     this.selectedDate = null;
     this.selectedTime = null;
+
+    // Keep date and time setup hidden by default so the interface stays clean and uncluttered
+    const schedSection = document.getElementById('sub-scheduling-section');
+    if (schedSection) {
+      schedSection.style.display = 'none';
+    }
 
     // Update educator preview card
     this.updateTutorPreview(this.selectedTutor);
 
-    // Update active scheduling banner
-    this.updateActiveLessonBanner();
-
     // Render 4 lesson tabs
     this.renderLessonTabs();
-
-    // Render calendar for active lesson
-    this.syncActiveLessonCalendar();
 
     // Update dynamic calculations and summary
     this.updateSummary();
@@ -325,6 +326,7 @@ const StudentSub = {
   },
 
   closeEnrollmentModal() {
+    this.closeScheduler();
     const modal = document.getElementById('sub-enrollment-modal');
     if (modal) {
       modal.classList.remove('active');
@@ -369,9 +371,11 @@ const StudentSub = {
       l.hourly_rate = rate;
     });
 
-    this.updateActiveLessonBanner();
+    if (this.isSchedulerOpen && this.activeLessonIndex >= 0) {
+      this.updateActiveLessonBanner();
+      this.syncActiveLessonCalendar();
+    }
     this.renderLessonTabs();
-    this.syncActiveLessonCalendar();
     this.updateSummary();
   },
 
@@ -380,7 +384,9 @@ const StudentSub = {
     this.selectedLessons.forEach(l => {
       l.subject = subj;
     });
-    this.updateActiveLessonBanner();
+    if (this.isSchedulerOpen && this.activeLessonIndex >= 0) {
+      this.updateActiveLessonBanner();
+    }
     this.renderLessonTabs();
     this.updateSummary();
   },
@@ -403,8 +409,9 @@ const StudentSub = {
     }
 
     this.selectedLessons[lessonIdx].subject = subject;
-    this.activeLessonIndex = lessonIdx;
-    this.updateActiveLessonBanner();
+    if (this.isSchedulerOpen && this.activeLessonIndex === lessonIdx) {
+      this.updateActiveLessonBanner();
+    }
     this.renderLessonTabs();
     this.updateSummary();
     showToast(`Lesson ${lessonIdx + 1} topic set to "${subject}"`, 'info');
@@ -451,12 +458,12 @@ const StudentSub = {
     const subjects = this.getTutorSubjects(this.selectedTutor);
 
     grid.innerHTML = this.selectedLessons.map((l, idx) => {
-      const isActive = idx === this.activeLessonIndex;
+      const isActive = this.isSchedulerOpen && idx === this.activeLessonIndex;
       const isScheduled = !!(l.scheduled_date && l.scheduled_time);
       const allOptions = subjects.includes(l.subject) ? subjects : [l.subject, ...subjects];
 
       return `
-        <div class="sub-lesson-card ${isActive ? 'active' : ''}" onclick="StudentSub.setActiveLesson(${idx})">
+        <div class="sub-lesson-card ${isActive ? 'active' : ''}" onclick="StudentSub.openLessonScheduler(${idx})" title="${isScheduled ? 'Click to change schedule for Lesson ' + (idx + 1) : 'Click to schedule Lesson ' + (idx + 1)}">
           <div class="lesson-card-header-row">
             <span class="lesson-card-num-badge">Lesson ${idx + 1}</span>
             <span class="lesson-card-status-badge ${isScheduled ? 'status-scheduled' : 'status-pending'}">
@@ -485,7 +492,7 @@ const StudentSub = {
 
           <div class="lesson-card-datetime ${isScheduled ? 'is-scheduled' : ''}">
             ${isScheduled 
-              ? `<div style="display: flex; align-items: center; gap: 0.25rem;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"></rect><line x1="16" x2="16" y1="2" x2="6"></line><line x1="8" x2="8" y1="2" y2="6"></line><line x1="3" x2="21" y1="10" y2="10"></line></svg> ${l.scheduled_date}</div><div style="font-size: 0.7rem; color: #047857; margin-top: 0.1rem; font-weight: 700;">${l.scheduled_time}</div>`
+              ? `<div style="display: flex; align-items: center; gap: 0.25rem;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"></rect><line x1="16" x2="16" y1="2" x2="6"></line><line x1="8" x2="8" y1="2" y2="6"></line><line x1="3" x2="21" y1="10" y2="10"></line></svg> ${l.scheduled_date}</div><div style="font-size: 0.7rem; color: #047857; margin-top: 0.1rem; font-weight: 700;">${l.scheduled_time} (Click to change)</div>`
               : '👉 Click to schedule'}
           </div>
         </div>
@@ -494,12 +501,20 @@ const StudentSub = {
   },
 
   setActiveLesson(idx) {
+    this.openLessonScheduler(idx);
+  },
+
+  openLessonScheduler(idx) {
     if (idx < 0 || idx >= this.selectedLessons.length) return;
     this.activeLessonIndex = idx;
+    this.isSchedulerOpen = true;
+
+    const schedSection = document.getElementById('sub-scheduling-section');
+    if (schedSection) {
+      schedSection.style.display = 'block';
+    }
+
     const lesson = this.selectedLessons[idx];
-
-    this.updateActiveLessonBanner();
-
     this.selectedDate = lesson.scheduled_date;
     this.selectedTime = lesson.scheduled_time;
 
@@ -511,8 +526,25 @@ const StudentSub = {
       }
     }
 
+    this.updateActiveLessonBanner();
     this.renderLessonTabs();
     this.syncActiveLessonCalendar();
+
+    if (schedSection) {
+      setTimeout(() => {
+        schedSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }, 60);
+    }
+  },
+
+  closeScheduler() {
+    this.isSchedulerOpen = false;
+    this.activeLessonIndex = -1;
+    const schedSection = document.getElementById('sub-scheduling-section');
+    if (schedSection) {
+      schedSection.style.display = 'none';
+    }
+    this.renderLessonTabs();
   },
 
   syncActiveLessonCalendar() {

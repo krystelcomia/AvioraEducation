@@ -201,10 +201,16 @@ const Router = {
       const view = document.getElementById('view-login');
       if (view) view.style.display = 'block';
       window.scrollTo(0, 0);
+      if (typeof Auth !== 'undefined' && Auth.updateLinkedAccountBadges) {
+        Auth.updateLinkedAccountBadges();
+      }
     } else if (hash === '#signup') {
       const view = document.getElementById('view-signup');
       if (view) view.style.display = 'block';
       window.scrollTo(0, 0);
+      if (typeof Auth !== 'undefined' && Auth.updateLinkedAccountBadges) {
+        Auth.updateLinkedAccountBadges();
+      }
     } else if (hash.startsWith('#tutor-profile')) {
       const view = document.getElementById('view-tutor-profile');
       if (view) view.style.display = 'block';

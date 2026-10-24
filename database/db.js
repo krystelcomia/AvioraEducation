@@ -218,8 +218,26 @@ function initSchema() {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
+
+    CREATE TABLE IF NOT EXISTS oauth_linked_accounts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      provider TEXT NOT NULL CHECK(provider IN ('google', 'facebook')),
+      provider_user_id TEXT,
+      email TEXT NOT NULL,
+      name TEXT,
+      avatar_url TEXT,
+      linked_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(provider, email)
+    );
   `);
 
+  try {
+    db.prepare("ALTER TABLE users ADD COLUMN auth_provider TEXT DEFAULT 'local'").run();
+  } catch (e) {}
+  try {
+    db.prepare("ALTER TABLE users ADD COLUMN oauth_id TEXT").run();
+  } catch (e) {}
   try {
     db.prepare("ALTER TABLE tutoring_requests ADD COLUMN payment_method TEXT DEFAULT 'card'").run();
   } catch (e) {}

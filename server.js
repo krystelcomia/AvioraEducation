@@ -387,6 +387,27 @@ app.post('/api/auth/oauth', (req, res) => {
       }
 
       user = { id: newUserId, name, email, role, avatar_url: avatar, status: 'active' };
+    } else {
+      // Existing user: ensure provider is linked
+      try {
+        db.prepare("UPDATE users SET auth_provider = ? WHERE id = ? AND (auth_provider IS NULL OR auth_provider = 'local')")
+          .run(provider, user.id);
+      } catch (e) {}
+    }
+
+    // Record persistent link in oauth_linked_accounts
+    try {
+      db.prepare(`
+        INSERT INTO oauth_linked_accounts (user_id, provider, provider_user_id, email, name, avatar_url)
+        VALUES (?, ?, ?, ?, ?, ?)
+        ON CONFLICT(provider, email) DO UPDATE SET
+          user_id = excluded.user_id,
+          name = excluded.name,
+          avatar_url = excluded.avatar_url,
+          linked_at = CURRENT_TIMESTAMP
+      `).run(user.id, provider, profile?.id || email, email, name, avatar);
+    } catch (e) {
+      console.warn('OAuth link recording warning:', e.message);
     }
 
     if (user.status !== 'active') {
@@ -399,6 +420,11 @@ app.post('/api/auth/oauth', (req, res) => {
       { expiresIn: '7d' }
     );
 
+    let linkedAccounts = [];
+    try {
+      linkedAccounts = db.prepare('SELECT provider, email, name, avatar_url, linked_at FROM oauth_linked_accounts WHERE user_id = ?').all(user.id);
+    } catch (e) {}
+
     const sanitizedUser = {
       id: user.id,
       name: user.name,
@@ -407,17 +433,51 @@ app.post('/api/auth/oauth', (req, res) => {
       phone: user.phone || null,
       avatar_url: user.avatar_url,
       status: user.status,
-      auth_provider: provider
+      auth_provider: provider,
+      linked_accounts: linkedAccounts
     };
 
     return res.json({
       message: `Signed in successfully with ${provider === 'google' ? 'Google' : 'Facebook'}.`,
       token,
-      user: sanitizedUser
+      user: sanitizedUser,
+      linkedAccounts
     });
   } catch (error) {
     console.error('Social OAuth error:', error);
     return res.status(500).json({ error: 'An error occurred during social authentication.' });
+  }
+});
+
+// Explicit account linking for authenticated users
+app.post('/api/auth/link-account', authenticateToken, (req, res) => {
+  try {
+    const { provider, profile } = req.body;
+    if (!['google', 'facebook'].includes(provider)) {
+      return res.status(400).json({ error: 'Unsupported social provider.' });
+    }
+    const email = profile?.email ? profile.email.toLowerCase().trim() : req.user.email;
+    const name = profile?.name ? profile.name.trim() : req.user.name;
+    const avatar = profile?.picture || req.user.avatar_url;
+
+    db.prepare(`
+      INSERT INTO oauth_linked_accounts (user_id, provider, provider_user_id, email, name, avatar_url)
+      VALUES (?, ?, ?, ?, ?, ?)
+      ON CONFLICT(provider, email) DO UPDATE SET
+        user_id = excluded.user_id,
+        name = excluded.name,
+        avatar_url = excluded.avatar_url,
+        linked_at = CURRENT_TIMESTAMP
+    `).run(req.user.id, provider, profile?.id || email, email, name, avatar);
+
+    const linked = db.prepare('SELECT provider, email, name, avatar_url, linked_at FROM oauth_linked_accounts WHERE user_id = ?').all(req.user.id);
+    return res.json({
+      message: `Successfully linked your ${provider === 'google' ? 'Google' : 'Facebook'} account (${email})!`,
+      linkedAccounts: linked
+    });
+  } catch (err) {
+    console.error('Link account error:', err);
+    return res.status(500).json({ error: 'Failed to link social account.' });
   }
 });
 

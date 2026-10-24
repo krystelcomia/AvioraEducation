@@ -358,22 +358,183 @@ const Auth = {
     }
   },
 
+  // ==========================================
+  // GOOGLE & FACEBOOK ACCOUNT LINKING & OAUTH
+  // ==========================================
+
+  getLinkedAccount(provider) {
+    try {
+      const raw = localStorage.getItem('aviora_linked_' + provider);
+      return raw ? JSON.parse(raw) : null;
+    } catch (e) {
+      return null;
+    }
+  },
+
+  saveLinkedAccount(provider, profile) {
+    try {
+      const data = {
+        provider,
+        name: profile.name,
+        email: profile.email,
+        avatar: profile.picture || profile.avatar || profile.avatar_url || '',
+        id: profile.id || profile.oauth_id || profile.provider_user_id || profile.email,
+        role: profile.role || 'student',
+        linked_at: new Date().toISOString()
+      };
+      localStorage.setItem('aviora_linked_' + provider, JSON.stringify(data));
+      localStorage.setItem('aviora_last_social_provider', provider);
+      this.updateLinkedAccountBadges();
+      return data;
+    } catch (e) {
+      console.warn('Failed to save linked account:', e);
+    }
+  },
+
+  clearLinkedAccount(provider) {
+    localStorage.removeItem('aviora_linked_' + provider);
+    this.updateLinkedAccountBadges();
+  },
+
+  updateLinkedAccountBadges() {
+    const fb = this.getLinkedAccount('facebook');
+    const google = this.getLinkedAccount('google');
+
+    // Page Login Google & Facebook Buttons
+    const pageGoogleBtn = document.getElementById('page-google-auth-btn');
+    const pageFbBtn = document.getElementById('page-facebook-auth-btn');
+    const signupGoogleBtn = document.getElementById('signup-google-auth-btn');
+    const signupFbBtn = document.getElementById('signup-facebook-auth-btn');
+
+    if (pageGoogleBtn) {
+      pageGoogleBtn.classList.toggle('is-linked', !!google);
+      pageGoogleBtn.setAttribute('title', google
+        ? `Linked Google Account: ${google.name} (${google.email}) - Click to sign in instantly`
+        : 'Sign in with Google');
+    }
+    if (pageFbBtn) {
+      pageFbBtn.classList.toggle('is-linked', !!fb);
+      pageFbBtn.setAttribute('title', fb
+        ? `Linked Facebook Account: ${fb.name} (${fb.email}) - Click to sign in instantly`
+        : 'Sign in with Facebook');
+    }
+
+    if (signupGoogleBtn) {
+      signupGoogleBtn.classList.toggle('is-linked', !!google);
+      signupGoogleBtn.setAttribute('title', google
+        ? `Linked with ${google.name}'s Google Account`
+        : 'Create account with Google');
+    }
+    if (signupFbBtn) {
+      signupFbBtn.classList.toggle('is-linked', !!fb);
+      signupFbBtn.setAttribute('title', fb
+        ? `Linked with ${fb.name}'s Facebook Account`
+        : 'Create account with Facebook');
+    }
+
+    // Hint text on Login view
+    const loginHints = document.getElementById('page-login-linked-hints');
+    if (loginHints) {
+      if (fb && google) {
+        loginHints.style.display = 'block';
+        loginHints.innerHTML = `
+          <span>Linked: <strong style="color: #1877F2;">Facebook (${fb.name.split(' ')[0]})</strong> &amp; <strong style="color: #4285F4;">Google (${google.name.split(' ')[0]})</strong> (1-click ready)</span>
+          <span style="margin: 0 4px; color: var(--text-muted);">•</span>
+          <button type="button" class="btn-text" style="color: var(--gold-800); text-decoration: underline; font-size: 0.76rem; cursor: pointer; background: none; border: none; padding: 0;" onclick="Auth.promptSwitchAccount()">Switch account</button>
+        `;
+      } else if (fb) {
+        loginHints.style.display = 'block';
+        loginHints.innerHTML = `
+          <span>Linked with Facebook: <strong>${fb.name}</strong> (Click Facebook icon for 1-click sign in)</span>
+          <span style="margin: 0 4px; color: var(--text-muted);">•</span>
+          <button type="button" class="btn-text" style="color: var(--gold-800); text-decoration: underline; font-size: 0.76rem; cursor: pointer; background: none; border: none; padding: 0;" onclick="Auth.openOAuthChoice('facebook', 'login', true)">Switch account</button>
+        `;
+      } else if (google) {
+        loginHints.style.display = 'block';
+        loginHints.innerHTML = `
+          <span>Linked with Google: <strong>${google.name}</strong> (Click Google icon for 1-click sign in)</span>
+          <span style="margin: 0 4px; color: var(--text-muted);">•</span>
+          <button type="button" class="btn-text" style="color: var(--gold-800); text-decoration: underline; font-size: 0.76rem; cursor: pointer; background: none; border: none; padding: 0;" onclick="Auth.openOAuthChoice('google', 'login', true)">Switch account</button>
+        `;
+      } else {
+        loginHints.style.display = 'none';
+        loginHints.innerHTML = '';
+      }
+    }
+
+    // Hint text on Sign Up view
+    const signupHints = document.getElementById('page-signup-linked-hints');
+    if (signupHints) {
+      if (fb || google) {
+        const active = fb || google;
+        const provName = active.provider === 'facebook' ? 'Facebook' : 'Google';
+        signupHints.style.display = 'block';
+        signupHints.innerHTML = `
+          <span>Account linking available: Click <strong>${provName}</strong> to register with ${active.name}'s profile</span>
+        `;
+      } else {
+        signupHints.style.display = 'none';
+        signupHints.innerHTML = '';
+      }
+    }
+  },
+
+  promptSwitchAccount() {
+    showToast('Choose which provider account you would like to switch to:', 'info');
+    this.openOAuthChoice('facebook', 'login', true);
+  },
+
+  handleSocialAuthClick(provider, mode = 'login') {
+    // On Login Page: If account is linked, do INSTANT 1-CLICK LOGIN!
+    if (mode === 'login') {
+      const linked = this.getLinkedAccount(provider);
+      if (linked && linked.email) {
+        showToast(`Signing in with linked ${provider === 'google' ? 'Google' : 'Facebook'} account (${linked.name})...`, 'info');
+        this.loginWithOAuth(provider, {
+          name: linked.name,
+          email: linked.email,
+          picture: linked.avatar || linked.picture,
+          id: linked.id || linked.provider_user_id,
+          role: linked.role || 'student'
+        }, { isInstant: true });
+        return;
+      }
+    }
+
+    // Otherwise (signup mode or unlinked account), direct user to the platform sign-in flow
+    this.openOAuthChoice(provider, mode);
+  },
+
   setupSocialAuth() {
     // Google Auth Triggers
     const pageGoogleBtn = document.getElementById('page-google-auth-btn');
     const signupGoogleBtn = document.getElementById('signup-google-auth-btn');
     const modalGoogleBtn = document.getElementById('modal-google-auth-btn');
-    if (pageGoogleBtn) pageGoogleBtn.addEventListener('click', () => this.openOAuthChoice('google'));
-    if (signupGoogleBtn) signupGoogleBtn.addEventListener('click', () => this.openOAuthChoice('google'));
-    if (modalGoogleBtn) modalGoogleBtn.addEventListener('click', () => this.openOAuthChoice('google'));
+
+    if (pageGoogleBtn) {
+      pageGoogleBtn.addEventListener('click', () => this.handleSocialAuthClick('google', 'login'));
+    }
+    if (signupGoogleBtn) {
+      signupGoogleBtn.addEventListener('click', () => this.handleSocialAuthClick('google', 'signup'));
+    }
+    if (modalGoogleBtn) {
+      modalGoogleBtn.addEventListener('click', () => this.handleSocialAuthClick('google', 'login'));
+    }
 
     // Facebook Auth Triggers
     const pageFbBtn = document.getElementById('page-facebook-auth-btn');
     const signupFbBtn = document.getElementById('signup-facebook-auth-btn');
     const modalFbBtn = document.getElementById('modal-facebook-auth-btn');
-    if (pageFbBtn) pageFbBtn.addEventListener('click', () => this.openOAuthChoice('facebook'));
-    if (signupFbBtn) signupFbBtn.addEventListener('click', () => this.openOAuthChoice('facebook'));
-    if (modalFbBtn) modalFbBtn.addEventListener('click', () => this.openOAuthChoice('facebook'));
+
+    if (pageFbBtn) {
+      pageFbBtn.addEventListener('click', () => this.handleSocialAuthClick('facebook', 'login'));
+    }
+    if (signupFbBtn) {
+      signupFbBtn.addEventListener('click', () => this.handleSocialAuthClick('facebook', 'signup'));
+    }
+    if (modalFbBtn) {
+      modalFbBtn.addEventListener('click', () => this.handleSocialAuthClick('facebook', 'login'));
+    }
 
     // Navigation redirects between login and signup
     const signupToLogin = document.getElementById('signup-to-login-link');
@@ -392,7 +553,7 @@ const Auth = {
       });
     }
 
-    // OAuth Modal Close
+    // OAuth Modal Close Triggers
     const closeBtn = document.getElementById('oauth-modal-close');
     const oauthModal = document.getElementById('oauth-provider-modal');
     if (closeBtn) closeBtn.addEventListener('click', () => this.closeOAuthChoice());
@@ -402,108 +563,233 @@ const Auth = {
       });
     }
 
-    // Custom OAuth account submit
-    const customSubmit = document.getElementById('oauth-custom-submit');
-    if (customSubmit) {
-      customSubmit.addEventListener('click', () => {
-        const name = document.getElementById('oauth-custom-name').value.trim();
-        const email = document.getElementById('oauth-custom-email').value.trim();
-        const provider = oauthModal?.dataset?.provider || 'google';
-
-        if (!email) {
-          showToast('Please enter a valid email address.', 'error');
-          return;
-        }
-
-        this.loginWithOAuth(provider, {
-          name: name || `${provider === 'google' ? 'Google' : 'Facebook'} Scholar`,
-          email,
-          role: 'student'
-        });
-      });
-    }
+    // Refresh UI badges based on stored links
+    this.updateLinkedAccountBadges();
   },
 
-  openOAuthChoice(provider) {
+  openOAuthChoice(provider, mode = 'login', forcePrompt = false) {
     const modal = document.getElementById('oauth-provider-modal');
-    const heading = document.getElementById('oauth-modal-heading');
-    const sub = document.getElementById('oauth-modal-sub');
-    const icon = document.getElementById('oauth-provider-icon');
-    const list = document.getElementById('oauth-accounts-list');
-
     if (!modal) return;
+
     modal.dataset.provider = provider;
+    modal.dataset.mode = mode;
 
     const isGoogle = provider === 'google';
-    const isSignup = window.location.hash === '#signup';
+    const isSignup = mode === 'signup' || window.location.hash === '#signup';
+
+    // Apply platform-specific styling classes
+    modal.classList.toggle('oauth-modal-google', isGoogle);
+    modal.classList.toggle('oauth-modal-facebook', !isGoogle);
+
+    // Platform header elements
+    const icon = document.getElementById('oauth-provider-icon');
+    const heading = document.getElementById('oauth-modal-heading');
+    const appTag = document.getElementById('oauth-modal-app-tag');
+    const permText = document.getElementById('oauth-permission-text');
+    const sub = document.getElementById('oauth-modal-sub');
+    const directHeading = document.getElementById('oauth-direct-heading');
+    const submitText = document.getElementById('oauth-submit-btn-text');
+    const directNameWrap = document.getElementById('oauth-direct-name-wrap');
+    const footerPrivacy = document.getElementById('oauth-footer-privacy');
+
+    if (icon) {
+      icon.innerHTML = isGoogle
+        ? `<svg width="24" height="24" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>`
+        : `<svg width="26" height="26" viewBox="0 0 24 24" fill="#FFFFFF"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>`;
+    }
 
     if (heading) {
       if (isSignup) {
         heading.textContent = isGoogle ? 'Create Account with Google' : 'Create Account with Facebook';
       } else {
-        heading.textContent = isGoogle ? 'Sign In with Google' : 'Sign In with Facebook';
+        heading.textContent = isGoogle ? 'Sign In with Google' : 'Log in with Facebook';
       }
     }
+
+    if (appTag) {
+      appTag.textContent = isGoogle
+        ? 'to continue to Aviora Education'
+        : 'Aviora Education Account Linking';
+    }
+
+    if (permText) {
+      permText.textContent = isGoogle
+        ? 'Aviora Education will receive your name, email address, language preference, and profile picture from Google.'
+        : 'Aviora Education will receive your name, profile picture, and email address from Facebook.';
+    }
+
     if (sub) {
-      if (isSignup) {
-        sub.textContent = isGoogle
-          ? 'Choose a Google account to create your Aviora Education account:'
-          : 'Choose a Facebook account to create your Aviora Education account:';
-      } else {
-        sub.textContent = isGoogle
-          ? 'Choose a Google account to continue to Aviora Education:'
-          : 'Choose a Facebook account to continue to Aviora Education:';
-      }
-    }
-    if (icon) {
-      icon.innerHTML = isGoogle
-        ? `<svg width="22" height="22" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>`
-        : `<svg width="22" height="22" viewBox="0 0 24 24" fill="#1877F2"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>`;
+      sub.textContent = isSignup
+        ? `Select your ${isGoogle ? 'Google' : 'Facebook'} profile to register:`
+        : `Choose a ${isGoogle ? 'Google' : 'Facebook'} account:`;
     }
 
-    const accounts = isGoogle ? [
-      {
-        name: 'Krystel Comia',
-        email: 'krystel.comia@gmail.com',
-        avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80',
-        badge: 'Google Account'
-      },
-      {
-        name: 'Marcus Chen',
-        email: 'marcus.chen.mit@gmail.com',
-        avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=120&q=80',
-        badge: 'Google Workspace'
-      }
-    ] : [
-      {
-        name: 'Krystel Comia',
-        email: 'krystel.comia.fb@facebook.com',
-        avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=120&q=80',
-        badge: 'Facebook Profile'
-      },
-      {
-        name: 'Sophia Lin',
-        email: 'sophia.lin.arts@facebook.com',
-        avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=120&q=80',
-        badge: 'Facebook Profile'
-      }
-    ];
+    if (directHeading) {
+      directHeading.textContent = isSignup
+        ? `Or register with ${isGoogle ? 'Google' : 'Facebook'} credentials:`
+        : `Or sign in with another ${isGoogle ? 'Google' : 'Facebook'} account:`;
+    }
 
+    if (submitText) {
+      submitText.textContent = isSignup
+        ? `Create Account & Link with ${isGoogle ? 'Google' : 'Facebook'}`
+        : `Sign In with ${isGoogle ? 'Google' : 'Facebook'}`;
+    }
+
+    if (directNameWrap) {
+      directNameWrap.style.display = isSignup ? 'block' : 'none';
+    }
+
+    if (footerPrivacy) {
+      footerPrivacy.textContent = isGoogle
+        ? "To continue, Google will share your profile with Aviora Education under Google's Privacy Policy."
+        : "By proceeding, Facebook will link your identity with Aviora Education. Facebook does not allow posting without permission.";
+    }
+
+    // Build accounts list
+    const linked = this.getLinkedAccount(provider);
+    const accounts = [];
+
+    if (linked) {
+      accounts.push({
+        name: linked.name,
+        email: linked.email,
+        avatar: linked.avatar || (isGoogle
+          ? 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80'
+          : 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=120&q=80'),
+        badge: 'Linked Account',
+        isLinked: true
+      });
+    }
+
+    if (isGoogle) {
+      if (!linked || linked.email !== 'krystel.comia@gmail.com') {
+        accounts.push({
+          name: 'Krystel Comia',
+          email: 'krystel.comia@gmail.com',
+          avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80',
+          badge: 'Google Account'
+        });
+      }
+      if (!linked || linked.email !== 'marcus.chen.mit@gmail.com') {
+        accounts.push({
+          name: 'Marcus Chen',
+          email: 'marcus.chen.mit@gmail.com',
+          avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=120&q=80',
+          badge: 'Google Workspace'
+        });
+      }
+    } else {
+      if (!linked || linked.email !== 'krystel.comia.fb@facebook.com') {
+        accounts.push({
+          name: 'Krystel Comia',
+          email: 'krystel.comia.fb@facebook.com',
+          avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=120&q=80',
+          badge: 'Facebook Profile'
+        });
+      }
+      if (!linked || linked.email !== 'sophia.lin.arts@facebook.com') {
+        accounts.push({
+          name: 'Sophia Lin',
+          email: 'sophia.lin.arts@facebook.com',
+          avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=120&q=80',
+          badge: 'Facebook Profile'
+        });
+      }
+    }
+
+    const list = document.getElementById('oauth-accounts-list');
     if (list) {
-      list.innerHTML = accounts.map(acc => `
-        <div class="oauth-account-item" onclick="Auth.loginWithOAuth('${provider}', { name: '${acc.name}', email: '${acc.email}', picture: '${acc.avatar}', role: 'student' })">
+      list.innerHTML = '';
+      accounts.forEach(acc => {
+        const item = document.createElement('div');
+        item.className = `oauth-account-item ${acc.isLinked ? 'is-active' : ''}`;
+        if (acc.isLinked) {
+          item.style.borderColor = '#10B981';
+          item.style.background = 'rgba(16, 185, 129, 0.05)';
+        }
+        item.innerHTML = `
           <img src="${acc.avatar}" alt="${acc.name}" class="oauth-account-avatar" />
-          <div style="flex: 1;">
+          <div style="flex: 1; text-align: left;">
             <div class="oauth-account-name">${acc.name}</div>
             <div class="oauth-account-email">${acc.email}</div>
           </div>
-          <span style="font-size: 0.72rem; color: var(--gold-light);">${acc.badge}</span>
-        </div>
-      `).join('');
+          <span style="font-size: 0.72rem; font-weight: 700; color: ${acc.isLinked ? '#10B981' : 'var(--gold-800)'};">${acc.badge}</span>
+        `;
+        item.addEventListener('click', () => {
+          this.selectOAuthAccount(provider, acc.name, acc.email, acc.avatar);
+        });
+        list.appendChild(item);
+      });
     }
+
+    // Reset direct input values
+    const emailInput = document.getElementById('oauth-direct-email');
+    const passInput = document.getElementById('oauth-direct-password');
+    const nameInput = document.getElementById('oauth-direct-name');
+    if (emailInput) emailInput.value = '';
+    if (passInput) passInput.value = '';
+    if (nameInput) nameInput.value = '';
 
     modal.classList.add('active');
     document.body.style.overflow = 'hidden';
+  },
+
+  selectOAuthAccount(provider, name, email, avatar) {
+    const isSignup = document.getElementById('oauth-provider-modal')?.dataset?.mode === 'signup' || window.location.hash === '#signup';
+    let role = 'student';
+    const roleRadio = document.querySelector('input[name="page_register_role"]:checked');
+    if (roleRadio) role = roleRadio.value;
+
+    this.loginWithOAuth(provider, {
+      name,
+      email,
+      picture: avatar,
+      role
+    }, { isSignup });
+  },
+
+  submitOAuthDirectForm() {
+    const modal = document.getElementById('oauth-provider-modal');
+    const provider = modal?.dataset?.provider || 'facebook';
+    const isSignup = modal?.dataset?.mode === 'signup' || window.location.hash === '#signup';
+
+    const emailInput = document.getElementById('oauth-direct-email');
+    const passInput = document.getElementById('oauth-direct-password');
+    const nameInput = document.getElementById('oauth-direct-name');
+
+    const email = emailInput ? emailInput.value.trim() : '';
+    const password = passInput ? passInput.value : '';
+    let name = nameInput ? nameInput.value.trim() : '';
+
+    if (!email) {
+      showToast('Please enter your email or phone number.', 'error');
+      return;
+    }
+    if (!password || password.length < 4) {
+      showToast(`Please enter your password to authenticate with ${provider === 'google' ? 'Google' : 'Facebook'}.`, 'error');
+      return;
+    }
+
+    if (!name) {
+      const localPart = email.split('@')[0];
+      name = localPart.split(/[._-]/).map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' ') || (provider === 'google' ? 'Google Scholar' : 'Facebook Scholar');
+    }
+
+    let role = 'student';
+    const roleRadio = document.querySelector('input[name="page_register_role"]:checked');
+    if (roleRadio) role = roleRadio.value;
+
+    const avatar = provider === 'google'
+      ? 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=300&q=80'
+      : 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=300&q=80';
+
+    this.loginWithOAuth(provider, {
+      name,
+      email,
+      picture: avatar,
+      role
+    }, { isSignup });
   },
 
   closeOAuthChoice() {
@@ -514,10 +800,14 @@ const Auth = {
     }
   },
 
-  async loginWithOAuth(provider, profile) {
+  async loginWithOAuth(provider, profile, options = {}) {
     try {
       this.closeOAuthChoice();
       this.closeModal();
+
+      const isInstant = options.isInstant;
+      const isSignup = options.isSignup;
+
       showToast(`Connecting with ${provider === 'google' ? 'Google' : 'Facebook'}...`, 'info');
 
       const res = await API.oauthLogin({
@@ -525,16 +815,33 @@ const Auth = {
         profile
       });
 
+      // Save persistent link in localStorage
+      this.saveLinkedAccount(provider, {
+        name: res.user.name,
+        email: res.user.email,
+        avatar: res.user.avatar_url,
+        role: res.user.role,
+        id: res.user.oauth_id || res.user.id
+      });
+
       Storage.setToken(res.token);
       Storage.setUser(res.user);
       this.currentUser = res.user;
 
       this.updateNavUI(res.user);
-      showToast(`Welcome, ${res.user.name}! Connected securely via ${provider === 'google' ? 'Google' : 'Facebook'}.`, 'success');
+
+      if (isInstant) {
+        showToast(`Welcome back, ${res.user.name}! (Signed in via linked ${provider === 'google' ? 'Google' : 'Facebook'})`, 'success');
+      } else if (isSignup) {
+        showToast(`Account created and linked with ${provider === 'google' ? 'Google' : 'Facebook'}! Welcome, ${res.user.name}.`, 'success');
+      } else {
+        showToast(`Welcome, ${res.user.name}! Connected securely via ${provider === 'google' ? 'Google' : 'Facebook'}.`, 'success');
+      }
 
       this.handlePostAuthRedirect(res.user);
+      this.updateLinkedAccountBadges();
     } catch (err) {
-      showToast(err.message || 'Social authentication failed.', 'error');
+      showToast(err.message || 'Social authentication failed. Please try again.', 'error');
     }
   },
 
@@ -850,6 +1157,7 @@ const Auth = {
     Storage.clearSession();
     this.currentUser = null;
     this.updateNavUI(null);
+    this.updateLinkedAccountBadges();
     showToast('You have been securely logged out.', 'info');
     window.location.hash = '#home';
     Router.handleRoute();

@@ -513,6 +513,7 @@
   cursor: pointer;
   transition: all var(--transition-fast);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  position: relative;
 }
 
 .social-icon-btn:hover {
@@ -529,6 +530,75 @@
 .social-facebook-icon-btn:hover {
   background: #F8FAFD;
   border-color: #1877F2;
+}
+
+/* Linked Social Indicator Badge */
+.social-icon-btn.is-linked {
+  border-color: #10B981;
+  box-shadow: 0 0 0 2.5px rgba(16, 185, 129, 0.28), 0 3px 10px rgba(0, 0, 0, 0.06);
+}
+
+.social-icon-btn.is-linked::after {
+  content: '';
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #10B981;
+  border: 2px solid #FFFFFF;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+  animation: pulseLinked 2.5s infinite;
+}
+
+@keyframes pulseLinked {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.15); opacity: 0.85; }
+}
+
+/* Platform OAuth Dialog Themes */
+.oauth-modal-facebook #oauth-modal-header {
+  background: #1877F2 !important;
+  color: #FFFFFF !important;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.oauth-modal-facebook #oauth-modal-heading {
+  color: #FFFFFF !important;
+}
+
+.oauth-modal-facebook #oauth-modal-app-tag {
+  color: rgba(255, 255, 255, 0.88) !important;
+}
+
+.oauth-modal-facebook #oauth-modal-close {
+  background: rgba(255, 255, 255, 0.22) !important;
+  color: #FFFFFF !important;
+}
+
+.oauth-modal-facebook #oauth-modal-close:hover {
+  background: rgba(255, 255, 255, 0.35) !important;
+}
+
+.oauth-modal-facebook #oauth-direct-submit-btn {
+  background: #1877F2 !important;
+  color: #FFFFFF !important;
+  border: none !important;
+}
+
+.oauth-modal-facebook #oauth-direct-submit-btn:hover {
+  background: #166FE5 !important;
+}
+
+.oauth-modal-google #oauth-direct-submit-btn {
+  background: #1A73E8 !important;
+  color: #FFFFFF !important;
+  border: none !important;
+}
+
+.oauth-modal-google #oauth-direct-submit-btn:hover {
+  background: #1557B0 !important;
 }
 
 .auth-divider {

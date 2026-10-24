@@ -1427,6 +1427,9 @@
             </button>
           </div>
 
+          <!-- Linked Account Status & Switch Account Option -->
+          <div id="page-login-linked-hints" style="text-align: center; font-size: 0.8rem; color: var(--gold-800); min-height: 22px; margin-bottom: 0.75rem; display: none;"></div>
+
           <div style="text-align: center; font-size: 0.8rem; color: var(--text-secondary); border-top: 1px solid rgba(0, 0, 0, 0.08); padding-top: 1rem;">
             By continuing, you agree to Aviora Education's 
             <a href="#" class="open-policy-btn" data-policy="terms" style="color: var(--gold-800); font-weight: 600; text-decoration: underline;">Terms of Service</a> &amp; 
@@ -1599,6 +1602,9 @@
               </svg>
             </button>
           </div>
+
+          <!-- Linked Account Status Hint for Sign Up -->
+          <div id="page-signup-linked-hints" style="text-align: center; font-size: 0.8rem; color: var(--gold-800); min-height: 22px; margin-bottom: 0.75rem; display: none;"></div>
 
           <div style="text-align: center; margin-top: 1rem; font-size: 0.8rem; color: var(--text-secondary); border-top: 1px solid rgba(0, 0, 0, 0.08); padding-top: 1rem;">
             By registering, you agree to Aviora Education's 
@@ -4695,34 +4701,63 @@
 
 
   <!-- =========================================
-       MODAL: GOOGLE / FACEBOOK OAUTH ACCOUNT PICKER
+       MODAL: GOOGLE / FACEBOOK OAUTH AUTHENTICATION
        ========================================= -->
   <div class="modal-overlay" id="oauth-provider-modal">
-    <div class="modal-card" style="max-width: 440px;">
-      <div class="modal-header">
-        <div style="display: flex; align-items: center; gap: 0.65rem;">
+    <div class="modal-card oauth-modal-card" style="max-width: 460px; overflow: hidden; border-radius: 16px;">
+      <!-- Dynamic Platform Header -->
+      <div id="oauth-modal-header" class="modal-header" style="transition: all 0.25s ease; padding: 1.25rem 1.75rem;">
+        <div style="display: flex; align-items: center; gap: 0.75rem;">
           <span id="oauth-provider-icon"></span>
-          <h3 class="modal-title" id="oauth-modal-heading" style="font-size: 1.15rem;">Sign In with Provider</h3>
+          <div>
+            <h3 class="modal-title" id="oauth-modal-heading" style="font-size: 1.15rem; margin: 0; line-height: 1.2; font-weight: 700;">Sign In with Provider</h3>
+            <div id="oauth-modal-app-tag" style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 2px;">Aviora Education</div>
+          </div>
         </div>
         <button class="modal-close-btn" id="oauth-modal-close" aria-label="Close dialog">✕</button>
       </div>
 
-      <div class="modal-body" style="padding: 1.5rem 1.75rem;">
-        <p style="font-size: 0.85rem; color: var(--charcoal-300); margin-bottom: 1.25rem;" id="oauth-modal-sub">
-          Choose an account to continue to Aviora Education:
+      <div class="modal-body" style="padding: 1.5rem 1.75rem; background: #FFFFFF;">
+        <!-- Permissions / Scopes notice -->
+        <div id="oauth-permission-notice" style="background: rgba(0,0,0,0.03); border: 1px solid rgba(0,0,0,0.06); border-radius: 8px; padding: 0.75rem 0.9rem; font-size: 0.78rem; color: var(--text-secondary); margin-bottom: 1.25rem; display: flex; align-items: flex-start; gap: 0.5rem;">
+          <span style="font-size: 1rem; line-height: 1;">🛡️</span>
+          <span id="oauth-permission-text">Aviora Education will receive your name, email address, and profile picture.</span>
+        </div>
+
+        <p style="font-size: 0.85rem; font-weight: 600; color: var(--charcoal-900); margin-bottom: 0.75rem;" id="oauth-modal-sub">
+          Choose an account to continue:
         </p>
 
+        <!-- Dynamic Accounts List -->
         <div id="oauth-accounts-list">
           <!-- Populated dynamically via auth.js -->
         </div>
 
-        <div style="border-top: 1px solid rgba(255,255,255,0.08); padding-top: 1.25rem; margin-top: 1rem;">
-          <div style="font-size: 0.8rem; font-weight: 600; color: var(--gold-light); margin-bottom: 0.5rem;">Or connect with a custom account:</div>
-          <div style="display: flex; gap: 0.5rem; margin-bottom: 0.5rem;">
-            <input type="text" id="oauth-custom-name" class="form-control" placeholder="Your Name" style="font-size: 0.82rem;" />
-            <input type="email" id="oauth-custom-email" class="form-control" placeholder="email@domain.com" style="font-size: 0.82rem;" />
+        <!-- Direct Platform Sign In / Account Creation Form -->
+        <div style="border-top: 1px solid rgba(0,0,0,0.08); padding-top: 1.25rem; margin-top: 1.25rem;">
+          <div id="oauth-direct-heading" style="font-size: 0.82rem; font-weight: 700; color: var(--charcoal-900); margin-bottom: 0.65rem;">
+            Or sign in with another account:
           </div>
-          <button type="button" class="btn btn-outline-gold btn-sm" id="oauth-custom-submit" style="width: 100%;">Continue as Custom User →</button>
+
+          <form id="oauth-direct-form" onsubmit="event.preventDefault(); Auth.submitOAuthDirectForm();">
+            <div class="form-group" style="margin-bottom: 0.65rem;">
+              <input type="text" id="oauth-direct-email" class="form-control" placeholder="Email address or phone number" required style="font-size: 0.85rem; padding: 0.65rem 0.85rem;" />
+            </div>
+            <div class="form-group" style="margin-bottom: 0.65rem;">
+              <input type="password" id="oauth-direct-password" class="form-control" placeholder="Password" required style="font-size: 0.85rem; padding: 0.65rem 0.85rem;" />
+            </div>
+            <div class="form-group" id="oauth-direct-name-wrap" style="margin-bottom: 0.75rem;">
+              <input type="text" id="oauth-direct-name" class="form-control" placeholder="Your Full Name (optional)" style="font-size: 0.85rem; padding: 0.65rem 0.85rem;" />
+            </div>
+
+            <button type="submit" class="btn btn-primary" id="oauth-direct-submit-btn" style="width: 100%; font-weight: 700; font-size: 0.9rem; padding: 0.75rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+              <span id="oauth-submit-btn-text">Sign In &amp; Link Account</span>
+            </button>
+          </form>
+
+          <div style="text-align: center; margin-top: 1rem; font-size: 0.73rem; color: var(--text-muted); line-height: 1.4;" id="oauth-footer-privacy">
+            To continue, Google or Facebook will share your name, email address, language preference, and profile picture with Aviora Education.
+          </div>
         </div>
       </div>
     </div>

@@ -203,6 +203,21 @@ function initSchema() {
       message TEXT NOT NULL,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
+
+    CREATE TABLE IF NOT EXISTS inquiries (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      email TEXT NOT NULL,
+      role TEXT DEFAULT 'Student',
+      subject TEXT,
+      message TEXT NOT NULL,
+      status TEXT DEFAULT 'pending' CHECK(status IN ('pending', 'responded', 'archived')),
+      admin_response TEXT,
+      responded_at DATETIME,
+      responded_by INTEGER REFERENCES users(id),
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
   `);
 
   try {
@@ -936,13 +951,63 @@ function ensureBuddySeedData() {
   }
 }
 
+function ensureInquirySeedData() {
+  try {
+    const existing = db.prepare('SELECT id FROM inquiries LIMIT 1').get();
+    if (!existing) {
+      const adminUser = db.prepare("SELECT id FROM users WHERE role = 'admin' LIMIT 1").get();
+      const adminId = adminUser ? adminUser.id : 1;
+
+      db.prepare(`
+        INSERT INTO inquiries (name, email, role, subject, message, status, admin_response, responded_at, responded_by, created_at)
+        VALUES (?, ?, ?, ?, ?, 'pending', NULL, NULL, NULL, datetime('now', '-2 hours'))
+      `).run(
+        'Maria Santos',
+        'maria.santos@gmail.com',
+        'Student',
+        'AP Calculus BC Mentorship',
+        'I am preparing for the AP Calculus BC exam this semester. Can I be paired with Dr. Elena Vance or another Stanford faculty member for twice-weekly 50-minute sessions?'
+      );
+
+      db.prepare(`
+        INSERT INTO inquiries (name, email, role, subject, message, status, admin_response, responded_at, responded_by, created_at)
+        VALUES (?, ?, ?, ?, ?, 'pending', NULL, NULL, NULL, datetime('now', '-5 hours'))
+      `).run(
+        'David Chen',
+        'david.chen@outlook.com',
+        'Parent / Guardian',
+        'Physics Olympiad Diagnostic Prep',
+        'My son is a sophomore interested in competitive Olympiad physics. Do you have specialized diagnostic assessment sessions to evaluate his conceptual baseline?'
+      );
+
+      db.prepare(`
+        INSERT INTO inquiries (name, email, role, subject, message, status, admin_response, responded_at, responded_by, created_at)
+        VALUES (?, ?, ?, ?, ?, 'responded', ?, datetime('now', '-1 day'), ?, datetime('now', '-2 days'))
+      `).run(
+        'Emily Watson',
+        'emily.watson@mit.edu',
+        'Prospective Tutor',
+        'Computer Science Faculty Application',
+        'I hold an M.S. in Computer Science from MIT and would like to mentor high school students in Algorithms and Python. How do I expedite transcript review?',
+        'Hi Emily, thank you for reaching out to Aviora Education! You can submit your accreditation application directly through our "Become an Aviora Tutor" portal. Our Academic Governance Board audits verified university transcripts within 24-48 hours. We look forward to reviewing your credentials!',
+        adminId
+      );
+    }
+  } catch (err) {
+    console.error('Error seeding initial inquiries:', err);
+  }
+}
+
 // Automatically ensure account and seed data on startup
 ensureKrystelAccount();
 ensureBuddySeedData();
+ensureInquirySeedData();
 
 module.exports = {
   db,
   initSchema,
   ensureKrystelAccount,
-  ensureBuddySeedData
+  ensureBuddySeedData,
+  ensureInquirySeedData
 };
+

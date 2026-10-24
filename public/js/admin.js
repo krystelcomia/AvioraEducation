@@ -10,6 +10,9 @@ const Admin = {
   tutors: [],
   students: [],
   requests: [],
+  inquiries: [],
+  currentInquiryFilter: 'all',
+  selectedInquiry: null,
   selectedApp: null,
 
   async init() {
@@ -54,6 +57,42 @@ const Admin = {
         this.loadApplications(status);
       });
     });
+
+    // Inquiry filter buttons (solely for Admin)
+    document.querySelectorAll('.inquiry-filter-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        document.querySelectorAll('.inquiry-filter-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        const status = btn.dataset.status;
+        this.currentInquiryFilter = status;
+        this.loadInquiries(status);
+      });
+    });
+
+    // Real-time inquiry search filter
+    const inquirySearchInput = document.getElementById('admin-inquiry-search');
+    if (inquirySearchInput) {
+      inquirySearchInput.addEventListener('input', (e) => {
+        this.filterInquiriesBySearch(e.target.value);
+      });
+    }
+
+    // Inquiry Response Modal Events
+    const inqModalClose = document.getElementById('admin-inquiry-modal-close');
+    const inqModalCancel = document.getElementById('admin-inquiry-modal-cancel');
+    const inqModal = document.getElementById('admin-inquiry-response-modal');
+    if (inqModalClose) inqModalClose.addEventListener('click', () => this.closeInquiryResponseModal());
+    if (inqModalCancel) inqModalCancel.addEventListener('click', () => this.closeInquiryResponseModal());
+    if (inqModal) {
+      inqModal.addEventListener('click', (e) => {
+        if (e.target === inqModal) this.closeInquiryResponseModal();
+      });
+    }
+
+    const inqForm = document.getElementById('admin-inquiry-response-form');
+    if (inqForm) {
+      inqForm.addEventListener('submit', (e) => this.handleInquiryResponseSubmit(e));
+    }
 
     // Close Review Modal
     const reviewCloseBtn = document.getElementById('admin-review-modal-close');
@@ -141,6 +180,8 @@ const Admin = {
       this.loadStudents();
     } else if (section === 'requests') {
       this.loadRequests();
+    } else if (section === 'inquiries') {
+      this.loadInquiries(this.currentInquiryFilter || 'all');
     }
   },
 
@@ -176,6 +217,19 @@ const Admin = {
 
       const volumeEl = document.getElementById('m-volume');
       if (volumeEl) volumeEl.textContent = `$${m.platformVolume?.toFixed(2) || '0.00'}`;
+
+      const pendingInquiriesEl = document.getElementById('m-pending-inquiries');
+      if (pendingInquiriesEl) pendingInquiriesEl.textContent = m.pendingInquiries || 0;
+
+      const inqBadge = document.getElementById('admin-inquiries-badge');
+      if (inqBadge) {
+        if (m.pendingInquiries > 0) {
+          inqBadge.textContent = m.pendingInquiries;
+          inqBadge.style.display = 'inline-block';
+        } else {
+          inqBadge.style.display = 'none';
+        }
+      }
 
       // Update User Badge in sidebar
       const usersBadge = document.getElementById('admin-users-badge');
@@ -273,6 +327,9 @@ const Admin = {
       } else if (a.type === 'application') {
         icon = Icons.fileText(18);
         desc = `Teacher Application submitted: ${a.info || 'Educator'}`;
+      } else if (a.type === 'inquiry') {
+        icon = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>`;
+        desc = `New user inquiry (${a.info})`;
       } else {
         icon = Icons.calendar(18);
         desc = `Tutoring Session booked for ${a.info}`;
@@ -874,5 +931,219 @@ const Admin = {
         </td>
       </tr>
     `).join('');
+  },
+
+  /* ========================================================
+     INQUIRIES (SUBMITTED VIA "SEND INQUIRY" - SOLELY FOR ADMIN)
+     ======================================================== */
+  async loadInquiries(status = 'all') {
+    try {
+      this.currentInquiryFilter = status;
+      const data = await API.getAdminInquiries(status);
+      this.inquiries = data.inquiries || [];
+
+      // Update counters in filter bar
+      const counts = data.counts || {};
+      const cAll = document.getElementById('count-all-inquiries');
+      const cPending = document.getElementById('count-pending-inquiries');
+      const cResponded = document.getElementById('count-responded-inquiries');
+      if (cAll) cAll.textContent = counts.all || 0;
+      if (cPending) cPending.textContent = counts.pending || 0;
+      if (cResponded) cResponded.textContent = counts.responded || 0;
+
+      // Update badge in sidebar
+      const badge = document.getElementById('admin-inquiries-badge');
+      if (badge) {
+        if (counts.pending > 0) {
+          badge.textContent = counts.pending;
+          badge.style.display = 'inline-block';
+        } else {
+          badge.style.display = 'none';
+        }
+      }
+
+      this.renderInquiries(this.inquiries);
+    } catch (err) {
+      console.error('Failed to load inquiries:', err);
+      showToast('Could not load inquiries: ' + err.message, 'error');
+    }
+  },
+
+  renderInquiries(inquiries) {
+    const container = document.getElementById('admin-inquiries-list');
+    if (!container) return;
+
+    if (!inquiries || inquiries.length === 0) {
+      container.innerHTML = `
+        <div style="background: rgba(255,255,255,0.03); border: 1px dashed rgba(255,255,255,0.15); border-radius: 12px; padding: 3rem 1.5rem; text-align: center;">
+          <div style="width: 48px; height: 48px; border-radius: 50%; background: rgba(198,138,40,0.12); color: var(--gold-400); display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem;">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+          </div>
+          <h3 style="color: var(--white); font-size: 1.15rem; margin-bottom: 0.35rem;">No Inquiries Found</h3>
+          <p style="color: var(--charcoal-400); font-size: 0.88rem; max-width: 450px; margin: 0 auto;">No student or guest inquiries match the current filter. Inquiries submitted via "Send Inquiry" are automatically routed here for personal admin response.</p>
+        </div>
+      `;
+      return;
+    }
+
+    container.innerHTML = inquiries.map(inq => {
+      const isPending = inq.status === 'pending';
+      const statusBadge = isPending
+        ? `<span class="badge-gold" style="background: rgba(245, 158, 11, 0.15); color: #F59E0B; border-color: rgba(245, 158, 11, 0.3); font-size: 0.75rem;">● Pending Response</span>`
+        : `<span class="badge-gold" style="background: rgba(16, 185, 129, 0.15); color: #10B981; border-color: rgba(16, 185, 129, 0.3); font-size: 0.75rem;">✓ Responded</span>`;
+
+      const roleColors = {
+        'Student': 'rgba(198, 138, 40, 0.15)',
+        'Parent / Guardian': 'rgba(59, 130, 246, 0.15)',
+        'Prospective Tutor': 'rgba(168, 85, 247, 0.15)',
+        'Institutional Partner': 'rgba(236, 72, 153, 0.15)'
+      };
+
+      const dateStr = new Date(inq.created_at).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
+
+      return `
+        <div class="inquiry-card" style="background: #FFFFFF; border: 1.5px solid ${isPending ? 'rgba(245, 158, 11, 0.35)' : 'rgba(0, 0, 0, 0.08)'}; border-radius: 14px; padding: 1.5rem; box-shadow: var(--shadow-sm); color: var(--charcoal-900);">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem;">
+            <div>
+              <div style="display: flex; align-items: center; gap: 0.65rem; margin-bottom: 0.25rem;">
+                <h3 style="font-size: 1.15rem; font-weight: 800; color: var(--charcoal-950); margin: 0;">${inq.name}</h3>
+                <span class="badge-gold" style="font-size: 0.72rem; background: ${roleColors[inq.role] || 'rgba(0,0,0,0.06)'}; color: var(--charcoal-800);">${inq.role || 'Student'}</span>
+                ${statusBadge}
+              </div>
+              <div style="font-size: 0.85rem; color: var(--charcoal-600); display: flex; align-items: center; gap: 0.85rem; flex-wrap: wrap;">
+                <span><strong>Email:</strong> <a href="mailto:${inq.email}" style="color: var(--gold-700); text-decoration: underline;">${inq.email}</a></span>
+                <span>•</span>
+                <span><strong>Received:</strong> ${dateStr}</span>
+                <span>•</span>
+                <span><strong>ID:</strong> #${inq.id}</span>
+              </div>
+            </div>
+
+            <div>
+              <button type="button" class="btn ${isPending ? 'btn-primary' : 'btn-outline-gold'} btn-sm" onclick="Admin.openInquiryResponseModal(${inq.id})">
+                <span>${isPending ? 'Personally Respond →' : 'View / Edit Response'}</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Subject -->
+          <div style="background: #FAF7F2; border-left: 3px solid var(--gold-500); padding: 0.6rem 0.85rem; margin-bottom: 0.85rem; border-radius: 0 6px 6px 0;">
+            <span style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--gold-800); font-weight: 700;">Subject of Interest:</span>
+            <div style="font-weight: 700; color: var(--charcoal-950); font-size: 0.95rem;">${inq.subject || 'General Inquiry'}</div>
+          </div>
+
+          <!-- Question message -->
+          <div style="background: rgba(0,0,0,0.02); border: 1px solid rgba(0,0,0,0.06); border-radius: 8px; padding: 1rem; margin-bottom: ${inq.admin_response ? '1rem' : '0'};">
+            <div style="font-size: 0.75rem; color: var(--charcoal-500); font-weight: 700; text-transform: uppercase; margin-bottom: 0.35rem;">Question / Inquiry Message:</div>
+            <p style="font-size: 0.92rem; color: var(--charcoal-900); line-height: 1.6; margin: 0; white-space: pre-wrap;">${inq.message}</p>
+          </div>
+
+          <!-- Admin Response Box if already responded -->
+          ${inq.admin_response ? `
+            <div style="background: rgba(16, 185, 129, 0.06); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 8px; padding: 1rem;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+                <div style="font-size: 0.78rem; color: #059669; font-weight: 700; text-transform: uppercase; display: flex; align-items: center; gap: 0.35rem;">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                  Admin Personal Response (${inq.responder_name || 'Administrator'}):
+                </div>
+                <div style="font-size: 0.72rem; color: var(--charcoal-500);">${inq.responded_at ? new Date(inq.responded_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' }) : ''}</div>
+              </div>
+              <p style="font-size: 0.9rem; color: var(--charcoal-900); line-height: 1.6; margin: 0; white-space: pre-wrap;">${inq.admin_response}</p>
+            </div>
+          ` : ''}
+        </div>
+      `;
+    }).join('');
+  },
+
+  filterInquiriesBySearch(term) {
+    if (!term || !term.trim()) {
+      this.renderInquiries(this.inquiries);
+      return;
+    }
+    const q = term.toLowerCase().trim();
+    const filtered = this.inquiries.filter(i => 
+      (i.name && i.name.toLowerCase().includes(q)) ||
+      (i.email && i.email.toLowerCase().includes(q)) ||
+      (i.subject && i.subject.toLowerCase().includes(q)) ||
+      (i.message && i.message.toLowerCase().includes(q))
+    );
+    this.renderInquiries(filtered);
+  },
+
+  openInquiryResponseModal(inquiryId) {
+    const inq = this.inquiries.find(i => i.id === inquiryId);
+    if (!inq) return;
+
+    this.selectedInquiry = inq;
+    const modal = document.getElementById('admin-inquiry-response-modal');
+    if (!modal) return;
+
+    document.getElementById('inq-modal-sender-name').textContent = inq.name;
+    document.getElementById('inq-modal-sender-email').textContent = inq.email;
+    document.getElementById('inq-modal-sender-role').textContent = inq.role || 'Student';
+    document.getElementById('inq-modal-subject').textContent = inq.subject || 'General Inquiry';
+    document.getElementById('inq-modal-message').textContent = inq.message;
+
+    const existingBox = document.getElementById('inq-modal-existing-response-box');
+    const existingText = document.getElementById('inq-modal-existing-response-text');
+    const existingMeta = document.getElementById('inq-modal-existing-response-meta');
+    const replyTextarea = document.getElementById('inq-admin-reply-text');
+
+    if (inq.admin_response) {
+      existingBox.style.display = 'block';
+      existingText.textContent = inq.admin_response;
+      existingMeta.textContent = `Sent on ${new Date(inq.responded_at).toLocaleString()} by ${inq.responder_name || 'Administrator'}`;
+      replyTextarea.value = inq.admin_response;
+    } else {
+      existingBox.style.display = 'none';
+      replyTextarea.value = '';
+    }
+
+    modal.classList.add('active');
+    document.body.style.overflow = 'hidden';
+    setTimeout(() => replyTextarea.focus(), 100);
+  },
+
+  closeInquiryResponseModal() {
+    const modal = document.getElementById('admin-inquiry-response-modal');
+    if (modal) {
+      modal.classList.remove('active');
+      document.body.style.overflow = '';
+      this.selectedInquiry = null;
+    }
+  },
+
+  async handleInquiryResponseSubmit(e) {
+    e.preventDefault();
+    if (!this.selectedInquiry) return;
+
+    const response = document.getElementById('inq-admin-reply-text')?.value.trim();
+    if (!response) {
+      showToast('Please type your personal response before submitting.', 'error');
+      return;
+    }
+
+    const submitBtn = document.getElementById('admin-inquiry-modal-submit');
+    const origHtml = submitBtn ? submitBtn.innerHTML : '<span>Send Personal Response</span><span>→</span>';
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<span>Saving & Delivering...</span>';
+    }
+
+    try {
+      const res = await API.respondToInquiry(this.selectedInquiry.id, { response });
+      showToast(res.message || 'Personal response sent successfully!', 'success');
+      this.closeInquiryResponseModal();
+      await this.loadInquiries(this.currentInquiryFilter || 'all');
+      await this.loadDashboardMetrics();
+    } catch (err) {
+      showToast('Failed to save response: ' + err.message, 'error');
+    } finally {
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = origHtml;
+      }
+    }
   }
 };

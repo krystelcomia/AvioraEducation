@@ -2695,7 +2695,12 @@ app.get('/api/admin/dashboard', authenticateToken, requireRole('admin'), (req, r
       GROUP BY status
     `).all();
 
-    // Recent platform activity (Accounts, Applications, Requests)
+    // Inquiries stats (intended solely for admin)
+    const totalInquiries = db.prepare("SELECT COUNT(*) as count FROM inquiries").get().count;
+    const pendingInquiries = db.prepare("SELECT COUNT(*) as count FROM inquiries WHERE status = 'pending'").get().count;
+    const respondedInquiries = db.prepare("SELECT COUNT(*) as count FROM inquiries WHERE status = 'responded'").get().count;
+
+    // Recent platform activity (Accounts, Applications, Requests, Inquiries)
     const recentActivity = db.prepare(`
       SELECT * FROM (
         SELECT 'registration' as type, u.id, u.name as user_name, u.status, u.created_at, ('Account created (' || u.role || ')') as info
@@ -2708,7 +2713,10 @@ app.get('/api/admin/dashboard', authenticateToken, requireRole('admin'), (req, r
         SELECT 'request' as type, tr.id, u.name as user_name, tr.status, tr.created_at, tr.subject as info
         FROM tutoring_requests tr
         JOIN users u ON tr.student_id = u.id
-      ) ORDER BY created_at DESC LIMIT 10
+        UNION ALL
+        SELECT 'inquiry' as type, inq.id, inq.name as user_name, inq.status, inq.created_at, ('Inquiry: ' || inq.subject) as info
+        FROM inquiries inq
+      ) ORDER BY created_at DESC LIMIT 12
     `).all();
 
     res.json({
@@ -2721,7 +2729,10 @@ app.get('/api/admin/dashboard', authenticateToken, requireRole('admin'), (req, r
         pendingApps,
         totalRequests,
         completedSessions,
-        platformVolume
+        platformVolume,
+        totalInquiries,
+        pendingInquiries,
+        respondedInquiries
       },
       charts: {
         subjects: subjectStats,
@@ -3145,6 +3156,155 @@ app.get('/api/admin/requests', authenticateToken, requireRole('admin'), (req, re
   } catch (error) {
     console.error('Admin get requests error:', error);
     res.status(500).json({ error: 'Failed to fetch tutoring requests.' });
+  }
+});
+
+// ==========================================
+// INQUIRIES (SUBMITTED VIA "SEND INQUIRY")
+// SOLELY INTENDED FOR ADMIN REVIEW & PERSONAL RESPONSE
+// ==========================================
+
+// Submit Send Inquiry (Public / Student / Guest) -> strictly routed to Admin
+app.post('/api/inquiries', (req, res) => {
+  try {
+    const { name, email, role, subject, message } = req.body;
+    if (!name || !name.trim() || !email || !email.trim() || !message || !message.trim()) {
+      return res.status(400).json({ error: 'Please provide your full name, email address, and message/question.' });
+    }
+
+    const finalRole = role && role.trim() ? role.trim() : 'Student';
+    const finalSubject = subject && subject.trim() ? subject.trim() : 'General Mentorship Inquiry';
+
+    const result = db.prepare(`
+      INSERT INTO inquiries (name, email, role, subject, message, status)
+      VALUES (?, ?, ?, ?, ?, 'pending')
+    `).run(name.trim(), email.trim(), finalRole, finalSubject, message.trim());
+
+    const inquiryId = result.lastInsertRowid;
+
+    // Inquiries are intended solely for the admin -> notify admin users
+    const admins = db.prepare("SELECT id FROM users WHERE role = 'admin'").all();
+    for (const adm of admins) {
+      db.prepare(`
+        INSERT INTO notifications (user_id, title, message, type, link)
+        VALUES (?, 'New User Inquiry (Admin Only)', ?, 'inquiry', '#admin-portal')
+      `).run(adm.id, `New inquiry from ${name.trim()} (${finalRole}): "${finalSubject}". Review and respond in Admin Console.`);
+    }
+
+    res.status(201).json({
+      success: true,
+      message: 'Your inquiry has been submitted and routed to the Aviora Administrator. Our admin will personally review and respond to your questions.',
+      inquiry_id: inquiryId
+    });
+  } catch (error) {
+    console.error('Submit inquiry error:', error);
+    res.status(500).json({ error: 'Failed to submit inquiry.' });
+  }
+});
+
+// Admin: Get all inquiries (Intended solely for Admin)
+app.get('/api/admin/inquiries', authenticateToken, requireRole('admin'), (req, res) => {
+  try {
+    const { status, search } = req.query;
+    let query = `
+      SELECT 
+        i.*,
+        u.name as responder_name,
+        u.email as responder_email
+      FROM inquiries i
+      LEFT JOIN users u ON i.responded_by = u.id
+      WHERE 1=1
+    `;
+    const params = [];
+
+    if (status && ['pending', 'responded'].includes(status)) {
+      query += ` AND i.status = ?`;
+      params.push(status);
+    }
+
+    if (search && search.trim()) {
+      query += ` AND (i.name LIKE ? OR i.email LIKE ? OR i.subject LIKE ? OR i.message LIKE ?)`;
+      const term = `%${search.trim()}%`;
+      params.push(term, term, term, term);
+    }
+
+    query += ` ORDER BY CASE WHEN i.status = 'pending' THEN 0 ELSE 1 END, i.created_at DESC`;
+
+    const inquiries = db.prepare(query).all(...params);
+
+    const countAll = db.prepare("SELECT COUNT(*) as count FROM inquiries").get().count;
+    const countPending = db.prepare("SELECT COUNT(*) as count FROM inquiries WHERE status = 'pending'").get().count;
+    const countResponded = db.prepare("SELECT COUNT(*) as count FROM inquiries WHERE status = 'responded'").get().count;
+
+    res.json({
+      success: true,
+      inquiries,
+      counts: {
+        all: countAll,
+        pending: countPending,
+        responded: countResponded
+      }
+    });
+  } catch (error) {
+    console.error('Admin get inquiries error:', error);
+    res.status(500).json({ error: 'Failed to fetch inquiries.' });
+  }
+});
+
+// Admin: Personally respond to an inquiry
+app.post('/api/admin/inquiries/:id/respond', authenticateToken, requireRole('admin'), (req, res) => {
+  try {
+    const inquiryId = req.params.id;
+    const { response } = req.body;
+    const adminId = req.user.id;
+    const adminName = req.user.name;
+
+    if (!response || !response.trim()) {
+      return res.status(400).json({ error: 'Response message cannot be empty.' });
+    }
+
+    const inquiry = db.prepare('SELECT * FROM inquiries WHERE id = ?').get(inquiryId);
+    if (!inquiry) {
+      return res.status(404).json({ error: 'Inquiry not found.' });
+    }
+
+    db.prepare(`
+      UPDATE inquiries
+      SET 
+        admin_response = ?,
+        responded_at = CURRENT_TIMESTAMP,
+        responded_by = ?,
+        status = 'responded',
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `).run(response.trim(), adminId, inquiryId);
+
+    // If inquirer email belongs to an existing user, send them an in-app notification
+    const matchedUser = db.prepare('SELECT id FROM users WHERE email = ?').get(inquiry.email);
+    if (matchedUser) {
+      db.prepare(`
+        INSERT INTO notifications (user_id, title, message, type, link)
+        VALUES (?, 'Administrator Response to Your Inquiry', ?, 'inquiry', '#profile')
+      `).run(matchedUser.id, `Aviora Administrator ${adminName} responded to your inquiry regarding "${inquiry.subject}". Check your email or notifications.`);
+    }
+
+    const updated = db.prepare(`
+      SELECT 
+        i.*,
+        u.name as responder_name
+      FROM inquiries i
+      LEFT JOIN users u ON i.responded_by = u.id
+      WHERE i.id = ?
+    `).get(inquiryId);
+
+    res.json({
+      success: true,
+      message: 'Your personal response has been recorded and delivered.',
+      inquiry: updated
+    });
+  } catch (error) {
+    console.error('Admin respond inquiry error:', error);
+    res.status(500).json({ error: 'Failed to save response to inquiry.' });
   }
 });
 

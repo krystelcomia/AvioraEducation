@@ -384,15 +384,41 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  // About Page Inquiry form
+  // About Page Send Inquiry form (routed strictly to Administrator Console)
   const aboutInquiryForm = document.getElementById('about-inquiry-form');
   if (aboutInquiryForm) {
-    aboutInquiryForm.addEventListener('submit', (e) => {
+    aboutInquiryForm.addEventListener('submit', async (e) => {
       e.preventDefault();
-      const nameInput = document.getElementById('inquiry-name');
-      const name = nameInput ? nameInput.value.trim() : 'there';
-      showToast(`Thank you, ${name}! Your inquiry has been sent to our academic advisory team. We will respond within 24 hours.`, 'success');
-      aboutInquiryForm.reset();
+      const name = document.getElementById('inquiry-name')?.value.trim();
+      const email = document.getElementById('inquiry-email')?.value.trim();
+      const role = document.getElementById('inquiry-role')?.value;
+      const subject = document.getElementById('inquiry-subject')?.value.trim();
+      const message = document.getElementById('inquiry-message')?.value.trim();
+
+      if (!name || !email || !message) {
+        showToast('Please fill out your name, email, and message.', 'error');
+        return;
+      }
+
+      const submitBtn = document.getElementById('about-inquiry-submit-btn') || aboutInquiryForm.querySelector('button[type="submit"]');
+      const originalBtnHtml = submitBtn ? submitBtn.innerHTML : '<span>Send Inquiry</span><span>→</span>';
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span>Sending Inquiry...</span>';
+      }
+
+      try {
+        const res = await API.submitInquiry({ name, email, role, subject, message });
+        showToast(res.message || `Thank you, ${name}! Your inquiry has been routed to the administrator.`, 'success');
+        aboutInquiryForm.reset();
+      } catch (err) {
+        showToast(err.message || 'Failed to submit inquiry. Please try again.', 'error');
+      } finally {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = originalBtnHtml;
+        }
+      }
     });
   }
 

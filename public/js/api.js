@@ -98,6 +98,11 @@ const API = {
   getAdminStudents: () => apiRequest('/admin/students'),
   updateUserStatus: (id, body) => apiRequest(`/admin/users/${id}/status`, { method: 'POST', body }),
   getAdminRequests: () => apiRequest('/admin/requests'),
+  getAdminInquiries: (status = 'all', search = '') => apiRequest(`/admin/inquiries?status=${status}&search=${encodeURIComponent(search)}`),
+  respondToInquiry: (id, body) => apiRequest(`/admin/inquiries/${id}/respond`, { method: 'POST', body }),
+
+  // Inquiries (Public / Student / Guest Submission)
+  submitInquiry: (body) => apiRequest('/inquiries', { method: 'POST', body }),
 
   // Notifications
   getNotifications: () => apiRequest('/notifications'),

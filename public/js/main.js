@@ -197,10 +197,20 @@ const Router = {
       if (typeof BookLesson !== 'undefined' && BookLesson.loadPage) {
         await BookLesson.loadPage();
       }
-    } else if (hash === '#login') {
+    } else if (hash.startsWith('#auth-success')) {
+      if (typeof Auth !== 'undefined' && Auth.handleOAuthCallbackHash) {
+        await Auth.handleOAuthCallbackHash();
+      }
+      return;
+    } else if (hash === '#login' || hash.startsWith('#login')) {
       const view = document.getElementById('view-login');
       if (view) view.style.display = 'block';
       window.scrollTo(0, 0);
+      const queryStr = hash.includes('?') ? hash.split('?')[1] : '';
+      const params = new URLSearchParams(queryStr);
+      if (params.get('error')) {
+        showToast(decodeURIComponent(params.get('error')), 'error');
+      }
       if (typeof Auth !== 'undefined' && Auth.updateLinkedAccountBadges) {
         Auth.updateLinkedAccountBadges();
       }

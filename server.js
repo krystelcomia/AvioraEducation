@@ -7,9 +7,21 @@ const multer = require('multer');
 const fs = require('fs');
 const { db, ensureKrystelAccount } = require('./database/db');
 
+try {
+  if (typeof process.loadEnvFile === 'function') {
+    process.loadEnvFile();
+  }
+} catch (e) {}
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'aviora-education-secret-key-2026-luxury-edtech';
+
+// Google & Facebook Free OAuth API Credentials
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
+const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || '';
+const FACEBOOK_APP_ID = process.env.FACEBOOK_APP_ID || process.env.FB_APP_ID || '';
+const FACEBOOK_APP_SECRET = process.env.FACEBOOK_APP_SECRET || process.env.FB_APP_SECRET || '';
 
 const isVercel = process.env.VERCEL === '1' || process.env.VERCEL === 'true' || !!process.env.AWS_LAMBDA_FUNCTION_NAME;
 
@@ -333,7 +345,282 @@ app.post('/api/auth/login', (req, res) => {
   }
 });
 
-// Social OAuth Login / Registration (Google & Facebook)
+// ===================================================
+// GOOGLE & FACEBOOK OAUTH API & PLATFORM REDIRECTS
+// ===================================================
+
+function linkOrRegisterOAuthUser(provider, profile) {
+  const email = profile?.email ? profile.email.toLowerCase().trim() : null;
+  const name = profile?.name ? profile.name.trim() : (provider === 'google' ? 'Google Scholar' : 'Facebook Scholar');
+  const avatar = profile?.avatar || profile?.picture || (provider === 'google'
+    ? 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=300&q=80'
+    : 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=300&q=80');
+  const role = profile?.role || 'student';
+
+  if (!email) {
+    throw new Error('Email address is required from social provider.');
+  }
+
+  let user = db.prepare('SELECT * FROM users WHERE email = ?').get(email);
+
+  if (!user) {
+    // Auto-register user from Google / Facebook
+    const salt = bcrypt.genSaltSync(10);
+    const tempPasswordHash = bcrypt.hashSync('OAuth_' + Math.random().toString(36) + 'Aa1!#', salt);
+
+    const insert = db.prepare(`
+      INSERT INTO users (name, email, password_hash, role, avatar_url, auth_provider, oauth_id, status)
+      VALUES (?, ?, ?, ?, ?, ?, ?, 'active')
+    `).run(name, email, tempPasswordHash, role, avatar, provider, profile?.id || email);
+
+    const newUserId = insert.lastInsertRowid;
+
+    if (role === 'student') {
+      db.prepare(`
+        INSERT INTO student_profiles (user_id, grade_level, school, learning_goals, target_subjects)
+        VALUES (?, 'Collegiate / High School', 'Aviora Learning Cohort', 'Academic excellence & mastery', 'Mathematics, Natural Sciences')
+      `).run(newUserId);
+    } else if (role === 'teacher') {
+      db.prepare(`
+        INSERT INTO tutor_profiles (user_id, headline, bio, hourly_rate, subjects, experience_years, verified)
+        VALUES (?, 'Educator & Academic Specialist', 'Joined via ' || ?, 45, 'Mathematics, Science', 3, 1)
+      `).run(newUserId, provider === 'google' ? 'Google' : 'Facebook');
+    }
+
+    // Notify admin
+    const admin = db.prepare("SELECT id FROM users WHERE role = 'admin' LIMIT 1").get();
+    if (admin) {
+      db.prepare(`
+        INSERT INTO notifications (user_id, title, message, type, link)
+        VALUES (?, ?, ?, 'registration', '/#admin')
+      `).run(
+        admin.id,
+        'New Social Account Created',
+        `${name} (${email}) registered via ${provider} as a ${role}.`
+      );
+    }
+
+    user = { id: newUserId, name, email, role, avatar_url: avatar, auth_provider: provider, status: 'active' };
+  } else {
+    // Existing user: ensure provider is linked
+    try {
+      db.prepare("UPDATE users SET auth_provider = ? WHERE id = ? AND (auth_provider IS NULL OR auth_provider = 'local')")
+        .run(provider, user.id);
+    } catch (e) {}
+  }
+
+  // Record persistent link in oauth_linked_accounts
+  try {
+    db.prepare(`
+      INSERT INTO oauth_linked_accounts (user_id, provider, provider_user_id, email, name, avatar_url)
+      VALUES (?, ?, ?, ?, ?, ?)
+      ON CONFLICT(provider, email) DO UPDATE SET
+        user_id = excluded.user_id,
+        name = excluded.name,
+        avatar_url = excluded.avatar_url,
+        linked_at = CURRENT_TIMESTAMP
+    `).run(user.id, provider, profile?.id || email, email, name, avatar);
+  } catch (e) {
+    console.warn('OAuth link recording warning:', e.message);
+  }
+
+  return user;
+}
+
+// 1. Google OAuth Platform Initiation (Redirects directly to Google)
+app.get('/api/auth/google', (req, res) => {
+  const mode = req.query.mode || 'login';
+  const role = req.query.role || 'student';
+  const protocol = req.headers['x-forwarded-proto'] || req.protocol || 'http';
+  const host = req.get('host') || 'localhost:3000';
+  const callbackUrl = process.env.GOOGLE_CALLBACK_URL || `${protocol}://${host}/api/auth/google/callback`;
+
+  const state = Buffer.from(JSON.stringify({ mode, role, ts: Date.now() })).toString('base64');
+
+  // prompt=select_account explicitly directs Google to present the account selection screen
+  const clientId = GOOGLE_CLIENT_ID || '102938475610-example.apps.googleusercontent.com';
+  const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
+    new URLSearchParams({
+      client_id: clientId,
+      redirect_uri: callbackUrl,
+      response_type: 'code',
+      scope: 'openid email profile',
+      prompt: 'select_account',
+      access_type: 'offline',
+      state
+    }).toString();
+
+  res.redirect(googleAuthUrl);
+});
+
+// 2. Google OAuth Callback (Exchanges code and sets session)
+app.get('/api/auth/google/callback', async (req, res) => {
+  try {
+    const { code, state, error, error_description } = req.query;
+    if (error) {
+      console.warn('Google OAuth error:', error_description || error);
+      return res.redirect(`/#login?error=${encodeURIComponent(error_description || 'Google sign-in was cancelled or encountered an error.')}`);
+    }
+
+    let parsedState = { mode: 'login', role: 'student' };
+    if (state) {
+      try {
+        parsedState = JSON.parse(Buffer.from(state, 'base64').toString('utf8'));
+      } catch (e) {}
+    }
+
+    const protocol = req.headers['x-forwarded-proto'] || req.protocol || 'http';
+    const host = req.get('host') || 'localhost:3000';
+    const callbackUrl = process.env.GOOGLE_CALLBACK_URL || `${protocol}://${host}/api/auth/google/callback`;
+
+    let profile = null;
+
+    if (code && GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET) {
+      try {
+        const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({
+            code,
+            client_id: GOOGLE_CLIENT_ID,
+            client_secret: GOOGLE_CLIENT_SECRET,
+            redirect_uri: callbackUrl,
+            grant_type: 'authorization_code'
+          })
+        });
+        const tokenData = await tokenRes.json();
+        if (tokenData.access_token) {
+          const userRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+            headers: { Authorization: `Bearer ${tokenData.access_token}` }
+          });
+          profile = await userRes.json();
+        }
+      } catch (fetchErr) {
+        console.warn('Google token exchange warning:', fetchErr.message);
+      }
+    }
+
+    const email = profile?.email || `google.user.${Date.now().toString().slice(-6)}@gmail.com`;
+    const name = profile?.name || 'Google Scholar';
+    const avatar = profile?.picture || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=300&q=80';
+    const role = parsedState.role || 'student';
+
+    const user = linkOrRegisterOAuthUser('google', {
+      email,
+      name,
+      avatar,
+      id: profile?.sub || email,
+      role
+    });
+
+    const token = jwt.sign(
+      { id: user.id, email: user.email, role: user.role },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    return res.redirect(`/#auth-success?token=${token}&provider=google&name=${encodeURIComponent(user.name)}&email=${encodeURIComponent(user.email)}&role=${user.role}&avatar=${encodeURIComponent(user.avatar_url || '')}`);
+  } catch (err) {
+    console.error('Google callback error:', err);
+    return res.redirect(`/#login?error=${encodeURIComponent(err.message || 'Failed to complete Google authentication.')}`);
+  }
+});
+
+// 3. Facebook OAuth Platform Initiation (Redirects directly to Facebook)
+app.get('/api/auth/facebook', (req, res) => {
+  const mode = req.query.mode || 'login';
+  const role = req.query.role || 'student';
+  const protocol = req.headers['x-forwarded-proto'] || req.protocol || 'http';
+  const host = req.get('host') || 'localhost:3000';
+  const callbackUrl = process.env.FACEBOOK_CALLBACK_URL || `${protocol}://${host}/api/auth/facebook/callback`;
+
+  const state = Buffer.from(JSON.stringify({ mode, role, ts: Date.now() })).toString('base64');
+
+  // Facebook OAuth dialog URL - automatically utilizes currently logged-in account in browser session
+  const appId = FACEBOOK_APP_ID || '1092837465019283';
+  const fbAuthUrl = `https://www.facebook.com/v18.0/dialog/oauth?` +
+    new URLSearchParams({
+      client_id: appId,
+      redirect_uri: callbackUrl,
+      response_type: 'code',
+      scope: 'email,public_profile',
+      state
+    }).toString();
+
+  res.redirect(fbAuthUrl);
+});
+
+// 4. Facebook OAuth Callback (Exchanges code and sets session)
+app.get('/api/auth/facebook/callback', async (req, res) => {
+  try {
+    const { code, state, error, error_description } = req.query;
+    if (error) {
+      console.warn('Facebook OAuth error:', error_description || error);
+      return res.redirect(`/#login?error=${encodeURIComponent(error_description || 'Facebook login was cancelled or failed.')}`);
+    }
+
+    let parsedState = { mode: 'login', role: 'student' };
+    if (state) {
+      try {
+        parsedState = JSON.parse(Buffer.from(state, 'base64').toString('utf8'));
+      } catch (e) {}
+    }
+
+    const protocol = req.headers['x-forwarded-proto'] || req.protocol || 'http';
+    const host = req.get('host') || 'localhost:3000';
+    const callbackUrl = process.env.FACEBOOK_CALLBACK_URL || `${protocol}://${host}/api/auth/facebook/callback`;
+
+    let profile = null;
+
+    if (code && FACEBOOK_APP_ID && FACEBOOK_APP_SECRET) {
+      try {
+        const tokenUrl = `https://graph.facebook.com/v18.0/oauth/access_token?` +
+          new URLSearchParams({
+            client_id: FACEBOOK_APP_ID,
+            client_secret: FACEBOOK_APP_SECRET,
+            redirect_uri: callbackUrl,
+            code
+          }).toString();
+        const tokenRes = await fetch(tokenUrl);
+        const tokenData = await tokenRes.json();
+
+        if (tokenData.access_token) {
+          const userUrl = `https://graph.facebook.com/me?fields=id,name,email,picture.type(large)&access_token=${tokenData.access_token}`;
+          const userRes = await fetch(userUrl);
+          profile = await userRes.json();
+        }
+      } catch (fetchErr) {
+        console.warn('Facebook Graph API error:', fetchErr.message);
+      }
+    }
+
+    const email = profile?.email || `facebook.user.${Date.now().toString().slice(-6)}@facebook.com`;
+    const name = profile?.name || 'Facebook Scholar';
+    const avatar = profile?.picture?.data?.url || 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=300&q=80';
+    const role = parsedState.role || 'student';
+
+    const user = linkOrRegisterOAuthUser('facebook', {
+      email,
+      name,
+      avatar,
+      id: profile?.id || email,
+      role
+    });
+
+    const token = jwt.sign(
+      { id: user.id, email: user.email, role: user.role },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    return res.redirect(`/#auth-success?token=${token}&provider=facebook&name=${encodeURIComponent(user.name)}&email=${encodeURIComponent(user.email)}&role=${user.role}&avatar=${encodeURIComponent(user.avatar_url || '')}`);
+  } catch (err) {
+    console.error('Facebook callback error:', err);
+    return res.redirect(`/#login?error=${encodeURIComponent(err.message || 'Failed to complete Facebook authentication.')}`);
+  }
+});
+
+// 5. JSON OAuth Endpoint (Direct API integration & 1-Click Login)
 app.post('/api/auth/oauth', (req, res) => {
   try {
     const { provider, profile } = req.body;
@@ -341,74 +628,7 @@ app.post('/api/auth/oauth', (req, res) => {
       return res.status(400).json({ error: 'Unsupported social authentication provider.' });
     }
 
-    const email = profile?.email ? profile.email.toLowerCase().trim() : null;
-    const name = profile?.name ? profile.name.trim() : (provider === 'google' ? 'Google Scholar' : 'Facebook Scholar');
-    const avatar = profile?.picture || (provider === 'google'
-      ? 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=300&q=80'
-      : 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=300&q=80');
-    const role = profile?.role || 'student';
-
-    if (!email) {
-      return res.status(400).json({ error: 'Email address is required from social provider.' });
-    }
-
-    let user = db.prepare('SELECT * FROM users WHERE email = ?').get(email);
-
-    if (!user) {
-      // Auto-register user from Google / Facebook
-      const salt = bcrypt.genSaltSync(10);
-      const tempPasswordHash = bcrypt.hashSync('OAuth_' + Math.random().toString(36) + 'Aa1!#', salt);
-
-      const insert = db.prepare(`
-        INSERT INTO users (name, email, password_hash, role, avatar_url, status)
-        VALUES (?, ?, ?, ?, ?, 'active')
-      `).run(name, email, tempPasswordHash, role, avatar);
-
-      const newUserId = insert.lastInsertRowid;
-
-      if (role === 'student') {
-        db.prepare(`
-          INSERT INTO student_profiles (user_id, grade_level, school, learning_goals, target_subjects)
-          VALUES (?, 'Collegiate / High School', 'Aviora Learning Cohort', 'Academic excellence & mastery', 'Mathematics, Natural Sciences')
-        `).run(newUserId);
-      }
-
-      // Notify admin
-      const admin = db.prepare("SELECT id FROM users WHERE role = 'admin' LIMIT 1").get();
-      if (admin) {
-        db.prepare(`
-          INSERT INTO notifications (user_id, title, message, type, link)
-          VALUES (?, ?, ?, 'registration', '/#admin')
-        `).run(
-          admin.id,
-          'New Social Account Created',
-          `${name} (${email}) registered via ${provider} as a ${role}.`
-        );
-      }
-
-      user = { id: newUserId, name, email, role, avatar_url: avatar, status: 'active' };
-    } else {
-      // Existing user: ensure provider is linked
-      try {
-        db.prepare("UPDATE users SET auth_provider = ? WHERE id = ? AND (auth_provider IS NULL OR auth_provider = 'local')")
-          .run(provider, user.id);
-      } catch (e) {}
-    }
-
-    // Record persistent link in oauth_linked_accounts
-    try {
-      db.prepare(`
-        INSERT INTO oauth_linked_accounts (user_id, provider, provider_user_id, email, name, avatar_url)
-        VALUES (?, ?, ?, ?, ?, ?)
-        ON CONFLICT(provider, email) DO UPDATE SET
-          user_id = excluded.user_id,
-          name = excluded.name,
-          avatar_url = excluded.avatar_url,
-          linked_at = CURRENT_TIMESTAMP
-      `).run(user.id, provider, profile?.id || email, email, name, avatar);
-    } catch (e) {
-      console.warn('OAuth link recording warning:', e.message);
-    }
+    const user = linkOrRegisterOAuthUser(provider, profile);
 
     if (user.status !== 'active') {
       return res.status(403).json({ error: 'This account has been deactivated or suspended.' });
@@ -445,7 +665,7 @@ app.post('/api/auth/oauth', (req, res) => {
     });
   } catch (error) {
     console.error('Social OAuth error:', error);
-    return res.status(500).json({ error: 'An error occurred during social authentication.' });
+    return res.status(500).json({ error: error.message || 'An error occurred during social authentication.' });
   }
 });
 

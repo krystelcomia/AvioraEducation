@@ -90,6 +90,10 @@ const Auth = {
     this.setupEventListeners();
     this.setupPasswordStrengthCheckers();
     this.setupSocialAuth();
+    if (window.location.hash.startsWith('#auth-success')) {
+      await this.handleOAuthCallbackHash();
+      return;
+    }
     await this.restoreSession();
   },
 
@@ -479,30 +483,108 @@ const Auth = {
     }
   },
 
-  promptSwitchAccount() {
-    showToast('Choose which provider account you would like to switch to:', 'info');
-    this.openOAuthChoice('facebook', 'login', true);
+  promptSwitchAccount(provider = 'facebook') {
+    this.redirectToProvider(provider, 'login');
+  },
+
+  redirectToProvider(provider, mode = 'login') {
+    let role = 'student';
+    if (mode === 'signup' || window.location.hash === '#signup') {
+      const roleRadio = document.querySelector('input[name="page_register_role"]:checked');
+      if (roleRadio) role = roleRadio.value;
+    }
+
+    if (provider === 'google') {
+      showToast('Redirecting to Google to select your account...', 'info');
+    } else {
+      showToast('Redirecting to Facebook...', 'info');
+    }
+
+    // Direct platform OAuth redirection
+    window.location.href = `/api/auth/${provider}?mode=${encodeURIComponent(mode)}&role=${encodeURIComponent(role)}`;
   },
 
   handleSocialAuthClick(provider, mode = 'login') {
-    // On Login Page: If account is linked, do INSTANT 1-CLICK LOGIN!
-    if (mode === 'login') {
-      const linked = this.getLinkedAccount(provider);
-      if (linked && linked.email) {
-        showToast(`Signing in with linked ${provider === 'google' ? 'Google' : 'Facebook'} account (${linked.name})...`, 'info');
-        this.loginWithOAuth(provider, {
-          name: linked.name,
-          email: linked.email,
-          picture: linked.avatar || linked.picture,
-          id: linked.id || linked.provider_user_id,
-          role: linked.role || 'student'
-        }, { isInstant: true });
-        return;
-      }
+    // On Sign-Up page: Always redirect to the platform for registration
+    if (mode === 'signup' || window.location.hash === '#signup') {
+      this.redirectToProvider(provider, 'signup');
+      return;
     }
 
-    // Otherwise (signup mode or unlinked account), direct user to the platform sign-in flow
-    this.openOAuthChoice(provider, mode);
+    // On Login page: Check if an account was already created/linked
+    const linked = this.getLinkedAccount(provider);
+    if (linked && linked.email) {
+      // 1-Click Instant Login for returning linked account
+      showToast(`Signing in with linked ${provider === 'google' ? 'Google' : 'Facebook'} account (${linked.name})...`, 'info');
+      this.loginWithOAuth(provider, {
+        name: linked.name,
+        email: linked.email,
+        picture: linked.avatar || linked.picture,
+        id: linked.id || linked.provider_user_id,
+        role: linked.role || 'student'
+      }, { isInstant: true });
+      return;
+    }
+
+    // If not linked yet, direct user to platform sign-in
+    this.redirectToProvider(provider, 'login');
+  },
+
+  async handleOAuthCallbackHash() {
+    try {
+      const hash = window.location.hash;
+      const queryPart = hash.includes('?') ? hash.split('?')[1] : '';
+      const params = new URLSearchParams(queryPart);
+
+      const token = params.get('token');
+      const provider = params.get('provider') || 'google';
+      const name = params.get('name') || 'Social Scholar';
+      const email = params.get('email') || '';
+      const role = params.get('role') || 'student';
+      const avatar = params.get('avatar') || '';
+
+      if (!token) {
+        return;
+      }
+
+      // Store authenticated session
+      Storage.setToken(token);
+      const userObj = {
+        id: email || Date.now(),
+        name: decodeURIComponent(name),
+        email: decodeURIComponent(email),
+        role,
+        avatar_url: decodeURIComponent(avatar),
+        auth_provider: provider,
+        status: 'active'
+      };
+      Storage.setUser(userObj);
+      this.currentUser = userObj;
+
+      // Save linked account locally for instant 1-click return logins
+      this.saveLinkedAccount(provider, {
+        name: userObj.name,
+        email: userObj.email,
+        avatar: userObj.avatar_url,
+        role: userObj.role,
+        id: userObj.id
+      });
+
+      this.updateNavUI(userObj);
+      this.updateLinkedAccountBadges();
+
+      showToast(`Welcome, ${userObj.name}! Account linked with ${provider === 'google' ? 'Google' : 'Facebook'}.`, 'success');
+
+      // Clear the auth-success token from the URL hash and navigate to dashboard
+      const targetHash = userObj.role === 'teacher' ? '#teacher-portal' : '#student-portal';
+      window.location.hash = targetHash;
+      if (typeof Router !== 'undefined' && Router.handleRoute) {
+        Router.handleRoute();
+      }
+    } catch (err) {
+      console.error('Failed to parse OAuth callback:', err);
+      showToast('Error processing social sign in. Please try again.', 'error');
+    }
   },
 
   setupSocialAuth() {
@@ -512,13 +594,22 @@ const Auth = {
     const modalGoogleBtn = document.getElementById('modal-google-auth-btn');
 
     if (pageGoogleBtn) {
-      pageGoogleBtn.addEventListener('click', () => this.handleSocialAuthClick('google', 'login'));
+      pageGoogleBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        this.handleSocialAuthClick('google', 'login');
+      });
     }
     if (signupGoogleBtn) {
-      signupGoogleBtn.addEventListener('click', () => this.handleSocialAuthClick('google', 'signup'));
+      signupGoogleBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        this.handleSocialAuthClick('google', 'signup');
+      });
     }
     if (modalGoogleBtn) {
-      modalGoogleBtn.addEventListener('click', () => this.handleSocialAuthClick('google', 'login'));
+      modalGoogleBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        this.handleSocialAuthClick('google', 'login');
+      });
     }
 
     // Facebook Auth Triggers
@@ -527,13 +618,22 @@ const Auth = {
     const modalFbBtn = document.getElementById('modal-facebook-auth-btn');
 
     if (pageFbBtn) {
-      pageFbBtn.addEventListener('click', () => this.handleSocialAuthClick('facebook', 'login'));
+      pageFbBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        this.handleSocialAuthClick('facebook', 'login');
+      });
     }
     if (signupFbBtn) {
-      signupFbBtn.addEventListener('click', () => this.handleSocialAuthClick('facebook', 'signup'));
+      signupFbBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        this.handleSocialAuthClick('facebook', 'signup');
+      });
     }
     if (modalFbBtn) {
-      modalFbBtn.addEventListener('click', () => this.handleSocialAuthClick('facebook', 'login'));
+      modalFbBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        this.handleSocialAuthClick('facebook', 'login');
+      });
     }
 
     // Navigation redirects between login and signup
@@ -553,256 +653,17 @@ const Auth = {
       });
     }
 
-    // OAuth Modal Close Triggers
-    const closeBtn = document.getElementById('oauth-modal-close');
-    const oauthModal = document.getElementById('oauth-provider-modal');
-    if (closeBtn) closeBtn.addEventListener('click', () => this.closeOAuthChoice());
-    if (oauthModal) {
-      oauthModal.addEventListener('click', (e) => {
-        if (e.target === oauthModal) this.closeOAuthChoice();
-      });
+    // Check if URL currently has auth-success or error
+    if (window.location.hash.startsWith('#auth-success')) {
+      this.handleOAuthCallbackHash();
     }
 
     // Refresh UI badges based on stored links
     this.updateLinkedAccountBadges();
   },
 
-  openOAuthChoice(provider, mode = 'login', forcePrompt = false) {
-    const modal = document.getElementById('oauth-provider-modal');
-    if (!modal) return;
-
-    modal.dataset.provider = provider;
-    modal.dataset.mode = mode;
-
-    const isGoogle = provider === 'google';
-    const isSignup = mode === 'signup' || window.location.hash === '#signup';
-
-    // Apply platform-specific styling classes
-    modal.classList.toggle('oauth-modal-google', isGoogle);
-    modal.classList.toggle('oauth-modal-facebook', !isGoogle);
-
-    // Platform header elements
-    const icon = document.getElementById('oauth-provider-icon');
-    const heading = document.getElementById('oauth-modal-heading');
-    const appTag = document.getElementById('oauth-modal-app-tag');
-    const permText = document.getElementById('oauth-permission-text');
-    const sub = document.getElementById('oauth-modal-sub');
-    const directHeading = document.getElementById('oauth-direct-heading');
-    const submitText = document.getElementById('oauth-submit-btn-text');
-    const directNameWrap = document.getElementById('oauth-direct-name-wrap');
-    const footerPrivacy = document.getElementById('oauth-footer-privacy');
-
-    if (icon) {
-      icon.innerHTML = isGoogle
-        ? `<svg width="24" height="24" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>`
-        : `<svg width="26" height="26" viewBox="0 0 24 24" fill="#FFFFFF"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>`;
-    }
-
-    if (heading) {
-      if (isSignup) {
-        heading.textContent = isGoogle ? 'Create Account with Google' : 'Create Account with Facebook';
-      } else {
-        heading.textContent = isGoogle ? 'Sign In with Google' : 'Log in with Facebook';
-      }
-    }
-
-    if (appTag) {
-      appTag.textContent = isGoogle
-        ? 'to continue to Aviora Education'
-        : 'Aviora Education Account Linking';
-    }
-
-    if (permText) {
-      permText.textContent = isGoogle
-        ? 'Aviora Education will receive your name, email address, language preference, and profile picture from Google.'
-        : 'Aviora Education will receive your name, profile picture, and email address from Facebook.';
-    }
-
-    if (sub) {
-      sub.textContent = isSignup
-        ? `Select your ${isGoogle ? 'Google' : 'Facebook'} profile to register:`
-        : `Choose a ${isGoogle ? 'Google' : 'Facebook'} account:`;
-    }
-
-    if (directHeading) {
-      directHeading.textContent = isSignup
-        ? `Or register with ${isGoogle ? 'Google' : 'Facebook'} credentials:`
-        : `Or sign in with another ${isGoogle ? 'Google' : 'Facebook'} account:`;
-    }
-
-    if (submitText) {
-      submitText.textContent = isSignup
-        ? `Create Account & Link with ${isGoogle ? 'Google' : 'Facebook'}`
-        : `Sign In with ${isGoogle ? 'Google' : 'Facebook'}`;
-    }
-
-    if (directNameWrap) {
-      directNameWrap.style.display = isSignup ? 'block' : 'none';
-    }
-
-    if (footerPrivacy) {
-      footerPrivacy.textContent = isGoogle
-        ? "To continue, Google will share your profile with Aviora Education under Google's Privacy Policy."
-        : "By proceeding, Facebook will link your identity with Aviora Education. Facebook does not allow posting without permission.";
-    }
-
-    // Build accounts list
-    const linked = this.getLinkedAccount(provider);
-    const accounts = [];
-
-    if (linked) {
-      accounts.push({
-        name: linked.name,
-        email: linked.email,
-        avatar: linked.avatar || (isGoogle
-          ? 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80'
-          : 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=120&q=80'),
-        badge: 'Linked Account',
-        isLinked: true
-      });
-    }
-
-    if (isGoogle) {
-      if (!linked || linked.email !== 'krystel.comia@gmail.com') {
-        accounts.push({
-          name: 'Krystel Comia',
-          email: 'krystel.comia@gmail.com',
-          avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80',
-          badge: 'Google Account'
-        });
-      }
-      if (!linked || linked.email !== 'marcus.chen.mit@gmail.com') {
-        accounts.push({
-          name: 'Marcus Chen',
-          email: 'marcus.chen.mit@gmail.com',
-          avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=120&q=80',
-          badge: 'Google Workspace'
-        });
-      }
-    } else {
-      if (!linked || linked.email !== 'krystel.comia.fb@facebook.com') {
-        accounts.push({
-          name: 'Krystel Comia',
-          email: 'krystel.comia.fb@facebook.com',
-          avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=120&q=80',
-          badge: 'Facebook Profile'
-        });
-      }
-      if (!linked || linked.email !== 'sophia.lin.arts@facebook.com') {
-        accounts.push({
-          name: 'Sophia Lin',
-          email: 'sophia.lin.arts@facebook.com',
-          avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=120&q=80',
-          badge: 'Facebook Profile'
-        });
-      }
-    }
-
-    const list = document.getElementById('oauth-accounts-list');
-    if (list) {
-      list.innerHTML = '';
-      accounts.forEach(acc => {
-        const item = document.createElement('div');
-        item.className = `oauth-account-item ${acc.isLinked ? 'is-active' : ''}`;
-        if (acc.isLinked) {
-          item.style.borderColor = '#10B981';
-          item.style.background = 'rgba(16, 185, 129, 0.05)';
-        }
-        item.innerHTML = `
-          <img src="${acc.avatar}" alt="${acc.name}" class="oauth-account-avatar" />
-          <div style="flex: 1; text-align: left;">
-            <div class="oauth-account-name">${acc.name}</div>
-            <div class="oauth-account-email">${acc.email}</div>
-          </div>
-          <span style="font-size: 0.72rem; font-weight: 700; color: ${acc.isLinked ? '#10B981' : 'var(--gold-800)'};">${acc.badge}</span>
-        `;
-        item.addEventListener('click', () => {
-          this.selectOAuthAccount(provider, acc.name, acc.email, acc.avatar);
-        });
-        list.appendChild(item);
-      });
-    }
-
-    // Reset direct input values
-    const emailInput = document.getElementById('oauth-direct-email');
-    const passInput = document.getElementById('oauth-direct-password');
-    const nameInput = document.getElementById('oauth-direct-name');
-    if (emailInput) emailInput.value = '';
-    if (passInput) passInput.value = '';
-    if (nameInput) nameInput.value = '';
-
-    modal.classList.add('active');
-    document.body.style.overflow = 'hidden';
-  },
-
-  selectOAuthAccount(provider, name, email, avatar) {
-    const isSignup = document.getElementById('oauth-provider-modal')?.dataset?.mode === 'signup' || window.location.hash === '#signup';
-    let role = 'student';
-    const roleRadio = document.querySelector('input[name="page_register_role"]:checked');
-    if (roleRadio) role = roleRadio.value;
-
-    this.loginWithOAuth(provider, {
-      name,
-      email,
-      picture: avatar,
-      role
-    }, { isSignup });
-  },
-
-  submitOAuthDirectForm() {
-    const modal = document.getElementById('oauth-provider-modal');
-    const provider = modal?.dataset?.provider || 'facebook';
-    const isSignup = modal?.dataset?.mode === 'signup' || window.location.hash === '#signup';
-
-    const emailInput = document.getElementById('oauth-direct-email');
-    const passInput = document.getElementById('oauth-direct-password');
-    const nameInput = document.getElementById('oauth-direct-name');
-
-    const email = emailInput ? emailInput.value.trim() : '';
-    const password = passInput ? passInput.value : '';
-    let name = nameInput ? nameInput.value.trim() : '';
-
-    if (!email) {
-      showToast('Please enter your email or phone number.', 'error');
-      return;
-    }
-    if (!password || password.length < 4) {
-      showToast(`Please enter your password to authenticate with ${provider === 'google' ? 'Google' : 'Facebook'}.`, 'error');
-      return;
-    }
-
-    if (!name) {
-      const localPart = email.split('@')[0];
-      name = localPart.split(/[._-]/).map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' ') || (provider === 'google' ? 'Google Scholar' : 'Facebook Scholar');
-    }
-
-    let role = 'student';
-    const roleRadio = document.querySelector('input[name="page_register_role"]:checked');
-    if (roleRadio) role = roleRadio.value;
-
-    const avatar = provider === 'google'
-      ? 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=300&q=80'
-      : 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=300&q=80';
-
-    this.loginWithOAuth(provider, {
-      name,
-      email,
-      picture: avatar,
-      role
-    }, { isSignup });
-  },
-
-  closeOAuthChoice() {
-    const modal = document.getElementById('oauth-provider-modal');
-    if (modal) {
-      modal.classList.remove('active');
-      document.body.style.overflow = '';
-    }
-  },
-
   async loginWithOAuth(provider, profile, options = {}) {
     try {
-      this.closeOAuthChoice();
       this.closeModal();
 
       const isInstant = options.isInstant;

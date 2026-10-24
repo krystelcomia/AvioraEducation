@@ -767,26 +767,6 @@ const StudentSub = {
     const scheduledCount = scheduledLessons.length;
     const isComplete = scheduledCount === 4;
 
-    // Top banner price: visible ONLY once all 4 lessons are completely set up
-    const planPriceEl = document.getElementById('sub-enroll-plan-price');
-    const planPriceCalcEl = document.getElementById('sub-enroll-plan-price-calc');
-    if (planPriceEl) {
-      if (isComplete) {
-        planPriceEl.textContent = `$${totalCost.toFixed(2)}`;
-        planPriceEl.style.fontSize = '1.75rem';
-        planPriceEl.style.color = 'var(--gold-700)';
-      } else {
-        planPriceEl.innerHTML = `<span style="font-size: 1.15rem; color: #D97706; font-weight: 700;">Pending Setup</span>`;
-      }
-    }
-    if (planPriceCalcEl) {
-      if (isComplete) {
-        const rates = this.selectedLessons.map(l => `$${Number(l.hourly_rate).toFixed(0)}`);
-        planPriceCalcEl.textContent = `4 Lessons: ${rates.join(' + ')}`;
-      } else {
-        planPriceCalcEl.textContent = `Visible once all 4 lessons are scheduled (${scheduledCount}/4 set)`;
-      }
-    }
 
     // Progress badge
     const progressTag = document.getElementById('sub-enroll-lessons-progress-tag');

@@ -75,7 +75,7 @@ function showConfirm(title, message, onConfirm) {
 
 // Router
 const Router = {
-  routes: ['#home', '#about', '#tutors', '#aviora-buddy', '#buddy', '#how-it-works', '#book-now', '#book-lesson', '#subscriptions', '#student-subscriptions', '#login', '#signup', '#student-portal', '#student-lessons', '#student-tutors', '#student-history', '#student-schedule', '#student-profile', '#teacher-portal', '#admin-portal'],
+  routes: ['#home', '#about', '#tutors', '#aviora-buddy', '#buddy', '#how-it-works', '#book-now', '#book-lesson', '#subscriptions', '#subscription', '#student-subscriptions', '#login', '#signup', '#student-portal', '#dashboard', '#student-lessons', '#student-tutors', '#student-history', '#student-schedule', '#student-profile', '#teacher-portal', '#admin-portal'],
 
   init() {
     window.addEventListener('hashchange', () => this.handleRoute());
@@ -87,7 +87,7 @@ const Router = {
     document.querySelectorAll('.nav-link').forEach(link => {
       const href = link.getAttribute('href');
       let isActive = (href === hash);
-      if (!isActive && href === '#student-portal' && ['#student-portal', '#student-lessons', '#student-schedule', '#student-history', '#student-tutors'].includes(hash)) {
+      if (!isActive && (href === '#student-portal' || href === '#dashboard') && ['#student-portal', '#dashboard', '#student-lessons', '#student-schedule', '#student-history', '#student-tutors'].includes(hash)) {
         isActive = true;
       }
       if (!isActive && (href === '#student-profile' || href === '#profile' || link.id === 'nav-user-profile-btn') && (hash === '#student-profile' || hash === '#profile')) {
@@ -97,6 +97,9 @@ const Router = {
         isActive = true;
       }
       if (!isActive && (href === '#aviora-buddy' || href === '#buddy') && (hash.startsWith('#aviora-buddy') || hash.startsWith('#buddy'))) {
+        isActive = true;
+      }
+      if (!isActive && (href === '#subscriptions' || href === '#subscription') && (hash === '#subscriptions' || hash === '#subscription' || hash === '#student-subscriptions')) {
         isActive = true;
       }
       link.classList.toggle('active', isActive);
@@ -173,7 +176,7 @@ const Router = {
       const view = document.getElementById('view-how-it-works');
       if (view) view.style.display = 'block';
       window.scrollTo(0, 0);
-    } else if (hash === '#subscriptions' || hash === '#student-subscriptions') {
+    } else if (hash === '#subscriptions' || hash === '#subscription' || hash === '#student-subscriptions') {
       const user = Auth.currentUser;
       if (user && user.role === 'student') {
         const studentSubView = document.getElementById('view-student-subscription');

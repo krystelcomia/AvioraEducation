@@ -185,6 +185,23 @@ const StudentSub = {
     this.openEnrollmentModal(packageKey);
   },
 
+  getTutorSubjects(tutor) {
+    if (!tutor) return ['General Tutoring'];
+    let subjs = tutor.subjects;
+    if (typeof subjs === 'string') {
+      try {
+        const parsed = JSON.parse(subjs);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed.filter(Boolean);
+      } catch (e) {}
+      const splitted = subjs.split(',').map(s => s.trim().replace(/^["'\[]+|["'\]]+$/g, '')).filter(Boolean);
+      if (splitted.length > 0) return splitted;
+    }
+    if (Array.isArray(subjs) && subjs.length > 0) {
+      return subjs.filter(Boolean);
+    }
+    return [tutor.subject || 'General Tutoring'];
+  },
+
   // OPEN INTERACTIVE SUBSCRIPTION & 4 LESSONS SCHEDULING STUDIO
   async openEnrollmentModal(packageKey = '4_lessons') {
     const user = typeof Auth !== 'undefined' ? Auth.currentUser : null;
@@ -238,22 +255,18 @@ const StudentSub = {
       }
     }
 
-    // Default subject
-    const defaultSubject = this.selectedTutor 
-      ? (Array.isArray(this.selectedTutor.subjects) ? this.selectedTutor.subjects[0] : (this.selectedTutor.subjects ? this.selectedTutor.subjects.split(',')[0].trim() : 'General Tutoring'))
-      : 'General Tutoring';
+    // Tutor subjects
+    const subjects = this.getTutorSubjects(this.selectedTutor);
+    const defaultSubject = subjects[0] || 'General Tutoring';
 
-    // Populate subject select
+    // Populate subject select in Section 1 (bulk apply)
     const subjectSelect = document.getElementById('sub-enroll-subject-select');
-    if (subjectSelect && this.selectedTutor) {
-      const subjects = Array.isArray(this.selectedTutor.subjects)
-        ? this.selectedTutor.subjects
-        : (this.selectedTutor.subjects ? this.selectedTutor.subjects.split(',').map(s => s.trim()).filter(Boolean) : ['Mathematics', 'Science']);
+    if (subjectSelect) {
       subjectSelect.innerHTML = subjects.map(s => `<option value="${s}">${s}</option>`).join('');
       subjectSelect.value = defaultSubject;
     }
 
-    // Initialize 4 lessons setup
+    // Initialize 4 lessons setup with educator's accredited subjects
     const tutorRate = Number(this.selectedTutor?.hourly_rate || 58);
     this.selectedLessons = [0, 1, 2, 3].map(i => ({
       index: i,
@@ -261,7 +274,7 @@ const StudentSub = {
       tutor_id: this.selectedTutor?.user_id || this.selectedTutor?.id || 1,
       tutor_name: this.selectedTutor?.name || 'Educator',
       tutor_avatar: this.selectedTutor?.avatar_url || this.selectedTutor?.avatar || '',
-      subject: defaultSubject,
+      subject: subjects[i % subjects.length] || defaultSubject,
       hourly_rate: tutorRate,
       scheduled_date: null,
       scheduled_time: null
@@ -273,6 +286,9 @@ const StudentSub = {
 
     // Update educator preview card
     this.updateTutorPreview(this.selectedTutor);
+
+    // Update active scheduling banner
+    this.updateActiveLessonBanner();
 
     // Render 4 lesson tabs
     this.renderLessonTabs();
@@ -317,49 +333,91 @@ const StudentSub = {
 
     this.updateTutorPreview(tutor);
 
-    // Update subjects dropdown
+    const subjects = this.getTutorSubjects(tutor);
+    const defaultSubject = subjects[0] || 'General Tutoring';
+
+    // Update bulk subjects dropdown in Section 1
     const subjectSelect = document.getElementById('sub-enroll-subject-select');
-    let chosenSubject = 'General Tutoring';
     if (subjectSelect) {
-      const subjects = Array.isArray(tutor.subjects)
-        ? tutor.subjects
-        : (tutor.subjects ? tutor.subjects.split(',').map(s => s.trim()).filter(Boolean) : ['Mathematics', 'Science']);
       subjectSelect.innerHTML = subjects.map(s => `<option value="${s}">${s}</option>`).join('');
-      chosenSubject = subjects[0] || 'General Tutoring';
-      subjectSelect.value = chosenSubject;
+      subjectSelect.value = defaultSubject;
     }
 
-    // Apply this tutor & rate to all 4 lessons
+    // Apply this tutor & rate to all 4 lessons, distributing accredited subjects
     const rate = Number(tutor.hourly_rate || 58);
     const tutorIdToSet = tutor.user_id || tutor.id;
-    this.selectedLessons.forEach(l => {
+    this.selectedLessons.forEach((l, idx) => {
       l.tutor_id = tutorIdToSet;
       l.tutor_name = tutor.name;
       l.tutor_avatar = tutor.avatar_url || tutor.avatar;
-      l.subject = chosenSubject;
+      l.subject = subjects[idx % subjects.length] || defaultSubject;
       l.hourly_rate = rate;
-      // Note: preserve scheduled_date/time if already set or allow re-verifying
     });
 
+    this.updateActiveLessonBanner();
     this.renderLessonTabs();
     this.syncActiveLessonCalendar();
     this.updateSummary();
   },
 
-  onSubjectSelected(subj) {
+  onApplySubjectToAll(subj) {
     if (!subj) return;
-    // Apply subject to all 4 lessons
     this.selectedLessons.forEach(l => {
       l.subject = subj;
     });
+    this.updateActiveLessonBanner();
     this.renderLessonTabs();
-    this.syncActiveLessonCalendar();
     this.updateSummary();
+  },
+
+  onSubjectSelected(subj) {
+    this.onApplySubjectToAll(subj);
+  },
+
+  setLessonSubject(lessonIdx, subject) {
+    if (lessonIdx < 0 || lessonIdx >= this.selectedLessons.length || !subject) return;
+    this.selectedLessons[lessonIdx].subject = subject;
+    this.activeLessonIndex = lessonIdx;
+    this.updateActiveLessonBanner();
+    this.renderLessonTabs();
+    this.updateSummary();
+  },
+
+  onActiveLessonSubjectChanged(subject) {
+    this.setLessonSubject(this.activeLessonIndex, subject);
+  },
+
+  updateActiveLessonBanner() {
+    const lesson = this.selectedLessons[this.activeLessonIndex];
+    if (!lesson) return;
+
+    const badgeEl = document.getElementById('sub-active-lesson-badge');
+    const titleEl = document.getElementById('sub-active-lesson-title');
+    const rateTagEl = document.getElementById('sub-active-lesson-rate-tag');
+    const subjectSelectEl = document.getElementById('sub-active-lesson-subject-select');
+
+    if (badgeEl) badgeEl.textContent = `Lesson ${this.activeLessonIndex + 1} of 4`;
+    if (titleEl) {
+      if (lesson.scheduled_date && lesson.scheduled_time) {
+        titleEl.textContent = `Scheduled: ${lesson.scheduled_date} at ${lesson.scheduled_time} (${lesson.tutor_name} — ${lesson.subject})`;
+      } else {
+        titleEl.textContent = `Select Date & Time for ${lesson.subject} with ${lesson.tutor_name}`;
+      }
+    }
+    if (rateTagEl) rateTagEl.textContent = `$${Number(lesson.hourly_rate).toFixed(2)} / session`;
+
+    if (subjectSelectEl) {
+      const subjects = this.getTutorSubjects(this.selectedTutor);
+      subjectSelectEl.innerHTML = subjects.map(s => `<option value="${s}" ${s === lesson.subject ? 'selected' : ''}>${s}</option>`).join('');
+      subjectSelectEl.value = lesson.subject;
+    }
   },
 
   renderLessonTabs() {
     const grid = document.getElementById('sub-lesson-tabs-grid');
     if (!grid) return;
+
+    const subjects = this.getTutorSubjects(this.selectedTutor);
 
     grid.innerHTML = this.selectedLessons.map((l, idx) => {
       const isActive = idx === this.activeLessonIndex;
@@ -378,7 +436,14 @@ const StudentSub = {
 
           <div style="min-width: 0;">
             <div class="lesson-card-tutor-name" title="${l.tutor_name}">${l.tutor_name}</div>
-            <div class="lesson-card-subject-tag" title="${l.subject}">${l.subject}</div>
+            
+            <div style="margin: 0.35rem 0;" onclick="event.stopPropagation()">
+              <label style="font-size: 0.68rem; font-weight: 700; color: var(--gold-800); text-transform: uppercase; letter-spacing: 0.03em; display: block; margin-bottom: 0.15rem;">Subject:</label>
+              <select class="lesson-card-subject-select" onchange="StudentSub.setLessonSubject(${idx}, this.value)" title="Change subject for Lesson ${idx + 1}">
+                ${subjects.map(s => `<option value="${s}" ${s === l.subject ? 'selected' : ''}>${s}</option>`).join('')}
+              </select>
+            </div>
+
             <div class="lesson-card-rate-pill">$${Number(l.hourly_rate).toFixed(2)} / 50 min</div>
           </div>
 
@@ -397,20 +462,7 @@ const StudentSub = {
     this.activeLessonIndex = idx;
     const lesson = this.selectedLessons[idx];
 
-    // Update active banner
-    const badgeEl = document.getElementById('sub-active-lesson-badge');
-    const titleEl = document.getElementById('sub-active-lesson-title');
-    const rateTagEl = document.getElementById('sub-active-lesson-rate-tag');
-
-    if (badgeEl) badgeEl.textContent = `Lesson ${idx + 1} of 4`;
-    if (titleEl) {
-      if (lesson.scheduled_date && lesson.scheduled_time) {
-        titleEl.textContent = `Scheduled: ${lesson.scheduled_date} at ${lesson.scheduled_time} (${lesson.tutor_name})`;
-      } else {
-        titleEl.textContent = `Select Date & Time with ${lesson.tutor_name} (${lesson.subject})`;
-      }
-    }
-    if (rateTagEl) rateTagEl.textContent = `$${Number(lesson.hourly_rate).toFixed(2)} / session`;
+    this.updateActiveLessonBanner();
 
     this.selectedDate = lesson.scheduled_date;
     this.selectedTime = lesson.scheduled_time;
@@ -628,10 +680,10 @@ const StudentSub = {
               this.setActiveLesson(anyUnscheduled);
             }, 300);
           } else {
-            showToast(`All 4 lessons are scheduled! Ready to confirm enrollment.`, 'success');
             const titleEl = document.getElementById('sub-active-lesson-title');
             if (titleEl) {
-              titleEl.textContent = `Scheduled: ${dateStr} at ${slot.key} (${this.selectedLessons[this.activeLessonIndex].tutor_name})`;
+              const currentLesson = this.selectedLessons[this.activeLessonIndex];
+              titleEl.textContent = `Scheduled: ${dateStr} at ${slot.key} (${currentLesson.tutor_name} — ${currentLesson.subject})`;
             }
           }
         });

@@ -3808,11 +3808,11 @@
           </div>
         </div>
 
-        <!-- 1. Select Educator & Subject -->
+        <!-- 1. Select Faculty Educator -->
         <div style="margin-bottom: 1.25rem;">
           <label class="form-label" style="font-weight: 700; color: var(--charcoal-900); display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-            <span>1. Select Faculty Educator &amp; Subject</span>
-            <span style="font-size: 0.75rem; font-weight: 500; color: var(--text-secondary);">Rate automatically applies to scheduled lessons</span>
+            <span>1. Select Faculty Educator</span>
+            <span style="font-size: 0.75rem; font-weight: 500; color: var(--text-secondary);">Customize subjects for each lesson below</span>
           </label>
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.75rem;">
             <div>
@@ -3822,8 +3822,8 @@
               </select>
             </div>
             <div>
-              <label style="font-size: 0.78rem; font-weight: 600; color: var(--charcoal-700); margin-bottom: 0.25rem; display: block;">Subject for Instruction</label>
-              <select id="sub-enroll-subject-select" class="form-control" style="font-weight: 600; font-size: 0.9rem; border: 1.5px solid rgba(198, 138, 40, 0.35);" onchange="StudentSub.onSubjectSelected(this.value)">
+              <label style="font-size: 0.78rem; font-weight: 600; color: var(--charcoal-700); margin-bottom: 0.25rem; display: block;">Apply Subject to All Lessons (Optional)</label>
+              <select id="sub-enroll-subject-select" class="form-control" style="font-weight: 600; font-size: 0.9rem; border: 1.5px solid rgba(198, 138, 40, 0.35);" onchange="StudentSub.onApplySubjectToAll(this.value)">
                 <!-- Populated from selected tutor's disciplines -->
               </select>
             </div>
@@ -3850,12 +3850,12 @@
         <div style="margin-bottom: 1.35rem;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.45rem;">
             <label class="form-label" style="font-weight: 700; color: var(--charcoal-900); margin-bottom: 0;">
-              2. Select 4 Lessons &amp; Respective Dates &amp; Times
+              2. Select 4 Lessons, Subjects &amp; Respective Dates &amp; Times
             </label>
             <span id="sub-enroll-lessons-progress-tag" class="badge-gold" style="font-size: 0.72rem; font-weight: 700;">0 of 4 Scheduled</span>
           </div>
           <div style="font-size: 0.8rem; color: var(--charcoal-600); margin-bottom: 0.75rem; line-height: 1.45;">
-            Click on any lesson below to pick its respective date and time. Each educator's rate contributes to your total cost.
+            You can select different accredited subjects for each lesson under your chosen tutor, then pick respective dates and times.
           </div>
           
           <!-- 4 Interactive Lesson Tabs / Cards Grid -->
@@ -3867,12 +3867,18 @@
         <!-- 3. Interactive Scheduling Calendar for Selected Lesson -->
         <div id="sub-scheduling-section" style="margin-bottom: 1.25rem;">
           <!-- Active Lesson Prompt Banner -->
-          <div class="active-lesson-scheduling-banner" id="sub-active-lesson-banner">
+          <div class="active-lesson-scheduling-banner" id="sub-active-lesson-banner" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.65rem;">
             <div style="display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;">
               <span class="badge-gold" id="sub-active-lesson-badge" style="font-size: 0.75rem; font-weight: 800;">Lesson 1</span>
               <span id="sub-active-lesson-title" style="font-size: 0.88rem; font-weight: 700; color: var(--charcoal-950);">Select Respective Date &amp; Time</span>
             </div>
-            <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <div style="display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;">
+              <div style="display: flex; align-items: center; gap: 0.35rem;">
+                <label style="font-size: 0.76rem; font-weight: 700; color: var(--charcoal-700); margin: 0;">Subject:</label>
+                <select id="sub-active-lesson-subject-select" class="form-control" style="padding: 0.2rem 0.5rem; font-size: 0.78rem; font-weight: 700; border: 1.5px solid rgba(198, 138, 40, 0.4); border-radius: var(--radius-sm); width: auto; height: auto;" onchange="StudentSub.onActiveLessonSubjectChanged(this.value)">
+                  <!-- Populated from current tutor's subjects -->
+                </select>
+              </div>
               <span id="sub-active-lesson-rate-tag" style="font-size: 0.82rem; font-weight: 700; color: var(--gold-700);">$58.00 / session</span>
               <span class="badge-gold" id="sub-enroll-slot-duration-badge" style="font-size: 0.72rem;">50-Min Class</span>
             </div>

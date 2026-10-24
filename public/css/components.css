@@ -2103,6 +2103,33 @@
   margin-top: 0.15rem;
 }
 
+.lesson-card-subject-select {
+  width: 100%;
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: var(--charcoal-900);
+  background: #FAF8F5;
+  border: 1.5px solid rgba(198, 138, 40, 0.35);
+  border-radius: var(--radius-sm);
+  padding: 0.3rem 0.45rem;
+  margin-top: 0.15rem;
+  cursor: pointer;
+  outline: none;
+  transition: all var(--transition-fast);
+}
+
+.lesson-card-subject-select:focus,
+.lesson-card-subject-select:hover {
+  border-color: var(--gold-600);
+  background: #FFFFFF;
+}
+
+[data-theme="dark"] .lesson-card-subject-select {
+  background: #1E232A;
+  color: #F7FAFC;
+  border-color: rgba(198, 138, 40, 0.4);
+}
+
 .lesson-card-datetime {
   font-size: 0.74rem;
   line-height: 1.35;

@@ -1231,11 +1231,24 @@ app.post('/api/student/subscription/purchase', authenticateToken, requireRole('s
         const lessonRate = Number(tProf.hourly_rate) || 58.00;
         totalCalculatedPrice += lessonRate;
 
+        let lessonSubject = item.subject ? String(item.subject).trim() : '';
+        if (!lessonSubject) {
+          if (tProf.subjects) {
+            try {
+              const parsedSubjs = JSON.parse(tProf.subjects);
+              if (Array.isArray(parsedSubjs) && parsedSubjs.length > 0) lessonSubject = parsedSubjs[0];
+            } catch (e) {
+              lessonSubject = tProf.subjects.split(',')[0].trim().replace(/^["'\[]+|["'\]]+$/g, '');
+            }
+          }
+          if (!lessonSubject) lessonSubject = 'General Tutoring';
+        }
+
         validatedLessons.push({
           index: i + 1,
           tutor_id: tProf.user_id,
           tutor_name: tUser.name,
-          subject: item.subject || (tProf.subjects ? tProf.subjects.split(',')[0].trim() : 'General Tutoring'),
+          subject: lessonSubject,
           scheduled_date: item.scheduled_date,
           scheduled_time: item.scheduled_time,
           rate: lessonRate

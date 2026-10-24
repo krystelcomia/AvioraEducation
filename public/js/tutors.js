@@ -1005,7 +1005,7 @@ const Tutors = {
       window.location.hash = targetHash;
     }
     window.scrollTo(0, 0);
-
+  },
 
   closeBookingModal() {
     const modal = document.getElementById('booking-modal');

@@ -3792,76 +3792,90 @@
         <!-- Chosen Plan Banner -->
         <div id="sub-enroll-plan-banner" style="background: linear-gradient(135deg, rgba(198, 138, 40, 0.08) 0%, rgba(212, 160, 68, 0.15) 100%); border: 1.5px solid rgba(198, 138, 40, 0.35); border-radius: var(--radius-md); padding: 1rem 1.25rem; margin-bottom: 1.35rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
           <div>
-            <div style="font-size: 0.75rem; text-transform: uppercase; font-weight: 700; color: var(--gold-800); letter-spacing: 0.05em;">Selected Subscription Plan</div>
-            <div id="sub-enroll-plan-name" style="font-family: var(--font-heading); font-size: 1.25rem; font-weight: 800; color: var(--charcoal-950);">Starter Tier: 4 Lessons</div>
+            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.2rem;">
+              <span class="badge-gold" id="sub-enroll-badge">Starter Package</span>
+              <span style="font-size: 0.75rem; text-transform: uppercase; font-weight: 700; color: var(--gold-800); letter-spacing: 0.05em;">Curated Academic Plan</span>
+            </div>
+            <div id="sub-enroll-plan-name" style="font-family: var(--font-heading); font-size: 1.25rem; font-weight: 800; color: var(--charcoal-950);">Starter Tier: 4 Lessons Package</div>
             <div id="sub-enroll-plan-meta" style="font-size: 0.82rem; color: var(--charcoal-700); margin-top: 0.15rem;">
-              4 Lessons • 50 Minutes each • Valid for 1 Month (30 Days)
+              Select 4 lessons. Total cost is calculated dynamically from the educator's rate for each subject.
             </div>
           </div>
           <div style="text-align: right;">
-            <div style="font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 600;">Plan Total</div>
-            <div id="sub-enroll-plan-price" style="font-size: 1.6rem; font-weight: 800; color: var(--gold-700); font-family: var(--font-heading);">$220.00</div>
+            <div style="font-size: 0.72rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 700; letter-spacing: 0.04em;">Total Amount to be Paid</div>
+            <div id="sub-enroll-plan-price" style="font-size: 1.75rem; font-weight: 800; color: var(--gold-700); font-family: var(--font-heading); line-height: 1.2;">$0.00</div>
+            <div id="sub-enroll-plan-price-calc" style="font-size: 0.72rem; color: var(--charcoal-600); font-weight: 600;">Based on educator rates</div>
           </div>
         </div>
 
-        <!-- 1. Select Educator -->
-        <div class="form-group" style="margin-bottom: 1.25rem;">
-          <label class="form-label" style="font-weight: 700; color: var(--charcoal-900); display: flex; justify-content: space-between; align-items: center;">
-            <span>1. Select an Accredited Aviora Tutor</span>
-            <span style="font-size: 0.75rem; font-weight: 500; color: var(--text-secondary);">Choose your faculty instructor</span>
-          </label>
-          <select id="sub-enroll-tutor-select" class="form-control" style="font-weight: 600; font-size: 0.95rem; border: 1.5px solid rgba(198, 138, 40, 0.35);" onchange="StudentSub.onTutorSelected(this.value)">
-            <!-- Populated via subscription.js -->
-          </select>
-        </div>
-
-        <!-- Selected Tutor Preview Card -->
-        <div id="sub-enroll-tutor-preview" style="display: flex; align-items: center; gap: 1rem; background: #FFFFFF; border: 1px solid var(--border-light); border-radius: var(--radius-md); padding: 0.85rem 1rem; margin-bottom: 1.25rem; box-shadow: var(--shadow-sm);">
-          <img id="sub-enroll-tutor-avatar" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80" style="width: 52px; height: 52px; border-radius: 50%; object-fit: cover; border: 2px solid var(--gold-400);" />
-          <div style="flex: 1;">
-            <div style="display: flex; align-items: center; gap: 0.4rem;">
-              <strong id="sub-enroll-tutor-name" style="color: var(--charcoal-950); font-size: 0.98rem;">Select a Tutor</strong>
-              <span class="badge-gold" style="font-size: 0.68rem; padding: 0.15rem 0.45rem;">Verified Faculty</span>
-            </div>
-            <div id="sub-enroll-tutor-headline" style="font-size: 0.82rem; color: var(--text-secondary); margin-top: 0.15rem;">Faculty Specialist</div>
-          </div>
-          <div style="text-align: right;">
-            <div id="sub-enroll-tutor-rating" style="font-size: 0.85rem; font-weight: 700; color: var(--gold-700);">★ 5.0</div>
-            <div style="font-size: 0.75rem; color: var(--text-secondary);">Included in Plan</div>
-          </div>
-        </div>
-
-        <!-- 2. Determine Number of Lessons with This Tutor -->
-        <div class="form-group" style="margin-bottom: 1.25rem; background: rgba(0,0,0,0.02); padding: 1rem; border-radius: var(--radius-md); border: 1px solid rgba(0,0,0,0.06);">
-          <label class="form-label" style="font-weight: 700; color: var(--charcoal-900); display: flex; justify-content: space-between; align-items: center;">
-            <span>2. Determine Lessons with this Educator</span>
-            <span id="sub-enroll-total-plan-tag" style="font-size: 0.75rem; font-weight: 600; color: var(--gold-700);">Plan includes 4 lessons</span>
-          </label>
-          <div style="display: flex; gap: 0.75rem; align-items: center;">
-            <select id="sub-enroll-lesson-count" class="form-control" style="font-weight: 700; font-size: 1rem; width: 180px; border: 1.5px solid rgba(198, 138, 40, 0.35);" onchange="StudentSub.onAllocationChanged(this.value)">
-              <!-- Populated dynamically (1 to N) -->
-            </select>
-            <div id="sub-enroll-allocation-note" style="font-size: 0.82rem; color: var(--charcoal-700); line-height: 1.4; flex: 1;">
-              Allocating lessons with this educator based on your chosen subscription tier.
-            </div>
-          </div>
-        </div>
-
-        <!-- 3. Subject Selection -->
-        <div class="form-group" style="margin-bottom: 1.25rem;">
-          <label class="form-label" style="font-weight: 700; color: var(--charcoal-900);">3. Subject for Instruction</label>
-          <select id="sub-enroll-subject-select" class="form-control" required>
-            <!-- Populated from selected tutor's disciplines -->
-          </select>
-        </div>
-
-        <!-- 4. Schedule Preferred Date & Time -->
+        <!-- 1. Select Educator & Subject -->
         <div style="margin-bottom: 1.25rem;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+          <label class="form-label" style="font-weight: 700; color: var(--charcoal-900); display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+            <span>1. Select Faculty Educator &amp; Subject</span>
+            <span style="font-size: 0.75rem; font-weight: 500; color: var(--text-secondary);">Rate automatically applies to scheduled lessons</span>
+          </label>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.75rem;">
+            <div>
+              <label style="font-size: 0.78rem; font-weight: 600; color: var(--charcoal-700); margin-bottom: 0.25rem; display: block;">Accredited Educator</label>
+              <select id="sub-enroll-tutor-select" class="form-control" style="font-weight: 600; font-size: 0.9rem; border: 1.5px solid rgba(198, 138, 40, 0.35);" onchange="StudentSub.onTutorSelected(this.value)">
+                <!-- Populated via subscription.js -->
+              </select>
+            </div>
+            <div>
+              <label style="font-size: 0.78rem; font-weight: 600; color: var(--charcoal-700); margin-bottom: 0.25rem; display: block;">Subject for Instruction</label>
+              <select id="sub-enroll-subject-select" class="form-control" style="font-weight: 600; font-size: 0.9rem; border: 1.5px solid rgba(198, 138, 40, 0.35);" onchange="StudentSub.onSubjectSelected(this.value)">
+                <!-- Populated from selected tutor's disciplines -->
+              </select>
+            </div>
+          </div>
+
+          <!-- Selected Tutor Preview Card -->
+          <div id="sub-enroll-tutor-preview" style="display: flex; align-items: center; gap: 1rem; background: #FFFFFF; border: 1px solid var(--border-light); border-radius: var(--radius-md); padding: 0.85rem 1rem; box-shadow: var(--shadow-sm);">
+            <img id="sub-enroll-tutor-avatar" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80" style="width: 52px; height: 52px; border-radius: 50%; object-fit: cover; border: 2px solid var(--gold-400);" />
+            <div style="flex: 1; min-width: 0;">
+              <div style="display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap;">
+                <strong id="sub-enroll-tutor-name" style="color: var(--charcoal-950); font-size: 0.98rem;">Select a Tutor</strong>
+                <span class="badge-gold" style="font-size: 0.68rem; padding: 0.15rem 0.45rem;">Verified Faculty</span>
+              </div>
+              <div id="sub-enroll-tutor-headline" style="font-size: 0.82rem; color: var(--text-secondary); margin-top: 0.15rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Faculty Specialist</div>
+            </div>
+            <div style="text-align: right;">
+              <div id="sub-enroll-tutor-rate-display" style="font-size: 1.05rem; font-weight: 800; color: var(--gold-700); font-family: var(--font-heading);">$58.00 / hr</div>
+              <div id="sub-enroll-tutor-rating" style="font-size: 0.8rem; font-weight: 600; color: var(--charcoal-600); margin-top: 0.15rem;">★ 5.0 (42)</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. Configure 4 Lessons Selection -->
+        <div style="margin-bottom: 1.35rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.45rem;">
             <label class="form-label" style="font-weight: 700; color: var(--charcoal-900); margin-bottom: 0;">
-              4. Schedule Preferred Date &amp; Time (Educator Availability)
+              2. Select 4 Lessons &amp; Respective Dates &amp; Times
             </label>
-            <span id="sub-enroll-slot-duration-badge" class="badge-gold" style="font-size: 0.72rem;">50-Min Class</span>
+            <span id="sub-enroll-lessons-progress-tag" class="badge-gold" style="font-size: 0.72rem; font-weight: 700;">0 of 4 Scheduled</span>
+          </div>
+          <div style="font-size: 0.8rem; color: var(--charcoal-600); margin-bottom: 0.75rem; line-height: 1.45;">
+            Click on any lesson below to pick its respective date and time. Each educator's rate contributes to your total cost.
+          </div>
+          
+          <!-- 4 Interactive Lesson Tabs / Cards Grid -->
+          <div id="sub-lesson-tabs-grid" class="sub-lesson-tabs-grid">
+            <!-- Dynamically populated via StudentSub.renderLessonTabs() -->
+          </div>
+        </div>
+
+        <!-- 3. Interactive Scheduling Calendar for Selected Lesson -->
+        <div id="sub-scheduling-section" style="margin-bottom: 1.25rem;">
+          <!-- Active Lesson Prompt Banner -->
+          <div class="active-lesson-scheduling-banner" id="sub-active-lesson-banner">
+            <div style="display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;">
+              <span class="badge-gold" id="sub-active-lesson-badge" style="font-size: 0.75rem; font-weight: 800;">Lesson 1</span>
+              <span id="sub-active-lesson-title" style="font-size: 0.88rem; font-weight: 700; color: var(--charcoal-950);">Select Respective Date &amp; Time</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+              <span id="sub-active-lesson-rate-tag" style="font-size: 0.82rem; font-weight: 700; color: var(--gold-700);">$58.00 / session</span>
+              <span class="badge-gold" id="sub-enroll-slot-duration-badge" style="font-size: 0.72rem;">50-Min Class</span>
+            </div>
           </div>
 
           <!-- Calendar Navigator -->
@@ -3903,42 +3917,38 @@
 
         <!-- Optional Notes -->
         <div class="form-group" style="margin-bottom: 1.25rem;">
-          <label class="form-label" style="font-weight: 700; color: var(--charcoal-900);">Learning Objectives or Problem Sets (Optional)</label>
-          <textarea id="sub-enroll-notes" class="form-control" rows="2" placeholder="e.g. Diagnostic assessment on AP Physics kinematics and problem sets..."></textarea>
+          <label class="form-label" style="font-weight: 700; color: var(--charcoal-900);">Learning Objectives or Specific Topics for the 4 Lessons (Optional)</label>
+          <textarea id="sub-enroll-notes" class="form-control" rows="2" placeholder="e.g. Diagnostic assessment on AP Physics kinematics, Newton's laws, rotational dynamics, and exam problem sets..."></textarea>
         </div>
 
-        <!-- Order Summary Box -->
+        <!-- Order Summary & Dynamic Rate Breakdown Box -->
         <div class="payment-summary-box" style="margin-bottom: 1.25rem; background: #FAF7F2; border: 1.5px solid rgba(198, 138, 40, 0.25); border-radius: var(--radius-md); padding: 1.15rem;">
-          <h4 style="font-size: 0.95rem; font-weight: 700; color: var(--charcoal-950); margin: 0 0 0.65rem 0;">Enrollment &amp; Booking Summary</h4>
-          <div class="payment-summary-row" style="display: flex; justify-content: space-between; font-size: 0.84rem; margin-bottom: 0.35rem;">
-            <span style="color: var(--charcoal-600);">Plan Selected:</span>
-            <strong id="sub-summary-plan-text" style="color: var(--charcoal-900);">-</strong>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.65rem;">
+            <h4 style="font-size: 0.95rem; font-weight: 700; color: var(--charcoal-950); margin: 0;">4-Lesson Cost Calculation &amp; Summary</h4>
+            <span style="font-size: 0.75rem; color: var(--gold-700); font-weight: 600;">Based on Teacher Rates</span>
           </div>
-          <div class="payment-summary-row" style="display: flex; justify-content: space-between; font-size: 0.84rem; margin-bottom: 0.35rem;">
-            <span style="color: var(--charcoal-600);">Educator:</span>
-            <strong id="sub-summary-tutor-text" style="color: var(--charcoal-900);">-</strong>
+
+          <!-- Itemized 4-Lesson Breakdown -->
+          <div id="sub-lessons-breakdown-list" style="margin-bottom: 0.75rem;">
+            <!-- Populated dynamically with 4 lesson line items -->
           </div>
-          <div class="payment-summary-row" style="display: flex; justify-content: space-between; font-size: 0.84rem; margin-bottom: 0.35rem;">
-            <span style="color: var(--charcoal-600);">Lesson Allocation:</span>
-            <strong id="sub-summary-alloc-text" style="color: var(--charcoal-900);">-</strong>
-          </div>
-          <div class="payment-summary-row" style="display: flex; justify-content: space-between; font-size: 0.84rem; margin-bottom: 0.35rem;">
-            <span style="color: var(--charcoal-600);">First Lesson Schedule:</span>
-            <strong id="sub-summary-schedule-text" style="color: var(--charcoal-900);">-</strong>
-          </div>
-          <div class="payment-summary-row" style="display: flex; justify-content: space-between; font-size: 0.84rem; margin-bottom: 0.35rem;">
+
+          <div class="payment-summary-row" style="display: flex; justify-content: space-between; font-size: 0.84rem; margin-bottom: 0.35rem; padding-top: 0.5rem; border-top: 1px dashed rgba(0,0,0,0.1);">
             <span style="color: var(--charcoal-600);">Session Duration:</span>
-            <strong id="sub-summary-duration-text" style="color: var(--gold-700);">50 Minutes</strong>
+            <strong id="sub-summary-duration-text" style="color: var(--gold-700);">50 Minutes per lesson</strong>
           </div>
-          <div class="payment-summary-row" style="display: flex; justify-content: space-between; font-size: 1.05rem; padding-top: 0.65rem; margin-top: 0.45rem; border-top: 1.5px solid rgba(0,0,0,0.1);">
-            <strong style="color: var(--charcoal-950);">Total Due Now:</strong>
-            <strong id="sub-summary-amount-text" style="color: var(--gold-700); font-size: 1.3rem;">$0.00</strong>
+          <div class="payment-summary-row" style="display: flex; justify-content: space-between; font-size: 1.05rem; padding-top: 0.65rem; margin-top: 0.45rem; border-top: 1.5px solid rgba(0,0,0,0.12); align-items: baseline;">
+            <div>
+              <strong style="color: var(--charcoal-950); font-size: 1.05rem;">Total Amount to be Paid:</strong>
+              <div id="sub-summary-calc-formula" style="font-size: 0.74rem; color: var(--charcoal-600); font-weight: 500; margin-top: 0.1rem;">Sum of 4 lessons based on teacher rates</div>
+            </div>
+            <strong id="sub-summary-amount-text" style="color: var(--gold-700); font-size: 1.4rem; font-family: var(--font-heading);">$0.00</strong>
           </div>
         </div>
 
         <!-- Action Button -->
-        <button type="button" class="btn btn-primary" id="btn-sub-enroll-submit" onclick="StudentSub.confirmEnrollment()" style="width: 100%; justify-content: center; padding: 0.9rem; font-weight: 700; font-size: 1rem;" disabled>
-          <span id="sub-enroll-btn-label">Confirm Enrollment &amp; Schedule Lesson</span>
+        <button type="button" class="btn btn-primary" id="btn-sub-enroll-submit" onclick="StudentSub.confirmEnrollment()" style="width: 100%; justify-content: center; padding: 0.95rem; font-weight: 700; font-size: 1rem;" disabled>
+          <span id="sub-enroll-btn-label">Please Schedule All 4 Lessons to Continue (0/4 Selected)</span>
           <span>→</span>
         </button>
 

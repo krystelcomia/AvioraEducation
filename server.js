@@ -1191,8 +1191,140 @@ app.get('/api/student/subscription', authenticateToken, requireRole('student'), 
 app.post('/api/student/subscription/purchase', authenticateToken, requireRole('student'), (req, res) => {
   try {
     const studentId = req.user.id;
-    const { package_key, tutor_id, lessons_with_tutor, subject, scheduled_date, scheduled_time, notes } = req.body;
+    const { package_key, tutor_id, lessons_with_tutor, subject, scheduled_date, scheduled_time, notes, lessons } = req.body;
 
+    // Check if 4-lesson selection setup is submitted
+    if (Array.isArray(lessons) && lessons.length > 0) {
+      if (lessons.length !== 4) {
+        return res.status(400).json({ error: 'Please configure exactly 4 lessons to determine the total cost.' });
+      }
+
+      let totalCalculatedPrice = 0;
+      const validatedLessons = [];
+
+      for (let i = 0; i < lessons.length; i++) {
+        const item = lessons[i];
+        if (!item.tutor_id) {
+          return res.status(400).json({ error: `Lesson ${i + 1} must have an educator selected.` });
+        }
+        if (!item.scheduled_date || !item.scheduled_time) {
+          return res.status(400).json({ error: `Lesson ${i + 1} must have a respective date and time selected.` });
+        }
+
+        let tProf = db.prepare('SELECT id, user_id, hourly_rate, is_active, subjects FROM tutor_profiles WHERE user_id = ?').get(item.tutor_id);
+        if (!tProf) {
+          tProf = db.prepare('SELECT id, user_id, hourly_rate, is_active, subjects FROM tutor_profiles WHERE id = ?').get(item.tutor_id);
+        }
+        let tUser = null;
+        if (tProf) {
+          tUser = db.prepare('SELECT id, name FROM users WHERE id = ?').get(tProf.user_id);
+        }
+
+        if (!tUser || !tProf || !tProf.is_active) {
+          return res.status(400).json({ error: `Educator for Lesson ${i + 1} is not active.` });
+        }
+
+        // 3-hour notice check
+        const timeStart = (item.scheduled_time.split(' - ')[0] || item.scheduled_time).trim();
+        const requestedDateTime = new Date(`${item.scheduled_date}T${timeStart.length === 5 ? timeStart : timeStart.padStart(5, '0')}:00`);
+        if (!isNaN(requestedDateTime.getTime())) {
+          const diffHours = (requestedDateTime.getTime() - Date.now()) / (1000 * 60 * 60);
+          if (diffHours < 3) {
+            return res.status(400).json({ error: `Lesson ${i + 1} (${item.scheduled_date} ${item.scheduled_time}) requires at least 3 hours advance notice.` });
+          }
+        }
+
+        const lessonRate = Number(tProf.hourly_rate) || 58.00;
+        totalCalculatedPrice += lessonRate;
+
+        validatedLessons.push({
+          index: i + 1,
+          tutor_id: tProf.user_id,
+          tutor_name: tUser.name,
+          subject: item.subject || (tProf.subjects ? tProf.subjects.split(',')[0].trim() : 'General Tutoring'),
+          scheduled_date: item.scheduled_date,
+          scheduled_time: item.scheduled_time,
+          rate: lessonRate
+        });
+      }
+
+      const insertSession = db.prepare(`
+        INSERT INTO tutoring_requests (
+          student_id, tutor_id, subject, grade_level, requested_date,
+          requested_time, duration_hours, hourly_rate, total_amount, status, notes, payment_method
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'accepted', ?, 'subscription')
+      `);
+
+      for (const vl of validatedLessons) {
+        const sessionNotes = notes
+          ? `${notes} (Starter Tier: Lesson ${vl.index} of 4 with ${vl.tutor_name} - ${vl.subject})`
+          : `Starter Tier: Lesson ${vl.index} of 4 with ${vl.tutor_name} (${vl.subject})`;
+
+        insertSession.run(
+          studentId,
+          vl.tutor_id,
+          vl.subject,
+          'High School',
+          vl.scheduled_date,
+          vl.scheduled_time,
+          50 / 60,
+          vl.rate,
+          vl.rate,
+          sessionNotes
+        );
+
+        // Notify tutor
+        db.prepare(`
+          INSERT INTO notifications (user_id, title, message, type, link)
+          VALUES (?, ?, ?, 'booking', '/#teacher-requests')
+        `).run(
+          vl.tutor_id,
+          'New Session Scheduled',
+          `${req.user.name} scheduled Lesson ${vl.index} of 4 (${vl.subject}, 50 min) for ${vl.scheduled_date} (${vl.scheduled_time}) at $${vl.rate.toFixed(2)}.`
+        );
+      }
+
+      // Deactivate previous active subscription if exists
+      db.prepare("UPDATE student_subscriptions SET status = 'exhausted' WHERE user_id = ? AND status = 'active'").run(studentId);
+
+      // Insert new subscription
+      const insertSub = db.prepare(`
+        INSERT INTO student_subscriptions (
+          user_id, plan_name, lessons_total, lessons_remaining, price_paid,
+          purchase_date, expires_at, status, is_trial
+        ) VALUES (
+          ?, 'Starter Tier: 4 Lessons', 4, 0, ?,
+          CURRENT_TIMESTAMP, datetime('now', '+30 days'), 'active', 0
+        )
+      `);
+
+      insertSub.run(
+        studentId,
+        totalCalculatedPrice
+      );
+
+      // Student notification
+      db.prepare(`
+        INSERT INTO notifications (user_id, title, message, type, link)
+        VALUES (?, ?, ?, 'subscription', '#subscriptions')
+      `).run(
+        studentId,
+        '4 Lessons Subscription Confirmed',
+        `Your 4-lesson enrollment has been confirmed! Total cost paid: $${totalCalculatedPrice.toFixed(2)} based on your instructors' rates. All 4 lessons have been scheduled.`
+      );
+
+      return res.status(201).json({
+        success: true,
+        message: `Successfully enrolled in Starter Tier! All 4 lessons have been scheduled for a total of $${totalCalculatedPrice.toFixed(2)} based on teacher rates.`,
+        plan: 'Starter Tier: 4 Lessons',
+        total_paid: totalCalculatedPrice,
+        remainingLessons: 0,
+        isTrial: false,
+        hasScheduledLesson: true
+      });
+    }
+
+    // Fallback for single-lesson legacy or trial packages
     const packageMap = {
       'trial': { name: 'One-Time Free Trial Lesson', lessons: 1, price: 0.00, days: 14, is_trial: 1, duration_minutes: 30 },
       '4_lessons': { name: 'Starter Tier: 4 Lessons', lessons: 4, price: 220.00, days: 30, is_trial: 0, duration_minutes: 50 },
@@ -1217,8 +1349,13 @@ app.post('/api/student/subscription/purchase', authenticateToken, requireRole('s
     let allocatedLessons = selectedPkg.lessons;
 
     if (tutor_id) {
-      tutorUser = db.prepare('SELECT id, name FROM users WHERE id = ?').get(tutor_id);
-      tutorProfile = db.prepare('SELECT hourly_rate, is_active, subjects FROM tutor_profiles WHERE user_id = ?').get(tutor_id);
+      tutorProfile = db.prepare('SELECT id, user_id, hourly_rate, is_active, subjects FROM tutor_profiles WHERE user_id = ?').get(tutor_id);
+      if (!tutorProfile) {
+        tutorProfile = db.prepare('SELECT id, user_id, hourly_rate, is_active, subjects FROM tutor_profiles WHERE id = ?').get(tutor_id);
+      }
+      if (tutorProfile) {
+        tutorUser = db.prepare('SELECT id, name FROM users WHERE id = ?').get(tutorProfile.user_id);
+      }
       if (!tutorUser || !tutorProfile || !tutorProfile.is_active) {
         return res.status(400).json({ error: 'Selected educator is not currently active.' });
       }
@@ -1291,6 +1428,11 @@ app.post('/api/student/subscription/purchase', authenticateToken, requireRole('s
     // Deactivate previous active subscription if exists
     db.prepare("UPDATE student_subscriptions SET status = 'exhausted' WHERE user_id = ? AND status = 'active'").run(studentId);
 
+    // Dynamic price calculation if tutor chosen
+    const calculatedPrice = (!selectedPkg.is_trial && tutorProfile?.hourly_rate) 
+      ? (tutorProfile.hourly_rate * selectedPkg.lessons) 
+      : selectedPkg.price;
+
     // Insert new subscription
     const insertSub = db.prepare(`
       INSERT INTO student_subscriptions (
@@ -1307,15 +1449,15 @@ app.post('/api/student/subscription/purchase', authenticateToken, requireRole('s
       selectedPkg.name,
       selectedPkg.lessons,
       finalRemainingLessons,
-      selectedPkg.price,
+      calculatedPrice,
       selectedPkg.days,
       selectedPkg.is_trial
     );
 
     // Notification for student
     const studentNotifMsg = hasScheduledLesson
-      ? `Your ${selectedPkg.name} is confirmed! 1 lesson (${selectedPkg.duration_minutes} min) is scheduled with ${tutorUser?.name || 'your tutor'} on ${scheduled_date} at ${scheduled_time}. Remaining lessons: ${finalRemainingLessons}.`
-      : `Your ${selectedPkg.name} ($${selectedPkg.price.toFixed(2)}) has been successfully activated with ${selectedPkg.lessons} lessons valid for ${selectedPkg.days} days.`;
+      ? `Your ${selectedPkg.name} is confirmed! 1 lesson (${selectedPkg.duration_minutes} min) is scheduled with ${tutorUser?.name || 'your tutor'} on ${scheduled_date} at ${scheduled_time}. Remaining lessons: ${finalRemainingLessons}. Total paid: $${calculatedPrice.toFixed(2)}.`
+      : `Your ${selectedPkg.name} ($${calculatedPrice.toFixed(2)}) has been successfully activated with ${selectedPkg.lessons} lessons valid for ${selectedPkg.days} days.`;
 
     db.prepare(`
       INSERT INTO notifications (user_id, title, message, type, link)
@@ -1331,12 +1473,13 @@ app.post('/api/student/subscription/purchase', authenticateToken, requireRole('s
       message: hasScheduledLesson
         ? (selectedPkg.is_trial 
             ? `Your free 30-minute trial lesson with ${tutorUser?.name || 'your tutor'} on ${scheduled_date} at ${scheduled_time} is confirmed!` 
-            : `Successfully enrolled in ${selectedPkg.name}! Your lesson with ${tutorUser?.name || 'your tutor'} on ${scheduled_date} at ${scheduled_time} is confirmed (${finalRemainingLessons} remaining lesson${finalRemainingLessons === 1 ? '' : 's'}).`)
-        : `Successfully enrolled in ${selectedPkg.name}! Your ${selectedPkg.lessons} lessons are now available for scheduling.`,
+            : `Successfully enrolled in ${selectedPkg.name}! Your lesson with ${tutorUser?.name || 'your tutor'} on ${scheduled_date} at ${scheduled_time} is confirmed (${finalRemainingLessons} remaining lesson${finalRemainingLessons === 1 ? '' : 's'}). Total: $${calculatedPrice.toFixed(2)}.`)
+        : `Successfully enrolled in ${selectedPkg.name}! Your ${selectedPkg.lessons} lessons are now available for scheduling. Total: $${calculatedPrice.toFixed(2)}.`,
       plan: selectedPkg.name,
       remainingLessons: finalRemainingLessons,
       isTrial: selectedPkg.is_trial === 1,
-      hasScheduledLesson
+      hasScheduledLesson,
+      total_paid: calculatedPrice
     });
   } catch (error) {
     console.error('Purchase subscription error:', error);

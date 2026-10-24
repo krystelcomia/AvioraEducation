@@ -185,8 +185,8 @@ const StudentSub = {
     this.openEnrollmentModal(packageKey);
   },
 
-  // OPEN INTERACTIVE SUBSCRIPTION & TUTOR SCHEDULING STUDIO
-  async openEnrollmentModal(packageKey) {
+  // OPEN INTERACTIVE SUBSCRIPTION & 4 LESSONS SCHEDULING STUDIO
+  async openEnrollmentModal(packageKey = '4_lessons') {
     const user = typeof Auth !== 'undefined' ? Auth.currentUser : null;
     if (!user) {
       sessionStorage.setItem('pending_subscription_package', packageKey);
@@ -204,15 +204,7 @@ const StudentSub = {
       return;
     }
 
-    // Strictly enforce 1-time trial limit
-    if (packageKey === 'trial' && this.data?.trialUsed) {
-      showToast('The free trial is a one-time offer ($0) and has already been availed by this student account.', 'warning');
-      return;
-    }
-
     this.activePackageKey = packageKey;
-    this.selectedDate = null;
-    this.selectedTime = null;
 
     const modal = document.getElementById('sub-enrollment-modal');
     if (!modal) return;
@@ -230,107 +222,66 @@ const StudentSub = {
       }
     }
 
-    const pkgDefs = {
-      'trial': {
-        name: 'One-Time Free Trial Lesson',
-        totalLessons: 1,
-        priceStr: '$0.00',
-        meta: '1 Single Diagnostic Lesson • 30 Minutes • One-time offer ($0)',
-        badge: 'Free (1-Time Offer)',
-        durationLabel: '30-Min Diagnostic Lesson',
-        durationMinutes: 30,
-        isTrial: true
-      },
-      '4_lessons': {
-        name: 'Starter Tier: 4 Lessons Package',
-        totalLessons: 4,
-        priceStr: '$220.00',
-        meta: '4 Lessons • 50 Minutes each • Valid for 1 Month (30 Days)',
-        badge: 'Starter Package',
-        durationLabel: '50-Min Class',
-        durationMinutes: 50,
-        isTrial: false
-      },
-      '8_lessons': {
-        name: 'Mastery Tier: 8 Lessons Package',
-        totalLessons: 8,
-        priceStr: '$399.00',
-        meta: '8 Lessons • 50 Minutes each • Valid for 1 Month (30 Days)',
-        badge: 'Most Popular',
-        durationLabel: '50-Min Class',
-        durationMinutes: 50,
-        isTrial: false
-      },
-      '12_lessons': {
-        name: 'Honors Tier: 12 Lessons Package',
-        totalLessons: 12,
-        priceStr: '$540.00',
-        meta: '12 Lessons • 50 Minutes each • Valid for 1 Month (30 Days)',
-        badge: 'Best Value',
-        durationLabel: '50-Min Class',
-        durationMinutes: 50,
-        isTrial: false
-      }
-    };
-
-    const pkg = pkgDefs[packageKey] || pkgDefs['4_lessons'];
-
-    // Update banner UI
-    document.getElementById('sub-enroll-plan-name').textContent = pkg.name;
-    document.getElementById('sub-enroll-plan-meta').textContent = pkg.meta;
-    document.getElementById('sub-enroll-plan-price').textContent = pkg.priceStr;
-    document.getElementById('sub-enroll-badge').textContent = pkg.badge;
-    document.getElementById('sub-enroll-slot-duration-badge').textContent = pkg.durationLabel;
-    document.getElementById('sub-summary-duration-text').textContent = `${pkg.durationMinutes} Minutes`;
-    document.getElementById('sub-summary-amount-text').textContent = pkg.priceStr;
+    // Default educator
+    if (!this.selectedTutor && this.allTutors.length > 0) {
+      this.selectedTutor = this.allTutors[0];
+    }
 
     // Populate tutors dropdown
     const tutorSelect = document.getElementById('sub-enroll-tutor-select');
     if (tutorSelect && this.allTutors.length > 0) {
       tutorSelect.innerHTML = this.allTutors.map(t => `
-        <option value="${t.id}">${t.name} — ${t.headline || t.subject || 'Faculty Specialist'} ($${t.hourly_rate}/hr)</option>
+        <option value="${t.id}" ${this.selectedTutor && this.selectedTutor.id === t.id ? 'selected' : ''}>${t.name} — ${t.headline || t.subject || 'Faculty Specialist'} ($${t.hourly_rate}/hr)</option>
       `).join('');
-
-      // Default select first tutor
-      this.selectedTutor = this.allTutors[0];
-      tutorSelect.value = this.selectedTutor.id;
-    }
-
-    // Populate lesson allocation dropdown based on package
-    const allocSelect = document.getElementById('sub-enroll-lesson-count');
-    const planTag = document.getElementById('sub-enroll-total-plan-tag');
-    if (allocSelect) {
-      if (pkg.isTrial) {
-        allocSelect.innerHTML = `<option value="1">1 Lesson (Free Trial)</option>`;
-        allocSelect.disabled = true;
-        this.allocatedLessons = 1;
-        if (planTag) planTag.textContent = 'One-time offer for $0 (single 30-min lesson)';
-      } else {
-        allocSelect.disabled = false;
-        let optionsHtml = '';
-        for (let i = 1; i <= pkg.totalLessons; i++) {
-          const isSelected = i === pkg.totalLessons ? 'selected' : '';
-          optionsHtml += `<option value="${i}" ${isSelected}>${i} Lesson${i > 1 ? 's' : ''}</option>`;
-        }
-        allocSelect.innerHTML = optionsHtml;
-        this.allocatedLessons = pkg.totalLessons;
-        if (planTag) planTag.textContent = `Plan includes ${pkg.totalLessons} lessons total`;
+      if (this.selectedTutor) {
+        tutorSelect.value = this.selectedTutor.id;
       }
     }
 
-    // Update educator preview & availability
-    if (this.selectedTutor) {
-      this.onTutorSelected(this.selectedTutor.id);
+    // Default subject
+    const defaultSubject = this.selectedTutor 
+      ? (Array.isArray(this.selectedTutor.subjects) ? this.selectedTutor.subjects[0] : (this.selectedTutor.subjects ? this.selectedTutor.subjects.split(',')[0].trim() : 'General Tutoring'))
+      : 'General Tutoring';
+
+    // Populate subject select
+    const subjectSelect = document.getElementById('sub-enroll-subject-select');
+    if (subjectSelect && this.selectedTutor) {
+      const subjects = Array.isArray(this.selectedTutor.subjects)
+        ? this.selectedTutor.subjects
+        : (this.selectedTutor.subjects ? this.selectedTutor.subjects.split(',').map(s => s.trim()).filter(Boolean) : ['Mathematics', 'Science']);
+      subjectSelect.innerHTML = subjects.map(s => `<option value="${s}">${s}</option>`).join('');
+      subjectSelect.value = defaultSubject;
     }
 
-    // Disable submit until slot picked
-    const submitBtn = document.getElementById('btn-sub-enroll-submit');
-    if (submitBtn) {
-      submitBtn.disabled = true;
-      document.getElementById('sub-enroll-btn-label').textContent = pkg.isTrial 
-        ? 'Book Free Trial Lesson ($0)' 
-        : `Confirm Enrollment & Schedule Lesson`;
-    }
+    // Initialize 4 lessons setup
+    const tutorRate = Number(this.selectedTutor?.hourly_rate || 58);
+    this.selectedLessons = [0, 1, 2, 3].map(i => ({
+      index: i,
+      label: `Lesson ${i + 1}`,
+      tutor_id: this.selectedTutor?.user_id || this.selectedTutor?.id || 1,
+      tutor_name: this.selectedTutor?.name || 'Educator',
+      tutor_avatar: this.selectedTutor?.avatar_url || this.selectedTutor?.avatar || '',
+      subject: defaultSubject,
+      hourly_rate: tutorRate,
+      scheduled_date: null,
+      scheduled_time: null
+    }));
+
+    this.activeLessonIndex = 0;
+    this.selectedDate = null;
+    this.selectedTime = null;
+
+    // Update educator preview card
+    this.updateTutorPreview(this.selectedTutor);
+
+    // Render 4 lesson tabs
+    this.renderLessonTabs();
+
+    // Render calendar for active lesson
+    this.syncActiveLessonCalendar();
+
+    // Update dynamic calculations and summary
+    this.updateSummary();
 
     modal.classList.add('active');
     document.body.style.overflow = 'hidden';
@@ -344,57 +295,157 @@ const StudentSub = {
     }
   },
 
+  updateTutorPreview(tutor) {
+    if (!tutor) return;
+    const avatarEl = document.getElementById('sub-enroll-tutor-avatar');
+    const nameEl = document.getElementById('sub-enroll-tutor-name');
+    const headlineEl = document.getElementById('sub-enroll-tutor-headline');
+    const ratingEl = document.getElementById('sub-enroll-tutor-rating');
+    const rateEl = document.getElementById('sub-enroll-tutor-rate-display');
+
+    if (avatarEl) avatarEl.src = tutor.avatar_url || tutor.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80';
+    if (nameEl) nameEl.textContent = tutor.name;
+    if (headlineEl) headlineEl.textContent = tutor.headline || tutor.subject || 'Verified Faculty Specialist';
+    if (ratingEl) ratingEl.innerHTML = `<span style="display: inline-flex; align-items: center; gap: 0.25rem;">${Icons.star(13)} ${tutor.rating ? Number(tutor.rating).toFixed(1) : '5.0'} (${tutor.reviews_count || 42})</span>`;
+    if (rateEl) rateEl.textContent = `$${Number(tutor.hourly_rate || 58).toFixed(2)} / hr`;
+  },
+
   onTutorSelected(tutorId) {
     const tutor = this.allTutors.find(t => t.id == tutorId) || this.allTutors[0];
     if (!tutor) return;
     this.selectedTutor = tutor;
 
-    // Update preview card
-    const avatarEl = document.getElementById('sub-enroll-tutor-avatar');
-    const nameEl = document.getElementById('sub-enroll-tutor-name');
-    const headlineEl = document.getElementById('sub-enroll-tutor-headline');
-    const ratingEl = document.getElementById('sub-enroll-tutor-rating');
+    this.updateTutorPreview(tutor);
 
-    if (avatarEl) avatarEl.src = tutor.avatar_url || tutor.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80';
-    if (nameEl) nameEl.textContent = tutor.name;
-    if (headlineEl) headlineEl.textContent = tutor.headline || tutor.subject || 'Verified Faculty Specialist';
-    if (ratingEl) ratingEl.innerHTML = `<span style="display: inline-flex; align-items: center; gap: 0.25rem;">${Icons.star(13)} ${tutor.rating ? Number(tutor.rating).toFixed(1) : '5.0'} (${tutor.reviews_count || 12})</span>`;
-
-    // Populate subject select
+    // Update subjects dropdown
     const subjectSelect = document.getElementById('sub-enroll-subject-select');
+    let chosenSubject = 'General Tutoring';
     if (subjectSelect) {
       const subjects = Array.isArray(tutor.subjects)
         ? tutor.subjects
         : (tutor.subjects ? tutor.subjects.split(',').map(s => s.trim()).filter(Boolean) : ['Mathematics', 'Science']);
       subjectSelect.innerHTML = subjects.map(s => `<option value="${s}">${s}</option>`).join('');
+      chosenSubject = subjects[0] || 'General Tutoring';
+      subjectSelect.value = chosenSubject;
     }
 
-    this.onAllocationChanged(this.allocatedLessons);
-    this.renderCalendar();
+    // Apply this tutor & rate to all 4 lessons
+    const rate = Number(tutor.hourly_rate || 58);
+    const tutorIdToSet = tutor.user_id || tutor.id;
+    this.selectedLessons.forEach(l => {
+      l.tutor_id = tutorIdToSet;
+      l.tutor_name = tutor.name;
+      l.tutor_avatar = tutor.avatar_url || tutor.avatar;
+      l.subject = chosenSubject;
+      l.hourly_rate = rate;
+      // Note: preserve scheduled_date/time if already set or allow re-verifying
+    });
+
+    this.renderLessonTabs();
+    this.syncActiveLessonCalendar();
     this.updateSummary();
   },
 
-  onAllocationChanged(count) {
-    this.allocatedLessons = parseInt(count, 10) || 1;
-    const noteEl = document.getElementById('sub-enroll-allocation-note');
-    const tutorName = this.selectedTutor ? this.selectedTutor.name : 'this educator';
+  onSubjectSelected(subj) {
+    if (!subj) return;
+    // Apply subject to all 4 lessons
+    this.selectedLessons.forEach(l => {
+      l.subject = subj;
+    });
+    this.renderLessonTabs();
+    this.syncActiveLessonCalendar();
+    this.updateSummary();
+  },
 
-    if (this.activePackageKey === 'trial') {
-      if (noteEl) noteEl.textContent = `Single 30-minute introductory lesson with ${tutorName} at $0 cost.`;
-    } else {
-      const pkgTotals = { '4_lessons': 4, '8_lessons': 8, '12_lessons': 12 };
-      const total = pkgTotals[this.activePackageKey] || 4;
-      const remaining = total - this.allocatedLessons;
-      if (noteEl) {
-        if (remaining > 0) {
-          noteEl.textContent = `Allocating ${this.allocatedLessons} of ${total} lessons with ${tutorName}. Your remaining ${remaining} lesson${remaining > 1 ? 's' : ''} can be booked with any tutor anytime!`;
-        } else {
-          noteEl.textContent = `Allocating all ${total} lessons from your plan with ${tutorName}.`;
-        }
+  renderLessonTabs() {
+    const grid = document.getElementById('sub-lesson-tabs-grid');
+    if (!grid) return;
+
+    grid.innerHTML = this.selectedLessons.map((l, idx) => {
+      const isActive = idx === this.activeLessonIndex;
+      const isScheduled = !!(l.scheduled_date && l.scheduled_time);
+
+      return `
+        <div class="sub-lesson-card ${isActive ? 'active' : ''}" onclick="StudentSub.setActiveLesson(${idx})">
+          <div class="lesson-card-header-row">
+            <span class="lesson-card-num-badge">Lesson ${idx + 1}</span>
+            <span class="lesson-card-status-badge ${isScheduled ? 'status-scheduled' : 'status-pending'}">
+              ${isScheduled 
+                ? '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> Scheduled' 
+                : 'Needs Schedule'}
+            </span>
+          </div>
+
+          <div style="min-width: 0;">
+            <div class="lesson-card-tutor-name" title="${l.tutor_name}">${l.tutor_name}</div>
+            <div class="lesson-card-subject-tag" title="${l.subject}">${l.subject}</div>
+            <div class="lesson-card-rate-pill">$${Number(l.hourly_rate).toFixed(2)} / 50 min</div>
+          </div>
+
+          <div class="lesson-card-datetime ${isScheduled ? 'is-scheduled' : ''}">
+            ${isScheduled 
+              ? `<div style="display: flex; align-items: center; gap: 0.25rem;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"></rect><line x1="16" x2="16" y1="2" x2="6"></line><line x1="8" x2="8" y1="2" y2="6"></line><line x1="3" x2="21" y1="10" y2="10"></line></svg> ${l.scheduled_date}</div><div style="font-size: 0.7rem; color: #047857; margin-top: 0.1rem; font-weight: 700;">${l.scheduled_time}</div>`
+              : '👉 Click to schedule'}
+          </div>
+        </div>
+      `;
+    }).join('');
+  },
+
+  setActiveLesson(idx) {
+    if (idx < 0 || idx >= this.selectedLessons.length) return;
+    this.activeLessonIndex = idx;
+    const lesson = this.selectedLessons[idx];
+
+    // Update active banner
+    const badgeEl = document.getElementById('sub-active-lesson-badge');
+    const titleEl = document.getElementById('sub-active-lesson-title');
+    const rateTagEl = document.getElementById('sub-active-lesson-rate-tag');
+
+    if (badgeEl) badgeEl.textContent = `Lesson ${idx + 1} of 4`;
+    if (titleEl) {
+      if (lesson.scheduled_date && lesson.scheduled_time) {
+        titleEl.textContent = `Scheduled: ${lesson.scheduled_date} at ${lesson.scheduled_time} (${lesson.tutor_name})`;
+      } else {
+        titleEl.textContent = `Select Date & Time with ${lesson.tutor_name} (${lesson.subject})`;
+      }
+    }
+    if (rateTagEl) rateTagEl.textContent = `$${Number(lesson.hourly_rate).toFixed(2)} / session`;
+
+    this.selectedDate = lesson.scheduled_date;
+    this.selectedTime = lesson.scheduled_time;
+
+    if (lesson.scheduled_date) {
+      const parts = lesson.scheduled_date.split('-');
+      if (parts.length === 3) {
+        this.calYear = parseInt(parts[0], 10);
+        this.calMonth = parseInt(parts[1], 10) - 1;
       }
     }
 
-    this.updateSummary();
+    this.renderLessonTabs();
+    this.syncActiveLessonCalendar();
+  },
+
+  syncActiveLessonCalendar() {
+    const lesson = this.selectedLessons[this.activeLessonIndex];
+    if (!lesson) return;
+
+    const tutor = this.allTutors.find(t => t.id == lesson.tutor_id) || this.selectedTutor;
+    if (tutor) this.selectedTutor = tutor;
+
+    this.renderCalendar();
+
+    if (lesson.scheduled_date) {
+      this.selectCalendarDate(lesson.scheduled_date);
+    } else {
+      const label = document.getElementById('sub-enroll-selected-date-label');
+      if (label) label.textContent = 'Please click an available date on the calendar';
+      const slotsContainer = document.getElementById('sub-enroll-slots-container');
+      if (slotsContainer) {
+        slotsContainer.innerHTML = '<div style="color: var(--charcoal-500); font-size: 0.85rem; grid-column: 1 / -1; padding: 0.5rem 0;">Click an available date marked above to view open 50-min class slots.</div>';
+      }
+    }
   },
 
   prevCalMonth() {
@@ -487,7 +538,9 @@ const StudentSub = {
 
   selectCalendarDate(dateStr) {
     this.selectedDate = dateStr;
-    this.selectedTime = null;
+    const currentLesson = this.selectedLessons[this.activeLessonIndex];
+    this.selectedTime = (currentLesson && currentLesson.scheduled_date === dateStr) ? currentLesson.scheduled_time : null;
+
     this.renderCalendar();
 
     const parsedDate = new Date(dateStr + 'T00:00:00');
@@ -501,7 +554,6 @@ const StudentSub = {
     const sched = this.selectedTutor?.availability_schedule || {};
     const blocks = sched[dayName] || ['09:00 - 12:00', '14:00 - 17:00'];
     const slots = [];
-    const isTrial = this.activePackageKey === 'trial';
 
     blocks.forEach(b => {
       const parts = b.split('-').map(s => s.trim());
@@ -510,33 +562,18 @@ const StudentSub = {
         const endH = parseInt(parts[1].split(':')[0], 10);
 
         for (let h = startH; h < endH; h++) {
-          if (isTrial) {
-            // 30-minute slots for trial
-            const slot1Start = `${String(h).padStart(2, '0')}:00`;
-            const slot1End = `${String(h).padStart(2, '0')}:30`;
-            const slot2Start = `${String(h).padStart(2, '0')}:30`;
-            const slot2End = `${String(h + 1).padStart(2, '0')}:00`;
-
-            slots.push({ start: slot1Start, end: slot1End, key: `${slot1Start} - ${slot1End}`, hour: h, minute: '00' });
-            slots.push({ start: slot2Start, end: slot2End, key: `${slot2Start} - ${slot2End}`, hour: h, minute: '30' });
-          } else {
-            // 50-minute slots for regular subscription
-            const slotStart = `${String(h).padStart(2, '0')}:00`;
-            const slotEnd = `${String(h).padStart(2, '0')}:50`;
-            slots.push({ start: slotStart, end: slotEnd, key: `${slotStart} - ${slotEnd}`, hour: h, minute: '00' });
-          }
+          const slotStart = `${String(h).padStart(2, '0')}:00`;
+          const slotEnd = `${String(h).padStart(2, '0')}:50`;
+          slots.push({ start: slotStart, end: slotEnd, key: `${slotStart} - ${slotEnd}`, hour: h, minute: '00' });
         }
       }
     });
 
     const slotsContainer = document.getElementById('sub-enroll-slots-container');
-    const submitBtn = document.getElementById('btn-sub-enroll-submit');
-    if (submitBtn) submitBtn.disabled = true;
-
     if (!slotsContainer) return;
 
     if (slots.length === 0) {
-      slotsContainer.innerHTML = '<div style="color: var(--charcoal-500); font-size: 0.85rem; grid-column: 1 / -1;">No slots available on this day.</div>';
+      slotsContainer.innerHTML = '<div style="color: var(--charcoal-500); font-size: 0.85rem; grid-column: 1 / -1; padding: 0.5rem 0;">No slots available on this day.</div>';
       return;
     }
 
@@ -550,14 +587,17 @@ const StudentSub = {
       const h = slot.hour;
       const ampm = h >= 12 ? 'PM' : 'AM';
       const h12 = h % 12 === 0 ? 12 : h % 12;
-      const displayLabel = isTrial
-        ? `${String(h12).padStart(2, '0')}:${slot.minute} ${ampm} (30 min)`
-        : `${String(h12).padStart(2, '0')}:00 - ${String(h12).padStart(2, '0')}:50 ${ampm}`;
+      const displayLabel = `${String(h12).padStart(2, '0')}:00 - ${String(h12).padStart(2, '0')}:50 ${ampm}`;
 
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'booking-slot-btn';
       btn.innerHTML = `<span>${displayLabel}</span>`;
+
+      const isCurrentSelected = (this.selectedTime === slot.key);
+      if (isCurrentSelected) {
+        btn.classList.add('selected');
+      }
 
       if (isUnder3Hours) {
         btn.disabled = true;
@@ -568,81 +608,152 @@ const StudentSub = {
           document.querySelectorAll('#sub-enroll-slots-container .booking-slot-btn').forEach(b => b.classList.remove('selected'));
           btn.classList.add('selected');
           this.selectedTime = slot.key;
-          if (submitBtn) submitBtn.disabled = false;
+
+          // Save date & time to active lesson
+          this.selectedLessons[this.activeLessonIndex].scheduled_date = this.selectedDate;
+          this.selectedLessons[this.activeLessonIndex].scheduled_time = slot.key;
+
+          this.renderLessonTabs();
           this.updateSummary();
+
+          // Check for next unscheduled lesson to auto advance
+          const nextUnscheduled = this.selectedLessons.findIndex((l, i) => i > this.activeLessonIndex && (!l.scheduled_date || !l.scheduled_time));
+          const anyUnscheduled = nextUnscheduled !== -1 
+            ? nextUnscheduled 
+            : this.selectedLessons.findIndex(l => !l.scheduled_date || !l.scheduled_time);
+
+          if (anyUnscheduled !== -1) {
+            showToast(`Lesson ${this.activeLessonIndex + 1} scheduled for ${dateStr} (${slot.key})! Next: pick Lesson ${anyUnscheduled + 1}.`, 'info');
+            setTimeout(() => {
+              this.setActiveLesson(anyUnscheduled);
+            }, 300);
+          } else {
+            showToast(`All 4 lessons are scheduled! Ready to confirm enrollment.`, 'success');
+            const titleEl = document.getElementById('sub-active-lesson-title');
+            if (titleEl) {
+              titleEl.textContent = `Scheduled: ${dateStr} at ${slot.key} (${this.selectedLessons[this.activeLessonIndex].tutor_name})`;
+            }
+          }
         });
       }
 
       slotsContainer.appendChild(btn);
     });
-
-    this.updateSummary();
   },
 
   updateSummary() {
-    const pkgLabels = {
-      'trial': 'Free Trial Lesson ($0.00)',
-      '4_lessons': 'Starter Tier: 4 Lessons Package ($220.00)',
-      '8_lessons': 'Mastery Tier: 8 Lessons Package ($399.00)',
-      '12_lessons': 'Honors Tier: 12 Lessons Package ($540.00)'
-    };
+    const totalCost = this.selectedLessons.reduce((sum, l) => sum + (Number(l.hourly_rate) || 0), 0);
+    const scheduledLessons = this.selectedLessons.filter(l => l.scheduled_date && l.scheduled_time);
+    const scheduledCount = scheduledLessons.length;
 
-    const isTrial = this.activePackageKey === 'trial';
-    const planText = pkgLabels[this.activePackageKey] || this.activePackageKey;
-    const tutorText = this.selectedTutor ? this.selectedTutor.name : 'None selected';
-    const allocText = isTrial ? '1 Lesson (Complimentary Trial)' : `${this.allocatedLessons} Lesson${this.allocatedLessons > 1 ? 's' : ''} with this educator`;
-
-    let schedText = 'Please pick date & time above';
-    if (this.selectedDate && this.selectedTime) {
-      schedText = `${this.selectedDate} at ${this.selectedTime}`;
-    } else if (this.selectedDate) {
-      schedText = `${this.selectedDate} (Select a time slot)`;
+    // Top banner price
+    const planPriceEl = document.getElementById('sub-enroll-plan-price');
+    const planPriceCalcEl = document.getElementById('sub-enroll-plan-price-calc');
+    if (planPriceEl) {
+      planPriceEl.textContent = `$${totalCost.toFixed(2)}`;
+    }
+    if (planPriceCalcEl) {
+      const rates = this.selectedLessons.map(l => `$${Number(l.hourly_rate).toFixed(0)}`);
+      planPriceCalcEl.textContent = `4 Lessons: ${rates.join(' + ')}`;
     }
 
-    const planEl = document.getElementById('sub-summary-plan-text');
-    const tutorEl = document.getElementById('sub-summary-tutor-text');
-    const allocEl = document.getElementById('sub-summary-alloc-text');
-    const schedEl = document.getElementById('sub-summary-schedule-text');
-    const durEl = document.getElementById('sub-summary-duration-text');
+    // Progress badge
+    const progressTag = document.getElementById('sub-enroll-lessons-progress-tag');
+    if (progressTag) {
+      progressTag.textContent = `${scheduledCount} of 4 Scheduled`;
+      if (scheduledCount === 4) {
+        progressTag.style.background = '#10B981';
+        progressTag.style.color = '#FFFFFF';
+      } else {
+        progressTag.style.background = 'rgba(198, 138, 40, 0.15)';
+        progressTag.style.color = 'var(--gold-800)';
+      }
+    }
 
-    if (planEl) planEl.textContent = planText;
-    if (tutorEl) tutorEl.textContent = tutorText;
-    if (allocEl) allocEl.textContent = allocText;
-    if (schedEl) schedEl.textContent = schedText;
-    if (durEl) durEl.textContent = isTrial ? '30 Minutes' : '50 Minutes';
+    // Itemized 4-lesson breakdown list
+    const breakdownList = document.getElementById('sub-lessons-breakdown-list');
+    if (breakdownList) {
+      breakdownList.innerHTML = this.selectedLessons.map((l, i) => {
+        const isSet = !!(l.scheduled_date && l.scheduled_time);
+        return `
+          <div class="sub-lesson-breakdown-row">
+            <div>
+              <div style="font-weight: 700; color: var(--charcoal-950);">
+                Lesson ${i + 1}: ${l.subject}
+              </div>
+              <div style="font-size: 0.76rem; color: var(--text-secondary); margin-top: 0.1rem;">
+                Faculty: <strong>${l.tutor_name}</strong> • 
+                ${isSet 
+                  ? `<span style="color: #059669; font-weight: 600;">📅 ${l.scheduled_date} at ${l.scheduled_time}</span>` 
+                  : `<span style="color: #D97706; font-weight: 600;">Not scheduled yet</span>`}
+              </div>
+            </div>
+            <div style="text-align: right;">
+              <span style="font-size: 0.95rem; font-weight: 800; color: var(--gold-700); font-family: var(--font-heading);">$${Number(l.hourly_rate).toFixed(2)}</span>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Total text at bottom of summary
+    const summaryAmountEl = document.getElementById('sub-summary-amount-text');
+    if (summaryAmountEl) {
+      summaryAmountEl.textContent = `$${totalCost.toFixed(2)}`;
+    }
+
+    const calcFormulaEl = document.getElementById('sub-summary-calc-formula');
+    if (calcFormulaEl) {
+      calcFormulaEl.textContent = `Sum of 4 lessons: ${this.selectedLessons.map((l, idx) => `Lesson ${idx + 1} ($${Number(l.hourly_rate).toFixed(0)})`).join(' + ')}`;
+    }
+
+    // Submit button
+    const submitBtn = document.getElementById('btn-sub-enroll-submit');
+    const btnLabel = document.getElementById('sub-enroll-btn-label');
+    if (submitBtn) {
+      if (scheduledCount === 4) {
+        submitBtn.disabled = false;
+        if (btnLabel) btnLabel.textContent = `Confirm 4 Lessons & Pay $${totalCost.toFixed(2)}`;
+      } else {
+        submitBtn.disabled = true;
+        if (btnLabel) btnLabel.textContent = `Please Schedule All 4 Lessons to Continue (${scheduledCount}/4 Complete)`;
+      }
+    }
   },
 
   async confirmEnrollment() {
-    if (!this.selectedTutor) {
-      showToast('Please select an Aviora educator.', 'warning');
+    const unscheduled = this.selectedLessons.filter(l => !l.scheduled_date || !l.scheduled_time);
+    if (unscheduled.length > 0) {
+      showToast(`Please select respective dates and times for all 4 lessons before proceeding.`, 'warning');
+      const firstMissing = this.selectedLessons.findIndex(l => !l.scheduled_date || !l.scheduled_time);
+      if (firstMissing !== -1) this.setActiveLesson(firstMissing);
       return;
     }
 
-    if (!this.selectedDate || !this.selectedTime) {
-      showToast('Please select your preferred date and time slot from the educator’s calendar.', 'warning');
-      return;
-    }
-
-    const subjectSelect = document.getElementById('sub-enroll-subject-select');
-    const chosenSubject = subjectSelect ? subjectSelect.value : (this.selectedTutor.subject || 'General Tutoring');
     const notesInput = document.getElementById('sub-enroll-notes');
     const notes = notesInput ? notesInput.value.trim() : '';
+    const totalCost = this.selectedLessons.reduce((sum, l) => sum + (Number(l.hourly_rate) || 0), 0);
 
     const submitBtn = document.getElementById('btn-sub-enroll-submit');
     const originalText = submitBtn ? submitBtn.innerHTML : '';
     if (submitBtn) {
       submitBtn.disabled = true;
-      submitBtn.innerHTML = `<span>Confirming &amp; Reserving Slot...</span>`;
+      submitBtn.innerHTML = `<span>Processing Enrollment &amp; Reserving 4 Lessons...</span>`;
     }
 
     try {
       const payload = {
-        package_key: this.activePackageKey,
-        tutor_id: this.selectedTutor.id,
-        lessons_with_tutor: this.allocatedLessons,
-        subject: chosenSubject,
-        scheduled_date: this.selectedDate,
-        scheduled_time: this.selectedTime,
+        package_key: '4_lessons',
+        total_amount: totalCost,
+        lessons: this.selectedLessons.map(l => ({
+          lesson_number: l.index + 1,
+          tutor_id: l.tutor_id,
+          tutor_name: l.tutor_name,
+          subject: l.subject,
+          scheduled_date: l.scheduled_date,
+          scheduled_time: l.scheduled_time,
+          hourly_rate: l.hourly_rate
+        })),
         notes: notes
       };
 
@@ -652,13 +763,13 @@ const StudentSub = {
       this.closeEnrollmentModal();
       await this.loadSubscriptionHub();
 
-      // Refresh student dashboard and schedule if on page
+      // Refresh student dashboard and requests if loaded
       if (typeof Student !== 'undefined' && Student.loadDashboard) {
         Student.loadDashboard();
       }
 
     } catch (err) {
-      showToast(err.message || 'Failed to process subscription enrollment.', 'error');
+      showToast(err.message || 'Failed to process 4-lesson enrollment.', 'error');
     } finally {
       if (submitBtn) {
         submitBtn.disabled = false;

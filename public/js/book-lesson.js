@@ -142,7 +142,7 @@ const BookLesson = {
       card.className = 'booking-sub-card';
       card.innerHTML = `
         <div class="booking-sub-meta">
-          <div class="booking-sub-icon">💎</div>
+          <div class="booking-sub-icon">${Icons.gem(20)}</div>
           <div>
             <div class="booking-sub-title">Your Subscription Status: Active • ${this.studentSubscription.plan_name}</div>
             <div class="booking-sub-desc">
@@ -160,7 +160,7 @@ const BookLesson = {
       card.className = 'booking-sub-card inactive';
       card.innerHTML = `
         <div class="booking-sub-meta">
-          <div class="booking-sub-icon">💳</div>
+          <div class="booking-sub-icon">${Icons.creditCard(20)}</div>
           <div>
             <div class="booking-sub-title">Your Subscription Status: No Active Plan</div>
             <div class="booking-sub-desc">
@@ -186,7 +186,7 @@ const BookLesson = {
           <div style="min-width: 0;">
             <div class="tutor-picker-name">${t.name}</div>
             <div class="tutor-picker-sub">${t.headline || t.institution || 'Verified Specialist'}</div>
-            <div style="font-size: 0.72rem; color: var(--gold-800); font-weight: 600; margin-top: 0.15rem;">★ ${t.rating ? t.rating.toFixed(1) : '5.0'} (${t.reviews_count || 0} reviews)</div>
+            <div style="font-size: 0.72rem; color: var(--gold-800); font-weight: 600; margin-top: 0.15rem; display: flex; align-items: center; gap: 0.2rem;">${Icons.star(12)} ${t.rating ? t.rating.toFixed(1) : '5.0'} (${t.reviews_count || 0} reviews)</div>
           </div>
         </div>
         <div class="tutor-picker-rate">

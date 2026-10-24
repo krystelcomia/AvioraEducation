@@ -202,7 +202,7 @@ const Tutors = {
     if (tutors.length === 0) {
       container.innerHTML = `
         <div class="empty-state" style="grid-column: 1 / -1;">
-          <div class="empty-icon">🔍</div>
+          <div class="empty-icon">${Icons.search(36)}</div>
           <h3 class="empty-title">No Tutors Match Your Filters</h3>
           <p class="empty-desc">Try clearing or adjusting your search terms, grade levels, or subject filters.</p>
           <button class="btn btn-outline-gold btn-sm" onclick="Tutors.resetFilters()">Reset All Filters</button>
@@ -245,13 +245,13 @@ const Tutors = {
         <div class="tutor-card-header">
           <div class="tutor-avatar-wrap">
             <img src="${t.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80'}" alt="${t.name}" class="tutor-avatar-img" />
-            <div class="verified-badge-icon" title="Aviora Academic Board Verified">✓</div>
+            <div class="verified-badge-icon" title="Aviora Academic Board Verified">${Icons.check(10)}</div>
           </div>
           <div class="tutor-info-meta">
             <h3 class="tutor-name">${t.name}</h3>
             <p class="tutor-headline">${t.headline || t.institution || 'Verified Academic Specialist'}</p>
             <div class="tutor-ratings-line">
-              <span class="star-gold">★</span>
+              <span class="star-gold" style="display: inline-flex; align-items: center; color: #F59E0B;">${Icons.star(13)}</span>
               <span>${t.rating ? t.rating.toFixed(1) : '5.0'}</span>
               <span class="review-count">(${t.reviews_count || 0} reviews)</span>
             </div>
@@ -342,7 +342,7 @@ const Tutors = {
       daysOfWeek.forEach(day => {
         const slots = sched[day] || (day !== 'Sunday' ? ['10:00 - 12:00', '14:00 - 17:00'] : ['Flexible Consultation']);
         const slotsArray = Array.isArray(slots) ? slots : [slots];
-        const badgesHtml = slotsArray.map(slot => `<span class="schedule-slot-badge">⏰ ${slot}</span>`).join(' ');
+        const badgesHtml = slotsArray.map(slot => `<span class="schedule-slot-badge" style="display: inline-flex; align-items: center; gap: 0.3rem;">${Icons.clock(12)} ${slot}</span>`).join(' ');
 
         scheduleRowsHtml += `
           <tr class="schedule-row">
@@ -365,8 +365,8 @@ const Tutors = {
                   <div style="font-size: 0.76rem; color: var(--text-muted);">${r.created_at ? new Date(r.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : 'Verified Student'}</div>
                 </div>
               </div>
-              <div style="color: #F59E0B; font-weight: 700; font-size: 0.9rem;">
-                ${'★'.repeat(Math.round(r.rating || 5))} <span style="font-size: 0.8rem; color: var(--text-muted); font-weight: normal;">(${r.rating}.0)</span>
+              <div style="color: #F59E0B; display: inline-flex; align-items: center; gap: 2px;">
+                ${Array.from({length: Math.round(r.rating || 5)}).map(() => Icons.star(13)).join('')} <span style="font-size: 0.8rem; color: var(--text-muted); font-weight: normal; margin-left: 4px;">(${r.rating}.0)</span>
               </div>
             </div>
             <p class="tutor-review-comment">"${r.comment}"</p>
@@ -399,7 +399,7 @@ const Tutors = {
           <div class="tutor-hero-top">
             <div class="tutor-hero-avatar-box">
               <img src="${tutor.avatar_url}" alt="${tutor.name}" class="tutor-hero-avatar-img" />
-              <div class="tutor-hero-badge-verified" title="Aviora Board Verified">✓</div>
+              <div class="tutor-hero-badge-verified" title="Aviora Board Verified">${Icons.check(12)}</div>
             </div>
 
             <div class="tutor-hero-info">
@@ -409,19 +409,16 @@ const Tutors = {
               </div>
               <div class="tutor-hero-headline">${tutor.headline || 'Distinguished Faculty Specialist'}</div>
               <div class="tutor-hero-credentials">
-                <span>🎓 <strong>${tutor.highest_degree || 'Advanced Degree'}</strong></span>
+                <span style="display: inline-flex; align-items: center; gap: 0.35rem;">${Icons.graduationCap(14)} <strong>${tutor.highest_degree || 'Advanced Degree'}</strong></span>
                 <span>•</span>
-                <span>🏛️ <strong>${tutor.institution || 'Accredited University'}</strong></span>
+                <span style="display: inline-flex; align-items: center; gap: 0.35rem;">${Icons.landmark(14)} <strong>${tutor.institution || 'Accredited University'}</strong></span>
                 <span>•</span>
-                <span>⏳ ${tutor.years_experience || 5} Years Teaching Experience</span>
+                <span style="display: inline-flex; align-items: center; gap: 0.35rem;">${Icons.clock(14)} ${tutor.years_experience || 5} Years Teaching Experience</span>
               </div>
 
               <div class="tutor-hero-actions">
                 <button class="btn btn-outline-gold btn-md" id="hero-message-tutor-btn" data-id="${tutor.id}" style="display: inline-flex; align-items: center; gap: 0.5rem;">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <rect width="20" height="16" x="2" y="4" rx="2"></rect>
-                    <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"></path>
-                  </svg>
+                  ${Icons.message(18)}
                   <span>Message Tutor</span>
                 </button>
                 <button class="btn btn-primary btn-md" id="hero-book-tutor-btn" data-id="${tutor.id}" style="display: inline-flex; align-items: center; gap: 0.5rem;">
@@ -435,7 +432,7 @@ const Tutors = {
           <!-- 4 Core High-Impact Stat Strip -->
           <div class="tutor-stats-strip">
             <div class="tutor-stat-item">
-              <div class="tutor-stat-icon">👥</div>
+              <div class="tutor-stat-icon" style="display: flex; align-items: center; justify-content: center; color: var(--gold-700);">${Icons.users(22)}</div>
               <div class="tutor-stat-info-col">
                 <span class="tutor-stat-num">${tutor.total_students || 18}</span>
                 <span class="tutor-stat-label">Total Students Mentored</span>
@@ -443,7 +440,7 @@ const Tutors = {
             </div>
 
             <div class="tutor-stat-item">
-              <div class="tutor-stat-icon">📚</div>
+              <div class="tutor-stat-icon" style="display: flex; align-items: center; justify-content: center; color: var(--gold-700);">${Icons.book(22)}</div>
               <div class="tutor-stat-info-col">
                 <span class="tutor-stat-num">${tutor.total_sessions || 0}</span>
                 <span class="tutor-stat-label">Sessions Completed</span>
@@ -451,7 +448,7 @@ const Tutors = {
             </div>
 
             <div class="tutor-stat-item">
-              <div class="tutor-stat-icon">⭐</div>
+              <div class="tutor-stat-icon" style="display: flex; align-items: center; justify-content: center; color: #F59E0B;">${Icons.star(22)}</div>
               <div class="tutor-stat-info-col">
                 <span class="tutor-stat-num">${tutor.rating ? tutor.rating.toFixed(1) : '5.0'}</span>
                 <span class="tutor-stat-label">Rating (${tutor.reviews_count || 0} Reviews)</span>
@@ -459,7 +456,7 @@ const Tutors = {
             </div>
 
             <div class="tutor-stat-item">
-              <div class="tutor-stat-icon">💎</div>
+              <div class="tutor-stat-icon" style="display: flex; align-items: center; justify-content: center; color: var(--gold-700);">${Icons.gem(22)}</div>
               <div class="tutor-stat-info-col">
                 <span class="tutor-stat-num">$${tutor.hourly_rate}</span>
                 <span class="tutor-stat-label">Standard Hourly Rate</span>
@@ -475,15 +472,15 @@ const Tutors = {
             <!-- Biography Card -->
             <div class="tutor-profile-card">
               <h2 class="tutor-profile-card-title">
-                <span>📖</span>
+                <span style="display: inline-flex; align-items: center; color: var(--gold-700);">${Icons.book(18)}</span>
                 <span>Biography &amp; Mentorship Philosophy</span>
               </h2>
               <p style="font-size: 0.95rem; line-height: 1.75; color: var(--charcoal-900); margin-bottom: 1.25rem;">
                 ${tutor.bio || 'Expert educator committed to rigorous conceptual instruction and academic empowerment.'}
               </p>
               <div style="background: rgba(198, 138, 40, 0.08); border-left: 3px solid var(--gold-600); padding: 0.85rem 1.15rem; border-radius: 0 var(--radius-sm) var(--radius-sm) 0;">
-                <p style="font-size: 0.85rem; color: var(--gold-900); font-weight: 600; margin: 0;">
-                  ✦ First-Principles Instruction: Lessons prioritize deep analytical understanding over memorization shortcuts.
+                <p style="font-size: 0.85rem; color: var(--gold-900); font-weight: 600; margin: 0; display: flex; align-items: center; gap: 0.35rem;">
+                  <span style="color: var(--gold-600); display: inline-flex;">${Icons.sparkle(13)}</span> First-Principles Instruction: Lessons prioritize deep analytical understanding over memorization shortcuts.
                 </p>
               </div>
             </div>
@@ -491,19 +488,19 @@ const Tutors = {
             <!-- Academic Qualifications Card -->
             <div class="tutor-profile-card">
               <h2 class="tutor-profile-card-title">
-                <span>🎓</span>
+                <span style="display: inline-flex; align-items: center; color: var(--gold-700);">${Icons.graduationCap(18)}</span>
                 <span>Academic Qualifications &amp; Pedagogy Vetting</span>
               </h2>
               <div style="display: flex; flex-direction: column; gap: 0.85rem;">
                 <div style="display: flex; align-items: flex-start; gap: 0.85rem;">
-                  <span style="font-size: 1.25rem;">🏛️</span>
+                  <span style="display: inline-flex; align-items: center; color: var(--gold-700); margin-top: 2px;">${Icons.landmark(18)}</span>
                   <div>
                     <strong style="color: var(--charcoal-950); font-size: 0.95rem;">${tutor.institution || 'University Faculty'}</strong>
                     <p style="font-size: 0.85rem; color: var(--text-secondary); margin: 0.2rem 0 0 0;">Highest Credential: ${tutor.highest_degree || 'Advanced Degree'}</p>
                   </div>
                 </div>
                 <div style="display: flex; align-items: flex-start; gap: 0.85rem;">
-                  <span style="font-size: 1.25rem;">🛡️</span>
+                  <span style="display: inline-flex; align-items: center; color: var(--gold-700); margin-top: 2px;">${Icons.shield(18)}</span>
                   <div>
                     <strong style="color: var(--charcoal-950); font-size: 0.95rem;">Identity &amp; Degree Verified</strong>
                     <p style="font-size: 0.85rem; color: var(--text-secondary); margin: 0.2rem 0 0 0;">Official transcripts, teaching pedigree, and identity authenticated by the Aviora Academic Board.</p>
@@ -515,7 +512,7 @@ const Tutors = {
             <!-- Subjects & Target Grades Card -->
             <div class="tutor-profile-card">
               <h2 class="tutor-profile-card-title">
-                <span>🎯</span>
+                <span style="display: inline-flex; align-items: center; color: var(--gold-700);">${Icons.target(18)}</span>
                 <span>Subjects &amp; Target Grade Levels</span>
               </h2>
               <div style="margin-bottom: 1.25rem;">
@@ -536,10 +533,10 @@ const Tutors = {
             <div class="tutor-profile-card">
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; border-bottom: 1px solid rgba(0,0,0,0.06); padding-bottom: 0.75rem;">
                 <h2 style="font-size: 1.25rem; font-weight: 700; color: var(--charcoal-950); margin: 0; display: flex; align-items: center; gap: 0.6rem;">
-                  <span>⭐</span>
+                  <span style="display: inline-flex; align-items: center; color: #F59E0B;">${Icons.star(18)}</span>
                   <span>Previous Student Ratings &amp; Reviews</span>
                 </h2>
-                <span class="badge-gold">★ ${tutor.rating ? tutor.rating.toFixed(1) : '5.0'} (${tutor.reviews?.length || 0})</span>
+                <span class="badge-gold" style="display: inline-flex; align-items: center; gap: 0.3rem;">${Icons.star(13)} ${tutor.rating ? tutor.rating.toFixed(1) : '5.0'} (${tutor.reviews?.length || 0})</span>
               </div>
               <div class="tutor-reviews-list">
                 ${reviewsHtml}
@@ -552,7 +549,7 @@ const Tutors = {
             <!-- Weekly Schedule Card -->
             <div class="tutor-profile-card" style="padding: 1.75rem;">
               <h2 class="tutor-profile-card-title" style="margin-bottom: 0.75rem;">
-                <span>🗓️</span>
+                <span style="display: inline-flex; align-items: center; color: var(--gold-700);">${Icons.calendar(18)}</span>
                 <span>Weekly Availability Schedule</span>
               </h2>
               <p style="font-size: 0.82rem; color: var(--text-secondary); margin-bottom: 1rem;">
@@ -573,7 +570,7 @@ const Tutors = {
             <div class="tutor-quick-message-card" style="background: linear-gradient(180deg, #FFFFFF, #FAF7F2); border: 1.5px solid rgba(198, 138, 40, 0.35); border-radius: var(--radius-lg); padding: 1.5rem; box-shadow: var(--shadow-sm);">
               <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
                 <div style="display: flex; align-items: center; gap: 0.55rem;">
-                  <span style="font-size: 1.35rem;">💬</span>
+                  <span style="display: inline-flex; align-items: center; color: var(--gold-700);">${Icons.message(20)}</span>
                   <h3 style="font-size: 1.15rem; font-weight: 700; color: var(--charcoal-950); margin: 0;">Direct Messenger</h3>
                 </div>
                 <span style="font-size: 0.72rem; color: #10B981; font-weight: 600; display: inline-flex; align-items: center; gap: 0.3rem;">● Active now</span>
@@ -797,7 +794,10 @@ const Tutors = {
             <div class="messenger-bubble-wrap">
               <div class="messenger-bubble">
                 <div class="messenger-bubble-text">${this.formatMessageText(m.text)}</div>
-                <div class="messenger-bubble-time">${m.time} • Delivered ✓✓</div>
+                <div class="messenger-bubble-time" style="display: flex; align-items: center; justify-content: flex-end; gap: 3px;">
+                  <span>${m.time} • Delivered</span>
+                  <span style="color: #10B981; display: inline-flex;">${Icons.check(11)}${Icons.check(11)}</span>
+                </div>
               </div>
             </div>
           </div>
@@ -1030,7 +1030,7 @@ const Tutors = {
         subCard.className = 'booking-sub-card';
         subCard.innerHTML = `
           <div class="booking-sub-meta">
-            <div class="booking-sub-icon">💎</div>
+            <div class="booking-sub-icon">${Icons.gem(20)}</div>
             <div>
               <div class="booking-sub-title">Active Subscription: ${this.studentSubscription.plan_name}</div>
               <div class="booking-sub-desc">
@@ -1047,7 +1047,7 @@ const Tutors = {
         subCard.className = 'booking-sub-card inactive';
         subCard.innerHTML = `
           <div class="booking-sub-meta">
-            <div class="booking-sub-icon">💳</div>
+            <div class="booking-sub-icon">${Icons.creditCard(20)}</div>
             <div>
               <div class="booking-sub-title">No Active Subscription Plan</div>
               <div class="booking-sub-desc">
@@ -1472,7 +1472,7 @@ const Tutors = {
         banner.style.display = 'flex';
         banner.innerHTML = `
           <div class="booking-sub-meta">
-            <div class="booking-sub-icon">💎</div>
+            <div class="booking-sub-icon">${Icons.gem(20)}</div>
             <div>
               <div class="booking-sub-title">Your Subscription Status: Active • ${sub.plan_name}</div>
               <div class="booking-sub-desc">
@@ -1489,7 +1489,7 @@ const Tutors = {
         banner.style.display = 'flex';
         banner.innerHTML = `
           <div class="booking-sub-meta">
-            <div class="booking-sub-icon">📚</div>
+            <div class="booking-sub-icon">${Icons.book(20)}</div>
             <div>
               <div class="booking-sub-title">Choose Your Tutor</div>
               <div class="booking-sub-desc">

@@ -11,14 +11,14 @@ function showToast(message, type = 'info') {
   toast.className = `toast ${type}`;
 
   const iconMap = {
-    success: '✓',
-    error: '✕',
-    warning: '⚠',
-    info: 'ℹ'
+    success: (window.AvioraIcons ? AvioraIcons.checkCircle(18) : '✓'),
+    error: (window.AvioraIcons ? AvioraIcons.x(18) : '✕'),
+    warning: (window.AvioraIcons ? AvioraIcons.shield(18) : '•'),
+    info: (window.AvioraIcons ? AvioraIcons.sparkle(18) : '•')
   };
 
   toast.innerHTML = `
-    <span class="toast-icon">${iconMap[type] || 'ℹ'}</span>
+    <span class="toast-icon" style="display: inline-flex; align-items: center; justify-content: center;">${iconMap[type] || '•'}</span>
     <span class="toast-content">${message}</span>
   `;
 
@@ -355,7 +355,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (statTutors) statTutors.textContent = `${stats.totalTutors || 6}+`;
     if (statStudents) statStudents.textContent = `${stats.totalStudents || 35}+`;
     if (statSessions) statSessions.textContent = `${stats.totalSessions || 450}+`;
-    if (statRating) statRating.textContent = `${stats.avgRating || '4.9'} ★`;
+    if (statRating) statRating.innerHTML = `${stats.avgRating || '4.9'} <span style="color: #F59E0B; display: inline-flex; vertical-align: middle;">${Icons.star(16)}</span>`;
   } catch (e) {
     console.warn('Could not load stats counters:', e);
   }
@@ -486,13 +486,18 @@ async function initRealTimeAnalytics() {
 
       // Populate Live Activity Feed
       if (liveFeedContainer && Array.isArray(data.liveActivityStream)) {
-        liveFeedContainer.innerHTML = data.liveActivityStream.map(evt => `
-          <div class="live-activity-event">
-            <span>${evt.icon}</span>
-            <span style="flex: 1;">${evt.action}</span>
-            <span class="live-activity-time">${evt.time}</span>
-          </div>
-        `).join('');
+        liveFeedContainer.innerHTML = data.liveActivityStream.map(evt => {
+          const iconRenderer = (window.AvioraIcons && typeof AvioraIcons[evt.icon] === 'function')
+            ? AvioraIcons[evt.icon]
+            : (typeof Icons !== 'undefined' && typeof Icons[evt.icon] === 'function' ? Icons[evt.icon] : Icons.zap);
+          return `
+            <div class="live-activity-event">
+              <span style="display: inline-flex; align-items: center; color: var(--gold-700);">${iconRenderer(15)}</span>
+              <span style="flex: 1;">${evt.action}</span>
+              <span class="live-activity-time">${evt.time}</span>
+            </div>
+          `;
+        }).join('');
       }
     } catch (e) {
       console.warn('Analytics polling error:', e);
@@ -564,8 +569,8 @@ function renderStudentWorks(filter = 'all') {
   grid.innerHTML = filtered.map(work => `
     <div class="student-work-card" onclick="openStudentWorkModal('${work.id}')">
       <div class="work-image-container">
-        <span class="work-category-badge ${work.category === 'drawing' ? 'badge-drawing' : 'badge-craft'}">
-          ${work.category === 'drawing' ? '✏️ Drawing' : '🛠️ Handmade Craft'}
+        <span class="work-category-badge ${work.category === 'drawing' ? 'badge-drawing' : 'badge-craft'}" style="display: inline-flex; align-items: center; gap: 0.35rem;">
+          ${work.category === 'drawing' ? Icons.pencil(13) + ' Drawing' : Icons.palette(13) + ' Handmade Craft'}
         </span>
         <img src="${work.image}" alt="${work.title}" loading="lazy" />
       </div>
@@ -573,7 +578,7 @@ function renderStudentWorks(filter = 'all') {
       <div class="work-card-content">
         <!-- Prominent Student Attribution Tag -->
         <div class="student-creator-tag">
-          <span class="student-creator-avatar">${work.studentAvatar || '🎓'}</span>
+          <span class="student-creator-avatar" style="font-weight: 700; font-size: 0.8rem; letter-spacing: 0.05em; display: inline-flex; align-items: center; justify-content: center;">${work.studentAvatar || Icons.graduationCap(16)}</span>
           <div class="student-creator-info">
             <span class="student-creator-name">Created by ${work.studentName}</span>
             <span class="student-creator-grade">${work.studentGrade}</span>
@@ -603,7 +608,14 @@ function openStudentWorkModal(workId) {
   document.getElementById('sw-modal-award').textContent = work.award || 'Aviora Student Showcase';
   document.getElementById('sw-modal-img').src = work.image;
   document.getElementById('sw-modal-img').alt = work.title;
-  document.getElementById('sw-modal-avatar').textContent = work.studentAvatar || '🎨';
+  const avatarEl = document.getElementById('sw-modal-avatar');
+  if (avatarEl) {
+    if (work.studentAvatar && work.studentAvatar.length <= 3) {
+      avatarEl.textContent = work.studentAvatar;
+    } else {
+      avatarEl.innerHTML = Icons.palette(18);
+    }
+  }
   document.getElementById('sw-modal-student-name').textContent = `Created by ${work.studentName}`;
   document.getElementById('sw-modal-student-grade').textContent = `${work.studentGrade} • Student Contributor`;
   document.getElementById('sw-modal-title').textContent = work.title;

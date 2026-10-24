@@ -265,22 +265,22 @@ const Admin = {
     }
 
     container.innerHTML = activity.map(a => {
-      let icon = '🎓';
+      let icon = Icons.graduationCap(18);
       let desc = '';
       if (a.type === 'registration') {
-        icon = '👤';
+        icon = Icons.user(18);
         desc = `Registered new user account (${a.info})`;
       } else if (a.type === 'application') {
-        icon = '📝';
+        icon = Icons.fileText(18);
         desc = `Teacher Application submitted: ${a.info || 'Educator'}`;
       } else {
-        icon = '🗓️';
+        icon = Icons.calendar(18);
         desc = `Tutoring Session booked for ${a.info}`;
       }
       return `
         <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.85rem 0; border-bottom: 1px solid rgba(0,0,0,0.06); font-size: 0.875rem;">
           <div style="display: flex; align-items: center; gap: 0.75rem;">
-            <span style="font-size: 1.25rem;">${icon}</span>
+            <span style="color: var(--gold-600); display: flex; align-items: center;">${icon}</span>
             <div>
               <strong style="color: var(--charcoal-900);">${a.user_name}</strong>
               <span style="color: var(--text-secondary);"> — ${desc}</span>
@@ -354,7 +354,7 @@ const Admin = {
         <tr>
           <td colspan="6" style="text-align: center; padding: 3rem;">
             <div class="empty-state">
-              <div class="empty-icon">👥</div>
+              <div class="empty-icon" style="color: var(--gold-600);">${Icons.users(36)}</div>
               <h4 class="empty-title">No User Accounts Found</h4>
               <p class="empty-desc">No accounts found matching the selected filter criteria.</p>
             </div>
@@ -365,21 +365,21 @@ const Admin = {
     }
 
     tbody.innerHTML = userList.map(u => {
-      let roleIcon = '🎓';
+      let roleIcon = Icons.graduationCap(14);
       let roleClass = 'student';
       let roleLabel = 'Student';
       let detailsHtml = '';
 
       if (u.role === 'teacher') {
-        roleIcon = '👨‍🏫';
+        roleIcon = Icons.user(14);
         roleClass = 'teacher';
         roleLabel = 'Teacher / Tutor';
         detailsHtml = `
           <div style="font-weight: 600; color: var(--charcoal-900); font-size: 0.85rem;">${u.highest_degree || u.teacher_headline || 'Educator Specialist'}</div>
-          <div style="font-size: 0.775rem; color: var(--text-secondary);">${u.institution || 'Aviora Faculty'} • ${u.application_status === 'approved' ? '✓ Verified' : (u.application_status || 'Pending')}</div>
+          <div style="font-size: 0.775rem; color: var(--text-secondary); display: flex; align-items: center; gap: 0.25rem;">${u.institution || 'Aviora Faculty'} • ${u.application_status === 'approved' ? Icons.check(12) + ' Verified' : (u.application_status || 'Pending')}</div>
         `;
       } else if (u.role === 'admin') {
-        roleIcon = '🛡️';
+        roleIcon = Icons.shield(14);
         roleClass = 'admin';
         roleLabel = 'Administrator';
         detailsHtml = `
@@ -409,12 +409,12 @@ const Admin = {
               <div>
                 <div class="user-cell-name">${u.name}</div>
                 <div class="user-cell-email">${u.email}</div>
-                ${u.phone ? `<div style="font-size: 0.725rem; color: var(--text-secondary);">📞 ${u.phone}</div>` : ''}
+                ${u.phone ? `<div style="font-size: 0.725rem; color: var(--text-secondary); display: flex; align-items: center; gap: 0.25rem;">${Icons.phone(12)} ${u.phone}</div>` : ''}
               </div>
             </div>
           </td>
           <td>
-            <span class="role-badge ${roleClass}">${roleIcon} ${roleLabel}</span>
+            <span class="role-badge ${roleClass}" style="display: inline-flex; align-items: center; gap: 0.35rem;">${roleIcon} ${roleLabel}</span>
           </td>
           <td>
             ${detailsHtml}
@@ -529,7 +529,7 @@ const Admin = {
         <tr>
           <td colspan="6" style="text-align: center; padding: 3rem;">
             <div class="empty-state">
-              <div class="empty-icon">✓</div>
+              <div class="empty-icon">${Icons.checkCircle(36)}</div>
               <h4 class="empty-title">No Teacher Applications Found</h4>
               <p class="empty-desc">All applications in this category have been processed.</p>
             </div>
@@ -602,14 +602,14 @@ const Admin = {
 
         <div style="background: rgba(0,0,0,0.03); border: 1px solid rgba(0,0,0,0.08); border-radius: var(--radius-md); padding: 1.25rem; margin-bottom: 1.25rem;">
           <h4 style="color: var(--charcoal-900); margin-bottom: 0.5rem; font-size: 0.95rem;">Academic Qualifications</h4>
-          <p style="font-size: 0.875rem; color: var(--charcoal-700); margin-bottom: 0.35rem;">
-            🎓 <strong>Degree:</strong> ${app.highest_degree} (${app.graduation_year || 'N/A'})
+          <p style="font-size: 0.875rem; color: var(--charcoal-700); margin-bottom: 0.35rem; display: flex; align-items: center; gap: 0.4rem;">
+            ${Icons.graduationCap(15)} <strong>Degree:</strong> ${app.highest_degree} (${app.graduation_year || 'N/A'})
           </p>
-          <p style="font-size: 0.875rem; color: var(--charcoal-700); margin-bottom: 0.35rem;">
-            🏛️ <strong>Institution:</strong> ${app.institution}
+          <p style="font-size: 0.875rem; color: var(--charcoal-700); margin-bottom: 0.35rem; display: flex; align-items: center; gap: 0.4rem;">
+            ${Icons.landmark(15)} <strong>Institution:</strong> ${app.institution}
           </p>
-          <p style="font-size: 0.875rem; color: var(--charcoal-700);">
-            ⏱️ <strong>Experience:</strong> ${app.years_experience} years • <strong>Target Rate:</strong> $${app.hourly_rate}/hr
+          <p style="font-size: 0.875rem; color: var(--charcoal-700); display: flex; align-items: center; gap: 0.4rem;">
+            ${Icons.clock(15)} <strong>Experience:</strong> ${app.years_experience} years • <strong>Target Rate:</strong> $${app.hourly_rate}/hr
           </p>
         </div>
 
@@ -628,7 +628,7 @@ const Admin = {
           <h4 style="color: var(--charcoal-900); margin-bottom: 0.35rem; font-size: 0.95rem;">Uploaded Credential Document</h4>
           ${app.credentials_file ? `
             <div style="display: flex; align-items: center; gap: 0.75rem; background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.3); padding: 0.75rem 1rem; border-radius: var(--radius-md);">
-              <span style="font-size: 1.25rem;">📄</span>
+              <span style="display: inline-flex; align-items: center; justify-content: center; color: #10B981;">${Icons.fileText(22)}</span>
               <div style="flex: 1;">
                 <div style="font-size: 0.85rem; font-weight: 600; color: #10B981;">${app.credentials_filename || 'Verified_Academic_Diploma.pdf'}</div>
                 <div style="font-size: 0.75rem; color: var(--text-secondary);">Official credential file submitted for verification</div>
@@ -731,7 +731,7 @@ const Admin = {
           <div style="font-size: 0.775rem; color: var(--text-secondary);">${t.institution}</div>
         </td>
         <td>
-          <div style="font-size: 0.85rem; color: #F59E0B; font-weight: 700;">★ ${t.rating.toFixed(1)} (${t.reviews_count})</div>
+          <div style="font-size: 0.85rem; color: #F59E0B; font-weight: 700; display: flex; align-items: center; gap: 0.25rem;">${Icons.star(13)} ${t.rating.toFixed(1)} (${t.reviews_count})</div>
           <div style="font-size: 0.775rem; color: var(--text-secondary);">${t.total_sessions} completed</div>
         </td>
         <td>
@@ -863,8 +863,8 @@ const Admin = {
           <strong style="color: var(--charcoal-900);">${r.subject}</strong>
         </td>
         <td>
-          <div>🗓️ ${r.requested_date}</div>
-          <div style="font-size: 0.75rem; color: var(--text-secondary);">⏰ ${r.requested_time} (${r.duration_hours}h)</div>
+          <div style="display: flex; align-items: center; gap: 0.35rem;">${Icons.calendar(13)} ${r.requested_date}</div>
+          <div style="display: flex; align-items: center; gap: 0.35rem; font-size: 0.75rem; color: var(--text-secondary); margin-top: 2px;">${Icons.clock(13)} ${r.requested_time} (${r.duration_hours}h)</div>
         </td>
         <td>
           <span style="font-weight: 700; color: var(--charcoal-900);">$${r.total_amount.toFixed(2)}</span>

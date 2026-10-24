@@ -587,11 +587,11 @@ app.get('/api/public/analytics', (req, res) => {
     ];
 
     const liveActivityStream = [
-      { time: 'Just now', action: 'Student booked 1-on-1 session in AP Calculus BC', icon: '⚡', category: 'Booking' },
-      { time: '2 mins ago', action: '5★ Verified Review published for Organic Chemistry mentorship', icon: '⭐', category: 'Review' },
-      { time: '4 mins ago', action: 'Student completed Python Data Structures diagnostic assessment', icon: '💻', category: 'Assessment' },
-      { time: '8 mins ago', action: 'New high school student enrolled from California', icon: '🎓', category: 'Enrollment' },
-      { time: '11 mins ago', action: 'AP Physics C Free-Body practice pack downloaded', icon: '📘', category: 'Resource' }
+      { time: 'Just now', action: 'Student booked 1-on-1 session in AP Calculus BC', icon: 'zap', category: 'Booking' },
+      { time: '2 mins ago', action: '5-star Verified Review published for Organic Chemistry mentorship', icon: 'star', category: 'Review' },
+      { time: '4 mins ago', action: 'Student completed Python Data Structures diagnostic assessment', icon: 'zap', category: 'Assessment' },
+      { time: '8 mins ago', action: 'New high school student enrolled from California', icon: 'graduationCap', category: 'Enrollment' },
+      { time: '11 mins ago', action: 'AP Physics C Free-Body practice pack downloaded', icon: 'book', category: 'Resource' }
     ];
 
     res.json({
@@ -623,7 +623,7 @@ app.get('/api/public/student-work', (req, res) => {
         categoryLabel: 'Mathematical Ink Drawing',
         studentName: 'Maya Lin',
         studentGrade: 'Grade 10',
-        studentAvatar: '🎨',
+        studentAvatar: 'ML',
         mentorName: 'Dr. Julian Rhodes',
         mentorSpecialty: 'Applied Mathematics & Topology',
         image: '/assets/student-work/drawing-fibonacci.jpg',
@@ -639,7 +639,7 @@ app.get('/api/public/student-work', (req, res) => {
         categoryLabel: 'Structural Engineering Craft',
         studentName: 'Leo Takahashi',
         studentGrade: 'Grade 11',
-        studentAvatar: '🛠️',
+        studentAvatar: 'LT',
         mentorName: 'Dr. Elena Vance',
         mentorSpecialty: 'Structural Physics & Mechanics',
         image: '/assets/student-work/craft-kinetic-bridge.jpg',
@@ -655,7 +655,7 @@ app.get('/api/public/student-work', (req, res) => {
         categoryLabel: 'Scientific Botanical Drawing',
         studentName: 'Aemilia Vernon',
         studentGrade: 'Grade 12',
-        studentAvatar: '🔬',
+        studentAvatar: 'AV',
         mentorName: 'Marcus Vance',
         mentorSpecialty: 'Biochemistry & Cellular Anatomy',
         image: '/assets/student-work/drawing-anatomical-botany.jpg',
@@ -671,7 +671,7 @@ app.get('/api/public/student-work', (req, res) => {
         categoryLabel: 'Geometric Paper Sculpture Craft',
         studentName: 'Ethan Zhao',
         studentGrade: 'Grade 10',
-        studentAvatar: '📐',
+        studentAvatar: 'EZ',
         mentorName: 'Dr. Julian Rhodes',
         mentorSpecialty: 'Topology & Discrete Mathematics',
         image: '/assets/student-work/craft-origami-tessellation.jpg',
@@ -687,7 +687,7 @@ app.get('/api/public/student-work', (req, res) => {
         categoryLabel: 'Handmade Ceramic Craft',
         studentName: 'Elena Rostova',
         studentGrade: 'Grade 11',
-        studentAvatar: '✨',
+        studentAvatar: 'ER',
         mentorName: 'Clara Higgins',
         mentorSpecialty: 'Astrophysics & Art History',
         image: '/assets/student-work/craft-celestial-globe.jpg',
@@ -703,7 +703,7 @@ app.get('/api/public/student-work', (req, res) => {
         categoryLabel: 'Architectural Charcoal Drawing',
         studentName: 'Julian Alvarez',
         studentGrade: 'Grade 12',
-        studentAvatar: '🏛️',
+        studentAvatar: 'JA',
         mentorName: 'Clara Higgins',
         mentorSpecialty: 'Architectural History & Design',
         image: '/assets/student-work/drawing-classical-colonnade.jpg',

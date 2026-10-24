@@ -162,7 +162,7 @@ const Student = {
       container.innerHTML = `
         <div class="spotlight-session-card" style="border-style: dashed; background: #FFFFFF;">
           <div class="spotlight-session-grid">
-            <div style="font-size: 2.4rem;">🎓</div>
+            <div style="color: var(--gold-600);">${Icons.graduationCap(42)}</div>
             <div>
               <h4 style="font-size: 1.15rem; color: var(--charcoal-900); font-weight: 800; margin-bottom: 0.3rem;">No Upcoming Classes Scheduled</h4>
               <p style="color: var(--text-secondary); font-size: 0.88rem; margin: 0;">Your next scheduled 1-on-1 class will be highlighted here once booked. All sessions are 50 minutes of focused instruction.</p>
@@ -181,8 +181,8 @@ const Student = {
           <span style="font-size: 0.78rem; font-weight: 800; color: #FFFFFF; background: var(--gold-600); padding: 0.25rem 0.75rem; border-radius: 999px; text-transform: uppercase; letter-spacing: 0.05em;">
             Next Scheduled Class
           </span>
-          <span style="font-size: 0.82rem; color: var(--gold-800); font-weight: 700;">
-            ⏱️ ${is30Min ? '30-Minute Trial Session' : '50-Minute Tailored Session'}
+          <span style="font-size: 0.82rem; color: var(--gold-800); font-weight: 700; display: inline-flex; align-items: center; gap: 0.3rem;">
+            ${Icons.timer(15)} <span>${is30Min ? '30-Minute Trial Session' : '50-Minute Tailored Session'}</span>
           </span>
         </div>
 
@@ -194,22 +194,24 @@ const Student = {
           <div>
             <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.3rem; flex-wrap: wrap;">
               <h3 style="font-size: 1.25rem; color: var(--charcoal-900); font-weight: 800; margin: 0;">${nextSession.subject}</h3>
-              <span class="status-pill accepted">✓ Confirmed</span>
+              <span class="status-pill accepted">${Icons.check(13)} Confirmed</span>
             </div>
             <p style="font-size: 0.9rem; color: var(--charcoal-700); margin: 0 0 0.4rem 0;">
               Instructor: <strong>${nextSession.tutor_name}</strong>
               ${nextSession.tutor_headline ? ` • <span style="color: var(--text-muted); font-size: 0.82rem;">${nextSession.tutor_headline}</span>` : ''}
             </p>
-            <div style="font-size: 0.88rem; color: var(--gold-900); font-weight: 700;">
-              🗓️ ${nextSession.requested_date} &nbsp;•&nbsp; ⏰ ${nextSession.requested_time} (${is30Min ? '30 mins' : '50 mins'})
+            <div style="font-size: 0.88rem; color: var(--gold-900); font-weight: 700; display: flex; align-items: center; gap: 0.35rem; flex-wrap: wrap;">
+              <span style="display: inline-flex; align-items: center; gap: 0.25rem;">${Icons.calendar(15)} ${nextSession.requested_date}</span>
+              <span>&nbsp;•&nbsp;</span>
+              <span style="display: inline-flex; align-items: center; gap: 0.25rem;">${Icons.clock(15)} ${nextSession.requested_time} (${is30Min ? '30 mins' : '50 mins'})</span>
             </div>
             ${nextSession.notes ? `<p style="font-size: 0.82rem; color: var(--text-secondary); margin-top: 0.4rem;"><strong>Topic Focus:</strong> ${escapeHtmlStr(nextSession.notes)}</p>` : ''}
             ${nextSession.tutor_response_note ? `<p style="font-size: 0.82rem; color: var(--gold-700); margin-top: 0.2rem; font-style: italic;"><strong>Instructor Note:</strong> "${escapeHtmlStr(nextSession.tutor_response_note)}"</p>` : ''}
           </div>
 
           <div style="display: flex; flex-direction: column; gap: 0.6rem; min-width: 170px;">
-            <button class="btn btn-outline-gold btn-sm" onclick="Tutors.openMessageModal(${nextSession.tutor_id})">💬 Message Tutor</button>
-            <button class="btn btn-primary btn-sm" onclick="showToast('Classroom link is active 10 minutes prior to session start.', 'info')">📹 Virtual Room</button>
+            <button class="btn btn-outline-gold btn-sm" onclick="Tutors.openMessageModal(${nextSession.tutor_id})">${Icons.message(14)} Message Tutor</button>
+            <button class="btn btn-primary btn-sm" onclick="showToast('Classroom link is active 10 minutes prior to session start.', 'info')">${Icons.video(14)} Virtual Room</button>
             <button class="btn btn-secondary btn-sm" style="font-size: 0.78rem;" onclick="Student.cancelRequest(${nextSession.id})">Cancel Booking</button>
           </div>
         </div>
@@ -229,7 +231,7 @@ const Student = {
     if (scheduled.length === 0) {
       container.innerHTML = `
         <div style="padding: 2.5rem; text-align: center; background: var(--bg-surface-alt); border-radius: var(--radius-lg); border: 1px dashed var(--border-light);">
-          <div style="font-size: 2rem; margin-bottom: 0.5rem;">🗓️</div>
+          <div style="margin-bottom: 0.5rem; color: var(--gold-600);">${Icons.calendar(36)}</div>
           <h4 style="color: var(--charcoal-900); font-weight: 700; margin-bottom: 0.3rem;">No Scheduled Classes on Your Calendar</h4>
           <p style="color: var(--text-secondary); font-size: 0.88rem; max-width: 440px; margin: 0 auto;">
             Your schedule is based on your booked lessons. Confirmed and pending sessions will appear here automatically.
@@ -253,14 +255,14 @@ const Student = {
       return `
         <div class="schedule-card">
           <div class="schedule-date-badge">
-            <div class="day-num">${dayStr || '📅'}</div>
+            <div class="day-num">${dayStr || Icons.calendar(16)}</div>
             <div class="day-name">${monthStr}</div>
           </div>
 
           <div>
             <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.25rem;">
               <h4 style="font-size: 1.05rem; color: var(--charcoal-900); font-weight: 700; margin: 0;">${r.subject}</h4>
-              <span class="status-pill ${r.status}">${r.status === 'accepted' ? '✓ Confirmed' : '⏳ Pending'}</span>
+              <span class="status-pill ${r.status}">${r.status === 'accepted' ? Icons.check(13) + ' Confirmed' : Icons.hourglass(13) + ' Pending'}</span>
             </div>
             <p style="font-size: 0.85rem; color: var(--charcoal-700); margin: 0 0 0.2rem 0;">
               Instructor: <strong>${r.tutor_name}</strong>
@@ -269,12 +271,12 @@ const Student = {
           </div>
 
           <div style="font-size: 0.88rem; color: var(--charcoal-900);">
-            <div style="font-weight: 700;">⏰ ${r.requested_time}</div>
+            <div style="font-weight: 700; display: flex; align-items: center; gap: 0.3rem;">${Icons.clock(14)} ${r.requested_time}</div>
             <div style="font-size: 0.78rem; color: var(--gold-800); font-weight: 600;">${(r.duration_hours === 0.5 || r.payment_method === 'free_trial') ? '30-Minute Trial Class' : '50-Minute Class'}</div>
           </div>
 
           <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-            <button class="btn btn-outline-gold btn-sm" onclick="Tutors.openMessageModal(${r.tutor_id})">💬 Message</button>
+            <button class="btn btn-outline-gold btn-sm" onclick="Tutors.openMessageModal(${r.tutor_id})">${Icons.message(14)} Message</button>
             ${r.status === 'pending' ? `
               <button class="btn btn-secondary btn-sm" onclick="Student.cancelRequest(${r.id})">Cancel</button>
             ` : ''}
@@ -296,7 +298,7 @@ const Student = {
     if (filtered.length === 0) {
       container.innerHTML = `
         <div class="empty-state">
-          <div class="empty-icon">📚</div>
+          <div class="empty-icon" style="color: var(--gold-600);">${Icons.book(36)}</div>
           <h3 class="empty-title">No ${this.activeTab !== 'all' ? this.activeTab : ''} Tutoring Sessions</h3>
           <p class="empty-desc">Explore verified tutors in calculus, physics, chemistry, coding, and languages to book your first 50-minute session.</p>
           <a href="#tutors" class="btn btn-primary btn-sm">Find a Tutor</a>
@@ -319,8 +321,8 @@ const Student = {
         </div>
 
         <div class="request-datetime-info">
-          <strong>🗓️ ${r.requested_date}</strong>
-          <span>⏰ ${r.requested_time} (50 mins)</span>
+          <strong style="display: flex; align-items: center; gap: 0.3rem;">${Icons.calendar(14)} ${r.requested_date}</strong>
+          <span style="display: flex; align-items: center; gap: 0.3rem;">${Icons.clock(14)} ${r.requested_time} (50 mins)</span>
         </div>
 
         <div class="request-pricing-info">
@@ -334,13 +336,13 @@ const Student = {
             <button class="btn btn-secondary btn-sm" onclick="Student.cancelRequest(${r.id})">Cancel</button>
           ` : ''}
           ${r.status === 'accepted' ? `
-            <button class="btn btn-outline-gold btn-sm" onclick="Tutors.openMessageModal(${r.tutor_id})">💬 Message</button>
+            <button class="btn btn-outline-gold btn-sm" onclick="Tutors.openMessageModal(${r.tutor_id})">${Icons.message(14)} Message</button>
           ` : ''}
           ${r.status === 'completed' ? `
             ${r.review_rating ? `
-              <span style="font-size: 0.82rem; color: #F59E0B; font-weight: 700;">★ ${r.review_rating}/5</span>
+              <span style="font-size: 0.82rem; color: #F59E0B; font-weight: 700; display: inline-flex; align-items: center; gap: 0.25rem;">${Icons.star(13)} ${r.review_rating}/5</span>
             ` : `
-              <button class="btn btn-outline-gold btn-sm" onclick="Student.openReviewModal(${r.id}, '${escapeQuotes(r.tutor_name)}', '${escapeQuotes(r.subject)}')">★ Review</button>
+              <button class="btn btn-outline-gold btn-sm" onclick="Student.openReviewModal(${r.id}, '${escapeQuotes(r.tutor_name)}', '${escapeQuotes(r.subject)}')">${Icons.star(12)} Review</button>
             `}
           ` : ''}
         </div>
@@ -359,7 +361,7 @@ const Student = {
     if (completedSessions.length === 0) {
       container.innerHTML = `
         <div style="padding: 2.5rem; text-align: center; background: var(--bg-surface-alt); border-radius: var(--radius-lg); border: 1px dashed var(--border-light);">
-          <div style="font-size: 2rem; margin-bottom: 0.5rem;">📜</div>
+          <div style="margin-bottom: 0.5rem; color: var(--gold-600);">${Icons.fileText(36)}</div>
           <h4 style="color: var(--charcoal-900); font-weight: 700; margin-bottom: 0.3rem;">No Completed Lesson Records Yet</h4>
           <p style="color: var(--text-secondary); font-size: 0.88rem; max-width: 440px; margin: 0 auto 1.25rem auto;">
             When you complete tutoring sessions with your instructors, your session history, study notes, and instructor feedback will be archived here.
@@ -377,7 +379,7 @@ const Student = {
         <div>
           <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.25rem;">
             <h4 style="font-size: 1.05rem; color: var(--charcoal-900); font-weight: 700; margin: 0;">${r.subject}</h4>
-            <span class="status-pill completed">✓ Completed</span>
+            <span class="status-pill completed">${Icons.check(13)} Completed</span>
           </div>
           <p style="font-size: 0.85rem; color: var(--charcoal-700); margin: 0 0 0.25rem 0;">
             Instructor: <strong>${r.tutor_name}</strong>
@@ -387,21 +389,21 @@ const Student = {
         </div>
 
         <div style="font-size: 0.88rem; color: var(--charcoal-900);">
-          <div style="font-weight: 700;">🗓️ ${r.requested_date}</div>
+          <div style="font-weight: 700; display: flex; align-items: center; gap: 0.3rem;">${Icons.calendar(14)} ${r.requested_date}</div>
           <div style="font-size: 0.78rem; color: var(--text-muted);">50 min class completed</div>
         </div>
 
         <div>
           ${r.review_rating ? `
             <div style="text-align: right;">
-              <div style="color: #F59E0B; font-size: 1rem; font-weight: 700;">
-                ${'★'.repeat(r.review_rating)}${'☆'.repeat(5 - r.review_rating)}
+              <div style="color: #F59E0B; display: inline-flex; align-items: center; gap: 2px;">
+                ${Array.from({length: Math.min(5, Math.max(1, r.review_rating))}).map(() => Icons.star(14)).join('')}
               </div>
-              <span style="font-size: 0.78rem; color: var(--text-muted);">Your Rating (${r.review_rating}/5)</span>
+              <span style="font-size: 0.78rem; color: var(--text-muted); display: block;">Your Rating (${r.review_rating}/5)</span>
               ${r.review_comment ? `<p style="font-size: 0.78rem; color: var(--charcoal-700); margin-top: 0.2rem; font-style: italic;">"${escapeHtmlStr(r.review_comment)}"</p>` : ''}
             </div>
           ` : `
-            <button class="btn btn-outline-gold btn-sm" onclick="Student.openReviewModal(${r.id}, '${escapeQuotes(r.tutor_name)}', '${escapeQuotes(r.subject)}')">★ Write Review</button>
+            <button class="btn btn-outline-gold btn-sm" onclick="Student.openReviewModal(${r.id}, '${escapeQuotes(r.tutor_name)}', '${escapeQuotes(r.subject)}')">${Icons.star(12)} Write Review</button>
           `}
         </div>
       </div>
@@ -432,7 +434,7 @@ const Student = {
     if (uniqueTutors.length === 0) {
       tutorsGrid.innerHTML = `
         <div style="grid-column: 1 / -1; padding: 2.5rem; text-align: center; background: var(--bg-surface-alt); border-radius: var(--radius-md); border: 1px dashed var(--border-light);">
-          <div style="font-size: 2.2rem; margin-bottom: 0.6rem;">👨‍🏫</div>
+          <div style="margin-bottom: 0.6rem; color: var(--gold-600);">${Icons.users(36)}</div>
           <h4 style="color: var(--charcoal-900); font-size: 1.1rem; margin-bottom: 0.4rem; font-weight: 700;">No Mentors Connected Yet</h4>
           <p style="color: var(--text-secondary); font-size: 0.88rem; max-width: 480px; margin: 0 auto 1.25rem auto;">Browse verified faculty across mathematics, natural sciences, coding, and humanities to book your first tailored 50-minute session.</p>
           <a href="#tutors" class="btn btn-primary btn-sm">Explore Verified Faculty →</a>
@@ -453,7 +455,7 @@ const Student = {
             <span>Rate: <strong style="color: var(--gold-600);">$${t.hourly_rate}/hr</strong></span>
           </div>
           <div style="display: flex; gap: 0.5rem;">
-            <button class="btn btn-outline-gold btn-sm" style="flex: 1;" onclick="Tutors.openMessageModal(${t.id})">💬 Message</button>
+            <button class="btn btn-outline-gold btn-sm" style="flex: 1;" onclick="Tutors.openMessageModal(${t.id})">${Icons.message(14)} Message</button>
             <button class="btn btn-primary btn-sm" style="flex: 1;" onclick="Tutors.openBookingModal(${t.id})">Book Again →</button>
           </div>
         </div>

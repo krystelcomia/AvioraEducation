@@ -175,10 +175,10 @@ const Profile = {
 
     if (heroSubBadge) {
       if (sub && sub.status === 'active') {
-        heroSubBadge.innerHTML = `💎 Active Plan (${sub.lessons_remaining} credits remaining)`;
+        heroSubBadge.innerHTML = `${Icons.gem(14)} Active Plan (${sub.lessons_remaining} credits remaining)`;
         heroSubBadge.className = 'badge-gold';
       } else {
-        heroSubBadge.innerHTML = `💳 Standard Pay-per-session`;
+        heroSubBadge.innerHTML = `${Icons.creditCard(14)} Standard Pay-per-session`;
         heroSubBadge.className = 'badge-secondary';
       }
     }

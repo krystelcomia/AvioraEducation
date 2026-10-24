@@ -358,7 +358,7 @@ const StudentSub = {
     if (avatarEl) avatarEl.src = tutor.avatar_url || tutor.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80';
     if (nameEl) nameEl.textContent = tutor.name;
     if (headlineEl) headlineEl.textContent = tutor.headline || tutor.subject || 'Verified Faculty Specialist';
-    if (ratingEl) ratingEl.textContent = `★ ${tutor.rating ? Number(tutor.rating).toFixed(1) : '5.0'} (${tutor.reviews_count || 12})`;
+    if (ratingEl) ratingEl.innerHTML = `<span style="display: inline-flex; align-items: center; gap: 0.25rem;">${Icons.star(13)} ${tutor.rating ? Number(tutor.rating).toFixed(1) : '5.0'} (${tutor.reviews_count || 12})</span>`;
 
     // Populate subject select
     const subjectSelect = document.getElementById('sub-enroll-subject-select');

@@ -26,7 +26,7 @@ const Teacher = {
       fileInput.addEventListener('change', (e) => {
         if (e.target.files.length > 0) {
           fileBadge.style.display = 'inline-flex';
-          fileBadge.textContent = `📎 ${e.target.files[0].name} (${(e.target.files[0].size / 1024 / 1024).toFixed(2)} MB)`;
+          fileBadge.innerHTML = `${Icons.paperclip(14)} ${e.target.files[0].name} (${(e.target.files[0].size / 1024 / 1024).toFixed(2)} MB)`;
         } else {
           fileBadge.style.display = 'none';
         }
@@ -60,7 +60,7 @@ const Teacher = {
         if (bannerContainer) {
           bannerContainer.innerHTML = `
             <div class="app-status-banner approved">
-              <div class="status-icon-circle">✓</div>
+              <div class="status-icon-circle">${Icons.check(18)}</div>
               <div class="status-banner-content">
                 <h3>Approved Aviora Academic Tutor</h3>
                 <p>Your academic credentials have been verified by the Aviora Academic Board. Your profile is live in the public tutor directory and students can now request sessions with you.</p>
@@ -82,7 +82,7 @@ const Teacher = {
         if (bannerContainer) {
           bannerContainer.innerHTML = `
             <div class="app-status-banner rejected">
-              <div class="status-icon-circle">✕</div>
+              <div class="status-icon-circle">${Icons.x(18)}</div>
               <div class="status-banner-content">
                 <h3>Application Requires Revisions</h3>
                 <p>The Academic Board reviewed your application with the following feedback: <em>"${this.application.admin_notes || 'Please provide updated degree verification or teaching credentials.'}"</em></p>
@@ -100,7 +100,7 @@ const Teacher = {
         if (bannerContainer) {
           bannerContainer.innerHTML = `
             <div class="app-status-banner pending">
-              <div class="status-icon-circle"><span class="pulsing-dot"></span>⏳</div>
+              <div class="status-icon-circle">${Icons.hourglass(18)}</div>
               <div class="status-banner-content">
                 <h3>Application Under Review by Academic Board</h3>
                 <p>Thank you for applying to Aviora Education! Our academic evaluation committee is actively verifying your academic credentials, teaching experience, and background. You will receive an email and in-app notification once approved.</p>
@@ -187,7 +187,7 @@ const Teacher = {
         <tr>
           <td colspan="6" style="text-align: center; padding: 3rem;">
             <div class="empty-state">
-              <div class="empty-icon">📬</div>
+              <div class="empty-icon" style="color: var(--gold-400);">${Icons.inbox(36)}</div>
               <h4 class="empty-title">No Incoming Tutoring Requests Yet</h4>
               <p class="empty-desc">When students book a session with you, their requests will appear here for you to accept or manage.</p>
             </div>
@@ -213,8 +213,8 @@ const Teacher = {
           ${r.notes ? `<div style="font-size: 0.775rem; color: var(--charcoal-400); max-width: 200px;">"${r.notes}"</div>` : ''}
         </td>
         <td>
-          <div>🗓️ ${r.requested_date}</div>
-          <div style="font-size: 0.775rem; color: var(--charcoal-400);">⏰ ${r.requested_time} (${r.duration_hours}h)</div>
+          <div style="display: flex; align-items: center; gap: 0.3rem;">${Icons.calendar(14)} ${r.requested_date}</div>
+          <div style="font-size: 0.775rem; color: var(--charcoal-400); display: flex; align-items: center; gap: 0.3rem;">${Icons.clock(14)} ${r.requested_time} (${r.duration_hours}h)</div>
         </td>
         <td>
           <span style="font-weight: 700; color: var(--white);">$${r.total_amount.toFixed(2)}</span>

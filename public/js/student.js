@@ -116,6 +116,9 @@ const Student = {
       if (studentNameElem) studentNameElem.textContent = user.name;
       if (studentAvatarElem) studentAvatarElem.src = user.avatar_url || '/assets/favicon.png';
 
+      // Time-aware greeting & live clock
+      this.updateTimeAwareGreeting();
+
       // Update stat widgets
       const statUpcoming = document.getElementById('student-stat-upcoming');
       const statPending = document.getElementById('student-stat-pending');
@@ -138,8 +141,13 @@ const Student = {
         if (statSubLabel) statSubLabel.textContent = 'No Active Plan';
       }
 
+      // Update micro-visuals and progress meters
+      this.updateStatsVisuals(data.stats, this.subscription);
+
       // Render comprehensive sub-components
       this.renderSpotlightSession();
+      this.renderWeeklyRhythm();
+      this.renderMasteryTrackers();
       this.renderSchedule();
       this.renderRequestsList();
       this.renderHistory();
@@ -147,6 +155,72 @@ const Student = {
       this.loadProfileForm();
     } catch (err) {
       console.error('Failed to load student dashboard:', err);
+    }
+  },
+
+  updateTimeAwareGreeting() {
+    const greetingElem = document.getElementById('student-greeting-prefix');
+    const clockElem = document.getElementById('student-clock-display');
+
+    const now = new Date();
+    const hour = now.getHours();
+
+    let greeting = 'Welcome back,';
+    if (hour < 12) {
+      greeting = 'Good morning,';
+    } else if (hour < 18) {
+      greeting = 'Good afternoon,';
+    } else {
+      greeting = 'Good evening,';
+    }
+
+    if (greetingElem) greetingElem.textContent = greeting;
+
+    if (clockElem) {
+      const options = { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' };
+      try {
+        clockElem.textContent = now.toLocaleDateString('en-US', options);
+      } catch (e) {
+        clockElem.textContent = now.toDateString();
+      }
+    }
+  },
+
+  updateStatsVisuals(stats, subscription) {
+    // Hours progress bar (10 hours milestone)
+    const hoursFill = document.getElementById('student-hours-progress-fill');
+    if (hoursFill) {
+      const hrs = stats.total_hours || 0;
+      const pct = Math.min(100, Math.max(10, Math.round((hrs / 10) * 100)));
+      hoursFill.style.width = `${pct}%`;
+    }
+
+    // Subscription progress fill
+    const subFill = document.getElementById('student-sub-progress-fill');
+    const subBadge = document.getElementById('student-sub-tier-badge');
+    if (subscription) {
+      if (subBadge) subBadge.textContent = 'Active Plan';
+      if (subFill) {
+        const total = subscription.total_lessons || 8;
+        const rem = subscription.lessons_remaining !== undefined ? subscription.lessons_remaining : (subscription.hours_remaining || 0);
+        const pct = Math.min(100, Math.max(15, Math.round((rem / total) * 100)));
+        subFill.style.width = `${pct}%`;
+      }
+    } else {
+      if (subBadge) subBadge.textContent = 'Standard';
+      if (subFill) subFill.style.width = '0%';
+    }
+
+    // Micro note for upcoming
+    const upcomingNote = document.getElementById('stat-note-upcoming');
+    if (upcomingNote) {
+      const confirmed = this.requests.filter(r => r.status === 'accepted');
+      if (confirmed.length > 0) {
+        const next = confirmed.sort((a, b) => (a.requested_date + ' ' + a.requested_time).localeCompare(b.requested_date + ' ' + b.requested_time))[0];
+        upcomingNote.textContent = `Next: ${next.subject} (${next.requested_date})`;
+      } else {
+        upcomingNote.textContent = 'All booked classes on track';
+      }
     }
   },
 
@@ -162,23 +236,25 @@ const Student = {
       const pendingReview = this.requests.find(r => (r.status === 'completed' || r.room_status === 'ended') && !r.review_rating);
       if (pendingReview) {
         container.innerHTML = `
-          <div class="spotlight-session-card" style="border: 1.5px solid var(--gold-500); background: linear-gradient(135deg, #FFFFFF 0%, rgba(198, 138, 40, 0.05) 100%);">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
-              <span style="font-size: 0.76rem; font-weight: 800; color: #FFFFFF; background: var(--gold-600); padding: 0.25rem 0.75rem; border-radius: 999px; text-transform: uppercase; letter-spacing: 0.05em;">
-                ★ Rate Your Educator
+          <div class="spotlight-mission-control" style="border: 1.5px solid var(--gold-500);">
+            <div class="mission-control-header">
+              <span class="mission-live-beacon" style="background: rgba(245, 158, 11, 0.15); color: #B45309; border-color: rgba(245, 158, 11, 0.3);">
+                ★ RATE YOUR EDUCATOR
               </span>
-              <span style="font-size: 0.8rem; color: var(--gold-800); font-weight: 700;">
-                Session Completed
+              <span class="mission-type-pill" style="color: var(--gold-800);">
+                Session Concluded Successfully
               </span>
             </div>
             <div class="spotlight-session-grid">
-              <img src="${pendingReview.tutor_avatar || '/assets/favicon.png'}" style="width: 64px; height: 64px; border-radius: 50%; object-fit: cover; border: 2.5px solid var(--gold-500);" />
-              <div>
-                <h3 style="font-size: 1.15rem; color: var(--charcoal-900); font-weight: 800; margin: 0 0 0.25rem 0;">${pendingReview.subject} Class Concluded</h3>
-                <p style="font-size: 0.88rem; color: var(--charcoal-700); margin: 0 0 0.3rem 0;">How was your class with <strong>${pendingReview.tutor_name}</strong>? Rate up to 5 stars to update their verified profile.</p>
-                <div style="font-size: 0.8rem; color: var(--text-muted);">${pendingReview.requested_date} • 50-minute virtual session</div>
+              <div class="mission-tutor-avatar-frame">
+                <img src="${pendingReview.tutor_avatar || '/assets/favicon.png'}" class="mission-tutor-avatar" />
               </div>
-              <div style="display: flex; flex-direction: column; gap: 0.5rem; justify-content: center;">
+              <div>
+                <h3 style="font-size: 1.25rem; color: var(--charcoal-900); font-weight: 800; margin: 0 0 0.25rem 0;">${pendingReview.subject} Class Completed</h3>
+                <p style="font-size: 0.9rem; color: var(--charcoal-700); margin: 0 0 0.35rem 0;">How was your class with <strong>${pendingReview.tutor_name}</strong>? Rate up to 5 stars to update their verified faculty profile.</p>
+                <div style="font-size: 0.82rem; color: var(--text-muted);">${pendingReview.requested_date} • 50-minute virtual session</div>
+              </div>
+              <div class="mission-action-column">
                 <button class="btn btn-primary btn-sm" onclick="Student.openReviewModal(${pendingReview.id}, '${escapeQuotes(pendingReview.tutor_name)}', '${escapeQuotes(pendingReview.subject)}')">${Icons.star(14)} Rate Tutor (★ 1-5)</button>
               </div>
             </div>
@@ -188,12 +264,18 @@ const Student = {
       }
 
       container.innerHTML = `
-        <div class="spotlight-session-card" style="border-style: dashed; background: #FFFFFF;">
+        <div class="spotlight-mission-control" style="border-style: dashed; background: #FFFFFF;">
           <div class="spotlight-session-grid">
-            <div style="color: var(--gold-600);">${Icons.graduationCap(42)}</div>
+            <div style="color: var(--gold-600); width: 64px; height: 64px; display: flex; align-items: center; justify-content: center; background: rgba(198, 138, 40, 0.1); border-radius: 16px;">
+              ${Icons.graduationCap(38)}
+            </div>
             <div>
-              <h4 style="font-size: 1.15rem; color: var(--charcoal-900); font-weight: 800; margin-bottom: 0.3rem;">No Upcoming Classes Scheduled</h4>
-              <p style="color: var(--text-secondary); font-size: 0.88rem; margin: 0;">Your next scheduled 1-on-1 class will be highlighted here once booked. All sessions are 50 minutes of focused instruction.</p>
+              <h4 style="font-size: 1.15rem; color: var(--charcoal-900); font-weight: 800; margin-bottom: 0.3rem;">No Upcoming Classes Scheduled Right Now</h4>
+              <p style="color: var(--text-secondary); font-size: 0.88rem; margin: 0 0 0.65rem 0;">Ready for your next academic breakthrough? Explore faculty in Calculus, Physics, Coding, and Languages for tailored 50-minute instruction.</p>
+              <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                <a href="#tutors" class="btn btn-primary btn-sm">Find a Tutor</a>
+                <a href="#buddy" class="btn btn-outline-gold btn-sm">Explore Aviora Buddy ($6)</a>
+              </div>
             </div>
           </div>
         </div>
@@ -203,48 +285,237 @@ const Student = {
 
     const nextSession = upcomingSessions[0];
     const is30Min = nextSession.duration_hours === 0.5 || nextSession.payment_method === 'free_trial';
+
+    // Calculate countdown
+    const match = String(nextSession.requested_time).match(/(\d{1,2}):(\d{2})/);
+    let countdownStr = 'Scheduled today at ' + nextSession.requested_time;
+    if (match) {
+      const h = parseInt(match[1], 10);
+      const m = parseInt(match[2], 10);
+      const sessionDate = new Date(`${nextSession.requested_date}T${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:00`);
+      const now = new Date();
+      const diffMs = sessionDate.getTime() - now.getTime();
+      if (diffMs > 0) {
+        const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+        const diffMins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+        if (diffHours === 0) {
+          countdownStr = `Starts in ${diffMins}m`;
+        } else {
+          countdownStr = `Starts in ${diffHours}h ${diffMins}m`;
+        }
+      } else if (diffMs > - (50 * 60 * 1000)) {
+        countdownStr = `Session Live Now`;
+      }
+    }
+
     container.innerHTML = `
-      <div class="spotlight-session-card">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.5rem;">
-          <span style="font-size: 0.78rem; font-weight: 800; color: #FFFFFF; background: var(--gold-600); padding: 0.25rem 0.75rem; border-radius: 999px; text-transform: uppercase; letter-spacing: 0.05em;">
-            Next Scheduled Class
-          </span>
-          <span style="font-size: 0.82rem; color: var(--gold-800); font-weight: 700; display: inline-flex; align-items: center; gap: 0.3rem;">
+      <div class="spotlight-mission-control">
+        <div class="mission-control-header">
+          <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+            <span class="mission-live-beacon">
+              <span class="beacon-pulse"></span>
+              <span>LIVE MISSION CONTROL</span>
+            </span>
+            <span class="mission-countdown-badge" title="Estimated countdown to session start">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+              <span>${nextSession.room_status === 'open' ? 'Room Open • Join Live' : countdownStr}</span>
+            </span>
+          </div>
+
+          <span class="mission-type-pill">
             ${Icons.timer(15)} <span>${is30Min ? '30-Minute Trial Session' : '50-Minute Tailored Session'}</span>
           </span>
         </div>
 
         <div class="spotlight-session-grid">
-          <a href="${nextSession.tutor_profile_id ? `#tutor-profile?id=${nextSession.tutor_profile_id}` : '#tutors'}">
-            <img src="${nextSession.tutor_avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80'}" style="width: 68px; height: 68px; border-radius: 50%; object-fit: cover; border: 2.5px solid var(--gold-500);" />
+          <a href="${nextSession.tutor_profile_id ? `#tutor-profile?id=${nextSession.tutor_profile_id}` : '#tutors'}" title="View Instructor Profile">
+            <div class="mission-tutor-avatar-frame">
+              <img src="${nextSession.tutor_avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80'}" class="mission-tutor-avatar" />
+            </div>
           </a>
 
           <div>
-            <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.3rem; flex-wrap: wrap;">
-              <h3 style="font-size: 1.25rem; color: var(--charcoal-900); font-weight: 800; margin: 0;">${nextSession.subject}</h3>
-              <span class="status-pill accepted">${Icons.check(13)} Confirmed</span>
+            <div style="display: flex; align-items: center; gap: 0.65rem; margin-bottom: 0.25rem; flex-wrap: wrap;">
+              <h3 style="font-size: 1.35rem; color: var(--charcoal-900); font-weight: 800; margin: 0; letter-spacing: -0.01em;">${nextSession.subject}</h3>
+              <span class="status-pill accepted" style="box-shadow: 0 2px 6px rgba(16, 185, 129, 0.2);">${Icons.check(13)} Confirmed</span>
             </div>
-            <p style="font-size: 0.9rem; color: var(--charcoal-700); margin: 0 0 0.4rem 0;">
+
+            <p style="font-size: 0.92rem; color: var(--charcoal-700); margin: 0 0 0.35rem 0;">
               Instructor: <strong>${nextSession.tutor_name}</strong>
-              ${nextSession.tutor_headline ? ` • <span style="color: var(--text-muted); font-size: 0.82rem;">${nextSession.tutor_headline}</span>` : ''}
+              ${nextSession.tutor_headline ? ` • <span class="mission-pedigree-tag">${nextSession.tutor_headline}</span>` : ''}
             </p>
-            <div style="font-size: 0.88rem; color: var(--gold-900); font-weight: 700; display: flex; align-items: center; gap: 0.35rem; flex-wrap: wrap;">
-              <span style="display: inline-flex; align-items: center; gap: 0.25rem;">${Icons.calendar(15)} ${nextSession.requested_date}</span>
+
+            <div style="font-size: 0.88rem; color: var(--gold-900); font-weight: 700; display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+              <span style="display: inline-flex; align-items: center; gap: 0.3rem;">${Icons.calendar(15)} ${nextSession.requested_date}</span>
               <span>&nbsp;•&nbsp;</span>
-              <span style="display: inline-flex; align-items: center; gap: 0.25rem;">${Icons.clock(15)} ${nextSession.requested_time} (${is30Min ? '30 mins' : '50 mins'})</span>
+              <span style="display: inline-flex; align-items: center; gap: 0.3rem;">${Icons.clock(15)} ${nextSession.requested_time} (${is30Min ? '30 mins' : '50 mins focused'})</span>
             </div>
-            ${nextSession.notes ? `<p style="font-size: 0.82rem; color: var(--text-secondary); margin-top: 0.4rem;"><strong>Topic Focus:</strong> ${escapeHtmlStr(nextSession.notes)}</p>` : ''}
-            ${nextSession.tutor_response_note ? `<p style="font-size: 0.82rem; color: var(--gold-700); margin-top: 0.2rem; font-style: italic;"><strong>Instructor Note:</strong> "${escapeHtmlStr(nextSession.tutor_response_note)}"</p>` : ''}
+
+            ${nextSession.notes ? `
+              <div class="mission-topic-cardlet">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--gold-600); flex-shrink: 0; margin-top: 2px;"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                <div><strong>Topic Focus:</strong> ${escapeHtmlStr(nextSession.notes)}</div>
+              </div>
+            ` : ''}
+
+            ${nextSession.tutor_response_note ? `
+              <div class="mission-note-quote">
+                <strong>Instructor Note:</strong> "${escapeHtmlStr(nextSession.tutor_response_note)}"
+              </div>
+            ` : ''}
           </div>
 
-          <div style="display: flex; flex-direction: column; gap: 0.6rem; min-width: 170px;">
-            <button class="btn btn-primary btn-sm" onclick="VirtualRoom.joinRoom(${nextSession.id}, 'student')" style="${nextSession.room_status === 'open' ? 'background: #10B981; border-color: #10B981;' : ''}">${Icons.video(14)} ${nextSession.room_status === 'open' ? 'Enter Virtual Room (Live)' : 'Virtual Room'}</button>
-            <button class="btn btn-outline-gold btn-sm" onclick="Tutors.openMessageModal(${nextSession.tutor_id})">${Icons.message(14)} Message Tutor</button>
+          <div class="mission-action-column">
+            <button class="btn btn-primary btn-sm ${nextSession.room_status === 'open' ? 'btn-vroom-live' : ''}" onclick="VirtualRoom.joinRoom(${nextSession.id}, 'student')">
+              ${Icons.video(14)} ${nextSession.room_status === 'open' ? 'Enter Virtual Room (Live Now)' : 'Virtual Room'}
+            </button>
+            <button class="btn btn-outline-gold btn-sm" onclick="Tutors.openMessageModal(${nextSession.tutor_id})">
+              ${Icons.message(14)} Message Tutor
+            </button>
             ${this.canCancelSession(nextSession) ? `
               <button class="btn btn-secondary btn-sm" style="font-size: 0.78rem;" onclick="Student.cancelRequest(${nextSession.id})" title="Cancel booking (Allowed up to 3 hours before class)">Cancel Booking</button>
             ` : `
               <button class="btn btn-secondary btn-sm" style="font-size: 0.78rem; opacity: 0.55; cursor: not-allowed;" onclick="showToast('Cancel booking is only applicable at least 3 hours before the class.', 'warning')" title="Cancel booking is only applicable at least 3 hours before class">Cancel Booking (&lt;3h)</button>
             `}
+          </div>
+        </div>
+      </div>
+    `;
+  },
+
+  renderWeeklyRhythm() {
+    const container = document.getElementById('student-weekly-rhythm-container');
+    if (!container) return;
+
+    const now = new Date();
+    const currentDay = now.getDay();
+    const mondayOffset = (currentDay === 0 ? -6 : 1) - currentDay;
+    const monday = new Date(now);
+    monday.setDate(now.getDate() + mondayOffset);
+
+    const weekDays = [];
+    const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(monday);
+      d.setDate(monday.getDate() + i);
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const dateNum = String(d.getDate()).padStart(2, '0');
+      const dateStr = `${year}-${month}-${dateNum}`;
+      const isToday = (d.toDateString() === now.toDateString());
+
+      const sessionsOnDay = this.requests.filter(r => r.requested_date === dateStr && (r.status === 'accepted' || r.status === 'pending' || r.status === 'completed'));
+
+      weekDays.push({
+        dateStr,
+        dayName: dayNames[i],
+        dayNum: d.getDate(),
+        isToday,
+        sessions: sessionsOnDay
+      });
+    }
+
+    container.innerHTML = `
+      <div class="weekly-rhythm-strip">
+        <div class="weekly-rhythm-header">
+          <h4>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+            7-Day Learning Rhythm &amp; Agenda
+          </h4>
+          <div class="weekly-rhythm-legend">
+            <span style="display: inline-flex; align-items: center; gap: 0.35rem;"><span style="width: 8px; height: 8px; border-radius: 50%; background: #10B981;"></span> Confirmed</span>
+            <span style="display: inline-flex; align-items: center; gap: 0.35rem;"><span style="width: 8px; height: 8px; border-radius: 50%; background: #F59E0B;"></span> Pending</span>
+            <span style="display: inline-flex; align-items: center; gap: 0.35rem;"><span style="width: 8px; height: 8px; border-radius: 50%; background: var(--gold-500);"></span> Today</span>
+          </div>
+        </div>
+        <div class="weekly-rhythm-grid">
+          ${weekDays.map(day => `
+            <div class="rhythm-day-card ${day.isToday ? 'today' : ''} ${day.sessions.length > 0 ? 'has-session' : ''}">
+              <div class="rhythm-day-name">${day.dayName}</div>
+              <div class="rhythm-day-num">${day.dayNum}</div>
+              ${day.isToday ? '<span class="rhythm-today-tag">TODAY</span>' : ''}
+              ${day.sessions.length > 0 ? `
+                <div style="display: flex; flex-direction: column; gap: 0.2rem; width: 100%; margin-top: 0.3rem;">
+                  ${day.sessions.map(s => `
+                    <span class="rhythm-session-chip ${s.status}" title="${escapeQuotes(s.subject)} @ ${s.requested_time}">
+                      ${s.subject.split(' ')[0]} ${s.requested_time}
+                    </span>
+                  `).join('')}
+                </div>
+              ` : `
+                <span style="font-size: 0.68rem; color: var(--text-muted); opacity: 0.65;">Free</span>
+              `}
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  },
+
+  renderMasteryTrackers() {
+    const container = document.getElementById('student-mastery-container');
+    if (!container) return;
+
+    container.innerHTML = `
+      <div class="academic-mastery-box">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+          <div>
+            <h4 style="font-size: 1.1rem; font-weight: 800; color: var(--charcoal-900); margin: 0 0 0.2rem 0; display: flex; align-items: center; gap: 0.5rem;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 10v6M2 10l10-5 10 5-10 5z"></path><path d="M6 12v5c3 3 9 3 12 0v-5"></path></svg>
+              Academic Milestone &amp; Subject Mastery
+            </h4>
+            <p style="font-size: 0.84rem; color: var(--text-secondary); margin: 0;">Verified curriculum pacing tracking your conceptual mastery, problem-solving depth, and AP prep velocity.</p>
+          </div>
+          <span style="font-size: 0.78rem; font-weight: 700; color: var(--gold-800); background: rgba(198, 138, 40, 0.12); padding: 0.25rem 0.65rem; border-radius: 999px;">
+            Target: AP 5.0 / Honor Roll
+          </span>
+        </div>
+
+        <div class="mastery-cards-grid">
+          <!-- Subject 1: Calculus BC -->
+          <div class="mastery-card">
+            <div class="mastery-card-header">
+              <h5>Calculus BC</h5>
+              <span class="mastery-tag gold">85% Mastery</span>
+            </div>
+            <div class="mastery-progress-track">
+              <div class="mastery-progress-fill gold" style="width: 85%;"></div>
+            </div>
+            <div class="mastery-meta-row">
+              <span>Unit 6: Integration by Parts</span>
+              <strong style="color: var(--gold-800);">Active Focus</strong>
+            </div>
+          </div>
+
+          <!-- Subject 2: AP Physics C Mechanics -->
+          <div class="mastery-card">
+            <div class="mastery-card-header">
+              <h5>AP Physics C (Mechanics)</h5>
+              <span class="mastery-tag emerald">74% Target</span>
+            </div>
+            <div class="mastery-progress-track">
+              <div class="mastery-progress-fill emerald" style="width: 74%;"></div>
+            </div>
+            <div class="mastery-meta-row">
+              <span>Rotational Dynamics &amp; Energy</span>
+              <strong style="color: #059669;">2 Lessons Complete</strong>
+            </div>
+          </div>
+
+          <!-- Subject 3: SAT & College Readiness -->
+          <div class="mastery-card">
+            <div class="mastery-card-header">
+              <h5>SAT &amp; College Prep</h5>
+              <span class="mastery-tag indigo">92% Ready</span>
+            </div>
+            <div class="mastery-progress-track">
+              <div class="mastery-progress-fill indigo" style="width: 92%;"></div>
+            </div>
+            <div class="mastery-meta-row">
+              <span>Math &amp; Verbal Modules</span>
+              <strong style="color: #4F46E5;">Diagnostic Cleared</strong>
+            </div>
           </div>
         </div>
       </div>

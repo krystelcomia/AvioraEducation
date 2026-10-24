@@ -1927,65 +1927,131 @@
          ======================================= -->
     <div id="view-student-portal" class="app-page-view" style="display: none;">
       <div class="container portal-wrapper">
-        <!-- Portal Header -->
-        <div class="portal-header">
+        <!-- High-Tech Command Deck Header -->
+        <div class="portal-header portal-command-deck">
           <div class="portal-user-meta">
-            <img src="/assets/favicon.png" alt="Student Avatar" class="portal-avatar-lg" id="student-display-avatar" />
+            <div class="avatar-deck-container">
+              <img src="/assets/favicon.png" alt="Student Avatar" class="portal-avatar-lg" id="student-display-avatar" />
+              <div class="deck-pulse-ring"></div>
+              <span class="deck-online-beacon" title="Active Scholar"></span>
+            </div>
             <div>
-              <h1 class="portal-title" id="student-portal-title">Welcome, <span id="student-display-name" style="color: var(--charcoal-950);">Student</span></h1>
-              <p class="portal-subtitle"><span id="student-grade-badge" style="display: inline-block; font-size: 0.8rem; font-weight: 700; color: var(--gold-800); background: rgba(198, 138, 40, 0.12); padding: 0.2rem 0.65rem; border-radius: 999px;">Active Student</span></p>
+              <div class="deck-greeting-line">
+                <span id="student-greeting-prefix" class="deck-greeting-prefix">Welcome back,</span>
+                <span class="deck-date-time-chip" id="student-live-clock">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                  <span id="student-clock-display">Academic Term 2026</span>
+                </span>
+              </div>
+              <h1 class="portal-title" id="student-portal-title"><span id="student-display-name" style="color: var(--charcoal-950);">Student</span></h1>
+              <div class="portal-subtitle-row">
+                <span id="student-grade-badge" class="scholar-grade-badge">Grade 11 - High School</span>
+                <span class="scholar-pill-gold">
+                  <span class="pulse-dot-green"></span> STEM Scholar Track
+                </span>
+                <span class="scholar-streak-pill" id="student-streak-badge">
+                  🔥 4-Day Learning Streak
+                </span>
+              </div>
             </div>
           </div>
-        </div>
 
+          <!-- Quick Command Action Deck -->
+          <div class="portal-deck-actions">
+            <a href="#tutors" class="deck-action-btn primary" title="Browse verified faculty specialists">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 10v6M2 10l10-5 10 5-10 5z"></path><path d="M6 12v5c3 3 9 3 12 0v-5"></path></svg>
+              <span>Find Faculty Tutor</span>
+            </a>
+            <a href="#buddy" class="deck-action-btn buddy" title="Aviora Buddy: 2-Student Co-Learning Sessions for $6">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+              <span>Aviora Buddy ($6)</span>
+            </a>
+            <a href="#subscription" class="deck-action-btn secondary" title="View & manage membership hours">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h12l4 6-10 12L2 9z"></path><path d="M11 3v6l-4 12"></path><path d="M13 3v6l4 12"></path></svg>
+              <span>Manage Plan</span>
+            </a>
+            <button type="button" class="deck-action-btn outline" onclick="Student.scrollToSection('schedule', event)" title="Jump to Class Schedule">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+              <span>Calendar</span>
+            </button>
+          </div>
+        </div>
 
         <!-- 1. OVERVIEW & STATS -->
         <div id="student-overview-section">
           <!-- Student Stats Cards Grid -->
           <div class="stats-cards-grid">
-            <div class="stat-widget">
-              <div class="stat-widget-icon">
+            <div class="stat-widget stat-widget-creative stat-widget-gold">
+              <div class="stat-widget-icon stat-icon-gold">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
               </div>
               <div class="stat-widget-info">
-                <h3 id="student-stat-upcoming" style="color: var(--gold-600);">0</h3>
+                <div class="stat-header-row">
+                  <h3 id="student-stat-upcoming" style="color: var(--gold-600);">0</h3>
+                  <span class="stat-trend-tag positive"><span class="pulse-dot-green"></span> Confirmed</span>
+                </div>
                 <p>Upcoming Confirmed</p>
+                <div class="stat-micro-note" id="stat-note-upcoming">Next: Confirmed session ready</div>
               </div>
             </div>
-            <div class="stat-widget">
-              <div class="stat-widget-icon">
+
+            <div class="stat-widget stat-widget-creative stat-widget-amber">
+              <div class="stat-widget-icon stat-icon-amber">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 22h14"></path><path d="M5 2h14"></path><path d="M17 22v-4.172a2 2 0 0 0-.586-1.414L12 12l-4.414 4.414A2 2 0 0 0 7 17.828V22"></path><path d="M7 2v4.172a2 2 0 0 0 .586 1.414L12 12l4.414-4.414A2 2 0 0 0 17 6.172V2"></path></svg>
               </div>
               <div class="stat-widget-info">
-                <h3 id="student-stat-pending" style="color: var(--warning);">0</h3>
+                <div class="stat-header-row">
+                  <h3 id="student-stat-pending" style="color: var(--warning);">0</h3>
+                  <span class="stat-trend-tag pending">In Review</span>
+                </div>
                 <p>Pending Tutor Acceptance</p>
+                <div class="stat-micro-note">Faculty responds &lt; 2h</div>
               </div>
             </div>
-            <div class="stat-widget">
-              <div class="stat-widget-icon">
+
+            <div class="stat-widget stat-widget-creative stat-widget-emerald">
+              <div class="stat-widget-icon stat-icon-emerald">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
               </div>
               <div class="stat-widget-info">
-                <h3 id="student-stat-completed" style="color: var(--success);">0</h3>
+                <div class="stat-header-row">
+                  <h3 id="student-stat-completed" style="color: var(--success);">0</h3>
+                  <span class="stat-trend-tag success">100% Attended</span>
+                </div>
                 <p>Completed Lessons</p>
+                <div class="stat-micro-note">All feedback archived</div>
               </div>
             </div>
-            <div class="stat-widget">
-              <div class="stat-widget-icon">
+
+            <div class="stat-widget stat-widget-creative stat-widget-charcoal">
+              <div class="stat-widget-icon stat-icon-charcoal">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"></circle><path d="M12 9v4l2 2"></path><path d="M5 3L2 6"></path><path d="m22 6-3-3"></path><path d="M12 2v2"></path></svg>
               </div>
               <div class="stat-widget-info">
-                <h3 id="student-stat-hours" style="color: var(--charcoal-900);">0</h3>
+                <div class="stat-header-row">
+                  <h3 id="student-stat-hours" style="color: var(--charcoal-900);">0 hrs</h3>
+                  <span class="stat-trend-tag info">Velocity: On Track</span>
+                </div>
                 <p>Hours Learned</p>
+                <div class="stat-progress-track" title="Milestone Target: 10 hrs">
+                  <div class="stat-progress-fill" id="student-hours-progress-fill" style="width: 25%;"></div>
+                </div>
               </div>
             </div>
-            <div class="stat-widget">
-              <div class="stat-widget-icon">
+
+            <div class="stat-widget stat-widget-creative stat-widget-luxury">
+              <div class="stat-widget-icon stat-icon-luxury">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12l4 6-10 12L2 9z"></path><path d="M11 3v6l-4 12"></path><path d="M13 3v6l4 12"></path></svg>
               </div>
               <div class="stat-widget-info">
-                <h3 id="student-stat-sub-hours" style="color: var(--gold-700);">0 hrs</h3>
+                <div class="stat-header-row">
+                  <h3 id="student-stat-sub-hours" style="color: var(--gold-700);">0 lessons</h3>
+                  <span class="stat-trend-tag premium" id="student-sub-tier-badge">Active Plan</span>
+                </div>
                 <p id="student-stat-sub-label">Plan Balance</p>
+                <div class="stat-progress-track">
+                  <div class="stat-progress-fill gold" id="student-sub-progress-fill" style="width: 75%;"></div>
+                </div>
               </div>
             </div>
           </div>
@@ -1993,6 +2059,41 @@
           <!-- Spotlight: Next Upcoming Lesson -->
           <div id="student-spotlight-container">
             <!-- Populated dynamically via student.js -->
+          </div>
+
+          <!-- Creative Widget 1: 7-Day Interactive Learning Rhythm Strip -->
+          <div id="student-weekly-rhythm-container">
+            <!-- Populated dynamically via student.js -->
+          </div>
+
+          <!-- Creative Widget 2: Academic Progress & Subject Mastery Radar -->
+          <div id="student-mastery-container">
+            <!-- Populated dynamically via student.js -->
+          </div>
+
+          <!-- Creative Widget 3: Aviora Buddy Co-Learning Studio Showcase Banner -->
+          <div class="buddy-co-learn-banner">
+            <div class="buddy-banner-content">
+              <span class="buddy-banner-pill">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                Co-Learning Innovation • $6 / Session
+              </span>
+              <h3 class="buddy-banner-title">Aviora Buddy Collaborative Studio</h3>
+              <p class="buddy-banner-desc">Pair up with a classmate or request a peer match! Experience real-time Quiz Bees, Math Duels, and a shared whiteboard tailored for two learners.</p>
+              <div class="buddy-features-tags">
+                <span class="buddy-tag">⚡ 2 Students • 1 Virtual Studio</span>
+                <span class="buddy-tag">🧮 Math Duel Battle</span>
+                <span class="buddy-tag">🏆 Live Quiz Bee</span>
+                <span class="buddy-tag">🎨 Shared Interactive Whiteboard</span>
+                <span class="buddy-tag">💬 Live Peer Chat</span>
+              </div>
+            </div>
+            <div>
+              <a href="#buddy" class="buddy-cta-btn" title="Open Aviora Buddy Studio">
+                <span>Enter Buddy Studio</span>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+              </a>
+            </div>
           </div>
         </div>
 

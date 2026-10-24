@@ -212,7 +212,11 @@ const Student = {
           <div style="display: flex; flex-direction: column; gap: 0.6rem; min-width: 170px;">
             <button class="btn btn-outline-gold btn-sm" onclick="Tutors.openMessageModal(${nextSession.tutor_id})">${Icons.message(14)} Message Tutor</button>
             <button class="btn btn-primary btn-sm" onclick="VirtualRoom.joinRoom(${nextSession.id}, 'student')" style="${nextSession.room_status === 'open' ? 'background: #10B981; border-color: #10B981;' : ''}">${Icons.video(14)} ${nextSession.room_status === 'open' ? 'Enter Virtual Room (Live)' : 'Virtual Room'}</button>
-            <button class="btn btn-secondary btn-sm" style="font-size: 0.78rem;" onclick="Student.cancelRequest(${nextSession.id})">Cancel Booking</button>
+            ${this.canCancelSession(nextSession) ? `
+              <button class="btn btn-secondary btn-sm" style="font-size: 0.78rem;" onclick="Student.cancelRequest(${nextSession.id})" title="Cancel booking (Allowed up to 3 hours before class)">Cancel Booking</button>
+            ` : `
+              <button class="btn btn-secondary btn-sm" style="font-size: 0.78rem; opacity: 0.55; cursor: not-allowed;" onclick="showToast('Cancel booking is only applicable at least 3 hours before the class.', 'warning')" title="Cancel booking is only applicable at least 3 hours before class">Cancel Booking (&lt;3h)</button>
+            `}
           </div>
         </div>
       </div>
@@ -280,8 +284,12 @@ const Student = {
               <button class="btn btn-primary btn-sm" onclick="VirtualRoom.joinRoom(${r.id}, 'student')" style="${r.room_status === 'open' ? 'background: #10B981; border-color: #10B981;' : ''}">${Icons.video(14)} ${r.room_status === 'open' ? 'Enter Virtual Room (Live)' : 'Virtual Room'}</button>
             ` : ''}
             <button class="btn btn-outline-gold btn-sm" onclick="Tutors.openMessageModal(${r.tutor_id})">${Icons.message(14)} Message</button>
-            ${r.status === 'pending' ? `
-              <button class="btn btn-secondary btn-sm" onclick="Student.cancelRequest(${r.id})">Cancel</button>
+            ${r.status === 'pending' || r.status === 'accepted' ? `
+              ${this.canCancelSession(r) ? `
+                <button class="btn btn-secondary btn-sm" onclick="Student.cancelRequest(${r.id})" title="Cancel booking (Allowed up to 3 hours before class)">Cancel</button>
+              ` : `
+                <button class="btn btn-secondary btn-sm" style="opacity: 0.55; cursor: not-allowed;" onclick="showToast('Cancel booking is only applicable at least 3 hours before the class.', 'warning')" title="Cancel booking is only applicable at least 3 hours before class">Cancel (&lt;3h)</button>
+              `}
             ` : ''}
           </div>
         </div>
@@ -335,8 +343,12 @@ const Student = {
 
         <div class="request-actions-col">
           <span class="status-pill ${r.status}">${r.status}</span>
-          ${r.status === 'pending' ? `
-            <button class="btn btn-secondary btn-sm" onclick="Student.cancelRequest(${r.id})">Cancel</button>
+          ${(r.status === 'pending' || r.status === 'accepted') ? `
+            ${this.canCancelSession(r) ? `
+              <button class="btn btn-secondary btn-sm" onclick="Student.cancelRequest(${r.id})" title="Cancel booking (Allowed up to 3 hours before class)">Cancel</button>
+            ` : `
+              <button class="btn btn-secondary btn-sm" style="opacity: 0.55; cursor: not-allowed;" onclick="showToast('Cancel booking is only applicable at least 3 hours before the class.', 'warning')" title="Cancel booking is only applicable at least 3 hours before class">Cancel (&lt;3h)</button>
+            `}
           ` : ''}
           ${r.status === 'accepted' ? `
             <button class="btn btn-primary btn-sm" onclick="VirtualRoom.joinRoom(${r.id}, 'student')" style="${r.room_status === 'open' ? 'background: #10B981; border-color: #10B981;' : ''}">${Icons.video(14)} ${r.room_status === 'open' ? 'Enter Room' : 'Virtual Room'}</button>
@@ -495,10 +507,32 @@ const Student = {
     }
   },
 
+  getHoursUntilSession(requestedDate, requestedTime) {
+    if (!requestedDate || !requestedTime) return Infinity;
+    const match = String(requestedTime).match(/(\d{1,2}):(\d{2})/);
+    if (!match) return Infinity;
+    const hours = match[1].padStart(2, '0');
+    const minutes = match[2];
+    const sessionDateTime = new Date(`${requestedDate}T${hours}:${minutes}:00`);
+    if (isNaN(sessionDateTime.getTime())) return Infinity;
+    return (sessionDateTime.getTime() - Date.now()) / (1000 * 60 * 60);
+  },
+
+  canCancelSession(session) {
+    if (!session || session.status === 'completed' || session.status === 'cancelled') return false;
+    return this.getHoursUntilSession(session.requested_date, session.requested_time) >= 3;
+  },
+
   async cancelRequest(requestId) {
+    const session = this.requests.find(r => r.id == requestId);
+    if (session && !this.canCancelSession(session)) {
+      showToast('Cancel booking is only applicable at least 3 hours before the class.', 'warning');
+      return;
+    }
+
     showConfirm(
-      'Cancel Tutoring Request',
-      'Are you sure you want to cancel this request? Your tutor will be notified.',
+      'Cancel Tutoring Booking',
+      'Are you sure you want to cancel this booking? Notice: Cancel booking is only applicable at least 3 hours before the class.',
       async () => {
         try {
           const res = await API.cancelRequest(requestId);

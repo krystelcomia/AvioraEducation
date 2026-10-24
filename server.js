@@ -1610,7 +1610,7 @@ app.post('/api/student/requests', authenticateToken, requireRole('student'), (re
   }
 });
 
-// Student cancels their pending request
+// Student cancels their booking/request
 app.post('/api/student/requests/:id/cancel', authenticateToken, requireRole('student'), (req, res) => {
   try {
     const requestId = req.params.id;
@@ -1625,9 +1625,47 @@ app.post('/api/student/requests/:id/cancel', authenticateToken, requireRole('stu
       return res.status(400).json({ error: 'Cannot cancel a completed session.' });
     }
 
+    if (request.status === 'cancelled') {
+      return res.status(400).json({ error: 'This booking has already been cancelled.' });
+    }
+
+    // Cancellation is strictly only applicable at least 3 hours before the class
+    const timeMatch = String(request.requested_time).match(/(\d{1,2}):(\d{2})/);
+    if (timeMatch && request.requested_date) {
+      const hours = timeMatch[1].padStart(2, '0');
+      const minutes = timeMatch[2];
+      const sessionDateTime = new Date(`${request.requested_date}T${hours}:${minutes}:00`);
+      if (!isNaN(sessionDateTime.getTime())) {
+        const diffHours = (sessionDateTime.getTime() - Date.now()) / (1000 * 60 * 60);
+        if (diffHours < 3) {
+          return res.status(400).json({
+            error: 'Cancel booking is only applicable at least 3 hours before the class.'
+          });
+        }
+      }
+    }
+
     db.prepare("UPDATE tutoring_requests SET status = 'cancelled', updated_at = CURRENT_TIMESTAMP WHERE id = ?").run(requestId);
 
-    res.json({ message: 'Request cancelled successfully.' });
+    // If session was booked using subscription, restore lesson credit
+    if (request.payment_method === 'subscription') {
+      db.prepare(`
+        UPDATE student_subscriptions 
+        SET lessons_remaining = lessons_remaining + 1, updated_at = CURRENT_TIMESTAMP
+        WHERE user_id = ? AND status = 'active'
+      `).run(studentId);
+    }
+
+    // Notify tutor
+    db.prepare(`
+      INSERT INTO notifications (user_id, title, message, type, link)
+      VALUES (?, 'Booking Cancelled', ?, 'booking', '#teacher-requests')
+    `).run(
+      request.tutor_id,
+      `${req.user.name} cancelled their ${request.subject} class scheduled for ${request.requested_date} (${request.requested_time}).`
+    );
+
+    res.json({ message: 'Booking cancelled successfully.' });
   } catch (error) {
     console.error('Cancel request error:', error);
     res.status(500).json({ error: 'Failed to cancel request.' });

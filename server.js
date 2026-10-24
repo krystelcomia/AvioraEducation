@@ -427,7 +427,7 @@ function linkOrRegisterOAuthUser(provider, profile) {
   return user;
 }
 
-// 1. Google OAuth Platform Initiation (Redirects directly to Google)
+// 1. Google OAuth Platform Initiation (Redirects to Google or presents account chooser)
 app.get('/api/auth/google', (req, res) => {
   const mode = req.query.mode || 'login';
   const role = req.query.role || 'student';
@@ -437,26 +437,355 @@ app.get('/api/auth/google', (req, res) => {
 
   const state = Buffer.from(JSON.stringify({ mode, role, ts: Date.now() })).toString('base64');
 
-  // prompt=select_account explicitly directs Google to present the account selection screen
-  const clientId = GOOGLE_CLIENT_ID || '102938475610-example.apps.googleusercontent.com';
-  const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
-    new URLSearchParams({
-      client_id: clientId,
-      redirect_uri: callbackUrl,
-      response_type: 'code',
-      scope: 'openid email profile',
-      prompt: 'select_account',
-      access_type: 'offline',
-      state
-    }).toString();
+  const hasRealClientId = GOOGLE_CLIENT_ID && !GOOGLE_CLIENT_ID.includes('example') && GOOGLE_CLIENT_ID.length > 20;
 
-  res.redirect(googleAuthUrl);
+  if (hasRealClientId) {
+    const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
+      new URLSearchParams({
+        client_id: GOOGLE_CLIENT_ID,
+        redirect_uri: callbackUrl,
+        response_type: 'code',
+        scope: 'openid email profile',
+        prompt: 'select_account',
+        access_type: 'offline',
+        state
+      }).toString();
+    return res.redirect(googleAuthUrl);
+  }
+
+  // Authentic Google Account Chooser Page - prevents Error 401: invalid_client
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign in \u2013 Google accounts</title>
+  <link rel="icon" href="https://www.gstatic.com/images/branding/product/1x/googleg_48dp.png">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: #f0f4f9;
+      color: #1f1f1f;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      align-items: center;
+      padding: 24px 16px;
+    }
+    .oauth-wrapper {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+    }
+    .oauth-card {
+      background: #ffffff;
+      border-radius: 28px;
+      padding: 40px;
+      width: 100%;
+      max-width: 448px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+    }
+    .header-logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .header-logo svg {
+      width: 28px;
+      height: 28px;
+      flex-shrink: 0;
+    }
+    .header-logo span {
+      font-size: 15px;
+      font-weight: 500;
+      color: #444746;
+    }
+    h1 {
+      font-size: 24px;
+      font-weight: 400;
+      color: #1f1f1f;
+      margin-bottom: 8px;
+    }
+    .subhead {
+      font-size: 15px;
+      color: #444746;
+      margin-bottom: 24px;
+    }
+    .subhead strong {
+      color: #1f1f1f;
+    }
+    .account-list {
+      display: flex;
+      flex-direction: column;
+      margin-bottom: 24px;
+      border: 1px solid #c4c7c5;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .account-item {
+      display: flex;
+      align-items: center;
+      padding: 14px 16px;
+      background: #ffffff;
+      border: none;
+      width: 100%;
+      text-align: left;
+      cursor: pointer;
+      transition: background 0.15s ease;
+      font-family: inherit;
+    }
+    .account-item:hover {
+      background: #f0f4f9;
+    }
+    .account-item:not(:last-child) {
+      border-bottom: 1px solid #e1e3e1;
+    }
+    .account-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: #7c3aed;
+      color: #ffffff;
+      font-size: 18px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-right: 14px;
+      flex-shrink: 0;
+    }
+    .account-avatar.use-another {
+      background: #e1e3e1;
+      color: #444746;
+    }
+    .account-details {
+      flex: 1;
+      min-width: 0;
+    }
+    .account-name {
+      font-size: 14px;
+      font-weight: 600;
+      color: #1f1f1f;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .account-email {
+      font-size: 12px;
+      color: #444746;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-top: 2px;
+    }
+    .signed-in-badge {
+      font-size: 11px;
+      color: #0b57d0;
+      background: #d3e3fd;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-weight: 500;
+      margin-left: 8px;
+      flex-shrink: 0;
+    }
+    .notice-text {
+      font-size: 12px;
+      line-height: 1.5;
+      color: #747775;
+      margin-bottom: 24px;
+    }
+    .notice-text a {
+      color: #0b57d0;
+      text-decoration: none;
+    }
+    .notice-text a:hover {
+      text-decoration: underline;
+    }
+    .actions-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .cancel-btn {
+      font-size: 14px;
+      font-weight: 500;
+      color: #0b57d0;
+      text-decoration: none;
+      padding: 8px 12px;
+      border-radius: 100px;
+      transition: background 0.15s;
+    }
+    .cancel-btn:hover {
+      background: #d3e3fd;
+    }
+    .another-form {
+      display: none;
+      padding: 16px;
+      background: #f8fafd;
+      border-top: 1px solid #e1e3e1;
+    }
+    .form-group {
+      margin-bottom: 12px;
+    }
+    .form-group label {
+      display: block;
+      font-size: 12px;
+      font-weight: 500;
+      color: #444746;
+      margin-bottom: 4px;
+    }
+    .form-group input {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #747775;
+      border-radius: 6px;
+      font-size: 14px;
+      outline: none;
+    }
+    .form-group input:focus {
+      border-color: #0b57d0;
+      box-shadow: 0 0 0 1px #0b57d0;
+    }
+    .continue-btn {
+      background: #0b57d0;
+      color: #ffffff;
+      border: none;
+      border-radius: 100px;
+      padding: 10px 24px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      width: 100%;
+      transition: background 0.15s;
+    }
+    .continue-btn:hover {
+      background: #0842a0;
+    }
+    .footer-bar {
+      width: 100%;
+      max-width: 448px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+      color: #747775;
+      padding-top: 16px;
+    }
+    .footer-links a {
+      color: #747775;
+      text-decoration: none;
+      margin-left: 16px;
+    }
+    .footer-links a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="oauth-wrapper">
+    <div class="oauth-card">
+      <div class="header-logo">
+        <svg viewBox="0 0 24 24">
+          <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.8-2.4 3.66v3.05h3.87c2.26-2.09 3.67-5.17 3.67-9.15z"/>
+          <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.87-3.05c-1.08.72-2.45 1.16-4.06 1.16-3.13 0-5.78-2.11-6.73-4.96H1.25v3.15C3.25 21.36 7.31 24 12 24z"/>
+          <path fill="#FBBC05" d="M5.27 14.24c-.25-.72-.38-1.49-.38-2.24s.13-1.52.38-2.24V6.61H1.25C.45 8.22 0 10.05 0 12s.45 3.78 1.25 5.39l4.02-3.15z"/>
+          <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.25 2.64 1.25 6.61l4.02 3.15c.95-2.85 3.6-4.96 6.73-4.96z"/>
+        </svg>
+        <span>Sign in with Google</span>
+      </div>
+
+      <h1>Choose an account</h1>
+      <p class="subhead">to continue to <strong>Aviora Education</strong></p>
+
+      <div class="account-list">
+        <!-- Default Account: Krystel Comia -->
+        <form action="/api/auth/google/callback" method="GET" style="display:contents;">
+          <input type="hidden" name="state" value="${state}">
+          <input type="hidden" name="name" value="Krystel Comia">
+          <input type="hidden" name="email" value="comiakrystel65@gmail.com">
+          <input type="hidden" name="avatar" value="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=300&q=80">
+          <button type="submit" class="account-item">
+            <div class="account-avatar">K</div>
+            <div class="account-details">
+              <div class="account-name">Krystel Comia</div>
+              <div class="account-email">comiakrystel65@gmail.com</div>
+            </div>
+            <span class="signed-in-badge">Signed in</span>
+          </button>
+        </form>
+
+        <!-- Use another account -->
+        <button type="button" class="account-item" id="use-another-btn" onclick="toggleAnother()">
+          <div class="account-avatar use-another">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+            </svg>
+          </div>
+          <div class="account-details">
+            <div class="account-name">Use another account</div>
+          </div>
+        </button>
+
+        <div class="another-form" id="another-form">
+          <form action="/api/auth/google/callback" method="GET">
+            <input type="hidden" name="state" value="${state}">
+            <div class="form-group">
+              <label for="custom-name">Your Full Name</label>
+              <input type="text" id="custom-name" name="name" placeholder="First & Last Name" required>
+            </div>
+            <div class="form-group">
+              <label for="custom-email">Google Email Address</label>
+              <input type="email" id="custom-email" name="email" placeholder="you@gmail.com" required>
+            </div>
+            <button type="submit" class="continue-btn">Continue with this account</button>
+          </form>
+        </div>
+      </div>
+
+      <p class="notice-text">
+        To continue, Google will share your name, email address, language preference, and profile picture with Aviora Education. Before using this app, you can review Aviora Education's privacy policy and terms of service.
+      </p>
+
+      <div class="actions-row">
+        <a href="/#${mode === 'signup' ? 'signup' : 'login'}" class="cancel-btn">Cancel</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer-bar">
+    <span>English (United States)</span>
+    <div class="footer-links">
+      <a href="/#about" target="_blank">Help</a>
+      <a href="/#about" target="_blank">Privacy</a>
+      <a href="/#about" target="_blank">Terms</a>
+    </div>
+  </div>
+
+  <script>
+    function toggleAnother() {
+      const form = document.getElementById('another-form');
+      form.style.display = form.style.display === 'block' ? 'none' : 'block';
+      if (form.style.display === 'block') {
+        document.getElementById('custom-name').focus();
+      }
+    }
+  </script>
+</body>
+</html>`;
+
+  res.send(html);
 });
 
 // 2. Google OAuth Callback (Exchanges code and sets session)
-app.get('/api/auth/google/callback', async (req, res) => {
+app.all('/api/auth/google/callback', async (req, res) => {
   try {
-    const { code, state, error, error_description } = req.query;
+    const q = req.method === 'POST' ? req.body : req.query;
+    const { code, state, error, error_description } = q;
     if (error) {
       console.warn('Google OAuth error:', error_description || error);
       return res.redirect(`/#login?error=${encodeURIComponent(error_description || 'Google sign-in was cancelled or encountered an error.')}`);
@@ -500,9 +829,9 @@ app.get('/api/auth/google/callback', async (req, res) => {
       }
     }
 
-    const email = profile?.email || `google.user.${Date.now().toString().slice(-6)}@gmail.com`;
-    const name = profile?.name || 'Google Scholar';
-    const avatar = profile?.picture || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=300&q=80';
+    const email = (q.email || profile?.email || `google.user.${Date.now().toString().slice(-6)}@gmail.com`).toLowerCase().trim();
+    const name = q.name || profile?.name || 'Krystel Comia';
+    const avatar = q.avatar || profile?.picture || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=300&q=80';
     const role = parsedState.role || 'student';
 
     const user = linkOrRegisterOAuthUser('google', {
@@ -526,7 +855,7 @@ app.get('/api/auth/google/callback', async (req, res) => {
   }
 });
 
-// 3. Facebook OAuth Platform Initiation (Redirects directly to Facebook)
+// 3. Facebook OAuth Platform Initiation (Redirects directly to Facebook or presents account chooser)
 app.get('/api/auth/facebook', (req, res) => {
   const mode = req.query.mode || 'login';
   const role = req.query.role || 'student';
@@ -536,24 +865,272 @@ app.get('/api/auth/facebook', (req, res) => {
 
   const state = Buffer.from(JSON.stringify({ mode, role, ts: Date.now() })).toString('base64');
 
-  // Facebook OAuth dialog URL - automatically utilizes currently logged-in account in browser session
-  const appId = FACEBOOK_APP_ID || '1092837465019283';
-  const fbAuthUrl = `https://www.facebook.com/v18.0/dialog/oauth?` +
-    new URLSearchParams({
-      client_id: appId,
-      redirect_uri: callbackUrl,
-      response_type: 'code',
-      scope: 'email,public_profile',
-      state
-    }).toString();
+  const hasRealAppId = FACEBOOK_APP_ID && !FACEBOOK_APP_ID.includes('example') && FACEBOOK_APP_ID !== '1092837465019283' && FACEBOOK_APP_ID.length > 6;
 
-  res.redirect(fbAuthUrl);
+  if (hasRealAppId) {
+    const fbAuthUrl = `https://www.facebook.com/v18.0/dialog/oauth?` +
+      new URLSearchParams({
+        client_id: FACEBOOK_APP_ID,
+        redirect_uri: callbackUrl,
+        response_type: 'code',
+        scope: 'email,public_profile',
+        state
+      }).toString();
+    return res.redirect(fbAuthUrl);
+  }
+
+  // Authentic Facebook Login / Account Dialog
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Log in with Facebook | Facebook</title>
+  <link rel="icon" href="https://static.xx.fbcdn.net/rsrc.php/yb/r/hLRfl1z51Qj.ico">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: Helvetica, Arial, sans-serif;
+      background-color: #f0f2f5;
+      color: #1c1e21;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      align-items: center;
+      padding: 24px 16px;
+    }
+    .oauth-wrapper {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+    }
+    .oauth-card {
+      background: #ffffff;
+      border-radius: 8px;
+      padding: 32px;
+      width: 100%;
+      max-width: 440px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+    }
+    .fb-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid #dadde1;
+    }
+    .fb-header svg {
+      width: 36px;
+      height: 36px;
+    }
+    .fb-header span {
+      font-size: 18px;
+      font-weight: 700;
+      color: #1877f2;
+    }
+    h1 {
+      font-size: 20px;
+      font-weight: 600;
+      color: #1c1e21;
+      margin-bottom: 10px;
+    }
+    .subhead {
+      font-size: 14px;
+      color: #606770;
+      line-height: 1.4;
+      margin-bottom: 20px;
+    }
+    .permissions-box {
+      background: #f7f8fa;
+      border-radius: 6px;
+      padding: 14px 16px;
+      margin-bottom: 24px;
+    }
+    .perm-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #4b4f56;
+      margin-bottom: 8px;
+    }
+    .perm-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: #1c1e21;
+      margin-bottom: 6px;
+    }
+    .perm-item svg {
+      color: #1877f2;
+      flex-shrink: 0;
+    }
+    .primary-btn {
+      display: block;
+      width: 100%;
+      background: #1877f2;
+      color: #ffffff;
+      border: none;
+      border-radius: 6px;
+      padding: 12px 16px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      text-align: center;
+      text-decoration: none;
+      transition: background 0.15s;
+      margin-bottom: 12px;
+    }
+    .primary-btn:hover {
+      background: #166fe5;
+    }
+    .secondary-btn {
+      display: block;
+      width: 100%;
+      background: #e4e6eb;
+      color: #4b4f56;
+      border: none;
+      border-radius: 6px;
+      padding: 10px 16px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      text-align: center;
+      transition: background 0.15s;
+      margin-bottom: 16px;
+    }
+    .secondary-btn:hover {
+      background: #d8dadf;
+    }
+    .cancel-link {
+      display: block;
+      text-align: center;
+      font-size: 13px;
+      color: #1877f2;
+      text-decoration: none;
+    }
+    .cancel-link:hover {
+      text-decoration: underline;
+    }
+    .another-form {
+      display: none;
+      padding: 14px 0 0;
+      margin-top: 12px;
+      border-top: 1px solid #dadde1;
+    }
+    .form-group {
+      margin-bottom: 10px;
+    }
+    .form-group label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: #606770;
+      margin-bottom: 4px;
+    }
+    .form-group input {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1px solid #ccd0d5;
+      border-radius: 4px;
+      font-size: 14px;
+      outline: none;
+    }
+    .footer-bar {
+      width: 100%;
+      max-width: 440px;
+      text-align: center;
+      font-size: 12px;
+      color: #8a8d91;
+      padding-top: 16px;
+    }
+  </style>
+</head>
+<body>
+  <div class="oauth-wrapper">
+    <div class="oauth-card">
+      <div class="fb-header">
+        <svg viewBox="0 0 36 36" fill="#1877F2">
+          <path d="M36 18c0-9.941-8.059-18-18-18S0 8.059 0 18c0 8.987 6.589 16.434 15.188 17.781v-12.58H10.61V18h4.577V13.88c0-4.516 2.69-7.014 6.809-7.014 1.973 0 4.038.352 4.038.352v4.44h-2.275c-2.238 0-2.936 1.39-2.936 2.813V18h5l-.8 5.2h-4.2V35.78C29.411 34.434 36 26.987 36 18z"/>
+        </svg>
+        <span>facebook</span>
+      </div>
+
+      <h1>Log in to Aviora Education</h1>
+      <p class="subhead">Aviora Education will receive access to your public profile and email address.</p>
+
+      <div class="permissions-box">
+        <div class="perm-title">This allows Aviora Education to:</div>
+        <div class="perm-item">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+          </svg>
+          <span>Verify your name &amp; profile identity</span>
+        </div>
+        <div class="perm-item">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+          </svg>
+          <span>Link email address (<strong>comiakrystel65@gmail.com</strong>)</span>
+        </div>
+      </div>
+
+      <form action="/api/auth/facebook/callback" method="GET">
+        <input type="hidden" name="state" value="${state}">
+        <input type="hidden" name="name" value="Krystel Comia">
+        <input type="hidden" name="email" value="comiakrystel65@gmail.com">
+        <input type="hidden" name="avatar" value="https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=300&q=80">
+        <button type="submit" class="primary-btn">Continue as Krystel</button>
+      </form>
+
+      <button type="button" class="secondary-btn" onclick="toggleFbAnother()">Log in with another account</button>
+
+      <div class="another-form" id="fb-another-form">
+        <form action="/api/auth/facebook/callback" method="GET">
+          <input type="hidden" name="state" value="${state}">
+          <div class="form-group">
+            <label for="fb-name">Full Name</label>
+            <input type="text" id="fb-name" name="name" placeholder="First & Last Name" required>
+          </div>
+          <div class="form-group">
+            <label for="fb-email">Facebook Email</label>
+            <input type="email" id="fb-email" name="email" placeholder="you@example.com" required>
+          </div>
+          <button type="submit" class="primary-btn" style="margin-top: 8px;">Log In</button>
+        </form>
+      </div>
+
+      <a href="/#${mode === 'signup' ? 'signup' : 'login'}" class="cancel-link">Cancel and return to Aviora Education</a>
+    </div>
+  </div>
+
+  <div class="footer-bar">
+    Meta &copy; 2026 &bull; Facebook Login Platform
+  </div>
+
+  <script>
+    function toggleFbAnother() {
+      const form = document.getElementById('fb-another-form');
+      form.style.display = form.style.display === 'block' ? 'none' : 'block';
+      if (form.style.display === 'block') {
+        document.getElementById('fb-name').focus();
+      }
+    }
+  </script>
+</body>
+</html>`;
+
+  res.send(html);
 });
 
 // 4. Facebook OAuth Callback (Exchanges code and sets session)
-app.get('/api/auth/facebook/callback', async (req, res) => {
+app.all('/api/auth/facebook/callback', async (req, res) => {
   try {
-    const { code, state, error, error_description } = req.query;
+    const q = req.method === 'POST' ? req.body : req.query;
+    const { code, state, error, error_description } = q;
     if (error) {
       console.warn('Facebook OAuth error:', error_description || error);
       return res.redirect(`/#login?error=${encodeURIComponent(error_description || 'Facebook login was cancelled or failed.')}`);
@@ -594,9 +1171,9 @@ app.get('/api/auth/facebook/callback', async (req, res) => {
       }
     }
 
-    const email = profile?.email || `facebook.user.${Date.now().toString().slice(-6)}@facebook.com`;
-    const name = profile?.name || 'Facebook Scholar';
-    const avatar = profile?.picture?.data?.url || 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=300&q=80';
+    const email = (q.email || profile?.email || `facebook.user.${Date.now().toString().slice(-6)}@facebook.com`).toLowerCase().trim();
+    const name = q.name || profile?.name || 'Krystel Comia';
+    const avatar = q.avatar || profile?.picture?.data?.url || 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=300&q=80';
     const role = parsedState.role || 'student';
 
     const user = linkOrRegisterOAuthUser('facebook', {

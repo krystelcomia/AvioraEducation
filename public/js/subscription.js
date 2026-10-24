@@ -152,6 +152,20 @@ const StudentSub = {
     }
   },
 
+  getPlanConfig(packageKey) {
+    const plans = {
+      'trial': { key: 'trial', name: 'Free Trial Lesson', lessons: 1, duration: 30, durationLabel: '30-Min Free Trial', isTrial: true },
+      'free_trial': { key: 'trial', name: 'Free Trial Lesson', lessons: 1, duration: 30, durationLabel: '30-Min Free Trial', isTrial: true },
+      '4_lessons': { key: '4_lessons', name: '4 Lessons Package', lessons: 4, duration: 50, durationLabel: '50-Min Class', isTrial: false },
+      'scholar': { key: '4_lessons', name: '4 Lessons Package', lessons: 4, duration: 50, durationLabel: '50-Min Class', isTrial: false },
+      '8_lessons': { key: '8_lessons', name: '8 Lessons Package', lessons: 8, duration: 50, durationLabel: '50-Min Class', isTrial: false },
+      'honors': { key: '8_lessons', name: '8 Lessons Package', lessons: 8, duration: 50, durationLabel: '50-Min Class', isTrial: false },
+      'mastery': { key: '8_lessons', name: '8 Lessons Package', lessons: 8, duration: 50, durationLabel: '50-Min Class', isTrial: false },
+      '12_lessons': { key: '12_lessons', name: '12 Lessons Package', lessons: 12, duration: 50, durationLabel: '50-Min Class', isTrial: false }
+    };
+    return plans[packageKey] || plans['4_lessons'];
+  },
+
   purchasePlan(planKey) {
     const user = typeof Auth !== 'undefined' ? Auth.currentUser : null;
     if (!user) {
@@ -171,8 +185,14 @@ const StudentSub = {
     }
 
     const packageMap = {
+      'trial': 'trial',
+      'free_trial': 'trial',
       'scholar': '4_lessons',
-      'honors': '8_lessons'
+      '4_lessons': '4_lessons',
+      'honors': '8_lessons',
+      'mastery': '8_lessons',
+      '8_lessons': '8_lessons',
+      '12_lessons': '12_lessons'
     };
     const packageKey = packageMap[planKey] || '4_lessons';
     window.location.hash = '#student-subscriptions';
@@ -202,18 +222,19 @@ const StudentSub = {
     return [tutor.subject || 'General Tutoring'];
   },
 
-  distributeSubjectsForLessons(subjects) {
-    if (!subjects || subjects.length === 0) return ['General Tutoring', 'General Tutoring', 'General Tutoring', 'General Tutoring'];
+  distributeSubjectsForLessons(subjects, count = 4) {
+    if (!subjects || subjects.length === 0) {
+      return Array.from({ length: count }, () => 'General Tutoring');
+    }
     const hasAlgebra = subjects.find(s => /algebra/i.test(s));
     const hasCalculus = subjects.find(s => /calculus/i.test(s));
     
     let list = [...subjects];
-    // If the educator teaches both Algebra and Calculus, place Algebra for lesson 1 and Calculus for lesson 2
     if (hasAlgebra && hasCalculus) {
       list = [hasAlgebra, hasCalculus, ...subjects.filter(s => s !== hasAlgebra && s !== hasCalculus)];
     }
     
-    return [0, 1, 2, 3].map(i => list[i % list.length]);
+    return Array.from({ length: count }, (_, i) => list[i % list.length]);
   },
 
   updateTutorDisciplines(tutor) {
@@ -227,7 +248,7 @@ const StudentSub = {
     `).join('');
   },
 
-  // OPEN INTERACTIVE SUBSCRIPTION & 4 LESSONS SCHEDULING STUDIO
+  // OPEN INTERACTIVE SUBSCRIPTION & LESSONS SCHEDULING STUDIO
   async openEnrollmentModal(packageKey = '4_lessons') {
     const user = typeof Auth !== 'undefined' ? Auth.currentUser : null;
     if (!user) {
@@ -246,7 +267,10 @@ const StudentSub = {
       return;
     }
 
-    this.activePackageKey = packageKey;
+    const planConfig = this.getPlanConfig(packageKey);
+    this.activePackageKey = planConfig.key;
+    const lessonCount = planConfig.lessons;
+    this.allocatedLessons = lessonCount;
 
     const modal = document.getElementById('sub-enrollment-modal');
     if (!modal) return;
@@ -282,16 +306,61 @@ const StudentSub = {
 
     // Tutor subjects
     const subjects = this.getTutorSubjects(this.selectedTutor);
-    const distributedTopics = this.distributeSubjectsForLessons(subjects);
+    const distributedTopics = this.distributeSubjectsForLessons(subjects, lessonCount);
 
     // Render educator's accredited discipline badges
     this.updateTutorDisciplines(this.selectedTutor);
 
-    // Initialize 4 lessons setup with distinct subjects under this tutor
-    const tutorRate = Number(this.selectedTutor?.hourly_rate || 58);
-    this.selectedLessons = [0, 1, 2, 3].map(i => ({
+    // Adjust UI labels & titles based on plan
+    const modalBadge = document.getElementById('sub-enroll-badge');
+    const stepTag = document.getElementById('sub-enroll-step-tag');
+    const modalTitle = document.getElementById('sub-enroll-modal-title');
+    const step2Title = document.getElementById('sub-enroll-step2-title');
+    const step2Subtitle = document.getElementById('sub-enroll-step2-subtitle');
+    const notesLabel = document.getElementById('sub-enroll-notes-label');
+    const durationText = document.getElementById('sub-summary-duration-text');
+    const slotDurationBadge = document.getElementById('sub-enroll-slot-duration-badge');
+    const tabsGrid = document.getElementById('sub-lesson-tabs-grid');
+
+    if (modalBadge) modalBadge.textContent = planConfig.isTrial ? 'Free Trial' : 'Plan Enrollment';
+    if (stepTag) stepTag.textContent = planConfig.isTrial ? 'Step 1: Trial Educator & Schedule' : `Step 1: Educator & Schedule (${lessonCount} Lessons)`;
+    if (modalTitle) modalTitle.textContent = planConfig.isTrial ? 'Free Trial Lesson & Tutor Scheduling' : `${planConfig.name} & Tutor Scheduling`;
+    
+    if (step2Title) {
+      step2Title.textContent = planConfig.isTrial 
+        ? '2. Select 1 Free Trial Lesson: Choose Topic & Respective Date & Time' 
+        : `2. Select ${lessonCount} Lessons: Choose Topics & Respective Dates & Times`;
+    }
+    if (step2Subtitle) {
+      step2Subtitle.innerHTML = planConfig.isTrial
+        ? 'Choose your complimentary trial topic using the dropdown below. Click on the lesson card marked <strong>"Needs Schedule"</strong> to open its 30-minute date &amp; time setup.'
+        : `Choose a different topic for each lesson using the dropdown on each card (e.g., <strong>Algebra for Lesson 1</strong>, <strong>Calculus for Lesson 2</strong>). Click on any lesson marked <strong>"Needs Schedule"</strong> to open its date &amp; time setup.`;
+    }
+    if (notesLabel) {
+      notesLabel.textContent = planConfig.isTrial
+        ? 'Learning Objectives or Goals for Your Free Trial Lesson (Optional)'
+        : `Learning Objectives or Specific Topics for the ${lessonCount} Lessons (Optional)`;
+    }
+    if (durationText) {
+      durationText.textContent = planConfig.isTrial ? '30 Minutes (Complimentary Session)' : '50 Minutes per lesson';
+    }
+    if (slotDurationBadge) {
+      slotDurationBadge.textContent = planConfig.isTrial ? '30-Min Trial' : '50-Min Class';
+    }
+
+    if (tabsGrid) {
+      if (lessonCount === 1) {
+        tabsGrid.classList.add('single-card');
+      } else {
+        tabsGrid.classList.remove('single-card');
+      }
+    }
+
+    // Initialize lesson setup
+    const tutorRate = planConfig.isTrial ? 0.00 : Number(this.selectedTutor?.hourly_rate || 58);
+    this.selectedLessons = Array.from({ length: lessonCount }, (_, i) => ({
       index: i,
-      label: `Lesson ${i + 1}`,
+      label: planConfig.isTrial ? 'Trial Lesson' : `Lesson ${i + 1}`,
       tutor_id: this.selectedTutor?.user_id || this.selectedTutor?.id || 1,
       tutor_name: this.selectedTutor?.name || 'Educator',
       tutor_avatar: this.selectedTutor?.avatar_url || this.selectedTutor?.avatar || '',
@@ -315,7 +384,7 @@ const StudentSub = {
     // Update educator preview card
     this.updateTutorPreview(this.selectedTutor);
 
-    // Render 4 lesson tabs
+    // Render lesson tabs
     this.renderLessonTabs();
 
     // Update dynamic calculations and summary
@@ -357,11 +426,12 @@ const StudentSub = {
     this.updateTutorPreview(tutor);
     this.updateTutorDisciplines(tutor);
 
+    const planConfig = this.getPlanConfig(this.activePackageKey);
     const subjects = this.getTutorSubjects(tutor);
-    const distributedTopics = this.distributeSubjectsForLessons(subjects);
+    const distributedTopics = this.distributeSubjectsForLessons(subjects, this.selectedLessons.length);
 
-    // Apply this tutor & rate to all 4 lessons, distributing accredited subjects
-    const rate = Number(tutor.hourly_rate || 58);
+    // Apply this tutor & rate to all lessons in the plan
+    const rate = planConfig.isTrial ? 0.00 : Number(tutor.hourly_rate || 58);
     const tutorIdToSet = tutor.user_id || tutor.id;
     this.selectedLessons.forEach((l, idx) => {
       l.tutor_id = tutorIdToSet;
@@ -425,12 +495,18 @@ const StudentSub = {
     const lesson = this.selectedLessons[this.activeLessonIndex];
     if (!lesson) return;
 
+    const planConfig = this.getPlanConfig(this.activePackageKey);
+    const totalCount = this.selectedLessons.length;
+
     const badgeEl = document.getElementById('sub-active-lesson-badge');
     const titleEl = document.getElementById('sub-active-lesson-title');
     const rateTagEl = document.getElementById('sub-active-lesson-rate-tag');
     const subjectSelectEl = document.getElementById('sub-active-lesson-subject-select');
+    const durationBadgeEl = document.getElementById('sub-enroll-slot-duration-badge');
 
-    if (badgeEl) badgeEl.textContent = `Lesson ${this.activeLessonIndex + 1} of 4`;
+    if (badgeEl) {
+      badgeEl.textContent = totalCount === 1 ? 'Free Trial Lesson' : `Lesson ${this.activeLessonIndex + 1} of ${totalCount}`;
+    }
     if (titleEl) {
       if (lesson.scheduled_date && lesson.scheduled_time) {
         titleEl.textContent = `Scheduled: ${lesson.scheduled_date} at ${lesson.scheduled_time} (${lesson.tutor_name} — ${lesson.subject})`;
@@ -438,7 +514,12 @@ const StudentSub = {
         titleEl.textContent = `Select Date & Time for ${lesson.subject} with ${lesson.tutor_name}`;
       }
     }
-    if (rateTagEl) rateTagEl.textContent = `$${Number(lesson.hourly_rate).toFixed(2)} / session`;
+    if (rateTagEl) {
+      rateTagEl.textContent = planConfig.isTrial ? 'Free Trial ($0.00)' : `$${Number(lesson.hourly_rate).toFixed(2)} / session`;
+    }
+    if (durationBadgeEl) {
+      durationBadgeEl.textContent = planConfig.isTrial ? '30-Min Trial' : '50-Min Class';
+    }
 
     if (subjectSelectEl) {
       const subjects = this.getTutorSubjects(this.selectedTutor);
@@ -455,17 +536,20 @@ const StudentSub = {
     const grid = document.getElementById('sub-lesson-tabs-grid');
     if (!grid) return;
 
+    const planConfig = this.getPlanConfig(this.activePackageKey);
     const subjects = this.getTutorSubjects(this.selectedTutor);
+    const totalCount = this.selectedLessons.length;
 
     grid.innerHTML = this.selectedLessons.map((l, idx) => {
       const isActive = this.isSchedulerOpen && idx === this.activeLessonIndex;
       const isScheduled = !!(l.scheduled_date && l.scheduled_time);
       const allOptions = subjects.includes(l.subject) ? subjects : [l.subject, ...subjects];
+      const lessonLabel = totalCount === 1 ? 'Free Trial Lesson' : `Lesson ${idx + 1}`;
 
       return `
-        <div class="sub-lesson-card ${isActive ? 'active' : ''}" onclick="StudentSub.openLessonScheduler(${idx})" title="${isScheduled ? 'Click to change schedule for Lesson ' + (idx + 1) : 'Click to schedule Lesson ' + (idx + 1)}">
+        <div class="sub-lesson-card ${isActive ? 'active' : ''}" onclick="StudentSub.openLessonScheduler(${idx})" title="${isScheduled ? 'Click to change schedule for ' + lessonLabel : 'Click to schedule ' + lessonLabel}">
           <div class="lesson-card-header-row">
-            <span class="lesson-card-num-badge">Lesson ${idx + 1}</span>
+            <span class="lesson-card-num-badge">${lessonLabel}</span>
             <span class="lesson-card-status-badge ${isScheduled ? 'status-scheduled' : 'status-pending'}">
               ${isScheduled 
                 ? '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> Scheduled' 
@@ -481,13 +565,15 @@ const StudentSub = {
                 <span>Topic:</span>
                 <span class="lesson-card-subject-hint">Choose subject</span>
               </div>
-              <select class="lesson-card-subject-select" onchange="StudentSub.setLessonSubject(${idx}, this.value)" title="Choose topic for Lesson ${idx + 1}">
+              <select class="lesson-card-subject-select" onchange="StudentSub.setLessonSubject(${idx}, this.value)" title="Choose topic for ${lessonLabel}">
                 ${allOptions.map(s => `<option value="${s}" ${s === l.subject ? 'selected' : ''}>${s}</option>`).join('')}
                 <option value="__custom__">✏️ Custom Topic...</option>
               </select>
             </div>
 
-            <div class="lesson-card-rate-pill">$${Number(l.hourly_rate).toFixed(2)} / 50 min</div>
+            ${planConfig.isTrial 
+              ? `<div class="lesson-card-rate-pill" style="background: rgba(16, 185, 129, 0.12); color: #047857; border-color: rgba(16, 185, 129, 0.3); font-weight: 700;">$0.00 / 30 min (Free Trial)</div>`
+              : `<div class="lesson-card-rate-pill">$${Number(l.hourly_rate).toFixed(2)} / 50 min</div>`}
           </div>
 
           <div class="lesson-card-datetime ${isScheduled ? 'is-scheduled' : ''}">
@@ -671,6 +757,8 @@ const StudentSub = {
     const label = document.getElementById('sub-enroll-selected-date-label');
     if (label) label.textContent = dateFormatted;
 
+    const planConfig = this.getPlanConfig(this.activePackageKey);
+    const durationMins = planConfig.isTrial ? 30 : 50;
     const sched = this.selectedTutor?.availability_schedule || {};
     const blocks = sched[dayName] || ['09:00 - 12:00', '14:00 - 17:00'];
     const slots = [];
@@ -683,7 +771,7 @@ const StudentSub = {
 
         for (let h = startH; h < endH; h++) {
           const slotStart = `${String(h).padStart(2, '0')}:00`;
-          const slotEnd = `${String(h).padStart(2, '0')}:50`;
+          const slotEnd = `${String(h).padStart(2, '0')}:${durationMins}`;
           slots.push({ start: slotStart, end: slotEnd, key: `${slotStart} - ${slotEnd}`, hour: h, minute: '00' });
         }
       }
@@ -707,7 +795,7 @@ const StudentSub = {
       const h = slot.hour;
       const ampm = h >= 12 ? 'PM' : 'AM';
       const h12 = h % 12 === 0 ? 12 : h % 12;
-      const displayLabel = `${String(h12).padStart(2, '0')}:00 - ${String(h12).padStart(2, '0')}:50 ${ampm}`;
+      const displayLabel = `${String(h12).padStart(2, '0')}:00 - ${String(h12).padStart(2, '0')}:${durationMins} ${ampm}`;
 
       const btn = document.createElement('button');
       btn.type = 'button';
@@ -737,6 +825,7 @@ const StudentSub = {
           this.updateSummary();
 
           // Check for next unscheduled lesson to auto advance
+          const totalCount = this.selectedLessons.length;
           const nextUnscheduled = this.selectedLessons.findIndex((l, i) => i > this.activeLessonIndex && (!l.scheduled_date || !l.scheduled_time));
           const anyUnscheduled = nextUnscheduled !== -1 
             ? nextUnscheduled 
@@ -748,6 +837,7 @@ const StudentSub = {
               this.setActiveLesson(anyUnscheduled);
             }, 300);
           } else {
+            showToast(totalCount === 1 ? `Trial lesson scheduled for ${dateStr} (${slot.key})!` : `All ${totalCount} lessons scheduled!`, 'success');
             const titleEl = document.getElementById('sub-active-lesson-title');
             if (titleEl) {
               const currentLesson = this.selectedLessons[this.activeLessonIndex];
@@ -762,16 +852,17 @@ const StudentSub = {
   },
 
   updateSummary() {
-    const totalCost = this.selectedLessons.reduce((sum, l) => sum + (Number(l.hourly_rate) || 0), 0);
+    const planConfig = this.getPlanConfig(this.activePackageKey);
+    const totalCount = this.selectedLessons.length;
+    const totalCost = planConfig.isTrial ? 0.00 : this.selectedLessons.reduce((sum, l) => sum + (Number(l.hourly_rate) || 0), 0);
     const scheduledLessons = this.selectedLessons.filter(l => l.scheduled_date && l.scheduled_time);
     const scheduledCount = scheduledLessons.length;
-    const isComplete = scheduledCount === 4;
-
+    const isComplete = scheduledCount === totalCount;
 
     // Progress badge
     const progressTag = document.getElementById('sub-enroll-lessons-progress-tag');
     if (progressTag) {
-      progressTag.textContent = `${scheduledCount} of 4 Scheduled`;
+      progressTag.textContent = `${scheduledCount} of ${totalCount} Scheduled`;
       if (isComplete) {
         progressTag.style.background = '#10B981';
         progressTag.style.color = '#FFFFFF';
@@ -781,16 +872,17 @@ const StudentSub = {
       }
     }
 
-    // Itemized 4-lesson breakdown list
+    // Itemized lesson breakdown list
     const breakdownList = document.getElementById('sub-lessons-breakdown-list');
     if (breakdownList) {
       breakdownList.innerHTML = this.selectedLessons.map((l, i) => {
         const isSet = !!(l.scheduled_date && l.scheduled_time);
+        const lessonTitle = totalCount === 1 ? `Trial Lesson: ${l.subject}` : `Lesson ${i + 1}: ${l.subject}`;
         return `
           <div class="sub-lesson-breakdown-row">
             <div>
               <div style="font-weight: 700; color: var(--charcoal-950);">
-                Lesson ${i + 1}: ${l.subject}
+                ${lessonTitle}
               </div>
               <div style="font-size: 0.76rem; color: var(--text-secondary); margin-top: 0.1rem;">
                 Faculty: <strong>${l.tutor_name}</strong> • 
@@ -800,33 +892,39 @@ const StudentSub = {
               </div>
             </div>
             <div style="text-align: right;">
-              ${isSet 
-                ? `<span style="font-size: 0.95rem; font-weight: 800; color: var(--gold-700); font-family: var(--font-heading);">$${Number(l.hourly_rate).toFixed(2)}</span>` 
-                : `<span style="font-size: 0.78rem; font-weight: 600; color: var(--text-secondary);">Rate: $${Number(l.hourly_rate).toFixed(0)}/hr</span>`}
+              ${planConfig.isTrial 
+                ? `<span style="font-size: 0.95rem; font-weight: 800; color: #059669; font-family: var(--font-heading);">$0.00 (Trial)</span>`
+                : (isSet 
+                  ? `<span style="font-size: 0.95rem; font-weight: 800; color: var(--gold-700); font-family: var(--font-heading);">$${Number(l.hourly_rate).toFixed(2)}</span>` 
+                  : `<span style="font-size: 0.78rem; font-weight: 600; color: var(--text-secondary);">Rate: $${Number(l.hourly_rate).toFixed(0)}/hr</span>`)}
             </div>
           </div>
         `;
       }).join('');
     }
 
-    // Total text at bottom of summary: visible ONLY once all 4 lessons are completely set up
+    // Total text at bottom of summary: visible ONLY once all lessons are completely set up
     const summaryAmountEl = document.getElementById('sub-summary-amount-text');
     if (summaryAmountEl) {
       if (isComplete) {
         summaryAmountEl.textContent = `$${totalCost.toFixed(2)}`;
         summaryAmountEl.style.fontSize = '1.4rem';
-        summaryAmountEl.style.color = 'var(--gold-700)';
+        summaryAmountEl.style.color = planConfig.isTrial ? '#059669' : 'var(--gold-700)';
       } else {
-        summaryAmountEl.innerHTML = `<span style="font-size: 0.98rem; color: #D97706; font-weight: 700;">Pending Setup (${scheduledCount}/4)</span>`;
+        summaryAmountEl.innerHTML = `<span style="font-size: 0.98rem; color: #D97706; font-weight: 700;">Pending Setup (${scheduledCount}/${totalCount})</span>`;
       }
     }
 
     const calcFormulaEl = document.getElementById('sub-summary-calc-formula');
     if (calcFormulaEl) {
       if (isComplete) {
-        calcFormulaEl.textContent = `Sum of 4 lessons: ${this.selectedLessons.map((l, idx) => `Lesson ${idx + 1} ($${Number(l.hourly_rate).toFixed(0)})`).join(' + ')}`;
+        if (planConfig.isTrial) {
+          calcFormulaEl.textContent = 'Complimentary 30-minute diagnostic session ($0.00 total)';
+        } else {
+          calcFormulaEl.textContent = `Sum of ${totalCount} lessons: ${this.selectedLessons.map((l, idx) => `Lesson ${idx + 1} ($${Number(l.hourly_rate).toFixed(0)})`).join(' + ')}`;
+        }
       } else {
-        calcFormulaEl.textContent = `The total amount to be paid will be visible once all 4 lessons are scheduled.`;
+        calcFormulaEl.textContent = `The total amount to be paid will be visible once all ${totalCount} lesson${totalCount > 1 ? 's are' : ' is'} scheduled.`;
       }
     }
 
@@ -836,37 +934,45 @@ const StudentSub = {
     if (submitBtn) {
       if (isComplete) {
         submitBtn.disabled = false;
-        if (btnLabel) btnLabel.textContent = `Confirm 4 Lessons & Pay $${totalCost.toFixed(2)}`;
+        if (btnLabel) {
+          btnLabel.textContent = planConfig.isTrial 
+            ? 'Confirm 1-Lesson Free Trial ($0.00)' 
+            : `Confirm ${totalCount} Lessons & Pay $${totalCost.toFixed(2)}`;
+        }
       } else {
         submitBtn.disabled = true;
-        if (btnLabel) btnLabel.textContent = `Please Schedule All 4 Lessons to View Total (${scheduledCount}/4 Scheduled)`;
+        if (btnLabel) {
+          btnLabel.textContent = `Please Schedule All ${totalCount} Lesson${totalCount > 1 ? 's' : ''} to View Total (${scheduledCount}/${totalCount} Scheduled)`;
+        }
       }
     }
   },
 
   async confirmEnrollment() {
+    const totalCount = this.selectedLessons.length;
     const unscheduled = this.selectedLessons.filter(l => !l.scheduled_date || !l.scheduled_time);
     if (unscheduled.length > 0) {
-      showToast(`Please select respective dates and times for all 4 lessons before proceeding.`, 'warning');
+      showToast(`Please select respective dates and times for all ${totalCount} lesson${totalCount > 1 ? 's' : ''} before proceeding.`, 'warning');
       const firstMissing = this.selectedLessons.findIndex(l => !l.scheduled_date || !l.scheduled_time);
       if (firstMissing !== -1) this.setActiveLesson(firstMissing);
       return;
     }
 
+    const planConfig = this.getPlanConfig(this.activePackageKey);
     const notesInput = document.getElementById('sub-enroll-notes');
     const notes = notesInput ? notesInput.value.trim() : '';
-    const totalCost = this.selectedLessons.reduce((sum, l) => sum + (Number(l.hourly_rate) || 0), 0);
+    const totalCost = planConfig.isTrial ? 0.00 : this.selectedLessons.reduce((sum, l) => sum + (Number(l.hourly_rate) || 0), 0);
 
     const submitBtn = document.getElementById('btn-sub-enroll-submit');
     const originalText = submitBtn ? submitBtn.innerHTML : '';
     if (submitBtn) {
       submitBtn.disabled = true;
-      submitBtn.innerHTML = `<span>Processing Enrollment &amp; Reserving 4 Lessons...</span>`;
+      submitBtn.innerHTML = `<span>Processing Enrollment &amp; Reserving ${totalCount} Lesson${totalCount > 1 ? 's' : ''}...</span>`;
     }
 
     try {
       const payload = {
-        package_key: '4_lessons',
+        package_key: this.activePackageKey,
         total_amount: totalCost,
         lessons: this.selectedLessons.map(l => ({
           lesson_number: l.index + 1,
@@ -892,7 +998,7 @@ const StudentSub = {
       }
 
     } catch (err) {
-      showToast(err.message || 'Failed to process 4-lesson enrollment.', 'error');
+      showToast(err.message || 'Failed to process enrollment.', 'error');
     } finally {
       if (submitBtn) {
         submitBtn.disabled = false;

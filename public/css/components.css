@@ -1983,6 +1983,11 @@
   margin-bottom: 1.25rem;
 }
 
+.sub-lesson-tabs-grid.single-card {
+  grid-template-columns: minmax(260px, 360px) !important;
+  justify-content: center;
+}
+
 @media (max-width: 820px) {
   .sub-lesson-tabs-grid {
     grid-template-columns: repeat(2, 1fr);

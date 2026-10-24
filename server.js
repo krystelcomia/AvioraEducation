@@ -1200,10 +1200,32 @@ app.post('/api/student/subscription/purchase', authenticateToken, requireRole('s
     const studentId = req.user.id;
     const { package_key, tutor_id, lessons_with_tutor, subject, scheduled_date, scheduled_time, notes, lessons } = req.body;
 
-    // Check if 4-lesson selection setup is submitted
+    const packageMap = {
+      'trial': { key: 'trial', name: 'One-Time Free Trial Lesson', lessons: 1, price: 0.00, days: 14, is_trial: 1, duration_minutes: 30 },
+      'free_trial': { key: 'trial', name: 'One-Time Free Trial Lesson', lessons: 1, price: 0.00, days: 14, is_trial: 1, duration_minutes: 30 },
+      '4_lessons': { key: '4_lessons', name: 'Starter Tier: 4 Lessons', lessons: 4, price: 220.00, days: 30, is_trial: 0, duration_minutes: 50 },
+      'scholar': { key: '4_lessons', name: 'Starter Tier: 4 Lessons', lessons: 4, price: 220.00, days: 30, is_trial: 0, duration_minutes: 50 },
+      '8_lessons': { key: '8_lessons', name: 'Mastery Tier: 8 Lessons', lessons: 8, price: 399.00, days: 30, is_trial: 0, duration_minutes: 50 },
+      'mastery': { key: '8_lessons', name: 'Mastery Tier: 8 Lessons', lessons: 8, price: 399.00, days: 30, is_trial: 0, duration_minutes: 50 },
+      'honors': { key: '8_lessons', name: 'Mastery Tier: 8 Lessons', lessons: 8, price: 399.00, days: 30, is_trial: 0, duration_minutes: 50 },
+      '12_lessons': { key: '12_lessons', name: 'Honors Tier: 12 Lessons', lessons: 12, price: 540.00, days: 30, is_trial: 0, duration_minutes: 50 }
+    };
+
+    const selectedPkg = packageMap[package_key] || packageMap['4_lessons'];
+
+    // Check if multi-lesson selection setup is submitted
     if (Array.isArray(lessons) && lessons.length > 0) {
-      if (lessons.length !== 4) {
-        return res.status(400).json({ error: 'Please configure exactly 4 lessons to determine the total cost.' });
+      if (lessons.length !== selectedPkg.lessons) {
+        return res.status(400).json({ 
+          error: `Please configure exactly ${selectedPkg.lessons} lesson${selectedPkg.lessons > 1 ? 's' : ''} for the ${selectedPkg.name}.` 
+        });
+      }
+
+      if (selectedPkg.is_trial) {
+        const trialCheck = db.prepare('SELECT id FROM student_subscriptions WHERE user_id = ? AND is_trial = 1').get(studentId);
+        if (trialCheck) {
+          return res.status(400).json({ error: 'The trial is a one-time offer for $0 and has already been used by this account.' });
+        }
       }
 
       let totalCalculatedPrice = 0;
@@ -1241,7 +1263,7 @@ app.post('/api/student/subscription/purchase', authenticateToken, requireRole('s
           }
         }
 
-        const lessonRate = Number(tProf.hourly_rate) || 58.00;
+        const lessonRate = selectedPkg.is_trial ? 0.00 : (Number(tProf.hourly_rate) || 58.00);
         totalCalculatedPrice += lessonRate;
 
         let lessonSubject = item.subject ? String(item.subject).trim() : '';
@@ -1268,17 +1290,20 @@ app.post('/api/student/subscription/purchase', authenticateToken, requireRole('s
         });
       }
 
+      const durationHours = selectedPkg.is_trial ? 0.5 : (50 / 60);
+      const paymentMethod = selectedPkg.is_trial ? 'free_trial' : 'subscription';
+
       const insertSession = db.prepare(`
         INSERT INTO tutoring_requests (
           student_id, tutor_id, subject, grade_level, requested_date,
           requested_time, duration_hours, hourly_rate, total_amount, status, notes, payment_method
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'accepted', ?, 'subscription')
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'accepted', ?, ?)
       `);
 
       for (const vl of validatedLessons) {
         const sessionNotes = notes
-          ? `${notes} (Starter Tier: Lesson ${vl.index} of 4 with ${vl.tutor_name} - ${vl.subject})`
-          : `Starter Tier: Lesson ${vl.index} of 4 with ${vl.tutor_name} (${vl.subject})`;
+          ? `${notes} (${selectedPkg.name}: Lesson ${vl.index} of ${selectedPkg.lessons} with ${vl.tutor_name} - ${vl.subject})`
+          : `${selectedPkg.name}: Lesson ${vl.index} of ${selectedPkg.lessons} with ${vl.tutor_name} (${vl.subject})`;
 
         insertSession.run(
           studentId,
@@ -1287,10 +1312,11 @@ app.post('/api/student/subscription/purchase', authenticateToken, requireRole('s
           'High School',
           vl.scheduled_date,
           vl.scheduled_time,
-          50 / 60,
+          durationHours,
           vl.rate,
           vl.rate,
-          sessionNotes
+          sessionNotes,
+          paymentMethod
         );
 
         // Notify tutor
@@ -1300,7 +1326,7 @@ app.post('/api/student/subscription/purchase', authenticateToken, requireRole('s
         `).run(
           vl.tutor_id,
           'New Session Scheduled',
-          `${req.user.name} scheduled Lesson ${vl.index} of 4 (${vl.subject}, 50 min) for ${vl.scheduled_date} (${vl.scheduled_time}) at $${vl.rate.toFixed(2)}.`
+          `${req.user.name} scheduled Lesson ${vl.index} of ${selectedPkg.lessons} (${vl.subject}, ${selectedPkg.duration_minutes} min) for ${vl.scheduled_date} (${vl.scheduled_time})${selectedPkg.is_trial ? ' (Free Trial)' : ` at $${vl.rate.toFixed(2)}`}.`
         );
       }
 
@@ -1313,14 +1339,18 @@ app.post('/api/student/subscription/purchase', authenticateToken, requireRole('s
           user_id, plan_name, lessons_total, lessons_remaining, price_paid,
           purchase_date, expires_at, status, is_trial
         ) VALUES (
-          ?, 'Starter Tier: 4 Lessons', 4, 0, ?,
-          CURRENT_TIMESTAMP, datetime('now', '+30 days'), 'active', 0
+          ?, ?, ?, 0, ?,
+          CURRENT_TIMESTAMP, datetime('now', '+' || ? || ' days'), 'active', ?
         )
       `);
 
       insertSub.run(
         studentId,
-        totalCalculatedPrice
+        selectedPkg.name,
+        selectedPkg.lessons,
+        totalCalculatedPrice,
+        selectedPkg.days,
+        selectedPkg.is_trial
       );
 
       // Student notification
@@ -1329,30 +1359,23 @@ app.post('/api/student/subscription/purchase', authenticateToken, requireRole('s
         VALUES (?, ?, ?, 'subscription', '#subscriptions')
       `).run(
         studentId,
-        '4 Lessons Subscription Confirmed',
-        `Your 4-lesson enrollment has been confirmed! Total cost paid: $${totalCalculatedPrice.toFixed(2)} based on your instructors' rates. All 4 lessons have been scheduled.`
+        `${selectedPkg.name} Confirmed`,
+        `Your ${selectedPkg.name} enrollment has been confirmed! Total cost paid: $${totalCalculatedPrice.toFixed(2)}${selectedPkg.is_trial ? ' (Free Trial)' : " based on your instructors' rates"}. All ${selectedPkg.lessons} lesson${selectedPkg.lessons > 1 ? 's have' : ' has'} been scheduled.`
       );
 
       return res.status(201).json({
         success: true,
-        message: `Successfully enrolled in Starter Tier! All 4 lessons have been scheduled for a total of $${totalCalculatedPrice.toFixed(2)} based on teacher rates.`,
-        plan: 'Starter Tier: 4 Lessons',
+        message: `Successfully enrolled in ${selectedPkg.name}! All ${selectedPkg.lessons} lesson${selectedPkg.lessons > 1 ? 's have' : ' has'} been scheduled${selectedPkg.is_trial ? ' for Free ($0.00)' : ` for a total of $${totalCalculatedPrice.toFixed(2)} based on teacher rates`}.`,
+        plan: selectedPkg.name,
+        lessons_total: selectedPkg.lessons,
         total_paid: totalCalculatedPrice,
         remainingLessons: 0,
-        isTrial: false,
+        isTrial: !!selectedPkg.is_trial,
         hasScheduledLesson: true
       });
     }
 
     // Fallback for single-lesson legacy or trial packages
-    const packageMap = {
-      'trial': { name: 'One-Time Free Trial Lesson', lessons: 1, price: 0.00, days: 14, is_trial: 1, duration_minutes: 30 },
-      '4_lessons': { name: 'Starter Tier: 4 Lessons', lessons: 4, price: 220.00, days: 30, is_trial: 0, duration_minutes: 50 },
-      '8_lessons': { name: 'Mastery Tier: 8 Lessons', lessons: 8, price: 399.00, days: 30, is_trial: 0, duration_minutes: 50 },
-      '12_lessons': { name: 'Honors Tier: 12 Lessons', lessons: 12, price: 540.00, days: 30, is_trial: 0, duration_minutes: 50 }
-    };
-
-    const selectedPkg = packageMap[package_key];
     if (!selectedPkg) {
       return res.status(400).json({ error: 'Invalid subscription package selected.' });
     }

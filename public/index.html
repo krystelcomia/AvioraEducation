@@ -3828,19 +3828,19 @@
           </div>
         </div>
 
-        <!-- 2. Configure 4 Lessons Selection -->
+        <!-- 2. Configure Lessons Selection -->
         <div style="margin-bottom: 1.35rem;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.45rem;">
-            <label class="form-label" style="font-weight: 700; color: var(--charcoal-900); margin-bottom: 0;">
+            <label class="form-label" id="sub-enroll-step2-title" style="font-weight: 700; color: var(--charcoal-900); margin-bottom: 0;">
               2. Select 4 Lessons: Choose Topics &amp; Respective Dates &amp; Times
             </label>
             <span id="sub-enroll-lessons-progress-tag" class="badge-gold" style="font-size: 0.72rem; font-weight: 700;">0 of 4 Scheduled</span>
           </div>
-          <div style="font-size: 0.8rem; color: var(--charcoal-600); margin-bottom: 0.75rem; line-height: 1.45;">
+          <div id="sub-enroll-step2-subtitle" style="font-size: 0.8rem; color: var(--charcoal-600); margin-bottom: 0.75rem; line-height: 1.45;">
             Choose a different topic for each lesson using the dropdown on each card (e.g., <strong>Algebra for Lesson 1</strong>, <strong>Calculus for Lesson 2</strong>). Click on any lesson marked <strong>"Needs Schedule"</strong> to open its date &amp; time setup.
           </div>
           
-          <!-- 4 Interactive Lesson Tabs / Cards Grid -->
+          <!-- Interactive Lesson Tabs / Cards Grid -->
           <div id="sub-lesson-tabs-grid" class="sub-lesson-tabs-grid">
             <!-- Dynamically populated via StudentSub.renderLessonTabs() -->
           </div>
@@ -3906,14 +3906,14 @@
 
         <!-- Optional Notes -->
         <div class="form-group" style="margin-bottom: 1.25rem;">
-          <label class="form-label" style="font-weight: 700; color: var(--charcoal-900);">Learning Objectives or Specific Topics for the 4 Lessons (Optional)</label>
-          <textarea id="sub-enroll-notes" class="form-control" rows="2" placeholder="e.g. Diagnostic assessment on AP Physics kinematics, Newton's laws, rotational dynamics, and exam problem sets..."></textarea>
+          <label class="form-label" id="sub-enroll-notes-label" style="font-weight: 700; color: var(--charcoal-900);">Learning Objectives or Specific Topics for the Lessons (Optional)</label>
+          <textarea id="sub-enroll-notes" class="form-control" rows="2" placeholder="e.g. Diagnostic assessment on kinematics, calculus, problem solving, or revision..."></textarea>
         </div>
 
         <!-- Order Summary & Dynamic Rate Breakdown Box -->
         <div class="payment-summary-box" style="margin-bottom: 1.25rem; background: #FAF7F2; border: 1.5px solid rgba(198, 138, 40, 0.25); border-radius: var(--radius-md); padding: 1.15rem;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.65rem;">
-            <h4 style="font-size: 0.95rem; font-weight: 700; color: var(--charcoal-950); margin: 0;">4-Lesson Cost Calculation &amp; Summary</h4>
+            <h4 id="sub-enroll-summary-title" style="font-size: 0.95rem; font-weight: 700; color: var(--charcoal-950); margin: 0;">Cost Calculation &amp; Summary</h4>
             <span style="font-size: 0.75rem; color: var(--gold-700); font-weight: 600;">Based on Teacher Rates</span>
           </div>
 

@@ -188,13 +188,14 @@ const Router = {
         window.scrollTo(0, 0);
       }
     } else if (hash === '#book-now' || hash === '#book-lesson' || hash.startsWith('#book-lesson')) {
-      const user = (typeof Auth !== 'undefined' && Auth.currentUser);
-      if (user && user.role === 'student') {
-        showToast('Lesson booking is currently unavailable while subscription setups are being adjusted. Once your current subscription ends, you can re-subscribe and select your preferred lessons.', 'info');
-        window.location.hash = '#student-subscriptions';
+      const queryStr = window.location.hash.includes('?') ? window.location.hash.split('?')[1] : '';
+      const params = new URLSearchParams(queryStr);
+      const tutorId = params.get('tutorId') || params.get('id');
+      if (tutorId && typeof Tutors !== 'undefined') {
+        await Tutors.openBookingModal(tutorId);
       } else {
-        showToast('Lesson booking is currently unavailable while subscription setups are being adjusted. You can view our available subscription packages.', 'info');
-        window.location.hash = '#subscriptions';
+        window.location.hash = '#tutors';
+        showToast('Please select a faculty educator to book your 50-minute session.', 'info');
       }
       return;
     } else if (hash === '#login') {

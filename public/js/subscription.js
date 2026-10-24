@@ -645,23 +645,34 @@ const StudentSub = {
     const totalCost = this.selectedLessons.reduce((sum, l) => sum + (Number(l.hourly_rate) || 0), 0);
     const scheduledLessons = this.selectedLessons.filter(l => l.scheduled_date && l.scheduled_time);
     const scheduledCount = scheduledLessons.length;
+    const isComplete = scheduledCount === 4;
 
-    // Top banner price
+    // Top banner price: visible ONLY once all 4 lessons are completely set up
     const planPriceEl = document.getElementById('sub-enroll-plan-price');
     const planPriceCalcEl = document.getElementById('sub-enroll-plan-price-calc');
     if (planPriceEl) {
-      planPriceEl.textContent = `$${totalCost.toFixed(2)}`;
+      if (isComplete) {
+        planPriceEl.textContent = `$${totalCost.toFixed(2)}`;
+        planPriceEl.style.fontSize = '1.75rem';
+        planPriceEl.style.color = 'var(--gold-700)';
+      } else {
+        planPriceEl.innerHTML = `<span style="font-size: 1.15rem; color: #D97706; font-weight: 700;">Pending Setup</span>`;
+      }
     }
     if (planPriceCalcEl) {
-      const rates = this.selectedLessons.map(l => `$${Number(l.hourly_rate).toFixed(0)}`);
-      planPriceCalcEl.textContent = `4 Lessons: ${rates.join(' + ')}`;
+      if (isComplete) {
+        const rates = this.selectedLessons.map(l => `$${Number(l.hourly_rate).toFixed(0)}`);
+        planPriceCalcEl.textContent = `4 Lessons: ${rates.join(' + ')}`;
+      } else {
+        planPriceCalcEl.textContent = `Visible once all 4 lessons are scheduled (${scheduledCount}/4 set)`;
+      }
     }
 
     // Progress badge
     const progressTag = document.getElementById('sub-enroll-lessons-progress-tag');
     if (progressTag) {
       progressTag.textContent = `${scheduledCount} of 4 Scheduled`;
-      if (scheduledCount === 4) {
+      if (isComplete) {
         progressTag.style.background = '#10B981';
         progressTag.style.color = '#FFFFFF';
       } else {
@@ -689,34 +700,46 @@ const StudentSub = {
               </div>
             </div>
             <div style="text-align: right;">
-              <span style="font-size: 0.95rem; font-weight: 800; color: var(--gold-700); font-family: var(--font-heading);">$${Number(l.hourly_rate).toFixed(2)}</span>
+              ${isSet 
+                ? `<span style="font-size: 0.95rem; font-weight: 800; color: var(--gold-700); font-family: var(--font-heading);">$${Number(l.hourly_rate).toFixed(2)}</span>` 
+                : `<span style="font-size: 0.78rem; font-weight: 600; color: var(--text-secondary);">Rate: $${Number(l.hourly_rate).toFixed(0)}/hr</span>`}
             </div>
           </div>
         `;
       }).join('');
     }
 
-    // Total text at bottom of summary
+    // Total text at bottom of summary: visible ONLY once all 4 lessons are completely set up
     const summaryAmountEl = document.getElementById('sub-summary-amount-text');
     if (summaryAmountEl) {
-      summaryAmountEl.textContent = `$${totalCost.toFixed(2)}`;
+      if (isComplete) {
+        summaryAmountEl.textContent = `$${totalCost.toFixed(2)}`;
+        summaryAmountEl.style.fontSize = '1.4rem';
+        summaryAmountEl.style.color = 'var(--gold-700)';
+      } else {
+        summaryAmountEl.innerHTML = `<span style="font-size: 0.98rem; color: #D97706; font-weight: 700;">Pending Setup (${scheduledCount}/4)</span>`;
+      }
     }
 
     const calcFormulaEl = document.getElementById('sub-summary-calc-formula');
     if (calcFormulaEl) {
-      calcFormulaEl.textContent = `Sum of 4 lessons: ${this.selectedLessons.map((l, idx) => `Lesson ${idx + 1} ($${Number(l.hourly_rate).toFixed(0)})`).join(' + ')}`;
+      if (isComplete) {
+        calcFormulaEl.textContent = `Sum of 4 lessons: ${this.selectedLessons.map((l, idx) => `Lesson ${idx + 1} ($${Number(l.hourly_rate).toFixed(0)})`).join(' + ')}`;
+      } else {
+        calcFormulaEl.textContent = `The total amount to be paid will be visible once all 4 lessons are scheduled.`;
+      }
     }
 
     // Submit button
     const submitBtn = document.getElementById('btn-sub-enroll-submit');
     const btnLabel = document.getElementById('sub-enroll-btn-label');
     if (submitBtn) {
-      if (scheduledCount === 4) {
+      if (isComplete) {
         submitBtn.disabled = false;
         if (btnLabel) btnLabel.textContent = `Confirm 4 Lessons & Pay $${totalCost.toFixed(2)}`;
       } else {
         submitBtn.disabled = true;
-        if (btnLabel) btnLabel.textContent = `Please Schedule All 4 Lessons to Continue (${scheduledCount}/4 Complete)`;
+        if (btnLabel) btnLabel.textContent = `Please Schedule All 4 Lessons to View Total (${scheduledCount}/4 Scheduled)`;
       }
     }
   },

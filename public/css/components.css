@@ -532,31 +532,6 @@
   border-color: #1877F2;
 }
 
-/* Linked Social Indicator Badge */
-.social-icon-btn.is-linked {
-  border-color: #10B981;
-  box-shadow: 0 0 0 2.5px rgba(16, 185, 129, 0.28), 0 3px 10px rgba(0, 0, 0, 0.06);
-}
-
-.social-icon-btn.is-linked::after {
-  content: '';
-  position: absolute;
-  top: -3px;
-  right: -3px;
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  background: #10B981;
-  border: 2px solid #FFFFFF;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
-  animation: pulseLinked 2.5s infinite;
-}
-
-@keyframes pulseLinked {
-  0%, 100% { transform: scale(1); opacity: 1; }
-  50% { transform: scale(1.15); opacity: 0.85; }
-}
-
 .auth-divider {
   display: flex;
   align-items: center;

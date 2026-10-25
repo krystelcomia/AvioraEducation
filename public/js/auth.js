@@ -401,85 +401,39 @@ const Auth = {
   },
 
   updateLinkedAccountBadges() {
-    const fb = this.getLinkedAccount('facebook');
-    const google = this.getLinkedAccount('google');
-
-    // Page Login Google & Facebook Buttons
+    // Keep icons clean without indicator badges or extra notes
     const pageGoogleBtn = document.getElementById('page-google-auth-btn');
     const pageFbBtn = document.getElementById('page-facebook-auth-btn');
     const signupGoogleBtn = document.getElementById('signup-google-auth-btn');
     const signupFbBtn = document.getElementById('signup-facebook-auth-btn');
 
     if (pageGoogleBtn) {
-      pageGoogleBtn.classList.toggle('is-linked', !!google);
-      pageGoogleBtn.setAttribute('title', google
-        ? `Linked Google Account: ${google.name} (${google.email}) - Click to sign in instantly`
-        : 'Sign in with Google');
+      pageGoogleBtn.classList.remove('is-linked');
+      pageGoogleBtn.setAttribute('title', 'Sign in with Google');
     }
     if (pageFbBtn) {
-      pageFbBtn.classList.toggle('is-linked', !!fb);
-      pageFbBtn.setAttribute('title', fb
-        ? `Linked Facebook Account: ${fb.name} (${fb.email}) - Click to sign in instantly`
-        : 'Sign in with Facebook');
+      pageFbBtn.classList.remove('is-linked');
+      pageFbBtn.setAttribute('title', 'Sign in with Facebook');
     }
-
     if (signupGoogleBtn) {
-      signupGoogleBtn.classList.toggle('is-linked', !!google);
-      signupGoogleBtn.setAttribute('title', google
-        ? `Linked with ${google.name}'s Google Account`
-        : 'Create account with Google');
+      signupGoogleBtn.classList.remove('is-linked');
+      signupGoogleBtn.setAttribute('title', 'Create account with Google');
     }
     if (signupFbBtn) {
-      signupFbBtn.classList.toggle('is-linked', !!fb);
-      signupFbBtn.setAttribute('title', fb
-        ? `Linked with ${fb.name}'s Facebook Account`
-        : 'Create account with Facebook');
+      signupFbBtn.classList.remove('is-linked');
+      signupFbBtn.setAttribute('title', 'Create account with Facebook');
     }
 
-    // Hint text on Login view
     const loginHints = document.getElementById('page-login-linked-hints');
     if (loginHints) {
-      if (fb && google) {
-        loginHints.style.display = 'block';
-        loginHints.innerHTML = `
-          <span>Linked: <strong style="color: #1877F2;">Facebook (${fb.name.split(' ')[0]})</strong> &amp; <strong style="color: #4285F4;">Google (${google.name.split(' ')[0]})</strong> (1-click ready)</span>
-          <span style="margin: 0 4px; color: var(--text-muted);">•</span>
-          <button type="button" class="btn-text" style="color: var(--gold-800); text-decoration: underline; font-size: 0.76rem; cursor: pointer; background: none; border: none; padding: 0;" onclick="Auth.promptSwitchAccount()">Switch account</button>
-        `;
-      } else if (fb) {
-        loginHints.style.display = 'block';
-        loginHints.innerHTML = `
-          <span>Linked with Facebook: <strong>${fb.name}</strong> (Click Facebook icon for 1-click sign in)</span>
-          <span style="margin: 0 4px; color: var(--text-muted);">•</span>
-          <button type="button" class="btn-text" style="color: var(--gold-800); text-decoration: underline; font-size: 0.76rem; cursor: pointer; background: none; border: none; padding: 0;" onclick="Auth.openOAuthChoice('facebook', 'login', true)">Switch account</button>
-        `;
-      } else if (google) {
-        loginHints.style.display = 'block';
-        loginHints.innerHTML = `
-          <span>Linked with Google: <strong>${google.name}</strong> (Click Google icon for 1-click sign in)</span>
-          <span style="margin: 0 4px; color: var(--text-muted);">•</span>
-          <button type="button" class="btn-text" style="color: var(--gold-800); text-decoration: underline; font-size: 0.76rem; cursor: pointer; background: none; border: none; padding: 0;" onclick="Auth.openOAuthChoice('google', 'login', true)">Switch account</button>
-        `;
-      } else {
-        loginHints.style.display = 'none';
-        loginHints.innerHTML = '';
-      }
+      loginHints.style.display = 'none';
+      loginHints.innerHTML = '';
     }
 
-    // Hint text on Sign Up view
     const signupHints = document.getElementById('page-signup-linked-hints');
     if (signupHints) {
-      if (fb || google) {
-        const active = fb || google;
-        const provName = active.provider === 'facebook' ? 'Facebook' : 'Google';
-        signupHints.style.display = 'block';
-        signupHints.innerHTML = `
-          <span>Account linking available: Click <strong>${provName}</strong> to register with ${active.name}'s profile</span>
-        `;
-      } else {
-        signupHints.style.display = 'none';
-        signupHints.innerHTML = '';
-      }
+      signupHints.style.display = 'none';
+      signupHints.innerHTML = '';
     }
   },
 

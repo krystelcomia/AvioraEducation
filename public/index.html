@@ -1191,127 +1191,251 @@
       <div class="container">
         <!-- Section Header -->
         <div class="section-header" style="text-align: center; margin-bottom: 3rem;">
-          <span class="badge-gold">Membership &amp; Packages</span>
-          <h1 class="portal-title" style="margin-top: 0.5rem; font-size: 2.75rem;">Subscription &amp; Session Plans</h1>
-          <p class="section-desc" style="max-width: 720px; margin: 0 auto; color: var(--text-secondary); font-size: 1.05rem;">
-            Choose between complete Pay-As-You-Go flexibility or structured monthly memberships with bundled tutoring hours and priority tutor matching.
+          <span class="badge-gold">Monthly Membership Options</span>
+          <h1 class="portal-title" style="margin-top: 0.5rem; font-size: 2.75rem;">Aviora Subscription Packages &amp; Free Trial</h1>
+          <p class="section-desc" style="max-width: 820px; margin: 0 auto; color: var(--text-secondary); font-size: 1.05rem;">
+            Choose from Aviora’s curated lesson packages for 4, 8, or 12 lessons. All subscriptions are valid for one month, with dates and times fully determined by the student. Free 30-minute trial lessons are also available for first-time evaluation ($0, strictly 1-time use).
           </p>
         </div>
 
+        <!-- 4 Subscription Packages Grid -->
         <div class="pricing-grid" style="margin-bottom: 4.5rem;">
-          <!-- Plan 1: Flexible Pay-As-You-Go -->
+          <!-- Plan 1: Free Trial Lesson -->
           <div class="pricing-card">
             <div class="pricing-card-header">
-              <span class="badge-gold" style="font-size: 0.72rem;">Flexible</span>
-              <h3 class="pricing-plan-name">Pay-As-You-Go</h3>
-              <div class="pricing-price-wrap">
-                <span class="pricing-amount">$0</span>
-                <span class="pricing-period">/ month fee</span>
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                <span class="badge-gold" style="font-size: 0.72rem;">Available (1-Time Use)</span>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--gold-600);"><path d="M9 3h6"></path><path d="M10 9V3"></path><path d="M14 9V3"></path><path d="M8.5 13h7"></path><path d="M14 9a2 2 0 0 1 2 2v6.5a4.5 4.5 0 0 1-9 0V11a2 2 0 0 1 2-2z"></path></svg>
               </div>
-              <p class="pricing-desc">Perfect for students who need targeted assistance before major exams or occasional coursework tune-ups.</p>
+              <h3 class="pricing-plan-name">Free Trial Lesson</h3>
+              <div class="pricing-price-wrap" style="min-height: 52px; display: flex; align-items: baseline; gap: 0.35rem;">
+                <span class="pricing-amount">$0</span>
+                <span class="pricing-period">/ one-time</span>
+              </div>
+              <p class="pricing-desc">Complimentary 30-minute diagnostic session with an accredited tutor to evaluate fit and establish your roadmap.</p>
             </div>
 
             <ul class="pricing-features">
               <li class="pricing-feature-item">
-                <span class="pricing-check">✓</span>
-                <span>Direct hourly booking at tutor's posted rate</span>
+                <span class="pricing-feature-icon">✓</span>
+                <span><strong>1 Single 30-Min Lesson</strong></span>
               </li>
               <li class="pricing-feature-item">
-                <span class="pricing-check">✓</span>
-                <span>Access to complete verified tutor directory</span>
+                <span class="pricing-feature-icon">✓</span>
+                <span><strong>Free Trial</strong> (Strictly 1-time offer for $0)</span>
               </li>
               <li class="pricing-feature-item">
-                <span class="pricing-check">✓</span>
-                <span>Instant booking confirmation &amp; messaging</span>
+                <span class="pricing-feature-icon">✓</span>
+                <span>Student determines date &amp; time</span>
               </li>
               <li class="pricing-feature-item">
-                <span class="pricing-check">✓</span>
-                <span>Session recordings &amp; whiteboard summaries</span>
+                <span class="pricing-feature-icon">✓</span>
+                <span>Academic diagnostic assessment</span>
               </li>
               <li class="pricing-feature-item">
-                <span class="pricing-check">✓</span>
-                <span>Standard customer support</span>
+                <span class="pricing-feature-icon">✓</span>
+                <span>No payment or obligation</span>
               </li>
             </ul>
 
-            <a href="#tutors" class="btn btn-outline-gold pricing-card-btn">Browse Tutors Now</a>
+            <button type="button" class="btn btn-outline-gold pricing-card-btn" onclick="StudentSub.purchasePlan('trial')">Book Free Trial ($0)</button>
           </div>
 
-          <!-- Plan 2: Scholar Monthly (Featured) -->
+          <!-- Plan 2: 4 Lessons Package -->
+          <div class="pricing-card">
+            <div class="pricing-card-header">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                <span class="badge-gold" style="font-size: 0.72rem;">Starter</span>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--gold-600);"><path d="M7 20h10"></path><path d="M12 20v-8"></path><path d="M12 12a5 5 0 0 1 5-5c0 3-2 5-5 5Z"></path><path d="M12 12a5 5 0 0 0-5-5c0 3 2 5 5 5Z"></path></svg>
+              </div>
+              <h3 class="pricing-plan-name">4 Lessons Package</h3>
+              <div class="pricing-price-wrap" style="min-height: 52px; display: flex; flex-direction: column; justify-content: center;">
+                <span style="font-size: 1.35rem; font-weight: 800; color: var(--gold-700); font-family: var(--font-heading); line-height: 1.2;">Calculated Upon Setup</span>
+                <span class="pricing-period" style="margin-top: 0.2rem;">Determined by 4 lessons &amp; teacher rates</span>
+              </div>
+              <p class="pricing-desc">Ideal for targeted subject support, tackling specific modules, or homework assistance across 4 bespoke sessions.</p>
+            </div>
+
+            <ul class="pricing-features">
+              <li class="pricing-feature-item">
+                <span class="pricing-feature-icon">✓</span>
+                <span><strong>4 Bespoke 1-on-1 Lessons</strong></span>
+              </li>
+              <li class="pricing-feature-item">
+                <span class="pricing-feature-icon">✓</span>
+                <span><strong>Valid for 1 Month</strong> from purchase</span>
+              </li>
+              <li class="pricing-feature-item">
+                <span class="pricing-feature-icon">✓</span>
+                <span>Student chooses dates &amp; times</span>
+              </li>
+              <li class="pricing-feature-item">
+                <span class="pricing-feature-icon">✓</span>
+                <span>Upfront payment requirement</span>
+              </li>
+              <li class="pricing-feature-item">
+                <span class="pricing-feature-icon">✓</span>
+                <span>Progress feedback &amp; lesson logs</span>
+              </li>
+            </ul>
+
+            <button type="button" class="btn btn-outline-gold pricing-card-btn" onclick="StudentSub.purchasePlan('4_lessons')">Enroll in 4 Lessons</button>
+          </div>
+
+          <!-- Plan 3: 8 Lessons Package (Featured) -->
           <div class="pricing-card featured">
             <span class="pricing-badge-popular">Most Popular</span>
             <div class="pricing-card-header">
-              <span class="badge-gold" style="font-size: 0.72rem;">Consistent Growth</span>
-              <h3 class="pricing-plan-name">Scholar Membership</h3>
-              <div class="pricing-price-wrap">
-                <span class="pricing-amount">$199</span>
-                <span class="pricing-period">/ month</span>
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                <span class="badge-gold" style="font-size: 0.72rem;">Mastery</span>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--gold-600);"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path><path d="M4 22h16"></path><path d="M10 14.66V17c0 .55-.45 1-1 1H7v4h10v-4h-2c-.55 0-1-.45-1-1v-2.34"></path><path d="M6 4h12a2 2 0 0 1 2 2v4a6 6 0 0 1-12 0V6a2 2 0 0 1 2-2Z"></path></svg>
               </div>
-              <p class="pricing-desc">Ideal for students seeking regular weekly mentorship with discounted session bundles and diagnostic progress tracking.</p>
+              <h3 class="pricing-plan-name">8 Lessons Package</h3>
+              <div class="pricing-price-wrap" style="min-height: 52px; display: flex; flex-direction: column; justify-content: center;">
+                <span style="font-size: 1.35rem; font-weight: 800; color: var(--gold-700); font-family: var(--font-heading); line-height: 1.2;">Calculated Upon Setup</span>
+                <span class="pricing-period" style="margin-top: 0.2rem;">Determined by 8 lessons &amp; teacher rates</span>
+              </div>
+              <p class="pricing-desc">Consistent twice-weekly sessions for academic grade elevation and deep subject fluency across 8 bespoke sessions.</p>
             </div>
 
             <ul class="pricing-features">
               <li class="pricing-feature-item">
-                <span class="pricing-check">✓</span>
-                <span><strong>4 hours</strong> of verified 1-on-1 tutoring included ($240 value)</span>
+                <span class="pricing-feature-icon">✓</span>
+                <span><strong>8 Bespoke 1-on-1 Lessons</strong></span>
               </li>
               <li class="pricing-feature-item">
-                <span class="pricing-check">✓</span>
-                <span><strong>15% discount</strong> on all additional tutoring hours</span>
+                <span class="pricing-feature-icon">✓</span>
+                <span><strong>Valid for 1 Month</strong> from purchase</span>
               </li>
               <li class="pricing-feature-item">
-                <span class="pricing-check">✓</span>
-                <span>Priority booking with Top 5% tutors</span>
+                <span class="pricing-feature-icon">✓</span>
+                <span>Student chooses dates &amp; times</span>
               </li>
               <li class="pricing-feature-item">
-                <span class="pricing-check">✓</span>
-                <span>Monthly diagnostic academic progress reports</span>
+                <span class="pricing-feature-icon">✓</span>
+                <span>Upfront payment requirement</span>
               </li>
               <li class="pricing-feature-item">
-                <span class="pricing-check">✓</span>
-                <span>Dedicated Academic Concierge advisor</span>
+                <span class="pricing-feature-icon">✓</span>
+                <span>Priority faculty schedule reservations</span>
+              </li>
+              <li class="pricing-feature-item">
+                <span class="pricing-feature-icon">✓</span>
+                <span>Comprehensive diagnostic milestones</span>
               </li>
             </ul>
 
-            <button type="button" class="btn btn-primary pricing-card-btn" onclick="StudentSub.purchasePlan('scholar')">Enroll in Scholar Plan</button>
+            <button type="button" class="btn btn-primary pricing-card-btn" onclick="StudentSub.purchasePlan('8_lessons')">Enroll in 8 Lessons</button>
           </div>
 
-          <!-- Plan 3: Honors Intensive -->
+          <!-- Plan 4: 12 Lessons Package -->
           <div class="pricing-card">
             <div class="pricing-card-header">
-              <span class="badge-gold" style="font-size: 0.72rem;">Comprehensive Mastery</span>
-              <h3 class="pricing-plan-name">Honors Intensive</h3>
-              <div class="pricing-price-wrap">
-                <span class="pricing-amount">$379</span>
-                <span class="pricing-period">/ month</span>
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                <span class="badge-gold" style="font-size: 0.72rem;">Honors Intensive</span>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--gold-600);"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"></path><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"></path><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"></path><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"></path></svg>
               </div>
-              <p class="pricing-desc">Designed for rigorous collegiate admissions prep, AP/IB diploma candidates, and standardized test mastery.</p>
+              <h3 class="pricing-plan-name">12 Lessons Package</h3>
+              <div class="pricing-price-wrap" style="min-height: 52px; display: flex; flex-direction: column; justify-content: center;">
+                <span style="font-size: 1.35rem; font-weight: 800; color: var(--gold-700); font-family: var(--font-heading); line-height: 1.2;">Calculated Upon Setup</span>
+                <span class="pricing-period" style="margin-top: 0.2rem;">Determined by 12 lessons &amp; teacher rates</span>
+              </div>
+              <p class="pricing-desc">Intensive preparation for AP/IB exams, SAT/ACT, and collegiate admissions across 12 bespoke sessions.</p>
             </div>
 
             <ul class="pricing-features">
               <li class="pricing-feature-item">
-                <span class="pricing-check">✓</span>
-                <span><strong>8 hours</strong> of elite 1-on-1 tutoring included ($520 value)</span>
+                <span class="pricing-feature-icon">✓</span>
+                <span><strong>12 Bespoke 1-on-1 Lessons</strong></span>
               </li>
               <li class="pricing-feature-item">
-                <span class="pricing-check">✓</span>
-                <span><strong>25% discount</strong> on all additional tutoring hours</span>
+                <span class="pricing-feature-icon">✓</span>
+                <span><strong>Valid for 1 Month</strong> from purchase</span>
               </li>
               <li class="pricing-feature-item">
-                <span class="pricing-check">✓</span>
-                <span>Direct matching with Ivy &amp; PhD-level faculty</span>
+                <span class="pricing-feature-icon">✓</span>
+                <span>Student chooses dates &amp; times</span>
               </li>
               <li class="pricing-feature-item">
-                <span class="pricing-check">✓</span>
-                <span>Bespoke syllabus design &amp; weekly diagnostic review</span>
+                <span class="pricing-feature-icon">✓</span>
+                <span>Upfront payment requirement</span>
               </li>
               <li class="pricing-feature-item">
-                <span class="pricing-check">✓</span>
-                <span>24/7 priority homework help via academic channel</span>
+                <span class="pricing-feature-icon">✓</span>
+                <span>Multi-subject flexibility &amp; VIP priority</span>
+              </li>
+              <li class="pricing-feature-item">
+                <span class="pricing-feature-icon">✓</span>
+                <span>Full exam simulation &amp; capstone review</span>
               </li>
             </ul>
 
-            <button type="button" class="btn btn-outline-gold pricing-card-btn" onclick="StudentSub.purchasePlan('honors')">Enroll in Honors Plan</button>
+            <button type="button" class="btn btn-outline-gold pricing-card-btn" onclick="StudentSub.purchasePlan('12_lessons')">Enroll in 12 Lessons</button>
+          </div>
+        </div>
+
+        <!-- Mandatory Academic Guidelines & Subscription Policies -->
+        <div class="sub-policy-card" style="background: var(--bg-surface); border: 1px solid var(--border-light); border-radius: 16px; padding: 2.5rem; box-shadow: var(--shadow-sm); margin-bottom: 3.5rem;">
+          <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem;">
+            <span class="badge-gold">Mandatory Academic Guidelines</span>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--gold-600);"><path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"></path><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"></path><path d="M7 21h10"></path><path d="M12 3v18"></path><path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"></path></svg>
+          </div>
+          <h2 style="font-family: var(--font-heading); font-size: 1.5rem; font-weight: 800; color: var(--charcoal-900); margin-bottom: 0.75rem;">
+            Aviora Education Subscription Terms &amp; Conditions
+          </h2>
+          <p style="color: var(--text-secondary); font-size: 0.88rem; line-height: 1.6; margin-bottom: 2rem;">
+            Please read these subscription provisions carefully before purchasing or booking sessions. By enrolling in an Aviora subscription package, you agree to comply with the terms set forth below.
+          </p>
+
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem;">
+            <div style="border-left: 3px solid var(--gold-500); padding-left: 1rem;">
+              <h4 style="font-weight: 700; color: var(--charcoal-900); font-size: 0.95rem; margin-bottom: 0.35rem;">1. Strict No-Refund Policy</h4>
+              <p style="font-size: 0.84rem; color: var(--text-secondary); line-height: 1.55; margin: 0;">
+                All subscription packages (4, 8, or 12 lessons) and trial enrollments are <strong>strictly non-refundable</strong> once purchased or activated. Fees cannot be prorated, refunded, or credited back for unused portions.
+              </p>
+            </div>
+
+            <div style="border-left: 3px solid var(--gold-500); padding-left: 1rem;">
+              <h4 style="font-weight: 700; color: var(--charcoal-900); font-size: 0.95rem; margin-bottom: 0.35rem;">2. Upfront Payment Requirement</h4>
+              <p style="font-size: 0.84rem; color: var(--text-secondary); line-height: 1.55; margin: 0;">
+                Full package fees must be <strong>paid upfront</strong> prior to booking sessions or reserving educator calendar slots. Lesson balances are credited immediately upon confirmed payment.
+              </p>
+            </div>
+
+            <div style="border-left: 3px solid var(--gold-500); padding-left: 1rem;">
+              <h4 style="font-weight: 700; color: var(--charcoal-900); font-size: 0.95rem; margin-bottom: 0.35rem;">3. One-Month Expiration &amp; Validity</h4>
+              <p style="font-size: 0.84rem; color: var(--text-secondary); line-height: 1.55; margin: 0;">
+                Every subscription package is valid for exactly <strong>one calendar month (30 days)</strong> from the date and timestamp of purchase. Any unused lessons remaining after the expiration date will lapse and cannot be rolled over.
+              </p>
+            </div>
+
+            <div style="border-left: 3px solid var(--gold-500); padding-left: 1rem;">
+              <h4 style="font-weight: 700; color: var(--charcoal-900); font-size: 0.95rem; margin-bottom: 0.35rem;">4. Student-Determined Scheduling</h4>
+              <p style="font-size: 0.84rem; color: var(--text-secondary); line-height: 1.55; margin: 0;">
+                Students possess complete autonomy to set and schedule lesson dates and times based on faculty availability. Rescheduling requires a minimum of 3 hours notice before the class to preserve session credits.
+              </p>
+            </div>
+
+            <div style="border-left: 3px solid var(--gold-500); padding-left: 1rem;">
+              <h4 style="font-weight: 700; color: var(--charcoal-900); font-size: 0.95rem; margin-bottom: 0.35rem;">5. Free Trial Lesson ($0) — Strictly 1-Time Use</h4>
+              <p style="font-size: 0.84rem; color: var(--text-secondary); line-height: 1.55; margin: 0;">
+                The trial is a one-time offer for $0 covering a single 30-minute lesson and is <strong>strictly limited to one single trial per registered student</strong>. Once a student has used it, this option is no longer available. Repeated claims of trial lessons are restricted by platform validation.
+              </p>
+            </div>
+
+            <div style="border-left: 3px solid var(--gold-500); padding-left: 1rem;">
+              <h4 style="font-weight: 700; color: var(--charcoal-900); font-size: 0.95rem; margin-bottom: 0.35rem;">6. Multi-Subject &amp; Tutor Flexibility</h4>
+              <p style="font-size: 0.84rem; color: var(--text-secondary); line-height: 1.55; margin: 0;">
+                Your subscription lessons may be distributed across any approved Aviora faculty members and academic disciplines (Mathematics, Sciences, Humanities, Languages, and Coding).
+              </p>
+            </div>
+
+            <div style="border-left: 3px solid var(--gold-500); padding-left: 1rem;">
+              <h4 style="font-weight: 700; color: var(--charcoal-900); font-size: 0.95rem; margin-bottom: 0.35rem;">7. Class Duration Limit</h4>
+              <p style="font-size: 0.84rem; color: var(--text-secondary); line-height: 1.55; margin: 0;">
+                <strong>Note: Trial lessons are 30 minutes in length. All standard subscription subjects are a maximum of 50 minutes of class</strong> per session to ensure focused, high-retention learning.
+              </p>
+            </div>
           </div>
         </div>
 
@@ -1319,25 +1443,25 @@
         <div style="background: var(--bg-surface); border: 1px solid var(--border-light); border-radius: 16px; padding: 2.5rem; box-shadow: var(--shadow-sm);">
           <div style="text-align: center; margin-bottom: 2rem;">
             <h3 style="font-size: 1.5rem; font-weight: 700; color: var(--charcoal-900); margin-bottom: 0.5rem;">Billing &amp; Subscription FAQ</h3>
-            <p style="color: var(--text-secondary); font-size: 0.9rem;">Everything you need to know about billing, plan switching, and lesson scheduling.</p>
+            <p style="color: var(--text-secondary); font-size: 0.9rem;">Everything you need to know about getting started, scheduling, and package validity.</p>
           </div>
 
           <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.75rem;">
             <div style="padding: 1rem; border-left: 2px solid var(--gold-500);">
-              <h4 style="font-size: 1rem; font-weight: 600; color: var(--charcoal-900); margin-bottom: 0.4rem;">Can I switch between plans at any time?</h4>
-              <p style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.6; margin: 0;">Yes. You can upgrade, downgrade, or cancel your monthly membership at any time with no lock-in fees or penalties.</p>
+              <h4 style="font-size: 1rem; font-weight: 600; color: var(--charcoal-900); margin-bottom: 0.4rem;">How do I get started if I don't have an account yet?</h4>
+              <p style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.6; margin: 0;">Simply click on any package above—such as the Free Trial or 4 Lessons Package. You will be prompted to create your student account, and your selected package will be automatically opened for you to choose your educator and schedule your lessons.</p>
             </div>
             <div style="padding: 1rem; border-left: 2px solid var(--gold-500);">
-              <h4 style="font-size: 1rem; font-weight: 600; color: var(--charcoal-900); margin-bottom: 0.4rem;">What if a session doesn't meet my expectations?</h4>
-              <p style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.6; margin: 0;">We offer a 100% Satisfaction Guarantee. If you are not satisfied with your first session, we will credit your account in full or reassign you to another educator.</p>
+              <h4 style="font-size: 1rem; font-weight: 600; color: var(--charcoal-900); margin-bottom: 0.4rem;">How is subscription package pricing calculated?</h4>
+              <p style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.6; margin: 0;">Your package price is calculated transparently upon setup based on the number of lessons (4, 8, or 12) multiplied by your selected verified educator's hourly rate, paid upfront before classes begin.</p>
             </div>
             <div style="padding: 1rem; border-left: 2px solid var(--gold-500);">
-              <h4 style="font-size: 1rem; font-weight: 600; color: var(--charcoal-900); margin-bottom: 0.4rem;">Do unused monthly hours roll over?</h4>
-              <p style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.6; margin: 0;">Yes. In the Scholar and Honors plans, unused tutoring hours automatically roll over for up to 60 days as long as your membership is active.</p>
+              <h4 style="font-size: 1rem; font-weight: 600; color: var(--charcoal-900); margin-bottom: 0.4rem;">What is the validity period of the lesson packages?</h4>
+              <p style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.6; margin: 0;">All subscription packages are valid for exactly 1 calendar month (30 days) from the purchase date. Lessons can be scheduled flexibly anytime within this 30-day window.</p>
             </div>
             <div style="padding: 1rem; border-left: 2px solid var(--gold-500);">
-              <h4 style="font-size: 1rem; font-weight: 600; color: var(--charcoal-900); margin-bottom: 0.4rem;">How are tutors paid?</h4>
-              <p style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.6; margin: 0;">Educators receive direct electronic payouts within 2 business days of session completion and verification, ensuring top-tier reliability.</p>
+              <h4 style="font-size: 1rem; font-weight: 600; color: var(--charcoal-900); margin-bottom: 0.4rem;">Can I reschedule a session if something comes up?</h4>
+              <p style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.6; margin: 0;">Yes. Students have complete autonomy to reschedule lessons as long as notice is submitted at least 3 hours before the scheduled class start time.</p>
             </div>
           </div>
         </div>

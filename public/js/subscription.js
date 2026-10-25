@@ -167,14 +167,29 @@ const StudentSub = {
   },
 
   purchasePlan(planKey) {
+    const packageMap = {
+      'trial': 'trial',
+      'free_trial': 'trial',
+      '4_lessons': '4_lessons',
+      '8_lessons': '8_lessons',
+      '12_lessons': '12_lessons',
+      'scholar': '4_lessons',
+      'honors': '8_lessons',
+      'mastery': '8_lessons'
+    };
+    const packageKey = packageMap[planKey] || planKey || '4_lessons';
+    const planConfig = this.getPlanConfig(packageKey);
+    const planName = planConfig ? planConfig.name : 'Subscription Package';
+
     const user = typeof Auth !== 'undefined' ? Auth.currentUser : null;
     if (!user) {
-      sessionStorage.setItem('pending_subscription_plan', planKey);
-      showToast('Please log in to your account to purchase a subscription.', 'info');
+      sessionStorage.setItem('pending_subscription_plan', packageKey);
+      sessionStorage.setItem('pending_subscription_package', packageKey);
+      showToast(`Please create an account or log in to enroll in the ${planName}.`, 'info');
       if (typeof Auth !== 'undefined' && Auth.closeModal) {
         Auth.closeModal();
       }
-      window.location.hash = '#login';
+      window.location.hash = '#signup';
       window.scrollTo(0, 0);
       return;
     }
@@ -184,17 +199,6 @@ const StudentSub = {
       return;
     }
 
-    const packageMap = {
-      'trial': 'trial',
-      'free_trial': 'trial',
-      'scholar': '4_lessons',
-      '4_lessons': '4_lessons',
-      'honors': '8_lessons',
-      'mastery': '8_lessons',
-      '8_lessons': '8_lessons',
-      '12_lessons': '12_lessons'
-    };
-    const packageKey = packageMap[planKey] || '4_lessons';
     window.location.hash = '#student-subscriptions';
     setTimeout(() => {
       this.openEnrollmentModal(packageKey);
@@ -253,11 +257,14 @@ const StudentSub = {
     const user = typeof Auth !== 'undefined' ? Auth.currentUser : null;
     if (!user) {
       sessionStorage.setItem('pending_subscription_package', packageKey);
-      showToast('Please log in to your account to avail of a subscription.', 'info');
+      sessionStorage.setItem('pending_subscription_plan', packageKey);
+      const planConfig = this.getPlanConfig(packageKey);
+      const planName = planConfig ? planConfig.name : 'Subscription Package';
+      showToast(`Please create an account or log in to enroll in the ${planName}.`, 'info');
       if (typeof Auth !== 'undefined' && Auth.closeModal) {
         Auth.closeModal();
       }
-      window.location.hash = '#login';
+      window.location.hash = '#signup';
       window.scrollTo(0, 0);
       return;
     }

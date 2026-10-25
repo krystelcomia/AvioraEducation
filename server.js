@@ -157,9 +157,10 @@ app.post('/api/auth/register', (req, res) => {
       return res.status(400).json({ error: 'Password must contain at least one special symbol (e.g. !@#$%^&*).' });
     }
 
-    const existing = db.prepare('SELECT id FROM users WHERE email = ?').get(email.toLowerCase().trim());
+    const cleanEmail = email.toLowerCase().trim();
+    const existing = db.prepare('SELECT id FROM users WHERE LOWER(email) = LOWER(?)').get(cleanEmail);
     if (existing) {
-      return res.status(409).json({ error: 'An account with this email address already exists.' });
+      return res.status(409).json({ error: 'An account with this email address already exists. Please sign in instead.' });
     }
 
     const salt = bcrypt.genSaltSync(10);
@@ -177,7 +178,7 @@ app.post('/api/auth/register', (req, res) => {
 
     const result = insertUser.run(
       name.trim(),
-      email.toLowerCase().trim(),
+      cleanEmail,
       passwordHash,
       role,
       phone || null,
@@ -190,7 +191,7 @@ app.post('/api/auth/register', (req, res) => {
       db.prepare(`
         INSERT INTO student_profiles (user_id, grade_level, school, learning_goals, target_subjects)
         VALUES (?, ?, ?, ?, ?)
-      `).run(userId, grade_level || 'Grade 11', school || '', 'Achieve academic excellence and master core coursework.', subjects || '');
+      `).run(userId, grade_level || 'Grade 11 - High School', school || '', 'Achieve academic excellence and master core coursework.', subjects || '');
 
       // Notify admin of new student account
       const admin = db.prepare("SELECT id FROM users WHERE role = 'admin' LIMIT 1").get();
@@ -201,7 +202,7 @@ app.post('/api/auth/register', (req, res) => {
         `).run(
           admin.id,
           'New Student Account Created',
-          `${name} (${email}) has registered a student account.`
+          `${name} (${cleanEmail}) has registered a student account.`
         );
       }
     } else if (role === 'teacher') {
@@ -244,13 +245,13 @@ app.post('/api/auth/register', (req, res) => {
         `).run(
           admin.id,
           'New Teacher Registered',
-          `${name} has registered and submitted an initial tutor application.`,
+          `${name} has registered and submitted an initial tutor application.`
         );
       }
     }
 
     const token = jwt.sign(
-      { id: userId, email: email.toLowerCase().trim(), role },
+      { id: userId, email: cleanEmail, role },
       JWT_SECRET,
       { expiresIn: '7d' }
     );
@@ -258,7 +259,7 @@ app.post('/api/auth/register', (req, res) => {
     const userObj = {
       id: userId,
       name: name.trim(),
-      email: email.toLowerCase().trim(),
+      email: cleanEmail,
       role,
       phone: phone || null,
       avatar_url: defaultAvatar,
@@ -272,6 +273,9 @@ app.post('/api/auth/register', (req, res) => {
     });
   } catch (error) {
     console.error('Registration error:', error);
+    if (error.message && (error.message.includes('UNIQUE constraint failed') || error.message.includes('users.email'))) {
+      return res.status(409).json({ error: 'An account with this email address already exists. Please sign in instead.' });
+    }
     return res.status(500).json({ error: 'An error occurred during registration. Please try again.' });
   }
 });
@@ -302,8 +306,8 @@ app.post('/api/auth/login', (req, res) => {
       return res.status(400).json({ error: 'Password is incomplete. Please enter your full password.' });
     }
 
-    // Lookup user in database
-    const user = db.prepare('SELECT * FROM users WHERE email = ?').get(cleanEmail);
+    // Lookup user in database with case-insensitive normalization
+    const user = db.prepare('SELECT * FROM users WHERE LOWER(email) = LOWER(?)').get(cleanEmail);
     if (!user) {
       return res.status(401).json({ error: 'Invalid email or password. Please verify your credentials and try again.' });
     }
@@ -361,46 +365,76 @@ function linkOrRegisterOAuthUser(provider, profile) {
     throw new Error('Email address is required from social provider.');
   }
 
-  let user = db.prepare('SELECT * FROM users WHERE email = ?').get(email);
+  let user = db.prepare('SELECT * FROM users WHERE LOWER(email) = LOWER(?)').get(email);
 
   if (!user) {
     // Auto-register user from Google / Facebook
     const salt = bcrypt.genSaltSync(10);
     const tempPasswordHash = bcrypt.hashSync('OAuth_' + Math.random().toString(36) + 'Aa1!#', salt);
 
-    const insert = db.prepare(`
-      INSERT INTO users (name, email, password_hash, role, avatar_url, auth_provider, oauth_id, status)
-      VALUES (?, ?, ?, ?, ?, ?, ?, 'active')
-    `).run(name, email, tempPasswordHash, role, avatar, provider, profile?.id || email);
+    try {
+      const insert = db.prepare(`
+        INSERT INTO users (name, email, password_hash, role, avatar_url, auth_provider, oauth_id, status)
+        VALUES (?, ?, ?, ?, ?, ?, ?, 'active')
+      `).run(name, email, tempPasswordHash, role, avatar, provider, profile?.id || email);
 
-    const newUserId = insert.lastInsertRowid;
+      const newUserId = insert.lastInsertRowid;
 
-    if (role === 'student') {
-      db.prepare(`
-        INSERT INTO student_profiles (user_id, grade_level, school, learning_goals, target_subjects)
-        VALUES (?, 'Collegiate / High School', 'Aviora Learning Cohort', 'Academic excellence & mastery', 'Mathematics, Natural Sciences')
-      `).run(newUserId);
-    } else if (role === 'teacher') {
-      db.prepare(`
-        INSERT INTO tutor_profiles (user_id, headline, bio, hourly_rate, subjects, experience_years, verified)
-        VALUES (?, 'Educator & Academic Specialist', 'Joined via ' || ?, 45, 'Mathematics, Science', 3, 1)
-      `).run(newUserId, provider === 'google' ? 'Google' : 'Facebook');
+      if (role === 'student') {
+        db.prepare(`
+          INSERT INTO student_profiles (user_id, grade_level, school, learning_goals, target_subjects)
+          VALUES (?, 'Grade 11 - High School', 'Aviora Learning Cohort', 'Academic excellence & mastery', 'Mathematics, Natural Sciences')
+        `).run(newUserId);
+      } else if (role === 'teacher') {
+        const subjectsJson = JSON.stringify(['Mathematics', 'Natural Sciences']);
+        const gradeLevelsJson = JSON.stringify(['High School', 'College / Undergraduate']);
+        const defaultSchedule = JSON.stringify({
+          Monday: ['09:00 - 12:00', '14:00 - 17:00'],
+          Tuesday: ['10:00 - 13:00', '15:00 - 18:00'],
+          Wednesday: ['09:00 - 12:00', '14:00 - 17:00'],
+          Thursday: ['13:00 - 18:00'],
+          Friday: ['09:00 - 15:00']
+        });
+
+        const appRes = db.prepare(`
+          INSERT INTO teacher_applications (
+            user_id, headline, highest_degree, institution, graduation_year,
+            years_experience, subjects, grade_levels, hourly_rate, bio,
+            teaching_philosophy, availability_schedule, status
+          ) VALUES (?, 'Educator & Academic Specialist', 'Bachelor of Science', 'Accredited Institution', 2022, 3, ?, ?, 45.0, 'Joined via ' || ?, 'Academic excellence through personalized instruction.', ?, 'approved')
+        `).run(newUserId, subjectsJson, gradeLevelsJson, provider === 'google' ? 'Google' : 'Facebook', defaultSchedule);
+
+        db.prepare(`
+          INSERT INTO tutor_profiles (
+            user_id, application_id, headline, bio, highest_degree,
+            institution, years_experience, subjects, grade_levels,
+            hourly_rate, rating, reviews_count, total_sessions,
+            availability_schedule, is_featured, is_active
+          ) VALUES (?, ?, 'Educator & Academic Specialist', 'Joined via ' || ?, 'Bachelor of Science', 'Accredited Institution', 3, ?, ?, 45.0, 5.0, 0, 0, ?, 0, 1)
+        `).run(newUserId, appRes.lastInsertRowid, provider === 'google' ? 'Google' : 'Facebook', subjectsJson, gradeLevelsJson, defaultSchedule);
+      }
+
+      // Notify admin
+      const admin = db.prepare("SELECT id FROM users WHERE role = 'admin' LIMIT 1").get();
+      if (admin) {
+        db.prepare(`
+          INSERT INTO notifications (user_id, title, message, type, link)
+          VALUES (?, ?, ?, 'registration', '/#admin')
+        `).run(
+          admin.id,
+          'New Social Account Created',
+          `${name} (${email}) registered via ${provider} as a ${role}.`
+        );
+      }
+
+      user = { id: newUserId, name, email, role, avatar_url: avatar, auth_provider: provider, status: 'active' };
+    } catch (insertErr) {
+      if (insertErr.message && (insertErr.message.includes('UNIQUE constraint failed') || insertErr.message.includes('users.email'))) {
+        user = db.prepare('SELECT * FROM users WHERE LOWER(email) = LOWER(?)').get(email);
+      } else {
+        throw insertErr;
+      }
     }
-
-    // Notify admin
-    const admin = db.prepare("SELECT id FROM users WHERE role = 'admin' LIMIT 1").get();
-    if (admin) {
-      db.prepare(`
-        INSERT INTO notifications (user_id, title, message, type, link)
-        VALUES (?, ?, ?, 'registration', '/#admin')
-      `).run(
-        admin.id,
-        'New Social Account Created',
-        `${name} (${email}) registered via ${provider} as a ${role}.`
-      );
-    }
-
-    user = { id: newUserId, name, email, role, avatar_url: avatar, auth_provider: provider, status: 'active' };
   } else {
     // Existing user: ensure provider is linked
     try {

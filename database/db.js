@@ -230,6 +230,18 @@ function initSchema() {
       linked_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       UNIQUE(provider, email)
     );
+
+    -- Enforce case-insensitive uniqueness and relational indexes across the entire system
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email_nocase ON users(email COLLATE NOCASE);
+    CREATE INDEX IF NOT EXISTS idx_student_profiles_user_id ON student_profiles(user_id);
+    CREATE INDEX IF NOT EXISTS idx_tutor_profiles_user_id ON tutor_profiles(user_id);
+    CREATE INDEX IF NOT EXISTS idx_teacher_applications_user_id ON teacher_applications(user_id);
+    CREATE INDEX IF NOT EXISTS idx_tutoring_requests_student ON tutoring_requests(student_id);
+    CREATE INDEX IF NOT EXISTS idx_tutoring_requests_tutor ON tutoring_requests(tutor_id);
+    CREATE INDEX IF NOT EXISTS idx_reviews_tutor ON reviews(tutor_id);
+    CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id);
+    CREATE INDEX IF NOT EXISTS idx_subscriptions_user ON student_subscriptions(user_id);
+    CREATE INDEX IF NOT EXISTS idx_oauth_linked_user ON oauth_linked_accounts(user_id);
   `);
 
   try {
@@ -773,7 +785,7 @@ try {
 function ensureKrystelAccount(customPassword) {
   try {
     const email = 'comiakrystel65@gmail.com';
-    let user = db.prepare('SELECT * FROM users WHERE email = ?').get(email);
+    let user = db.prepare('SELECT * FROM users WHERE LOWER(email) = LOWER(?)').get(email);
 
     if (!user) {
       const salt = bcrypt.genSaltSync(10);

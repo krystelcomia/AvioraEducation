@@ -667,56 +667,44 @@
   color: #059669;
 }
 
-/* Dedicated Auth Page View (Login & Sign Up) with Blurred Tutoring Backdrop */
+/* Dedicated Auth Page View (Login & Sign Up) with Clearer Tutoring Background */
 .auth-page-view {
   position: relative;
-  min-height: 100vh;
-  min-height: 100dvh;
+  min-height: calc(100vh - var(--header-height));
   isolation: isolate;
 }
 
 .auth-page-view::before {
   content: "";
-  position: fixed;
-  top: -24px;
-  left: -24px;
-  right: -24px;
-  bottom: -24px;
-  width: calc(100vw + 48px);
-  height: calc(100vh + 48px);
-  height: calc(100dvh + 48px);
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   background-image: url('/assets/images/auth-bg.jpg');
   background-size: cover;
-  background-position: center 30%;
+  background-position: center 25%;
   background-repeat: no-repeat;
-  filter: blur(14px) brightness(0.95) saturate(1.08);
-  transform: translate3d(0, 0, 0);
-  will-change: transform;
+  filter: blur(2.5px) brightness(0.98);
   z-index: -2;
   pointer-events: none;
 }
 
 .auth-page-view::after {
   content: "";
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  width: 100vw;
-  height: 100vh;
-  height: 100dvh;
-  background: radial-gradient(circle at 50% 38%, rgba(250, 247, 242, 0.72) 0%, rgba(246, 241, 233, 0.88) 100%);
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 35%, rgba(250, 247, 242, 0.22) 0%, rgba(246, 241, 233, 0.38) 100%);
   z-index: -1;
   pointer-events: none;
 }
 
 [data-theme="dark"] .auth-page-view::before {
-  filter: blur(14px) brightness(0.48) saturate(1.1);
+  filter: blur(2.5px) brightness(0.65);
 }
 
 [data-theme="dark"] .auth-page-view::after {
-  background: radial-gradient(circle at 50% 38%, rgba(20, 23, 30, 0.76) 0%, rgba(14, 16, 22, 0.92) 100%);
+  background: radial-gradient(circle at 50% 35%, rgba(20, 23, 30, 0.35) 0%, rgba(14, 16, 22, 0.55) 100%);
 }
 
 .auth-page-view .container {

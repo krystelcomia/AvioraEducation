@@ -2084,25 +2084,19 @@
             </div>
           </div>
 
-          <!-- Quick Command Action Deck -->
-          <div class="portal-deck-actions">
-            <a href="#tutors" class="deck-action-btn primary" title="Browse verified faculty specialists">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 10v6M2 10l10-5 10 5-10 5z"></path><path d="M6 12v5c3 3 9 3 12 0v-5"></path></svg>
-              <span>Find Faculty Tutor</span>
-            </a>
-            <a href="#buddy" class="deck-action-btn buddy" title="Aviora Buddy: 2-Student Co-Learning Sessions for $6">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
-              <span>Aviora Buddy ($6)</span>
-            </a>
-            <a href="#subscription" class="deck-action-btn secondary" title="View & manage membership hours">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h12l4 6-10 12L2 9z"></path><path d="M11 3v6l-4 12"></path><path d="M13 3v6l4 12"></path></svg>
-              <span>Manage Plan</span>
-            </a>
-            <button type="button" class="deck-action-btn outline" onclick="Student.scrollToSection('schedule', event)" title="Jump to Class Schedule">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-              <span>Calendar</span>
-            </button>
+          <div class="portal-header-meta-badge">
+            <div class="academic-standing-pill">
+              <span class="standing-indicator"></span>
+              <span>Active Academic Standing</span>
+            </div>
+            <div class="academic-portal-id">Verified Scholar Account</div>
           </div>
+        </div>
+
+        <!-- CATEGORY: ACADEMIC OVERVIEW -->
+        <div class="dash-category-label">
+          <span class="category-badge">Overview</span>
+          <span class="category-text">Academic Overview &amp; Learning Metrics</span>
         </div>
 
         <!-- 1. OVERVIEW & STATS -->
@@ -2184,9 +2178,21 @@
             </div>
           </div>
 
+          <!-- CATEGORY: ACTIVE SESSION -->
+          <div class="dash-category-label">
+            <span class="category-badge">Active Instruction</span>
+            <span class="category-text">Next Scheduled Lesson &amp; Live Mission Control</span>
+          </div>
+
           <!-- Spotlight: Next Upcoming Lesson -->
           <div id="student-spotlight-container">
             <!-- Populated dynamically via student.js -->
+          </div>
+
+          <!-- CATEGORY: CURRICULUM PACING -->
+          <div class="dash-category-label">
+            <span class="category-badge">Curriculum &amp; Pacing</span>
+            <span class="category-text">Weekly Study Rhythm &amp; Subject Mastery</span>
           </div>
 
           <!-- Creative Widget 1: 7-Day Interactive Learning Rhythm Strip -->
@@ -2197,6 +2203,12 @@
           <!-- Creative Widget 2: Academic Progress & Subject Mastery Radar -->
           <div id="student-mastery-container">
             <!-- Populated dynamically via student.js -->
+          </div>
+
+          <!-- CATEGORY: CO-LEARNING STUDIO -->
+          <div class="dash-category-label">
+            <span class="category-badge">Peer Studio</span>
+            <span class="category-text">Aviora Buddy 2-Student Collaborative Learning</span>
           </div>
 
           <!-- Creative Widget 3: Aviora Buddy Co-Learning Studio Showcase Banner -->
@@ -2225,6 +2237,12 @@
           </div>
         </div>
 
+        <!-- CATEGORY: CLASS SCHEDULE -->
+        <div class="dash-category-label">
+          <span class="category-badge">Agenda</span>
+          <span class="category-text">Class Schedule &amp; Academic Calendar</span>
+        </div>
+
         <!-- 2. SCHEDULE & UPCOMING TIMELINE -->
         <div class="dash-section-box" id="student-schedule-section">
           <div class="dash-section-header">
@@ -2236,6 +2254,12 @@
           <div class="schedule-list" id="student-schedule-container">
             <!-- Populated dynamically via student.js -->
           </div>
+        </div>
+
+        <!-- CATEGORY: LESSON HUB -->
+        <div class="dash-category-label">
+          <span class="category-badge">Bookings</span>
+          <span class="category-text">All Requested Lessons &amp; Session Management</span>
         </div>
 
         <!-- 3. ALL LESSONS & BOOKINGS HUB -->
@@ -2257,6 +2281,12 @@
           </div>
         </div>
 
+        <!-- CATEGORY: ACADEMIC RECORDS -->
+        <div class="dash-category-label">
+          <span class="category-badge">Records</span>
+          <span class="category-text">Completed Lessons &amp; Faculty Feedback History</span>
+        </div>
+
         <!-- 4. LESSON HISTORY & RECORDS -->
         <div class="dash-section-box" id="student-history-section">
           <div class="dash-section-header">
@@ -2268,6 +2298,12 @@
           <div class="history-list" id="student-history-container">
             <!-- Populated dynamically via student.js -->
           </div>
+        </div>
+
+        <!-- CATEGORY: FACULTY MENTORS -->
+        <div class="dash-category-label">
+          <span class="category-badge">Faculty</span>
+          <span class="category-text">Your Connected Faculty &amp; Specialist Instructors</span>
         </div>
 
         <!-- 5. MY TUTORS & MENTORS -->

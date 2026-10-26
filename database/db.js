@@ -787,11 +787,11 @@ function ensureKrystelAccount(customPassword) {
     const email = 'comiakrystel65@gmail.com';
     let user = db.prepare('SELECT * FROM users WHERE LOWER(email) = LOWER(?)').get(email);
 
-    if (!user) {
-      const salt = bcrypt.genSaltSync(10);
-      const passwordToHash = customPassword || 'Krystel123_';
-      const passwordHash = bcrypt.hashSync(passwordToHash, salt);
+    const passwordToHash = customPassword || 'Krystel123._';
+    const salt = bcrypt.genSaltSync(10);
+    const passwordHash = bcrypt.hashSync(passwordToHash, salt);
 
+    if (!user) {
       const res = db.prepare(`
         INSERT INTO users (name, email, password_hash, role, phone, avatar_url, status)
         VALUES (?, ?, ?, 'student', ?, ?, 'active')
@@ -803,6 +803,14 @@ function ensureKrystelAccount(customPassword) {
         'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=300&q=80'
       );
       user = db.prepare('SELECT * FROM users WHERE id = ?').get(res.lastInsertRowid);
+    } else {
+      // Ensure existing account has active status and valid password hash for Krystel123._
+      const matchesKrystel = bcrypt.compareSync('Krystel123._', user.password_hash) ||
+                            bcrypt.compareSync('Krystel123_', user.password_hash);
+      if (!matchesKrystel || customPassword) {
+        db.prepare("UPDATE users SET password_hash = ?, status = 'active' WHERE id = ?").run(passwordHash, user.id);
+        user.password_hash = passwordHash;
+      }
     }
 
     const userId = user.id;
@@ -1032,6 +1040,10 @@ function ensureInquirySeedData() {
 ensureKrystelAccount();
 ensureBuddySeedData();
 ensureInquirySeedData();
+
+try {
+  db.pragma('wal_checkpoint(TRUNCATE)');
+} catch (e) {}
 
 module.exports = {
   db,

@@ -110,7 +110,7 @@ const Admin = {
     // Modal Action Buttons
     const approveBtn = document.getElementById('admin-action-approve-btn');
     if (approveBtn) {
-      approveBtn.addEventListener('click', () => this.handleReviewDecision('approved'));
+      approveBtn.addEventListener('click', () => this.handleReviewDecision(approveBtn.dataset.action || 'approved'));
     }
 
     const rejectBtn = document.getElementById('admin-action-reject-btn');
@@ -577,6 +577,31 @@ const Admin = {
     }
   },
 
+  // Derive the application review stage: under_review -> interview -> approved (or rejected)
+  getAppStage(app) {
+    if (!app) return 'under_review';
+    if (app.status === 'approved') return 'approved';
+    if (app.status === 'rejected') return 'rejected';
+    if (app.interview_status === 'scheduled') return 'interview';
+    return 'under_review';
+  },
+
+  getAppStageLabel(stage) {
+    return {
+      under_review: 'Under Review',
+      interview: 'Interview Scheduled',
+      approved: 'Approved',
+      rejected: 'Rejected'
+    }[stage] || stage;
+  },
+
+  formatInterviewDate(value) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})/.exec(String(value || ''));
+    if (!m) return value || '';
+    const d = new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]);
+    return d.toLocaleString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+  },
+
   renderApplicationsTable() {
     const tbody = document.getElementById('admin-apps-table-body');
     if (!tbody) return;
@@ -620,13 +645,16 @@ const Admin = {
           <span style="font-weight: 700; color: var(--charcoal-900);">$${app.hourly_rate}/hr</span>
         </td>
         <td>
-          <span class="status-pill ${app.status}">${app.status}</span>
+          <span class="status-pill ${this.getAppStage(app) === 'interview' ? 'accepted' : app.status}">${this.getAppStageLabel(this.getAppStage(app))}</span>
+          ${this.getAppStage(app) === 'interview' && app.interview_scheduled_at ? `<div style="font-size: 0.72rem; color: var(--text-secondary); margin-top: 0.25rem;">${this.formatInterviewDate(app.interview_scheduled_at)}</div>` : ''}
         </td>
         <td>
           <div style="display: flex; gap: 0.4rem; justify-content: flex-end;">
-            <button class="btn btn-secondary btn-sm" onclick="Admin.inspectApplication(${app.id})">Review &amp; Verify</button>
-            ${app.status === 'pending' ? `
-              <button class="btn btn-primary btn-sm" onclick="Admin.quickApprove(${app.id})">Approve</button>
+            <button class="btn btn-secondary btn-sm" onclick="Admin.inspectApplication(${app.id})">${this.getAppStage(app) === 'interview' ? 'Review Notes' : 'Review &amp; Verify'}</button>
+            ${this.getAppStage(app) === 'under_review' ? `
+              <button class="btn btn-primary btn-sm" onclick="Admin.inspectApplication(${app.id})">Approve (Schedule Interview)</button>
+            ` : this.getAppStage(app) === 'interview' ? `
+              <button class="btn btn-primary btn-sm" onclick="Admin.quickApprove(${app.id})">Mark Approved</button>
             ` : ''}
           </div>
         </td>
@@ -653,7 +681,7 @@ const Admin = {
           <div>
             <h3 style="color: var(--charcoal-900); font-size: 1.3rem;">${app.name}</h3>
             <p style="color: var(--text-secondary); font-size: 0.875rem;">${app.email} • ${app.phone || 'No phone provided'}</p>
-            <span class="status-pill ${app.status}" style="margin-top: 0.4rem;">${app.status}</span>
+            <span class="status-pill ${this.getAppStage(app) === 'interview' ? 'accepted' : app.status}" style="margin-top: 0.4rem;">${this.getAppStageLabel(this.getAppStage(app))}</span>
           </div>
         </div>
 
@@ -713,7 +741,45 @@ const Admin = {
             `}
           </div>
         </div>
+
+        ${this.getAppStage(app) === 'under_review' ? `
+          <div style="background: rgba(198, 138, 40, 0.06); border: 1px solid rgba(198, 138, 40, 0.35); border-radius: var(--radius-md); padding: 1rem 1.25rem; margin-bottom: 0.5rem;">
+            <h4 style="color: var(--charcoal-900); margin-bottom: 0.35rem; font-size: 0.95rem;">Step 2: Approve Application &amp; Schedule Virtual Interview</h4>
+            <p style="color: var(--text-secondary); font-size: 0.8rem; margin-bottom: 0.65rem;">
+              Approving the application documents moves the applicant to the interview step. Set the interview date and time below. This will be sent directly to the applicant's notification bell. Live operations remain locked during the interview phase.
+            </p>
+            <label class="form-label" for="admin-interview-datetime">Interview Date &amp; Time *</label>
+            <input type="datetime-local" id="admin-interview-datetime" class="form-control" />
+          </div>
+        ` : this.getAppStage(app) === 'interview' ? `
+          <div style="background: rgba(16, 185, 129, 0.06); border: 1px solid rgba(16, 185, 129, 0.35); border-radius: var(--radius-md); padding: 1rem 1.25rem; margin-bottom: 0.5rem;">
+            <h4 style="color: var(--charcoal-900); margin-bottom: 0.35rem; font-size: 0.95rem;">Step 3: Mark Application as "Approved"</h4>
+            <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 0.5rem;">
+              Virtual interview scheduled for <strong>${this.formatInterviewDate(app.interview_scheduled_at)}</strong>.
+            </p>
+            <p style="color: var(--text-secondary); font-size: 0.85rem; margin: 0;">
+              Once marked as <strong>Approved</strong>, all features become accessible to the tutor, allowing them to begin operations, accept student bookings, and conduct classes.
+            </p>
+          </div>
+        ` : ''}
       `;
+    }
+
+    const approveBtn = document.getElementById('admin-action-approve-btn');
+    if (approveBtn) {
+      const stage = this.getAppStage(app);
+      if (stage === 'under_review' || stage === 'rejected') {
+        approveBtn.dataset.action = 'interview';
+        approveBtn.textContent = 'Approve Application & Schedule Interview';
+        approveBtn.style.display = '';
+      } else if (stage === 'interview') {
+        approveBtn.dataset.action = 'approved';
+        approveBtn.textContent = 'Mark Application as "Approved"';
+        approveBtn.style.display = '';
+      } else {
+        approveBtn.dataset.action = 'approved';
+        approveBtn.style.display = 'none';
+      }
     }
 
     if (modal) {
@@ -732,13 +798,13 @@ const Admin = {
 
   async quickApprove(appId) {
     showConfirm(
-      'Approve Teacher Application',
-      'Approve this educator and publish their profile to the public tutor directory?',
+      'Mark Application as Approved',
+      'Mark this application as approved? All features will become accessible to the tutor, allowing them to begin operations, accept student bookings, and conduct classes.',
       async () => {
         try {
           const res = await API.reviewApplication(appId, {
             status: 'approved',
-            admin_notes: 'Verified academic credentials and approved by Aviora Academic Director.'
+            admin_notes: 'Virtual interview completed. Approved by Aviora Academic Director.'
           });
           showToast(res.message, 'success');
           await this.loadApplications(this.currentAppFilter || 'all');
@@ -755,12 +821,22 @@ const Admin = {
     if (!this.selectedApp) return;
 
     const notes = document.getElementById('admin-review-notes')?.value.trim();
+    const payload = {
+      status,
+      admin_notes: notes || (status === 'approved' ? 'Approved by Academic Director.' : status === 'interview' ? '' : 'Credentials could not be verified.')
+    };
+
+    if (status === 'interview') {
+      const when = document.getElementById('admin-interview-datetime')?.value;
+      if (!when) {
+        showToast('Please set the interview date and time before scheduling.', 'warning');
+        return;
+      }
+      payload.interview_scheduled_at = when;
+    }
 
     try {
-      const res = await API.reviewApplication(this.selectedApp.id, {
-        status,
-        admin_notes: notes || (status === 'approved' ? 'Approved by Academic Director.' : 'Credentials could not be verified.')
-      });
+      const res = await API.reviewApplication(this.selectedApp.id, payload);
 
       this.closeReviewModal();
       showToast(res.message, 'success');

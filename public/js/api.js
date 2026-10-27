@@ -77,6 +77,13 @@ async function apiRequest(endpoint, options = {}) {
     const data = await response.json().catch(() => ({}));
 
     if (!response.ok) {
+      if (response.status === 401 || (response.status === 404 && data && data.error === 'User account not found.')) {
+        Storage.clearSession();
+        if (typeof Auth !== 'undefined') {
+          Auth.currentUser = null;
+          Auth.updateNavUI(null);
+        }
+      }
       throw new Error(data.error || 'A network error occurred. Please try again.');
     }
 

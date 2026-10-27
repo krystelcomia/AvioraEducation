@@ -160,7 +160,10 @@ function authenticateToken(req, res, next) {
       return res.status(403).json({ error: 'Session expired or invalid token. Please log in again.' });
     }
 
-    const user = db.prepare('SELECT id, name, email, role, phone, avatar_url, status FROM users WHERE id = ?').get(decoded.id);
+    let user = db.prepare('SELECT id, name, email, role, phone, avatar_url, status FROM users WHERE id = ?').get(decoded.id);
+    if (!user && decoded.email) {
+      user = db.prepare('SELECT id, name, email, role, phone, avatar_url, status FROM users WHERE LOWER(email) = LOWER(?)').get(decoded.email);
+    }
     if (!user) {
       return res.status(404).json({ error: 'User account not found.' });
     }
@@ -4533,20 +4536,62 @@ app.get('/api/admin/teacher-applications', authenticateToken, requireRole('admin
   }
 });
 
-// Admin: Review Teacher Application (Approve / Reject)
+// Format an admin-entered interview datetime ("YYYY-MM-DDTHH:mm") exactly as entered, without timezone shifting
+function formatInterviewDateTime(value) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})/.exec(String(value || ''));
+  if (!m) return String(value || '');
+  const d = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]));
+  const datePart = d.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' });
+  const timePart = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'UTC' });
+  return `${datePart} at ${timePart}`;
+}
+
+// Admin: Review Teacher Application (Schedule Interview / Approve / Reject)
 app.post('/api/admin/teacher-applications/:id/review', authenticateToken, requireRole('admin'), (req, res) => {
   try {
     const appId = req.params.id;
-    const { status, admin_notes } = req.body;
+    const { status, admin_notes, interview_scheduled_at } = req.body;
     const adminId = req.user.id;
 
-    if (!['approved', 'rejected', 'pending'].includes(status)) {
+    if (!['approved', 'rejected', 'pending', 'interview'].includes(status)) {
       return res.status(400).json({ error: 'Invalid application status.' });
     }
 
     const application = db.prepare('SELECT * FROM teacher_applications WHERE id = ?').get(appId);
     if (!application) {
       return res.status(404).json({ error: 'Application not found.' });
+    }
+
+    // Stage 2: Documents approved -> virtual interview scheduled (operations remain locked)
+    if (status === 'interview') {
+      if (!interview_scheduled_at || !/^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}/.test(String(interview_scheduled_at))) {
+        return res.status(400).json({ error: 'Please set a valid interview date and time.' });
+      }
+
+      db.prepare(`
+        UPDATE teacher_applications
+        SET status = 'pending', interview_status = 'scheduled', interview_scheduled_at = ?,
+            interview_notes = ?, admin_notes = ?, reviewed_by = ?, reviewed_at = CURRENT_TIMESTAMP,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+      `).run(interview_scheduled_at, admin_notes || null, admin_notes || null, adminId, appId);
+
+      const when = formatInterviewDateTime(interview_scheduled_at);
+      sendNotification(
+        application.user_id,
+        'Application Approved • Virtual Interview Scheduled',
+        `Your application has been approved! The next step is your virtual interview, scheduled for ${when}.${admin_notes ? ' Note from Administrator: ' + admin_notes : ''} Check this notification for the date and time. Note that live operations remain locked during the interview phase until final approval.`,
+        'calendar',
+        '#teacher-dashboard'
+      );
+
+      return res.json({ message: `Application approved. Virtual interview scheduled for ${when}.` });
+    }
+
+    // Stage 3: Final approval requires the interview stage first
+    if (status === 'approved' && application.status !== 'approved' &&
+        !['scheduled', 'completed', 'waived'].includes(application.interview_status)) {
+      return res.status(400).json({ error: 'Please approve the application and schedule a virtual interview before giving final approval.' });
     }
 
     // Update application
@@ -4557,6 +4602,7 @@ app.post('/api/admin/teacher-applications/:id/review', authenticateToken, requir
     `).run(status, admin_notes || null, adminId, appId);
 
     if (status === 'approved') {
+      db.prepare(`UPDATE teacher_applications SET interview_status = 'completed' WHERE id = ? AND interview_status = 'scheduled'`).run(appId);
       // Upsert into tutor_profiles so they immediately appear in the public directory!
       const existingTutor = db.prepare('SELECT id FROM tutor_profiles WHERE user_id = ?').get(application.user_id);
       if (existingTutor) {
@@ -4606,9 +4652,9 @@ app.post('/api/admin/teacher-applications/:id/review', authenticateToken, requir
       sendNotification(
         application.user_id,
         'Application Approved! Welcome to Aviora Education',
-        'Congratulations! Your teacher credentials have been verified and approved. Your tutor profile is now live in the Aviora directory.',
+        'Congratulations! Following your virtual interview, your tutor application has been marked as approved. All features are now accessible: you can begin operations, accept student bookings, and conduct classes. Your tutor profile is now live in the Aviora directory.',
         'approval',
-        '/#teacher-portal'
+        '#teacher-dashboard'
       );
     } else if (status === 'rejected') {
       // Deactivate tutor profile if previously active

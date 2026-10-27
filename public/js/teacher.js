@@ -165,16 +165,84 @@ const Teacher = {
     return !!(this.application && this.application.resume_file && (this.application.diploma_file || this.application.credentials_file));
   },
 
+  // Application stage for the tutor: not_submitted -> under_review -> interview -> approved (or rejected)
+  getApplicationStage() {
+    const app = this.application;
+    if (!app) return 'not_submitted';
+    if (app.status === 'approved') return 'approved';
+    if (app.status === 'rejected') return 'rejected';
+    if (!this.hasSubmittedApplication()) return 'not_submitted';
+    if (app.interview_status === 'scheduled') return 'interview';
+    return 'under_review';
+  },
+
+  formatInterviewDate(value) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})/.exec(String(value || ''));
+    if (!m) return value || '';
+    const d = new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]);
+    return d.toLocaleString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+  },
+
   renderStatusBanner(targetContainerId) {
     const bannerContainer = document.getElementById(targetContainerId);
     if (!bannerContainer) return;
 
-    const hasSubmitted = this.hasSubmittedApplication();
-    const appStatus = this.application ? this.application.status : null;
+    const stage = this.getApplicationStage();
+    const applicantName = (typeof Auth !== 'undefined' && Auth.currentUser && Auth.currentUser.name)
+      ? Auth.currentUser.name
+      : (this.application?.name || 'Applicant');
 
-    if (appStatus === 'approved') {
+    if (stage === 'not_submitted') {
       bannerContainer.innerHTML = '';
-    } else if (appStatus === 'rejected') {
+      return;
+    }
+
+    if (stage === 'approved') {
+      // Show the approved status on the dashboard only; other pages stay clean
+      bannerContainer.innerHTML = targetContainerId !== 'teacher-banner-dashboard' ? '' : `
+        <div class="app-status-banner approved-dashboard" style="margin-bottom: 1.5rem; background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.35); border-radius: var(--radius-md); padding: 1.25rem; display: flex; gap: 1rem; align-items: flex-start;">
+          <div class="status-icon-circle" style="background: rgba(16, 185, 129, 0.2); color: #10B981; width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+            ${Icons.check(22)}
+          </div>
+          <div class="status-banner-content" style="flex: 1;">
+            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
+              <div style="font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.04em; font-weight: 700;">
+                Tutor Application • ${applicantName}
+              </div>
+              <span class="status-pill approved" style="font-size: 0.75rem;">Status: Approved</span>
+            </div>
+            <h3 style="color: var(--text-primary); margin: 0.2rem 0 0; font-size: 1.15rem; font-weight: 700;">
+              Application Approved • All Features Accessible
+            </h3>
+            <div style="display: flex; align-items: center; margin: 0.85rem 0 0.4rem; flex-wrap: wrap; row-gap: 0.5rem;">
+              <div style="display: flex; align-items: center; gap: 0.45rem; flex: 1;">
+                <span style="width: 22px; height: 22px; border-radius: 50%; background: #10B981; color: #fff; display: inline-flex; align-items: center; justify-content: center; font-size: 0.72rem; font-weight: 700;">✓</span>
+                <span style="font-size: 0.8rem; font-weight: 700; color: var(--text-primary); white-space: nowrap;">1. Application Submitted</span>
+                <span style="flex: 1; height: 2px; min-width: 16px; background: #10B981; margin: 0 0.35rem;"></span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 0.45rem; flex: 1;">
+                <span style="width: 22px; height: 22px; border-radius: 50%; background: #10B981; color: #fff; display: inline-flex; align-items: center; justify-content: center; font-size: 0.72rem; font-weight: 700;">✓</span>
+                <span style="font-size: 0.8rem; font-weight: 700; color: var(--text-primary); white-space: nowrap;">2. Virtual Interview</span>
+                <span style="flex: 1; height: 2px; min-width: 16px; background: #10B981; margin: 0 0.35rem;"></span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 0.45rem; flex: 0 0 auto;">
+                <span style="width: 22px; height: 22px; border-radius: 50%; background: #10B981; color: #fff; display: inline-flex; align-items: center; justify-content: center; font-size: 0.72rem; font-weight: 700;">✓</span>
+                <span style="font-size: 0.8rem; font-weight: 700; color: #10B981; white-space: nowrap;">3. Approved</span>
+              </div>
+            </div>
+            <p style="color: var(--text-secondary); margin: 0.5rem 0 0 0; font-size: 0.88rem; line-height: 1.5;">
+              Congratulations, <strong>${applicantName}</strong>! Your application has been marked as <strong>Approved</strong> by the administrator. All features are now accessible: you can begin operations, accept student bookings, and conduct classes.
+            </p>
+            <div style="margin-top: 0.65rem; background: rgba(16, 185, 129, 0.08); border-left: 3px solid #10B981; padding: 0.5rem 0.75rem; font-size: 0.82rem; color: var(--text-primary);">
+              <strong>✅ Live Operations Active:</strong> Your tutor profile is live in the Aviora directory and open for student lesson bookings and coursework management.
+            </div>
+          </div>
+        </div>
+      `;
+      return;
+    }
+
+    if (stage === 'rejected') {
       bannerContainer.innerHTML = `
         <div class="app-status-banner rejected" style="margin-bottom: 1.5rem;">
           <div class="status-icon-circle">${Icons.x(18)}</div>
@@ -187,33 +255,81 @@ const Teacher = {
           </div>
         </div>
       `;
-    } else if (hasSubmitted) {
-      // Pending Admin Approval (Only displayed AFTER application has been submitted!)
-      bannerContainer.innerHTML = `
-        <div class="app-status-banner pending-dashboard" style="margin-bottom: 1.5rem; background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.35); border-radius: var(--radius-md); padding: 1.25rem; display: flex; gap: 1rem; align-items: flex-start;">
-          <div class="status-icon-circle" style="background: rgba(245, 158, 11, 0.18); color: #F59E0B; width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-            ${Icons.hourglass(22)}
-          </div>
-          <div class="status-banner-content" style="flex: 1;">
-            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
-              <h3 style="color: var(--text-primary); margin: 0; font-size: 1.1rem; font-weight: 700;">Application Under Review • Virtual Interview Pending</h3>
-              <span class="badge" style="background: rgba(245, 158, 11, 0.2); color: #D97706; font-weight: 700; font-size: 0.78rem; padding: 0.3rem 0.75rem; border-radius: 9999px;">Pending Admin Approval</span>
-            </div>
-            <p style="color: var(--text-secondary); margin: 0.5rem 0 0 0; font-size: 0.88rem; line-height: 1.5;">
-              Your submitted resume and diploma are currently undergoing review by the Academic Board. You will be notified once a schedule for your virtual interview is set.
-            </p>
-            <div style="margin-top: 0.65rem; background: rgba(0, 0, 0, 0.04); border-left: 3px solid #F59E0B; padding: 0.5rem 0.75rem; font-size: 0.82rem; color: var(--text-primary);">
-              <strong>🔒 Operational Notice:</strong> You may explore your dashboard and timetable in view-only mode; however, live operations (launching live virtual sessions, accepting student bookings, and assigning or grading coursework) remain locked until your account is approved by an administrator following your interview.
-            </div>
-            <div style="margin-top: 0.75rem; display: flex; gap: 0.75rem; flex-wrap: wrap;">
-              <button class="btn btn-outline-gold btn-sm" onclick="Teacher.toggleEditApplication()">View / Update Submitted Documents</button>
-            </div>
-          </div>
+      return;
+    }
+
+    // Under review or interview stage: operations remain locked
+    const isInterview = stage === 'interview';
+    const accent = isInterview ? '#3B82F6' : '#F59E0B';
+    const accentBg = isInterview ? 'rgba(59, 130, 246, 0.08)' : 'rgba(245, 158, 11, 0.08)';
+    const accentBorder = isInterview ? 'rgba(59, 130, 246, 0.35)' : 'rgba(245, 158, 11, 0.35)';
+
+    const steps = [
+      { key: 'under_review', label: '1. Under Review' },
+      { key: 'interview', label: '2. Virtual Interview' },
+      { key: 'approved', label: '3. Final Approval' }
+    ];
+    const currentIndex = isInterview ? 1 : 0;
+
+    const tracker = steps.map((s, i) => {
+      const done = i < currentIndex;
+      const active = i === currentIndex;
+      const dotBg = done ? '#10B981' : active ? accent : 'rgba(0,0,0,0.12)';
+      const textColor = (done || active) ? 'var(--text-primary)' : 'var(--text-secondary)';
+      return `
+        <div style="display: flex; align-items: center; gap: 0.45rem; flex: ${i < steps.length - 1 ? '1' : '0 0 auto'};">
+          <span style="width: 22px; height: 22px; border-radius: 50%; background: ${dotBg}; color: #fff; display: inline-flex; align-items: center; justify-content: center; font-size: 0.72rem; font-weight: 700; flex-shrink: 0;">${done ? '✓' : i + 1}</span>
+          <span style="font-size: 0.8rem; font-weight: ${active ? '700' : '600'}; color: ${textColor}; white-space: nowrap;">${s.label}</span>
+          ${i < steps.length - 1 ? `<span style="flex: 1; height: 2px; min-width: 16px; background: ${done ? '#10B981' : 'rgba(0,0,0,0.1)'}; margin: 0 0.35rem;"></span>` : ''}
         </div>
       `;
-    } else {
-      bannerContainer.innerHTML = '';
-    }
+    }).join('');
+
+    const title = isInterview
+      ? 'Application Approved • Next Step: Virtual Interview'
+      : 'Application Under Review • Pending Admin Approval';
+
+    const statusPill = isInterview
+      ? '<span class="status-pill accepted" style="font-size: 0.75rem;">Status: Virtual Interview Scheduled</span>'
+      : '<span class="status-pill pending" style="font-size: 0.75rem;">Status: Under Review</span>';
+
+    const message = isInterview
+      ? `Your application has been approved by the Administrator! The next step is your virtual interview, scheduled for <strong>${this.formatInterviewDate(this.application.interview_scheduled_at)}</strong>. Check your <strong>notification bell</strong> in the top header to see the date and time set by the admin for your interview.`
+      : `The submitted application is currently under review under the name of the applicant (<strong>${applicantName}</strong>). You will be notified once a schedule for your virtual interview is set.`;
+
+    const operationalNotice = isInterview
+      ? `<strong>🔒 Operational Notice:</strong> You still cannot begin operations during the interview phase. Once the administrator marks your application as "Approved" following your interview, all features become accessible to begin operations, accept student bookings, and conduct classes.`
+      : `<strong>🔒 Operational Notice:</strong> While your application is under review or pending approval, you cannot yet begin operations, though you can still view the website's content through your account.`;
+
+    bannerContainer.innerHTML = `
+      <div class="app-status-banner pending-dashboard" style="margin-bottom: 1.5rem; background: ${accentBg}; border: 1px solid ${accentBorder}; border-radius: var(--radius-md); padding: 1.25rem; display: flex; gap: 1rem; align-items: flex-start;">
+        <div class="status-icon-circle" style="background: ${accentBg}; color: ${accent}; width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+          ${isInterview ? Icons.calendar(22) : Icons.hourglass(22)}
+        </div>
+        <div class="status-banner-content" style="flex: 1;">
+          <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
+            <div style="font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.04em; font-weight: 700;">
+              Tutor Application • Applicant: ${applicantName}
+            </div>
+            ${statusPill}
+          </div>
+          <h3 style="color: var(--text-primary); margin: 0.2rem 0 0; font-size: 1.15rem; font-weight: 700;">${title}</h3>
+          <div style="display: flex; align-items: center; margin: 0.85rem 0 0.25rem; flex-wrap: wrap; row-gap: 0.5rem;">${tracker}</div>
+          <p style="color: var(--text-secondary); margin: 0.6rem 0 0 0; font-size: 0.88rem; line-height: 1.5;">${message}</p>
+          <div style="margin-top: 0.65rem; background: rgba(0, 0, 0, 0.04); border-left: 3px solid ${accent}; padding: 0.5rem 0.75rem; font-size: 0.82rem; color: var(--text-primary);">
+            ${operationalNotice}
+          </div>
+          <div style="margin-top: 0.75rem; display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center;">
+            ${isInterview ? `
+              <button class="btn btn-primary btn-sm" onclick="document.getElementById('notif-bell-btn')?.click();" style="display: inline-flex; align-items: center; gap: 0.4rem;">
+                ${Icons.bell(15)} Check Notification Bell
+              </button>
+            ` : ''}
+            <button class="btn btn-outline-gold btn-sm" onclick="Teacher.toggleEditApplication()">View / Update Submitted Documents</button>
+          </div>
+        </div>
+      </div>
+    `;
   },
 
   // 1. Dedicated Class Page

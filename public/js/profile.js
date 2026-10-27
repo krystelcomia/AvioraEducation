@@ -41,9 +41,7 @@ const Profile = {
     const key = this.getUserKey();
     const savedTheme = localStorage.getItem(`aviora_theme${key}`) || localStorage.getItem('aviora_theme') || 'light';
     this.applyTheme(savedTheme, false, false);
-
-    const savedFontSize = localStorage.getItem(`aviora_font_size${key}`) || localStorage.getItem('aviora_font_size') || 'normal';
-    this.applyFontSize(savedFontSize, false, false);
+    document.documentElement.removeAttribute('data-font-size');
 
     const savedLang = localStorage.getItem(`aviora_language${key}`) || localStorage.getItem('aviora_language') || 'en-US';
     this.applyLanguage(savedLang, false, false);
@@ -131,43 +129,8 @@ const Profile = {
     }
   },
 
-  applyFontSize(size, notify = true, persistToServer = true) {
-    const validSizes = ['small', 'normal', 'large'];
-    const activeSize = validSizes.includes(size) ? size : 'normal';
-
-    document.documentElement.setAttribute('data-font-size', activeSize);
-
-    const key = this.getUserKey();
-    if (key) localStorage.setItem(`aviora_font_size${key}`, activeSize);
-    localStorage.setItem('aviora_font_size', activeSize);
-
-    const smallCard = document.getElementById('font-card-small');
-    const normalCard = document.getElementById('font-card-normal');
-    const largeCard = document.getElementById('font-card-large');
-    if (smallCard) smallCard.classList.toggle('active', activeSize === 'small');
-    if (normalCard) normalCard.classList.toggle('active', activeSize === 'normal');
-    if (largeCard) largeCard.classList.toggle('active', activeSize === 'large');
-
-    if (persistToServer && typeof Auth !== 'undefined' && Auth.currentUser && typeof API !== 'undefined') {
-      this.setSaveStatus('saving');
-      API.updateUserPreferences({ font_size: activeSize })
-        .then(res => {
-          if (res && res.preferences) {
-            this.userPreferences = res.preferences;
-            Storage.setUserPreferences(Auth.currentUser.id, res.preferences);
-          }
-          this.setSaveStatus('saved');
-        })
-        .catch(e => {
-          console.warn('Font size preference sync warning:', e);
-          this.setSaveStatus('error', 'Saved Locally');
-        });
-    }
-
-    if (notify) {
-      const msg = typeof I18n !== 'undefined' ? I18n.t('toast.font_saved') : 'Interface font size updated across the website';
-      showToast(msg, 'info');
-    }
+  applyFontSize(size) {
+    document.documentElement.removeAttribute('data-font-size');
   },
 
   applyLanguage(lang, notify = true, persistToServer = true) {
@@ -321,7 +284,7 @@ const Profile = {
   resetToDefaults() {
     // Reset DOM styling to clean default state upon logout
     document.documentElement.removeAttribute('data-theme');
-    document.documentElement.setAttribute('data-font-size', 'normal');
+    document.documentElement.removeAttribute('data-font-size');
     if (typeof I18n !== 'undefined') {
       I18n.applyLanguage('en-US', true);
     } else {
@@ -332,13 +295,6 @@ const Profile = {
     const darkCard = document.getElementById('theme-card-dark');
     if (lightCard) lightCard.classList.add('active');
     if (darkCard) darkCard.classList.remove('active');
-
-    const normalCard = document.getElementById('font-card-normal');
-    const smallCard = document.getElementById('font-card-small');
-    const largeCard = document.getElementById('font-card-large');
-    if (normalCard) normalCard.classList.add('active');
-    if (smallCard) smallCard.classList.remove('active');
-    if (largeCard) largeCard.classList.remove('active');
 
     const langSelect = document.getElementById('profile-language-select');
     if (langSelect) langSelect.value = 'en-US';
@@ -381,15 +337,6 @@ const Profile = {
     if (darkCard) {
       darkCard.addEventListener('click', () => this.applyTheme('dark'));
     }
-
-    // Font Size Cards
-    const fontCards = document.querySelectorAll('.font-picker-card');
-    fontCards.forEach(card => {
-      card.addEventListener('click', () => {
-        const size = card.getAttribute('data-size') || 'normal';
-        this.applyFontSize(size);
-      });
-    });
 
     // Language selector
     const langSelect = document.getElementById('profile-language-select');

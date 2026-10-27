@@ -129,9 +129,7 @@ const Auth = {
         if (prefs.theme === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
         else document.documentElement.removeAttribute('data-theme');
       }
-      if (prefs.font_size) {
-        document.documentElement.setAttribute('data-font-size', prefs.font_size);
-      }
+      document.documentElement.removeAttribute('data-font-size');
       if (prefs.language && typeof I18n !== 'undefined') {
         I18n.applyLanguage(prefs.language);
       }

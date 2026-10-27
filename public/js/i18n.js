@@ -1,22 +1,25 @@
 /**
  * AVIORA EDUCATION - MULTI-LANGUAGE INTERNATIONALIZATION (i18n) ENGINE
  * Supports: en-US (English), es-ES (Español), fr-FR (Français),
- *           de-DE (Deutsch), zh-CN (中文), ja-JP (日本語), fil-PH (Filipino)
+ *           de-DE (Deutsch), zh-CN (中文), ja-JP (日本語), fil-PH / tl-PH (Filipino)
  */
 
 const I18N_TRANSLATIONS = {
   'en-US': {
     // Navigation
     'nav.home': 'Home',
+    'nav.about': 'About',
     'nav.tutors': 'Find Tutors',
-    'nav.pricing': 'Pricing',
-    'nav.buddy': 'Buddy & Arena',
+    'nav.pricing': 'Subscription',
+    'nav.subscriptions': 'Subscription',
+    'nav.buddy': 'Aviora Buddy',
     'nav.virtual_room': 'Virtual Room',
     'nav.student_portal': 'Student Portal',
     'nav.teacher_portal': 'Teacher Portal',
     'nav.admin_portal': 'Admin Portal',
-    'nav.profile': 'Profile & Settings',
+    'nav.profile': 'Profile',
     'nav.login': 'Log In',
+    'nav.signup': 'Sign Up',
     'nav.get_started': 'Get Started',
     'nav.logout': 'Log Out',
     'nav.how_it_works': 'How It Works',
@@ -24,20 +27,12 @@ const I18N_TRANSLATIONS = {
 
     // Profile & Settings
     'settings.title': 'Settings & Preferences',
-    'settings.subtitle': 'Configure display themes, font size, internationalization, session notifications, and account security.',
+    'settings.subtitle': 'Configure display themes, internationalization, session notifications, and account security.',
     'settings.appearance_theme': 'Appearance Theme',
     'settings.light_mode': 'Light Mode',
     'settings.light_mode_desc': 'Warm cream & gold canvas',
     'settings.dark_mode': 'Dark Mode',
     'settings.dark_mode_desc': 'Obsidian & luxury gold',
-    'settings.font_size': 'Interface Font Size',
-    'settings.font_size_desc': 'Adjust system-wide typography scale for optimal reading comfort.',
-    'settings.font_small': 'Small (14px)',
-    'settings.font_small_desc': 'Compact & data-dense',
-    'settings.font_normal': 'Normal (16px)',
-    'settings.font_normal_desc': 'Standard balanced scale',
-    'settings.font_large': 'Large (18px)',
-    'settings.font_large_desc': 'Enhanced clarity & legibility',
     'settings.language': 'Language',
     'settings.timezone': 'Preferred Timezone',
     'settings.notifications': 'Notification Preferences',
@@ -104,7 +99,6 @@ const I18N_TRANSLATIONS = {
 
     // Toasts
     'toast.theme_saved': 'Appearance theme saved and applied across the website.',
-    'toast.font_saved': 'Font size updated and applied system-wide.',
     'toast.lang_saved': 'Language preference saved and updated across the website.',
     'toast.tz_saved': 'Preferred timezone updated successfully.',
     'toast.notif_saved': 'Notification preference updated and saved to your account.',
@@ -113,50 +107,45 @@ const I18N_TRANSLATIONS = {
 
   'es-ES': {
     'nav.home': 'Inicio',
+    'nav.about': 'Acerca de',
     'nav.tutors': 'Buscar Tutores',
-    'nav.pricing': 'Precios',
-    'nav.buddy': 'Compañero y Arena',
+    'nav.pricing': 'Suscripción',
+    'nav.subscriptions': 'Suscripción',
+    'nav.buddy': 'Aviora Buddy',
     'nav.virtual_room': 'Aula Virtual',
     'nav.student_portal': 'Portal de Estudiante',
     'nav.teacher_portal': 'Portal de Profesor',
     'nav.admin_portal': 'Portal de Administrador',
-    'nav.profile': 'Perfil y Ajustes',
+    'nav.profile': 'Perfil',
     'nav.login': 'Iniciar Sesión',
+    'nav.signup': 'Registrarse',
     'nav.get_started': 'Empezar',
     'nav.logout': 'Cerrar Sesión',
     'nav.how_it_works': 'Cómo Funciona',
     'nav.dashboard': 'Panel Principal',
 
     'settings.title': 'Ajustes y Preferencias',
-    'settings.subtitle': 'Configura temas de visualización, tamaño de fuente, internacionalización, notificaciones y seguridad.',
+    'settings.subtitle': 'Configura temas de visualización, internacionalización, notificaciones y seguridad.',
     'settings.appearance_theme': 'Tema de Apariencia',
     'settings.light_mode': 'Modo Claro',
     'settings.light_mode_desc': 'Lienzo crema cálido y oro',
     'settings.dark_mode': 'Modo Oscuro',
     'settings.dark_mode_desc': 'Obsidiana y oro de lujo',
-    'settings.font_size': 'Tamaño de Fuente de la Interfaz',
-    'settings.font_size_desc': 'Ajusta la escala tipográfica del sistema para una lectura óptima.',
-    'settings.font_small': 'Pequeño (14px)',
-    'settings.font_small_desc': 'Compacto y denso en datos',
-    'settings.font_normal': 'Normal (16px)',
-    'settings.font_normal_desc': 'Escala equilibrada estándar',
-    'settings.font_large': 'Grande (18px)',
-    'settings.font_large_desc': 'Mayor claridad y legibilidad',
     'settings.language': 'Idioma',
     'settings.timezone': 'Zona Horaria Preferida',
     'settings.notifications': 'Preferencias de Notificación',
     'settings.notif_lessons': 'Recordatorios de Clase de 3 Horas',
     'settings.notif_lessons_desc': 'Recibe alerta 3 horas antes de tu clase programada de 50 minutos',
     'settings.notif_calendar': 'Alertas de Sincronización de Calendario',
-    'settings.notif_calendar_desc': 'Avisar cuando un tutor confirme, reprograme o modifique la sesión',
+    'settings.notif_calendar_desc': 'Avisar cuando un tutor confirme, reprograme o actualice los detalles de la sesión',
     'settings.notif_messages': 'Mensajes Directos del Educador',
-    'settings.notif_messages_desc': 'Alertas instantáneas cuando tu tutor envíe notas de estudio o mensajes',
+    'settings.notif_messages_desc': 'Alertas instantáneas cuando un tutor asignado envíe notas de estudio o mensajes',
     'settings.notif_reports': 'Resumen Académico Semanal',
-    'settings.notif_reports_desc': 'Recibe resúmenes semanales de rendimiento y saldo de clases restantes',
-    'settings.save_profile': 'Guardar Cambios del Perfil',
+    'settings.notif_reports_desc': 'Recibe resúmenes semanales de rendimiento y créditos de clase restantes',
+    'settings.save_profile': 'Guardar Cambios de Perfil',
     'settings.saving_profile': 'Guardando Cambios...',
     'settings.account_security': 'Seguridad de la Cuenta',
-    'settings.security_desc': 'Actualiza tu contraseña para mantener seguro tu historial y suscripción.',
+    'settings.security_desc': 'Actualiza tu contraseña para asegurar que tu historial y suscripción estén protegidos.',
     'settings.current_password': 'Contraseña Actual',
     'settings.new_password': 'Nueva Contraseña',
     'settings.confirm_password': 'Confirmar Nueva Contraseña',
@@ -170,9 +159,9 @@ const I18N_TRANSLATIONS = {
     'dash.total_lessons': 'Total de Clases',
     'dash.remaining_credits': 'Créditos Restantes',
     'dash.study_hours': 'Horas de Estudio',
-    'dash.grade_level': 'Nivel Académico',
+    'dash.grade_level': 'Nivel de Grado',
     'dash.active_plan': 'Plan Activo',
-    'dash.standard_plan': 'Pago por Sesión Estándar',
+    'dash.standard_plan': 'Pago por sesión estándar',
     'dash.all_lessons': 'Todas las Clases',
     'dash.scheduled': 'Programada',
     'dash.completed': 'Completada',
@@ -181,7 +170,7 @@ const I18N_TRANSLATIONS = {
     'dash.book_lesson': 'Reservar una Clase',
     'dash.view_tutors': 'Explorar Tutores',
     'dash.join_room': 'Entrar a la Clase Virtual',
-    'dash.review_tutor': 'Calificar Sesión',
+    'dash.review_tutor': 'Evaluar Sesión',
     'dash.no_lessons': 'No hay clases programadas en este momento.',
     'dash.quick_actions': 'Acciones Rápidas',
     'dash.status': 'Estado',
@@ -200,13 +189,12 @@ const I18N_TRANSLATIONS = {
     'common.search': 'Buscar',
     'common.notifications': 'Notificaciones',
     'common.mark_all_read': 'Marcar todo como leído',
-    'common.no_notifications': 'No hay notificaciones nuevas.',
+    'common.no_notifications': 'No hay nuevas notificaciones.',
     'common.saving': 'Guardando preferencia...',
     'common.saved': 'Preferencia guardada con éxito.',
 
     'toast.theme_saved': 'Tema de apariencia guardado y aplicado en todo el sitio web.',
-    'toast.font_saved': 'Tamaño de fuente actualizado y aplicado a todo el sistema.',
-    'toast.lang_saved': 'Preferencia de idioma guardada y actualizada en todo el sitio.',
+    'toast.lang_saved': 'Preferencia de idioma guardada y actualizada en todo el sitio web.',
     'toast.tz_saved': 'Zona horaria preferida actualizada con éxito.',
     'toast.notif_saved': 'Preferencia de notificación guardada en tu cuenta.',
     'toast.error_sync': 'Error al sincronizar con el servidor. Usando ajustes locales.'
@@ -214,35 +202,30 @@ const I18N_TRANSLATIONS = {
 
   'fr-FR': {
     'nav.home': 'Accueil',
+    'nav.about': 'À propos',
     'nav.tutors': 'Trouver des Tuteurs',
-    'nav.pricing': 'Tarifs',
-    'nav.buddy': 'Buddy & Arène',
+    'nav.pricing': 'Abonnement',
+    'nav.subscriptions': 'Abonnement',
+    'nav.buddy': 'Aviora Buddy',
     'nav.virtual_room': 'Salle Virtuelle',
     'nav.student_portal': 'Portail Étudiant',
     'nav.teacher_portal': 'Portail Enseignant',
     'nav.admin_portal': 'Portail Admin',
-    'nav.profile': 'Profil & Paramètres',
+    'nav.profile': 'Profil',
     'nav.login': 'Connexion',
+    'nav.signup': 'Inscription',
     'nav.get_started': 'Commencer',
     'nav.logout': 'Déconnexion',
     'nav.how_it_works': 'Comment ça marche',
     'nav.dashboard': 'Tableau de bord',
 
     'settings.title': 'Paramètres & Préférences',
-    'settings.subtitle': 'Configurez les thèmes d’affichage, la taille de police, l’internationalisation, les alertes et la sécurité.',
+    'settings.subtitle': 'Configurez les thèmes d’affichage, l’internationalisation, les alertes et la sécurité.',
     'settings.appearance_theme': 'Thème d’Apparence',
     'settings.light_mode': 'Mode Clair',
     'settings.light_mode_desc': 'Crème chaleureuse et touches d’or',
     'settings.dark_mode': 'Mode Sombre',
     'settings.dark_mode_desc': 'Obsidienne et or prestigieux',
-    'settings.font_size': 'Taille de Police d’Interface',
-    'settings.font_size_desc': 'Ajustez l’échelle typographique globale pour un confort de lecture optimal.',
-    'settings.font_small': 'Petite (14px)',
-    'settings.font_small_desc': 'Vue compacte et dense',
-    'settings.font_normal': 'Normale (16px)',
-    'settings.font_normal_desc': 'Échelle standard équilibrée',
-    'settings.font_large': 'Grande (18px)',
-    'settings.font_large_desc': 'Lisibilité et clarté accrues',
     'settings.language': 'Langue',
     'settings.timezone': 'Fuseau Horaire Préféré',
     'settings.notifications': 'Préférences de Notification',
@@ -306,7 +289,6 @@ const I18N_TRANSLATIONS = {
     'common.saved': 'Préférences enregistrées avec succès.',
 
     'toast.theme_saved': 'Thème d’apparence enregistré et appliqué à tout le site.',
-    'toast.font_saved': 'Taille de police appliquée à l’ensemble du système.',
     'toast.lang_saved': 'Langue enregistrée et mise à jour sur tout le site.',
     'toast.tz_saved': 'Fuseau horaire préféré mis à jour.',
     'toast.notif_saved': 'Préférences de notification enregistrées sur votre compte.',
@@ -315,35 +297,30 @@ const I18N_TRANSLATIONS = {
 
   'de-DE': {
     'nav.home': 'Startseite',
+    'nav.about': 'Über uns',
     'nav.tutors': 'Tutoren finden',
-    'nav.pricing': 'Preise',
-    'nav.buddy': 'Buddy & Arena',
+    'nav.pricing': 'Abonnement',
+    'nav.subscriptions': 'Abonnement',
+    'nav.buddy': 'Aviora Buddy',
     'nav.virtual_room': 'Virtueller Raum',
     'nav.student_portal': 'Studentenportal',
     'nav.teacher_portal': 'Lehrerportal',
     'nav.admin_portal': 'Adminportal',
-    'nav.profile': 'Profil & Einstellungen',
+    'nav.profile': 'Profil',
     'nav.login': 'Anmelden',
+    'nav.signup': 'Registrieren',
     'nav.get_started': 'Loslegen',
     'nav.logout': 'Abmelden',
     'nav.how_it_works': 'So funktioniert es',
     'nav.dashboard': 'Dashboard',
 
     'settings.title': 'Einstellungen & Präferenzen',
-    'settings.subtitle': 'Passen Sie Anzeigedesigns, Schriftgrößen, Internationalisierung, Benachrichtigungen und Sicherheit an.',
+    'settings.subtitle': 'Passen Sie Anzeigedesigns, Internationalisierung, Benachrichtigungen und Sicherheit an.',
     'settings.appearance_theme': 'Erscheinungsbild',
     'settings.light_mode': 'Heller Modus',
     'settings.light_mode_desc': 'Warme Creme & edles Gold',
     'settings.dark_mode': 'Dunkler Modus',
     'settings.dark_mode_desc': 'Obsidian & Luxusgold',
-    'settings.font_size': 'Schriftgröße der Oberfläche',
-    'settings.font_size_desc': 'Passen Sie die Typografie für optimalen Lesekomfort an.',
-    'settings.font_small': 'Klein (14px)',
-    'settings.font_small_desc': 'Kompakt & datendicht',
-    'settings.font_normal': 'Normal (16px)',
-    'settings.font_normal_desc': 'Ausgewogener Standard',
-    'settings.font_large': 'Groß (18px)',
-    'settings.font_large_desc': 'Erhöhte Klarheit & Lesbarkeit',
     'settings.language': 'Sprache',
     'settings.timezone': 'Bevorzugte Zeitzone',
     'settings.notifications': 'Benachrichtigungseinstellungen',
@@ -407,7 +384,6 @@ const I18N_TRANSLATIONS = {
     'common.saved': 'Einstellung erfolgreich gespeichert.',
 
     'toast.theme_saved': 'Design gespeichert und auf der gesamten Website angewendet.',
-    'toast.font_saved': 'Schriftgröße systemweit aktualisiert.',
     'toast.lang_saved': 'Sprache gespeichert und überall aktualisiert.',
     'toast.tz_saved': 'Bevorzugte Zeitzone erfolgreich aktualisiert.',
     'toast.notif_saved': 'Benachrichtigungseinstellung in Ihrem Konto gespeichert.',
@@ -416,35 +392,30 @@ const I18N_TRANSLATIONS = {
 
   'zh-CN': {
     'nav.home': '首页',
+    'nav.about': '关于我们',
     'nav.tutors': '寻找导师',
-    'nav.pricing': '价格方案',
-    'nav.buddy': '伙伴与竞技场',
+    'nav.pricing': '课程订阅',
+    'nav.subscriptions': '课程订阅',
+    'nav.buddy': 'Aviora 伙伴',
     'nav.virtual_room': '虚拟教室',
     'nav.student_portal': '学生门户',
     'nav.teacher_portal': '教师门户',
     'nav.admin_portal': '管理门户',
-    'nav.profile': '个人资料与设置',
+    'nav.profile': '个人资料',
     'nav.login': '登录',
+    'nav.signup': '注册',
     'nav.get_started': '开始使用',
     'nav.logout': '登出',
     'nav.how_it_works': '服务流程',
     'nav.dashboard': '控制台',
 
     'settings.title': '设置与偏好',
-    'settings.subtitle': '自定义系统外观主题、字号大小、多语言环境、通知偏好和账户安全。',
+    'settings.subtitle': '自定义系统外观主题、多语言环境、通知偏好和账户安全。',
     'settings.appearance_theme': '外观主题',
     'settings.light_mode': '浅色模式',
     'settings.light_mode_desc': '温润米白与暖金质感',
     'settings.dark_mode': '深色模式',
     'settings.dark_mode_desc': '黑曜石沉稳与奢华金',
-    'settings.font_size': '界面字体大小',
-    'settings.font_size_desc': '调整全站文本排版比例，获得最佳阅读与操作体验。',
-    'settings.font_small': '偏小 (14px)',
-    'settings.font_small_desc': '紧凑高密视界',
-    'settings.font_normal': '标准 (16px)',
-    'settings.font_normal_desc': '黄金均衡默认比例',
-    'settings.font_large': '偏大 (18px)',
-    'settings.font_large_desc': '清晰大字舒畅阅读',
     'settings.language': '显示语言',
     'settings.timezone': '首选时区',
     'settings.notifications': '课程通知偏好',
@@ -508,7 +479,6 @@ const I18N_TRANSLATIONS = {
     'common.saved': '偏好设置已成功保存。',
 
     'toast.theme_saved': '外观主题已成功保存并实时应用于全站。',
-    'toast.font_saved': '界面字体大小已更新并全局生效。',
     'toast.lang_saved': '显示语言已保存并全站更新。',
     'toast.tz_saved': '首选时区已成功更新。',
     'toast.notif_saved': '通知偏好已同步至您的账户。',
@@ -517,35 +487,30 @@ const I18N_TRANSLATIONS = {
 
   'ja-JP': {
     'nav.home': 'ホーム',
+    'nav.about': '会社概要',
     'nav.tutors': '講師を探す',
-    'nav.pricing': '料金プラン',
-    'nav.buddy': 'バディ＆アリーナ',
+    'nav.pricing': 'サブスクリプション',
+    'nav.subscriptions': 'サブスクリプション',
+    'nav.buddy': 'Aviora バディ',
     'nav.virtual_room': 'バーチャル教室',
     'nav.student_portal': '受講生ポータル',
     'nav.teacher_portal': '講師ポータル',
     'nav.admin_portal': '管理ポータル',
-    'nav.profile': 'プロフィール＆設定',
+    'nav.profile': 'プロフィール',
     'nav.login': 'ログイン',
+    'nav.signup': '新規登録',
     'nav.get_started': '今すぐ始める',
     'nav.logout': 'ログアウト',
     'nav.how_it_works': 'ご利用の流れ',
     'nav.dashboard': 'ダッシュボード',
 
     'settings.title': '設定と環境設定',
-    'settings.subtitle': '表示テーマ、文字サイズ、言語設定、通知、アカウントセキュリティを管理できます。',
+    'settings.subtitle': '表示テーマ、言語設定、通知、アカウントセキュリティを管理できます。',
     'settings.appearance_theme': '表示テーマ',
     'settings.light_mode': 'ライトモード',
     'settings.light_mode_desc': '温かみのあるクリーム＆ゴールド',
     'settings.dark_mode': 'ダークモード',
     'settings.dark_mode_desc': '上質な黒曜石＆ラグジュアリーゴールド',
-    'settings.font_size': 'インターフェース文字サイズ',
-    'settings.font_size_desc': '画面全体の文字サイズを調整して、快適に閲覧いただけます。',
-    'settings.font_small': '小さめ (14px)',
-    'settings.font_small_desc': 'コンパクトで見やすい配置',
-    'settings.font_normal': '標準 (16px)',
-    'settings.font_normal_desc': 'バランスの良い標準設定',
-    'settings.font_large': '大きめ (18px)',
-    'settings.font_large_desc': '視認性を高めた大きめ表示',
     'settings.language': '表示言語',
     'settings.timezone': '優先タイムゾーン',
     'settings.notifications': '通知の環境設定',
@@ -609,7 +574,6 @@ const I18N_TRANSLATIONS = {
     'common.saved': '設定が正常に保存されました。',
 
     'toast.theme_saved': '表示テーマが保存され、サイト全体に適用されました。',
-    'toast.font_saved': '文字サイズが更新され、全体に反映されました。',
     'toast.lang_saved': '言語設定が保存され、サイト全体が更新されました。',
     'toast.tz_saved': '優先タイムゾーンが正常に更新されました。',
     'toast.notif_saved': '通知設定がアカウントに保存されました。',
@@ -618,35 +582,30 @@ const I18N_TRANSLATIONS = {
 
   'fil-PH': {
     'nav.home': 'Tahanan',
+    'nav.about': 'Tungkol sa Amin',
     'nav.tutors': 'Maghanap ng Tutor',
-    'nav.pricing': 'Presyo',
-    'nav.buddy': 'Kasama at Arena',
+    'nav.pricing': 'Subskripsyon',
+    'nav.subscriptions': 'Subskripsyon',
+    'nav.buddy': 'Aviora Buddy',
     'nav.virtual_room': 'Virtual na Silid',
     'nav.student_portal': 'Portal ng Mag-aaral',
     'nav.teacher_portal': 'Portal ng Guro',
     'nav.admin_portal': 'Portal ng Admin',
-    'nav.profile': 'Profile at Mga Setting',
+    'nav.profile': 'Profile',
     'nav.login': 'Mag-log In',
+    'nav.signup': 'Mag-sign Up',
     'nav.get_started': 'Magsimula Na',
     'nav.logout': 'Mag-log Out',
     'nav.how_it_works': 'Paano Gumagana',
     'nav.dashboard': 'Dashboard',
 
     'settings.title': 'Mga Setting at Kagustuhan',
-    'settings.subtitle': 'I-configure ang tema ng kulay, laki ng font, wika, mga abiso, at seguridad ng account.',
+    'settings.subtitle': 'I-configure ang tema ng kulay, wika, mga abiso, at seguridad ng account.',
     'settings.appearance_theme': 'Tema ng Hitsura',
     'settings.light_mode': 'Maliwanag na Mode',
     'settings.light_mode_desc': 'Mainit na krema at ginto',
     'settings.dark_mode': 'Madilim na Mode',
     'settings.dark_mode_desc': 'Obsidian at marangyang ginto',
-    'settings.font_size': 'Laki ng Font ng Interface',
-    'settings.font_size_desc': 'Isaayos ang laki ng teksto sa buong website para sa mas komportableng pagbasa.',
-    'settings.font_small': 'Maliit (14px)',
-    'settings.font_small_desc': 'Siksik at marami ang kasya',
-    'settings.font_normal': 'Normal (16px)',
-    'settings.font_normal_desc': 'Karaniwang balanseng sukat',
-    'settings.font_large': 'Malaki (18px)',
-    'settings.font_large_desc': 'Mas malinaw at madaling basahin',
     'settings.language': 'Wika',
     'settings.timezone': 'Paboritong Timezone',
     'settings.notifications': 'Mga Kagustuhan sa Abiso',
@@ -710,7 +669,6 @@ const I18N_TRANSLATIONS = {
     'common.saved': 'Matagumpay na na-save ang kagustuhan.',
 
     'toast.theme_saved': 'Tema ng kulay na-save at inilapat sa buong website.',
-    'toast.font_saved': 'Laki ng font na-update sa buong sistema.',
     'toast.lang_saved': 'Kagustuhan sa wika na-save at na-update sa buong website.',
     'toast.tz_saved': 'Paboritong timezone matagumpay na na-update.',
     'toast.notif_saved': 'Kagustuhan sa abiso na-save sa iyong account.',
@@ -718,22 +676,791 @@ const I18N_TRANSLATIONS = {
   }
 };
 
+// Comprehensive English-to-Target Phrase & Word Dictionary
+const PHRASE_DICTIONARY = {
+  'es-ES': {
+    // Nav & Common
+    'Home': 'Inicio',
+    'About': 'Acerca de',
+    'Subscription': 'Suscripción',
+    'Subscriptions': 'Suscripciones',
+    'Find Tutors': 'Buscar Tutores',
+    'Tutors': 'Tutores',
+    'Aviora Buddy': 'Aviora Buddy',
+    'Buddy & Arena': 'Compañero y Arena',
+    'How It Works': 'Cómo Funciona',
+    'Dashboard': 'Panel Principal',
+    'Log In': 'Iniciar Sesión',
+    'Sign Up': 'Registrarse',
+    'Profile': 'Perfil',
+    'Log Out': 'Cerrar Sesión',
+    'Notifications': 'Notificaciones',
+    'Mark all read': 'Marcar todo leído',
+    'Mark all as read': 'Marcar todo como leído',
+    'Filtered': 'Filtrado',
+    'Back to Dashboard': 'Volver al Panel',
+    'Save': 'Guardar',
+    'Cancel': 'Cancelar',
+    'Close': 'Cerrar',
+    'Submit': 'Enviar',
+    'Confirm': 'Confirmar',
+    'Search': 'Buscar',
+    'Filter': 'Filtrar',
+    'Edit': 'Editar',
+    'Delete': 'Eliminar',
+    'Status': 'Estado',
+    'Actions': 'Acciones',
+    'Subject': 'Materia',
+    'Tutor': 'Tutor',
+    'Date & Time': 'Fecha y Hora',
+    'Duration': 'Duración',
+    'Hourly Rate': 'Tarifa por Hora',
+    'Book Lesson': 'Reservar Clase',
+    'Book a Lesson': 'Reservar una Clase',
+    'View Profile': 'Ver Perfil',
+    'Explore Tutors': 'Explorar Tutores',
+    'Join Virtual Class': 'Entrar a Clase Virtual',
+    'Review Session': 'Evaluar Sesión',
+    'Academic Overview': 'Resumen Académico',
+    'Upcoming Lessons': 'Próximas Clases',
+    'Learning Milestones': 'Hitos de Aprendizaje',
+    'Total Lessons': 'Total de Clases',
+    'Remaining Credits': 'Créditos Restantes',
+    'Study Hours': 'Horas de Estudio',
+    'Grade Level': 'Nivel de Grado',
+    'Active Plan': 'Plan Activo',
+    'Quick Actions': 'Acciones Rápidas',
+    'All Lessons': 'Todas las Clases',
+    'Scheduled': 'Programada',
+    'Completed': 'Completada',
+    'Pending': 'Pendiente',
+    'Cancelled': 'Cancelada',
+    
+    // Profile Fields
+    'Full Name': 'Nombre Completo',
+    'Email Address': 'Correo Electrónico',
+    'Phone Contact': 'Teléfono de Contacto',
+    'Current Grade Level': 'Nivel de Grado Actual',
+    'School / Institution Name': 'Nombre de Escuela / Institución',
+    'Primary Learning Goals': 'Objetivos Principales de Aprendizaje',
+    'Target Subjects of Interest': 'Materias de Interés',
+    'Save Profile Changes': 'Guardar Cambios de Perfil',
+    'Settings & Preferences': 'Ajustes y Preferencias',
+    'Appearance Theme': 'Tema de Apariencia',
+    'Light Mode': 'Modo Claro',
+    'Warm cream & gold canvas': 'Lienzo crema cálido y oro',
+    'Dark Mode': 'Modo Oscuro',
+    'Obsidian & luxury gold': 'Obsidiana y oro de lujo',
+    'Language': 'Idioma',
+    'Preferred Timezone': 'Zona Horaria Preferida',
+    'Notification Preferences': 'Preferencias de Notificación',
+    '3-Hour Lesson Reminders': 'Recordatorios de Clase de 3 Horas',
+    'Receive reminder alert 3 hours prior to scheduled 50-minute class': 'Recibe alerta 3 horas antes de tu clase programada de 50 minutos',
+    'Calendar Sync Alerts': 'Alertas de Sincronización de Calendario',
+    'Notify when a tutor confirms, reschedules, or updates session details': 'Avisar cuando un tutor confirme, reprograme o actualice los detalles',
+    'Direct Educator Messages': 'Mensajes Directos del Educador',
+    'Instant alerts when an assigned educator sends study notes or messages': 'Alertas instantáneas cuando un tutor asignado envíe notas o mensajes',
+    'Weekly Academic Digest': 'Resumen Académico Semanal',
+    'Receive weekly performance summaries and remaining lesson credit updates': 'Recibe resúmenes semanales de rendimiento y créditos restantes',
+    'Account Security': 'Seguridad de la Cuenta',
+    'Current Password': 'Contraseña Actual',
+    'New Password': 'Nueva Contraseña',
+    'Confirm New Password': 'Confirmar Nueva Contraseña',
+    'Update Password': 'Actualizar Contraseña',
+    'Saved to Account': 'Guardado en la Cuenta',
+    'Manage Subscription': 'Gestionar Suscripción',
+    'Verified Student Account': 'Cuenta de Estudiante Verificada',
+    
+    // Hero & Features
+    'Elite 1-on-1 Academic Mentorship & AI Tutoring': 'Tutoría Académica de Élite 1 a 1 y Tutoría con IA',
+    'Transform your learning with world-class Ivy League educators and cutting-edge interactive tools.': 'Transforma tu aprendizaje con educadores de la Ivy League y herramientas interactivas de vanguardia.',
+    'Find Your Tutor': 'Encuentra a tu Tutor',
+    'Explore Subscription': 'Explorar Suscripciones',
+    '500+ Expert Tutors': '500+ Tutores Expertos',
+    '99.4% Pass Rate': '99.4% Tasa de Aprobación',
+    '50+ Subjects': '50+ Materias',
+    'Our Mission': 'Nuestra Misión',
+    'About Aviora Education': 'Sobre Aviora Education',
+    'Redefining High School & University Academic Excellence': 'Redefiniendo la Excelencia Académica Escolar y Universitaria',
+    'Transparent, Flexible Membership Plans': 'Planes de Membresía Transparentes y Flexibles',
+    'Starter': 'Inicial',
+    'Scholar': 'Académico',
+    'Elite Prodigy': 'Prodigio de Élite',
+    'Choose Plan': 'Elegir Plan',
+    'Purchase Credits': 'Comprar Créditos',
+    'Credits Remaining': 'Créditos Restantes',
+    'All Subjects': 'Todas las Materias',
+    'Mathematics': 'Matemáticas',
+    'Physics': 'Física',
+    'Chemistry': 'Química',
+    'Biology': 'Biología',
+    'Computer Science': 'Ciencias de la Computación',
+    'English & Literature': 'Inglés y Literatura',
+    'Economics': 'Economía',
+    'History': 'Historia',
+    'Join with Buddy Code': 'Unirse con Código Buddy',
+    'Instant Passcode': 'Código Instantáneo',
+    'Join Aviora Buddy Session': 'Unirse a Sesión de Aviora Buddy',
+    'All rights reserved.': 'Todos los derechos reservados.'
+  },
+
+  'fr-FR': {
+    // Nav & Common
+    'Home': 'Accueil',
+    'About': 'À propos',
+    'Subscription': 'Abonnement',
+    'Subscriptions': 'Abonnements',
+    'Find Tutors': 'Trouver des Tuteurs',
+    'Tutors': 'Tuteurs',
+    'Aviora Buddy': 'Aviora Buddy',
+    'Buddy & Arena': 'Buddy & Arène',
+    'How It Works': 'Comment ça marche',
+    'Dashboard': 'Tableau de bord',
+    'Log In': 'Connexion',
+    'Sign Up': 'Inscription',
+    'Profile': 'Profil',
+    'Log Out': 'Déconnexion',
+    'Notifications': 'Notifications',
+    'Mark all read': 'Tout marquer comme lu',
+    'Mark all as read': 'Tout marquer comme lu',
+    'Filtered': 'Filtré',
+    'Back to Dashboard': 'Retour au Tableau de bord',
+    'Save': 'Enregistrer',
+    'Cancel': 'Annuler',
+    'Close': 'Fermer',
+    'Submit': 'Soumettre',
+    'Confirm': 'Confirmer',
+    'Search': 'Rechercher',
+    'Filter': 'Filtrer',
+    'Edit': 'Modifier',
+    'Delete': 'Supprimer',
+    'Status': 'Statut',
+    'Actions': 'Actions',
+    'Subject': 'Matière',
+    'Tutor': 'Tuteur',
+    'Date & Time': 'Date et Heure',
+    'Duration': 'Durée',
+    'Hourly Rate': 'Taux Horaire',
+    'Book Lesson': 'Réserver un Cours',
+    'Book a Lesson': 'Réserver un Cours',
+    'View Profile': 'Voir le Profil',
+    'Explore Tutors': 'Découvrir les Tuteurs',
+    'Join Virtual Class': 'Rejoindre la Classe Virtuelle',
+    'Review Session': 'Évaluer la Session',
+    'Academic Overview': 'Aperçu Académique',
+    'Upcoming Lessons': 'Cours à Venir',
+    'Learning Milestones': 'Étapes d’Apprentissage',
+    'Total Lessons': 'Total des Cours',
+    'Remaining Credits': 'Crédits Restants',
+    'Study Hours': 'Heures d’Étude',
+    'Grade Level': 'Niveau d’Étude',
+    'Active Plan': 'Abonnement Actif',
+    'Quick Actions': 'Actions Rapides',
+    'All Lessons': 'Tous les Cours',
+    'Scheduled': 'Planifié',
+    'Completed': 'Terminé',
+    'Pending': 'En attente',
+    'Cancelled': 'Annulé',
+    
+    // Profile Fields
+    'Full Name': 'Nom Complet',
+    'Email Address': 'Adresse E-mail',
+    'Phone Contact': 'Numéro de Téléphone',
+    'Current Grade Level': 'Niveau Scolaire Actuel',
+    'School / Institution Name': 'Établissement / École',
+    'Primary Learning Goals': 'Objectifs d’Apprentissage',
+    'Target Subjects of Interest': 'Matières d’Intérêt',
+    'Save Profile Changes': 'Enregistrer les Modifications',
+    'Settings & Preferences': 'Paramètres & Préférences',
+    'Appearance Theme': 'Thème d’Apparence',
+    'Light Mode': 'Mode Clair',
+    'Warm cream & gold canvas': 'Crème chaleureuse et touches d’or',
+    'Dark Mode': 'Mode Sombre',
+    'Obsidian & luxury gold': 'Obsidienne et or prestigieux',
+    'Language': 'Langue',
+    'Preferred Timezone': 'Fuseau Horaire Préféré',
+    'Notification Preferences': 'Préférences de Notification',
+    '3-Hour Lesson Reminders': 'Rappels de cours 3 heures avant',
+    'Receive reminder alert 3 hours prior to scheduled 50-minute class': 'Recevez une notification 3 heures avant votre cours de 50 minutes',
+    'Calendar Sync Alerts': 'Alertes de Calendrier',
+    'Notify when a tutor confirms, reschedules, or updates session details': 'Notification lorsqu’un tuteur confirme ou met à jour la session',
+    'Direct Educator Messages': 'Messages Directs de l’Enseignant',
+    'Instant alerts when an assigned educator sends study notes or messages': 'Alertes immédiates en cas de nouveaux messages ou notes',
+    'Weekly Academic Digest': 'Synthèse Académique Hebdomadaire',
+    'Receive weekly performance summaries and remaining lesson credit updates': 'Recevez un récapitulatif hebdomadaire de vos progrès',
+    'Account Security': 'Sécurité du Compte',
+    'Current Password': 'Mot de Passe Actuel',
+    'New Password': 'Nouveau Mot de Passe',
+    'Confirm New Password': 'Confirmer Nouveau Mot de Passe',
+    'Update Password': 'Changer le Mot de Passe',
+    'Saved to Account': 'Enregistré sur le Compte',
+    'Manage Subscription': 'Gérer l’Abonnement',
+    'Verified Student Account': 'Compte Étudiant Vérifié',
+
+    // Hero & Features
+    'Elite 1-on-1 Academic Mentorship & AI Tutoring': 'Mentorat Académique d’Élite 1-sur-1 & Tutorat IA',
+    'Transform your learning with world-class Ivy League educators and cutting-edge interactive tools.': 'Transformez votre apprentissage avec des tuteurs d’élite et des outils interactifs de pointe.',
+    'Find Your Tutor': 'Trouvez Votre Tuteur',
+    'Explore Subscription': 'Découvrir les Abonnements',
+    '500+ Expert Tutors': '500+ Tuteurs Experts',
+    '99.4% Pass Rate': 'Taux de Réussite de 99.4%',
+    '50+ Subjects': '50+ Matières',
+    'Our Mission': 'Notre Mission',
+    'About Aviora Education': 'À Propos d’Aviora Education',
+    'Redefining High School & University Academic Excellence': 'Redéfinir l’Excellence Académique au Lycée et à l’Université',
+    'Transparent, Flexible Membership Plans': 'Formules d’Abonnement Claires et Flexibles',
+    'Starter': 'Découverte',
+    'Scholar': 'Érudit',
+    'Elite Prodigy': 'Prodige d’Élite',
+    'Choose Plan': 'Choisir cette Formule',
+    'Purchase Credits': 'Acheter des Crédits',
+    'Credits Remaining': 'Crédits Restants',
+    'All Subjects': 'Toutes les Matières',
+    'Mathematics': 'Mathématiques',
+    'Physics': 'Physique',
+    'Chemistry': 'Chimie',
+    'Biology': 'Biologie',
+    'Computer Science': 'Informatique',
+    'English & Literature': 'Anglais & Littérature',
+    'Economics': 'Économie',
+    'History': 'Histoire',
+    'Join with Buddy Code': 'Rejoindre avec un Code Buddy',
+    'Instant Passcode': 'Code Instantané',
+    'Join Aviora Buddy Session': 'Rejoindre la Session Buddy',
+    'All rights reserved.': 'Tous droits réservés.'
+  },
+
+  'de-DE': {
+    // Nav & Common
+    'Home': 'Startseite',
+    'About': 'Über uns',
+    'Subscription': 'Abonnement',
+    'Subscriptions': 'Abonnements',
+    'Find Tutors': 'Tutoren finden',
+    'Tutors': 'Tutoren',
+    'Aviora Buddy': 'Aviora Buddy',
+    'Buddy & Arena': 'Buddy & Arena',
+    'How It Works': 'So funktioniert es',
+    'Dashboard': 'Dashboard',
+    'Log In': 'Anmelden',
+    'Sign Up': 'Registrieren',
+    'Profile': 'Profil',
+    'Log Out': 'Abmelden',
+    'Notifications': 'Benachrichtigungen',
+    'Mark all read': 'Alle als gelesen markieren',
+    'Mark all as read': 'Alle als gelesen markieren',
+    'Filtered': 'Gefiltert',
+    'Back to Dashboard': 'Zurück zum Dashboard',
+    'Save': 'Speichern',
+    'Cancel': 'Abbrechen',
+    'Close': 'Schließen',
+    'Submit': 'Absenden',
+    'Confirm': 'Bestätigen',
+    'Search': 'Suchen',
+    'Filter': 'Filtern',
+    'Edit': 'Bearbeiten',
+    'Delete': 'Löschen',
+    'Status': 'Status',
+    'Actions': 'Aktionen',
+    'Subject': 'Fach',
+    'Tutor': 'Tutor',
+    'Date & Time': 'Datum & Uhrzeit',
+    'Duration': 'Dauer',
+    'Hourly Rate': 'Stundensatz',
+    'Book Lesson': 'Stunde buchen',
+    'Book a Lesson': 'Stunde buchen',
+    'View Profile': 'Profil ansehen',
+    'Explore Tutors': 'Tutoren entdecken',
+    'Join Virtual Class': 'Klassenzimmer beitreten',
+    'Review Session': 'Sitzung bewerten',
+    'Academic Overview': 'Akademische Übersicht',
+    'Upcoming Lessons': 'Kommende Stunden',
+    'Learning Milestones': 'Lernmeilensteine',
+    'Total Lessons': 'Gesamte Stunden',
+    'Remaining Credits': 'Verbleibende Guthaben',
+    'Study Hours': 'Lernstunden',
+    'Grade Level': 'Klassenstufe',
+    'Active Plan': 'Aktiver Plan',
+    'Quick Actions': 'Schnellaktionen',
+    'All Lessons': 'Alle Stunden',
+    'Scheduled': 'Geplant',
+    'Completed': 'Abgeschlossen',
+    'Pending': 'Ausstehend',
+    'Cancelled': 'Storniert',
+    
+    // Profile Fields
+    'Full Name': 'Vollständiger Name',
+    'Email Address': 'E-Mail-Adresse',
+    'Phone Contact': 'Telefonnummer',
+    'Current Grade Level': 'Aktuelle Klassenstufe',
+    'School / Institution Name': 'Schule / Institution',
+    'Primary Learning Goals': 'Hauptlernziele',
+    'Target Subjects of Interest': 'Interessengebiete',
+    'Save Profile Changes': 'Profiländerungen speichern',
+    'Settings & Preferences': 'Einstellungen & Präferenzen',
+    'Appearance Theme': 'Erscheinungsbild',
+    'Light Mode': 'Heller Modus',
+    'Warm cream & gold canvas': 'Warme Creme & edles Gold',
+    'Dark Mode': 'Dunkler Modus',
+    'Obsidian & luxury gold': 'Obsidian & Luxusgold',
+    'Language': 'Sprache',
+    'Preferred Timezone': 'Bevorzugte Zeitzone',
+    'Notification Preferences': 'Benachrichtigungseinstellungen',
+    '3-Hour Lesson Reminders': '3-Stunden-Unterrichtserinnerung',
+    'Receive reminder alert 3 hours prior to scheduled 50-minute class': 'Erinnerung 3 Stunden vor der geplanten 50-Minuten-Stunde erhalten',
+    'Calendar Sync Alerts': 'Kalendersynchronisierung',
+    'Notify when a tutor confirms, reschedules, or updates session details': 'Benachrichtigung bei Terminbestätigungen oder -änderungen',
+    'Direct Educator Messages': 'Direkte Lehrernachrichten',
+    'Instant alerts when an assigned educator sends study notes or messages': 'Sofortige Benachrichtigung bei neuen Lernnotizen oder Nachrichten',
+    'Weekly Academic Digest': 'Wöchentlicher Lernbericht',
+    'Receive weekly performance summaries and remaining lesson credit updates': 'Wöchentliche Zusammenfassungen und verbleibende Stunden erhalten',
+    'Account Security': 'Kontosicherheit',
+    'Current Password': 'Aktuelles Passwort',
+    'New Password': 'Neues Passwort',
+    'Confirm New Password': 'Neues Passwort bestätigen',
+    'Update Password': 'Passwort aktualisieren',
+    'Saved to Account': 'Im Konto gespeichert',
+    'Manage Subscription': 'Abonnement verwalten',
+    'Verified Student Account': 'Verifiziertes Schülerkonto',
+
+    // Hero & Features
+    'Elite 1-on-1 Academic Mentorship & AI Tutoring': 'Elite 1-zu-1 Mentoring & KI-Nachhilfe',
+    'Transform your learning with world-class Ivy League educators and cutting-edge interactive tools.': 'Steigern Sie Ihren Lernerfolg mit Spitzenlehrkräften und modernen interaktiven Werkzeugen.',
+    'Find Your Tutor': 'Finden Sie Ihren Tutor',
+    'Explore Subscription': 'Abonnements ansehen',
+    '500+ Expert Tutors': '500+ Erfahrene Tutoren',
+    '99.4% Pass Rate': '99,4% Erfolgsquote',
+    '50+ Subjects': '50+ Fächer',
+    'Our Mission': 'Unsere Mission',
+    'About Aviora Education': 'Über Aviora Education',
+    'Redefining High School & University Academic Excellence': 'Akademische Spitzenleistungen für Schule & Universität neu definiert',
+    'Transparent, Flexible Membership Plans': 'Transparente, flexible Mitgliedschaften',
+    'Starter': 'Einsteiger',
+    'Scholar': 'Gelehrter',
+    'Elite Prodigy': 'Elite-Wunderkind',
+    'Choose Plan': 'Plan auswählen',
+    'Purchase Credits': 'Guthaben aufladen',
+    'Credits Remaining': 'Verbleibende Guthaben',
+    'All Subjects': 'Alle Fächer',
+    'Mathematics': 'Mathematik',
+    'Physics': 'Physik',
+    'Chemistry': 'Chemie',
+    'Biology': 'Biologie',
+    'Computer Science': 'Informatik',
+    'English & Literature': 'Englisch & Literatur',
+    'Economics': 'Wirtschaft',
+    'History': 'Geschichte',
+    'Join with Buddy Code': 'Mit Buddy-Code beitreten',
+    'Instant Passcode': 'Sofort-Code',
+    'Join Aviora Buddy Session': 'Buddy-Sitzung beitreten',
+    'All rights reserved.': 'Alle Rechte vorbehalten.'
+  },
+
+  'zh-CN': {
+    // Nav & Common
+    'Home': '首页',
+    'About': '关于我们',
+    'Subscription': '课程订阅',
+    'Subscriptions': '课程订阅',
+    'Find Tutors': '寻找导师',
+    'Tutors': '名师阵容',
+    'Aviora Buddy': 'Aviora 伙伴',
+    'Buddy & Arena': '伙伴与竞技场',
+    'How It Works': '服务流程',
+    'Dashboard': '控制台',
+    'Log In': '登录',
+    'Sign Up': '注册',
+    'Profile': '个人资料',
+    'Log Out': '登出',
+    'Notifications': '通知中心',
+    'Mark all read': '全部标为已读',
+    'Mark all as read': '全部标为已读',
+    'Filtered': '已过滤',
+    'Back to Dashboard': '返回控制台',
+    'Save': '保存',
+    'Cancel': '取消',
+    'Close': '关闭',
+    'Submit': '提交',
+    'Confirm': '确认',
+    'Search': '搜索',
+    'Filter': '筛选',
+    'Edit': '编辑',
+    'Delete': '删除',
+    'Status': '状态',
+    'Actions': '操作',
+    'Subject': '学科',
+    'Tutor': '导师',
+    'Date & Time': '日期与时间',
+    'Duration': '课时时长',
+    'Hourly Rate': '课时单价',
+    'Book Lesson': '预约课程',
+    'Book a Lesson': '预约新课程',
+    'View Profile': '查看详情',
+    'Explore Tutors': '浏览名师团队',
+    'Join Virtual Class': '进入在线教室',
+    'Review Session': '评价课程',
+    'Academic Overview': '学术概览',
+    'Upcoming Lessons': '待上课程',
+    'Learning Milestones': '学习里程碑',
+    'Total Lessons': '累计课时',
+    'Remaining Credits': '剩余课时额度',
+    'Study Hours': '专注时长',
+    'Grade Level': '当前年级',
+    'Active Plan': '当前生效计划',
+    'Quick Actions': '快捷操作',
+    'All Lessons': '全部课程',
+    'Scheduled': '已预约',
+    'Completed': '已完成',
+    'Pending': '待确认',
+    'Cancelled': '已取消',
+    
+    // Profile Fields
+    'Full Name': '学员姓名',
+    'Email Address': '电子邮箱',
+    'Phone Contact': '联系电话',
+    'Current Grade Level': '当前就读年级',
+    'School / Institution Name': '在读学校 / 机构名称',
+    'Primary Learning Goals': '核心学习目标',
+    'Target Subjects of Interest': '重点关注学科',
+    'Save Profile Changes': '保存个人资料与偏好',
+    'Settings & Preferences': '设置与偏好',
+    'Appearance Theme': '外观主题',
+    'Light Mode': '浅色模式',
+    'Warm cream & gold canvas': '温润米白与暖金质感',
+    'Dark Mode': '深色模式',
+    'Obsidian & luxury gold': '黑曜石沉稳与奢华金',
+    'Language': '显示语言',
+    'Preferred Timezone': '首选时区',
+    'Notification Preferences': '课程通知偏好',
+    '3-Hour Lesson Reminders': '开课前 3 小时提醒',
+    'Receive reminder alert 3 hours prior to scheduled 50-minute class': '在 50 分钟专属课程开始前 3 小时接收贴心提醒',
+    'Calendar Sync Alerts': '日历日程同步提醒',
+    'Notify when a tutor confirms, reschedules, or updates session details': '导师确认、改期或调整安排时第一时间通知',
+    'Direct Educator Messages': '专属教师私信提醒',
+    'Instant alerts when an assigned educator sends study notes or messages': '导师发送学习笔记或指导信息时即时推送',
+    'Weekly Academic Digest': '每周学习周报推送',
+    'Receive weekly performance summaries and remaining lesson credit updates': '定期接收课时余额变动与学业成长总结',
+    'Account Security': '账户安全中心',
+    'Current Password': '当前密码',
+    'New Password': '新密码',
+    'Confirm New Password': '确认新密码',
+    'Update Password': '更新登录密码',
+    'Saved to Account': '已保存至账户',
+    'Manage Subscription': '管理订阅套餐',
+    'Verified Student Account': '已认证学员账户',
+
+    // Hero & Features
+    'Elite 1-on-1 Academic Mentorship & AI Tutoring': '常春藤顶尖名师 1 对 1 学术辅导与智能 AI 伴学',
+    'Transform your learning with world-class Ivy League educators and cutting-edge interactive tools.': '汇聚全球顶尖名校名师，借助先进交互式教学工具，全面激发您的学业潜能。',
+    'Find Your Tutor': '匹配专属名师',
+    'Explore Subscription': '探索课时方案',
+    '500+ Expert Tutors': '500+ 资深名校名师',
+    '99.4% Pass Rate': '99.4% 学员优异通过率',
+    '50+ Subjects': '50+ 全学科覆盖',
+    'Our Mission': '办学宗旨',
+    'About Aviora Education': '关于 Aviora Education',
+    'Redefining High School & University Academic Excellence': '重塑中学与大学学术卓越标杆',
+    'Transparent, Flexible Membership Plans': '清晰透明、灵活随心的会员计划',
+    'Starter': '初级筑基',
+    'Scholar': '学者进阶',
+    'Elite Prodigy': '常青藤精英',
+    'Choose Plan': '选择此方案',
+    'Purchase Credits': '充值课时',
+    'Credits Remaining': '剩余课时',
+    'All Subjects': '所有科目',
+    'Mathematics': '高等数学',
+    'Physics': '大学物理',
+    'Chemistry': '有机化学',
+    'Biology': '分子生物学',
+    'Computer Science': '计算机科学',
+    'English & Literature': '英语与文学',
+    'Economics': '经济学',
+    'History': '世界历史',
+    'Join with Buddy Code': '输入结对码加入',
+    'Instant Passcode': '即时结对码',
+    'Join Aviora Buddy Session': '加入伴学房间',
+    'All rights reserved.': '版权所有，保留一切权利。'
+  },
+
+  'ja-JP': {
+    // Nav & Common
+    'Home': 'ホーム',
+    'About': '会社概要',
+    'Subscription': 'サブスクリプション',
+    'Subscriptions': 'サブスクリプション',
+    'Find Tutors': '講師を探す',
+    'Tutors': '講師一覧',
+    'Aviora Buddy': 'Aviora バディ',
+    'Buddy & Arena': 'バディ＆アリーナ',
+    'How It Works': 'ご利用の流れ',
+    'Dashboard': 'ダッシュボード',
+    'Log In': 'ログイン',
+    'Sign Up': '新規登録',
+    'Profile': 'プロフィール',
+    'Log Out': 'ログアウト',
+    'Notifications': '通知',
+    'Mark all read': 'すべて既読にする',
+    'Mark all as read': 'すべて既読にする',
+    'Filtered': 'フィルター適用中',
+    'Back to Dashboard': 'ダッシュボードに戻る',
+    'Save': '保存',
+    'Cancel': 'キャンセル',
+    'Close': '閉じる',
+    'Submit': '送信',
+    'Confirm': '確認',
+    'Search': '検索',
+    'Filter': '絞り込み',
+    'Edit': '編集',
+    'Delete': '削除',
+    'Status': 'ステータス',
+    'Actions': '操作',
+    'Subject': '科目',
+    'Tutor': '講師',
+    'Date & Time': '日時',
+    'Duration': '所要時間',
+    'Hourly Rate': '1時間料金',
+    'Book Lesson': 'レッスンを予約',
+    'Book a Lesson': 'レッスンを予約',
+    'View Profile': 'プロフィールを見る',
+    'Explore Tutors': '講師一覧を見る',
+    'Join Virtual Class': 'バーチャル教室に入室',
+    'Review Session': 'レッスンを評価',
+    'Academic Overview': '学習概要',
+    'Upcoming Lessons': '予定されているレッスン',
+    'Learning Milestones': '学習マイルストーン',
+    'Total Lessons': '受講済みレッスン数',
+    'Remaining Credits': '残りレッスン枠',
+    'Study Hours': '総学習時間',
+    'Grade Level': '学年',
+    'Active Plan': '有効なプラン',
+    'Quick Actions': 'クイックアクション',
+    'All Lessons': 'すべてのレッスン',
+    'Scheduled': '予約済み',
+    'Completed': '完了',
+    'Pending': '確認待ち',
+    'Cancelled': 'キャンセル済み',
+    
+    // Profile Fields
+    'Full Name': '氏名',
+    'Email Address': 'メールアドレス',
+    'Phone Contact': '電話番号',
+    'Current Grade Level': '現在の学年',
+    'School / Institution Name': '学校名 / 所属機関',
+    'Primary Learning Goals': '主な学習目標',
+    'Target Subjects of Interest': '重点的に学びたい科目',
+    'Save Profile Changes': '変更を保存する',
+    'Settings & Preferences': '設定と環境設定',
+    'Appearance Theme': '表示テーマ',
+    'Light Mode': 'ライトモード',
+    'Warm cream & gold canvas': '温かみのあるクリーム＆ゴールド',
+    'Dark Mode': 'ダークモード',
+    'Obsidian & luxury gold': '上質な黒曜石＆ラグジュアリーゴールド',
+    'Language': '表示言語',
+    'Preferred Timezone': '優先タイムゾーン',
+    'Notification Preferences': '通知の環境設定',
+    '3-Hour Lesson Reminders': 'レッスン開始3時間前リマインダー',
+    'Receive reminder alert 3 hours prior to scheduled 50-minute class': '50分の個別レッスン開始3時間前に通知を受信します',
+    'Calendar Sync Alerts': 'カレンダー同期アラート',
+    'Notify when a tutor confirms, reschedules, or updates session details': '講師が予約を確認・変更した際に通知します',
+    'Direct Educator Messages': '講師からのダイレクトメッセージ',
+    'Instant alerts when an assigned educator sends study notes or messages': '学習ノートやメッセージが届いた際に即時通知します',
+    'Weekly Academic Digest': '週刊学習ダイジェスト',
+    'Receive weekly performance summaries and remaining lesson credit updates': '週ごとの学習成果と残りレッスン数の更新をお届けします',
+    'Account Security': 'アカウントセキュリティ',
+    'Current Password': '現在のパスワード',
+    'New Password': '新しいパスワード',
+    'Confirm New Password': '新しいパスワード（確認）',
+    'Update Password': 'パスワードを更新',
+    'Saved to Account': 'アカウントに保存されました',
+    'Manage Subscription': 'プランを管理',
+    'Verified Student Account': '認証済み受講生アカウント',
+
+    // Hero & Features
+    'Elite 1-on-1 Academic Mentorship & AI Tutoring': '最高峰の個別指導と最先端AIによる個別アカデミック指導',
+    'Transform your learning with world-class Ivy League educators and cutting-edge interactive tools.': '世界屈指の名門大出身講師と最新ツールで、学習体験を劇的に変革します。',
+    'Find Your Tutor': '専属講師を見つける',
+    'Explore Subscription': '料金プランを見る',
+    '500+ Expert Tutors': '500名以上の厳選講師',
+    '99.4% Pass Rate': '99.4%の合格実績',
+    '50+ Subjects': '50以上の専門科目',
+    'Our Mission': '私たちの使命',
+    'About Aviora Education': 'Aviora Education について',
+    'Redefining High School & University Academic Excellence': '中高・大学における学業の卓越性を再定義する',
+    'Transparent, Flexible Membership Plans': '透明で柔軟な会員プラン',
+    'Starter': 'スターター',
+    'Scholar': 'スカラー',
+    'Elite Prodigy': 'エリート・プロディジー',
+    'Choose Plan': 'このプランを選択',
+    'Purchase Credits': 'レッスン枠を購入',
+    'Credits Remaining': '残りレッスン枠',
+    'All Subjects': 'すべての科目',
+    'Mathematics': '数学',
+    'Physics': '物理学',
+    'Chemistry': '化学',
+    'Biology': '生物学',
+    'Computer Science': '情報科学',
+    'English & Literature': '英語・文学',
+    'Economics': '経済学',
+    'History': '世界史',
+    'Join with Buddy Code': 'バディコードで参加',
+    'Instant Passcode': '即時パスコード',
+    'Join Aviora Buddy Session': 'バディセッションに参加',
+    'All rights reserved.': '無断転載を禁じます。'
+  },
+
+  'fil-PH': {
+    // Nav & Common
+    'Home': 'Tahanan',
+    'About': 'Tungkol sa Amin',
+    'Subscription': 'Subskripsyon',
+    'Subscriptions': 'Mga Subskripsyon',
+    'Find Tutors': 'Maghanap ng Tutor',
+    'Tutors': 'Mga Tutor',
+    'Aviora Buddy': 'Aviora Buddy',
+    'Buddy & Arena': 'Kasama at Arena',
+    'How It Works': 'Paano Gumagana',
+    'Dashboard': 'Dashboard',
+    'Log In': 'Mag-log In',
+    'Sign Up': 'Mag-sign Up',
+    'Profile': 'Profile',
+    'Log Out': 'Mag-log Out',
+    'Notifications': 'Mga Abiso',
+    'Mark all read': 'Markahan lahat bilang nabasa na',
+    'Mark all as read': 'Markahan lahat bilang nabasa na',
+    'Filtered': 'Nasala',
+    'Back to Dashboard': 'Bumalik sa Dashboard',
+    'Save': 'I-save',
+    'Cancel': 'Kanselahin',
+    'Close': 'Isara',
+    'Submit': 'Isumite',
+    'Confirm': 'Kumpirmahin',
+    'Search': 'Maghanap',
+    'Filter': 'Salain',
+    'Edit': 'I-edit',
+    'Delete': 'Burahin',
+    'Status': 'Katayuan',
+    'Actions': 'Mga Aksyon',
+    'Subject': 'Paksa',
+    'Tutor': 'Tutor',
+    'Date & Time': 'Petsa at Oras',
+    'Duration': 'Tagal',
+    'Hourly Rate': 'Bayad Bawat Oras',
+    'Book Lesson': 'Magpa-book ng Klase',
+    'Book a Lesson': 'Magpa-book ng Klase',
+    'View Profile': 'Tingnan ang Profile',
+    'Explore Tutors': 'Tumingin ng Mga Tutor',
+    'Join Virtual Class': 'Pumasok sa Virtual na Klase',
+    'Review Session': 'Suriin ang Sesyon',
+    'Academic Overview': 'Pangkalahatang-ideya sa Pag-aaral',
+    'Upcoming Lessons': 'Paparating na Mga Klase',
+    'Learning Milestones': 'Mga Tagumpay sa Pag-aaral',
+    'Total Lessons': 'Kabuuan ng Klase',
+    'Remaining Credits': 'Natitirang Kredito',
+    'Study Hours': 'Oras ng Pag-aaral',
+    'Grade Level': 'Baitang',
+    'Active Plan': 'Aktibong Plano',
+    'Quick Actions': 'Mabilisang Aksyon',
+    'All Lessons': 'Lahat ng Klase',
+    'Scheduled': 'Nakatakda',
+    'Completed': 'Tapos Na',
+    'Pending': 'Naghihintay',
+    'Cancelled': 'Kinansela',
+    
+    // Profile Fields
+    'Full Name': 'Buong Pangalan',
+    'Email Address': 'Email Address',
+    'Phone Contact': 'Numero ng Telepono',
+    'Current Grade Level': 'Kasalukuyang Baitang',
+    'School / Institution Name': 'Pangalan ng Paaralan',
+    'Primary Learning Goals': 'Mga Layunin sa Pag-aaral',
+    'Target Subjects of Interest': 'Mga Paksang Nais Pag-aralan',
+    'Save Profile Changes': 'I-save ang Mga Pagbabago',
+    'Settings & Preferences': 'Mga Setting at Kagustuhan',
+    'Appearance Theme': 'Tema ng Hitsura',
+    'Light Mode': 'Maliwanag na Mode',
+    'Warm cream & gold canvas': 'Mainit na krema at ginto',
+    'Dark Mode': 'Madilim na Mode',
+    'Obsidian & luxury gold': 'Obsidian at marangyang ginto',
+    'Language': 'Wika',
+    'Preferred Timezone': 'Paboritong Timezone',
+    'Notification Preferences': 'Mga Kagustuhan sa Abiso',
+    '3-Hour Lesson Reminders': 'Paalala sa Klase Bago Mag-3 Oras',
+    'Receive reminder alert 3 hours prior to scheduled 50-minute class': 'Makatanggap ng abiso 3 oras bago ang nakatakdang 50-minutong klase',
+    'Calendar Sync Alerts': 'Mga Alerto sa Kalendaryo',
+    'Notify when a tutor confirms, reschedules, or updates session details': 'Ipaalam kapag kinumpirma o inilipat ng tutor ang iskedyul',
+    'Direct Educator Messages': 'Direktang Mensahe mula sa Guro',
+    'Instant alerts when an assigned educator sends study notes or messages': 'Mabilisang alerto kapag nagpadala ang iyong tutor ng mga tala o mensahe',
+    'Weekly Academic Digest': 'Lingguhang Ulat sa Pag-aaral',
+    'Receive weekly performance summaries and remaining lesson credit updates': 'Tumanggap ng lingguhang buod ng grado at natitirang kredito',
+    'Account Security': 'Seguridad ng Account',
+    'Current Password': 'Kasalukuyang Password',
+    'New Password': 'Bagong Password',
+    'Confirm New Password': 'Kumpirmahin ang Bagong Password',
+    'Update Password': 'Palitan ang Password',
+    'Saved to Account': 'Nai-save sa Account',
+    'Manage Subscription': 'Pamahalaan ang Subskripsyon',
+    'Verified Student Account': 'Beripikadong Account ng Mag-aaral',
+
+    // Hero & Features
+    'Elite 1-on-1 Academic Mentorship & AI Tutoring': 'Mataas na Kalidad na 1-on-1 Mentorship at AI Tutoring',
+    'Transform your learning with world-class Ivy League educators and cutting-edge interactive tools.': 'Itaas ang antas ng iyong pag-aaral kasama ang mga mahuhusay na guro at makabagong gamit.',
+    'Find Your Tutor': 'Hanapin ang Iyong Tutor',
+    'Explore Subscription': 'Tingnan ang Subskripsyon',
+    '500+ Expert Tutors': '500+ Dalubhasang Tutor',
+    '99.4% Pass Rate': '99.4% Antas ng Pagpasa',
+    '50+ Subjects': '50+ Asignatura',
+    'Our Mission': 'Ang Aming Misyon',
+    'About Aviora Education': 'Tungkol sa Aviora Education',
+    'Redefining High School & University Academic Excellence': 'Muling Pagtatakda ng Kahusayan sa Hayskul at Kolehiyo',
+    'Transparent, Flexible Membership Plans': 'Malinaw at Madaling Baguhing Plano',
+    'Starter': 'Pambungad',
+    'Scholar': 'Iskolar',
+    'Elite Prodigy': 'Elite Prodigy',
+    'Choose Plan': 'Piliin ang Plano',
+    'Purchase Credits': 'Bumili ng Kredito',
+    'Credits Remaining': 'Natitirang Kredito',
+    'All Subjects': 'Lahat ng Asignatura',
+    'Mathematics': 'Matematika',
+    'Physics': 'Pisika',
+    'Chemistry': 'Kimika',
+    'Biology': 'Biyolohiya',
+    'Computer Science': 'Agham Pangkompyuter',
+    'English & Literature': 'Ingles at Panitikan',
+    'Economics': 'Ekonomiks',
+    'History': 'Kasaysayan',
+    'Join with Buddy Code': 'Sumali Gamit ang Buddy Code',
+    'Instant Passcode': 'Agarang Passcode',
+    'Join Aviora Buddy Session': 'Sumali sa Sesyon ng Buddy',
+    'All rights reserved.': 'Lahat ng karapatan ay nakalaan.'
+  }
+};
+
 const I18n = {
   currentLanguage: 'en-US',
+  isTranslating: false,
+  observer: null,
 
   init() {
     let saved = 'en-US';
     try {
-      const user = Storage.getUser();
-      const userPrefs = user ? Storage.getUserPreferences(user.id) : null;
+      const user = (typeof Storage !== 'undefined' && Storage.getUser) ? Storage.getUser() : null;
+      const userPrefs = (user && user.id && typeof Storage !== 'undefined') ? Storage.getUserPreferences(user.id) : null;
       saved = (userPrefs && userPrefs.language) || localStorage.getItem('aviora_language') || 'en-US';
     } catch (e) {}
 
     this.applyLanguage(saved, false);
+    this.setupObserver();
+  },
+
+  normalizeLanguage(lang) {
+    if (!lang) return 'en-US';
+    if (lang === 'tl-PH' || lang === 'fil' || lang === 'tl') return 'fil-PH';
+    if (I18N_TRANSLATIONS[lang]) return lang;
+    return 'en-US';
   },
 
   t(key, fallback = '') {
-    const lang = this.currentLanguage || 'en-US';
+    const lang = this.normalizeLanguage(this.currentLanguage);
     const dict = I18N_TRANSLATIONS[lang] || I18N_TRANSLATIONS['en-US'];
     if (dict && dict[key] !== undefined) {
       return dict[key];
@@ -745,19 +1472,133 @@ const I18n = {
     return fallback || key;
   },
 
-  applyLanguage(lang, dispatchEvent = true) {
-    if (!I18N_TRANSLATIONS[lang]) {
-      lang = 'en-US';
+  translatePhrase(text, lang) {
+    if (!text || typeof text !== 'string') return text;
+    const cleanLang = this.normalizeLanguage(lang);
+    if (cleanLang === 'en-US') return text;
+
+    const dict = PHRASE_DICTIONARY[cleanLang];
+    if (!dict) return text;
+
+    const trimmed = text.trim();
+    if (!trimmed) return text;
+
+    // Direct match
+    if (dict[trimmed] !== undefined) {
+      return dict[trimmed];
     }
-    this.currentLanguage = lang;
-    document.documentElement.setAttribute('lang', lang);
+
+    // Case-insensitive match
+    const lowerTrimmed = trimmed.toLowerCase();
+    for (const phrase in dict) {
+      if (phrase.toLowerCase() === lowerTrimmed) {
+        return dict[phrase];
+      }
+    }
+
+    return text;
+  },
+
+  translateDomTree(root, lang) {
+    if (!root) return;
+    const cleanLang = this.normalizeLanguage(lang);
+
+    // 1. Walk visible text nodes
+    const walker = document.createTreeWalker(
+      root,
+      NodeFilter.SHOW_TEXT,
+      {
+        acceptNode(node) {
+          if (!node || !node.parentNode) return NodeFilter.FILTER_REJECT;
+          const parentTag = node.parentNode.nodeName;
+          if (['SCRIPT', 'STYLE', 'SVG', 'PATH', 'CODE', 'PRE'].includes(parentTag)) {
+            return NodeFilter.FILTER_REJECT;
+          }
+          if (node.parentNode.classList && node.parentNode.classList.contains('no-translate')) {
+            return NodeFilter.FILTER_REJECT;
+          }
+          if (!node.textContent || !node.textContent.trim()) {
+            return NodeFilter.FILTER_REJECT;
+          }
+          return NodeFilter.FILTER_ACCEPT;
+        }
+      }
+    );
+
+    let currentNode = walker.nextNode();
+    while (currentNode) {
+      // Store original English text on first visit
+      if (currentNode.__avioraOrigText === undefined) {
+        currentNode.__avioraOrigText = currentNode.textContent;
+      }
+
+      const origText = currentNode.__avioraOrigText;
+      if (cleanLang === 'en-US') {
+        if (currentNode.textContent !== origText) {
+          currentNode.textContent = origText;
+        }
+      } else {
+        const leadingSpace = origText.match(/^\s*/)[0];
+        const trailingSpace = origText.match(/\s*$/)[0];
+        const raw = origText.trim();
+
+        const translated = this.translatePhrase(raw, cleanLang);
+        if (translated !== raw) {
+          currentNode.textContent = leadingSpace + translated + trailingSpace;
+        }
+      }
+      currentNode = walker.nextNode();
+    }
+
+    // 2. Translate attributes (placeholder, title, submit button value)
+    root.querySelectorAll('input[placeholder], textarea[placeholder]').forEach(el => {
+      if (el.__avioraOrigPlaceholder === undefined) {
+        el.__avioraOrigPlaceholder = el.getAttribute('placeholder') || '';
+      }
+      if (cleanLang === 'en-US') {
+        el.setAttribute('placeholder', el.__avioraOrigPlaceholder);
+      } else {
+        const trans = this.translatePhrase(el.__avioraOrigPlaceholder, cleanLang);
+        el.setAttribute('placeholder', trans);
+      }
+    });
+
+    root.querySelectorAll('[title]').forEach(el => {
+      if (['SVG', 'PATH'].includes(el.nodeName)) return;
+      if (el.__avioraOrigTitle === undefined) {
+        el.__avioraOrigTitle = el.getAttribute('title') || '';
+      }
+      if (cleanLang === 'en-US') {
+        el.setAttribute('title', el.__avioraOrigTitle);
+      } else {
+        const trans = this.translatePhrase(el.__avioraOrigTitle, cleanLang);
+        el.setAttribute('title', trans);
+      }
+    });
+
+    root.querySelectorAll('input[type="submit"], input[type="button"]').forEach(el => {
+      if (el.__avioraOrigValue === undefined) {
+        el.__avioraOrigValue = el.value || '';
+      }
+      if (cleanLang === 'en-US') {
+        el.value = el.__avioraOrigValue;
+      } else {
+        el.value = this.translatePhrase(el.__avioraOrigValue, cleanLang);
+      }
+    });
+  },
+
+  applyLanguage(lang, dispatchEvent = true) {
+    const cleanLang = this.normalizeLanguage(lang);
+    this.currentLanguage = cleanLang;
+    document.documentElement.setAttribute('lang', cleanLang);
 
     try {
-      const user = Storage.getUser();
+      const user = (typeof Storage !== 'undefined' && Storage.getUser) ? Storage.getUser() : null;
       if (user && user.id) {
-        localStorage.setItem(`aviora_language_${user.id}`, lang);
+        localStorage.setItem(`aviora_language_${user.id}`, cleanLang);
       }
-      localStorage.setItem('aviora_language', lang);
+      localStorage.setItem('aviora_language', cleanLang);
     } catch (e) {}
 
     // Translate DOM elements marked with data-i18n
@@ -766,10 +1607,8 @@ const I18n = {
       if (key) {
         const text = this.t(key);
         if (text) {
-          // If element has icon children, preserve icons or update only text node
           const icon = el.querySelector('svg, i, span.badge-gold, span.badge-secondary');
           if (icon && !el.classList.contains('preserve-no-icon')) {
-            // Find text node
             let foundText = false;
             for (let i = 0; i < el.childNodes.length; i++) {
               if (el.childNodes[i].nodeType === Node.TEXT_NODE && el.childNodes[i].textContent.trim().length > 0) {
@@ -788,7 +1627,7 @@ const I18n = {
       }
     });
 
-    // Translate placeholders
+    // Translate placeholders marked with data-i18n-placeholder
     document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
       const key = el.getAttribute('data-i18n-placeholder');
       if (key) {
@@ -796,7 +1635,7 @@ const I18n = {
       }
     });
 
-    // Translate titles
+    // Translate titles marked with data-i18n-title
     document.querySelectorAll('[data-i18n-title]').forEach(el => {
       const key = el.getAttribute('data-i18n-title');
       if (key) {
@@ -804,24 +1643,43 @@ const I18n = {
       }
     });
 
-    // Translate Core Nav Links
+    // Translate Core Standard Nav & UI Elements
     this.translateStandardElements();
 
+    // Universal Text Walker: translates every word across the website
+    this.isTranslating = true;
+    try {
+      this.translateDomTree(document.body, cleanLang);
+    } catch (e) {
+      console.warn('DOM tree translation error:', e);
+    } finally {
+      this.isTranslating = false;
+    }
+
     if (dispatchEvent) {
-      window.dispatchEvent(new CustomEvent('aviora-language-changed', { detail: { language: lang } }));
+      window.dispatchEvent(new CustomEvent('aviora-language-changed', { detail: { language: cleanLang } }));
     }
   },
 
   translateStandardElements() {
     // Navigation items
     const navMap = {
+      'nav-link-home': 'nav.home',
+      'nav-link-about': 'nav.about',
       'nav-link-tutors': 'nav.tutors',
+      'nav-link-subscriptions': 'nav.pricing',
+      'nav-link-subscription': 'nav.pricing',
       'nav-link-pricing': 'nav.pricing',
       'nav-link-buddy': 'nav.buddy',
       'nav-link-room': 'nav.virtual_room',
       'nav-link-portal': 'nav.student_portal',
+      'nav-link-how': 'nav.how_it_works',
+      'nav-link-dashboard': 'nav.dashboard',
       'nav-user-profile-btn': 'nav.profile',
-      'user-logout-btn': 'nav.logout'
+      'user-logout-btn': 'nav.logout',
+      'nav-login-btn': 'nav.login',
+      'nav-signup-btn': 'nav.signup',
+      'notif-mark-read-btn': 'common.mark_all_read'
     };
 
     Object.keys(navMap).forEach(id => {
@@ -839,7 +1697,7 @@ const I18n = {
       if (svg) {
         profCardTitle.innerHTML = '';
         profCardTitle.appendChild(svg);
-        profCardTitle.appendChild(document.createTextNode(text));
+        profCardTitle.appendChild(document.createTextNode(' ' + text));
       } else {
         profCardTitle.textContent = text;
       }
@@ -891,7 +1749,33 @@ const I18n = {
     }
     const notifDesc4 = document.querySelector('#notif-reports')?.closest('.setting-switch-row')?.querySelector('.setting-switch-desc');
     if (notifDesc4) notifDesc4.textContent = this.t('settings.notif_reports_desc');
+  },
+
+  setupObserver() {
+    if (this.observer) return;
+    let timeout = null;
+    this.observer = new MutationObserver(() => {
+      if (this.isTranslating) return;
+      if (this.currentLanguage === 'en-US') return;
+
+      clearTimeout(timeout);
+      timeout = setTimeout(() => {
+        if (!this.isTranslating) {
+          this.applyLanguage(this.currentLanguage, false);
+        }
+      }, 100);
+    });
+
+    if (document.body) {
+      this.observer.observe(document.body, { childList: true, subtree: true });
+    } else {
+      document.addEventListener('DOMContentLoaded', () => {
+        this.observer.observe(document.body, { childList: true, subtree: true });
+      });
+    }
   }
 };
 
 window.I18n = I18n;
+window.I18N_TRANSLATIONS = I18N_TRANSLATIONS;
+window.PHRASE_DICTIONARY = PHRASE_DICTIONARY;

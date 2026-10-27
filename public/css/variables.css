@@ -107,55 +107,63 @@
    AVIORA EDUCATION - DARK MODE PALETTE
    ========================================= */
 [data-theme="dark"] {
-  --bg-main: #0E1015;
-  --bg-surface: #161920;
-  --bg-surface-alt: #1D212B;
-  --bg-surface-elevated: #1F232E;
-  --border-color: rgba(255, 255, 255, 0.09);
-  --border-color-strong: rgba(255, 255, 255, 0.16);
-  --border-gold: rgba(216, 170, 60, 0.35);
+  --bg-main: #000000;
+  --bg-surface: #050505;
+  --bg-surface-alt: #0a0a0a;
+  --bg-surface-elevated: #111111;
+  --border-color: rgba(255, 255, 255, 0.12);
+  --border-color-strong: rgba(255, 255, 255, 0.2);
+  --border-gold: rgba(216, 170, 60, 0.4);
 
-  --cream-bg: #0E1015;
-  --cream-50: #161920;
-  --cream-100: #1D212B;
-  --cream-200: #252B38;
-  --cream-300: #333B4A;
-  --cream-400: #465166;
-  --white: #161920;
+  --cream-bg: #000000;
+  --cream-50: #050505;
+  --cream-100: #0a0a0a;
+  --cream-200: #111111;
+  --cream-300: #1a1a1a;
+  --cream-400: #2a2a2a;
+  --white: #000000;
 
-  --text-primary: #F3F4F6;
-  --text-secondary: #9CA3AF;
-  --text-muted: #6B7280;
+  --text-primary: #FFFFFF;
+  --text-secondary: #E5E7EB;
+  --text-muted: #9CA3AF;
 
   --charcoal-950: #FFFFFF;
-  --charcoal-900: #F3F4F6;
-  --charcoal-850: #E5E7EB;
-  --charcoal-800: #D1D5DB;
-  --charcoal-700: #9CA3AF;
-  --charcoal-600: #9CA3AF;
-  --charcoal-500: #6B7280;
-  --charcoal-400: #9CA3AF;
-  --charcoal-300: #D1D5DB;
-  --charcoal-200: #E5E7EB;
-  --charcoal-100: #F3F4F6;
+  --charcoal-900: #FFFFFF;
+  --charcoal-850: #F3F4F6;
+  --charcoal-800: #E5E7EB;
+  --charcoal-700: #D1D5DB;
+  --charcoal-600: #CBD5E1;
+  --charcoal-500: #9CA3AF;
+  --charcoal-400: #E5A93C;
+  --charcoal-300: #D4AF37;
+  --charcoal-200: #F3F4F6;
+  --charcoal-100: #FFFFFF;
 
-  --gradient-dark: linear-gradient(180deg, #161920 0%, #0E1015 100%);
-  --gradient-dark-card: linear-gradient(145deg, #1A1E26 0%, #14171E 100%);
-  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.4);
-  --shadow-md: 0 6px 20px rgba(0, 0, 0, 0.5);
-  --shadow-lg: 0 16px 36px rgba(0, 0, 0, 0.6);
+  --gradient-dark: linear-gradient(180deg, #050505 0%, #000000 100%);
+  --gradient-dark-card: linear-gradient(145deg, #0a0a0a 0%, #000000 100%);
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.8);
+  --shadow-md: 0 6px 20px rgba(0, 0, 0, 0.9);
+  --shadow-lg: 0 16px 36px rgba(0, 0, 0, 0.95);
 }
 
-[data-theme="dark"] body {
-  background-color: var(--bg-main) !important;
-  color: var(--text-primary) !important;
+/* Base Body & Main in Dark Mode */
+[data-theme="dark"] html,
+[data-theme="dark"] body,
+[data-theme="dark"] main,
+[data-theme="dark"] #app-viewport,
+[data-theme="dark"] .app-page-view,
+[data-theme="dark"] section {
+  background-color: #000000 !important;
+  color: #FFFFFF !important;
 }
 
+/* Header & Navigation in Dark Mode */
 [data-theme="dark"] .site-header {
-  background: rgba(14, 16, 21, 0.94) !important;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  background: #000000 !important;
+  border-bottom: 1px solid rgba(216, 170, 60, 0.3) !important;
 }
 
+/* Every Box, Card, Widget & Section Container in Dark Mode */
 [data-theme="dark"] .portal-header,
 [data-theme="dark"] .dash-section-box,
 [data-theme="dark"] .stat-widget,
@@ -167,233 +175,213 @@
 [data-theme="dark"] .sub-plan-card,
 [data-theme="dark"] .tutor-card,
 [data-theme="dark"] .tutor-picker-item,
-[data-theme="dark"] .payment-method-card {
-  background: var(--bg-surface) !important;
-  border-color: rgba(255, 255, 255, 0.08) !important;
-  color: var(--text-primary);
-}
-
-[data-theme="dark"] .form-control {
-  background-color: #11141A !important;
-  border-color: rgba(255, 255, 255, 0.14) !important;
-  color: #F9FAFB !important;
-}
-
-[data-theme="dark"] .form-label {
-  color: #E5E7EB !important;
-}
-
+[data-theme="dark"] .payment-method-card,
 [data-theme="dark"] .booking-calendar-box,
 [data-theme="dark"] .payment-summary-box,
-[data-theme="dark"] .booking-sub-card {
-  background: #12151C !important;
-  border-color: rgba(198, 138, 40, 0.25) !important;
+[data-theme="dark"] .booking-sub-card,
+[data-theme="dark"] .buddy-hero-banner,
+[data-theme="dark"] .buddy-card,
+[data-theme="dark"] .buddy-feature-card,
+[data-theme="dark"] .arena-lobby-box,
+[data-theme="dark"] .arena-question-card,
+[data-theme="dark"] .admin-stat-card,
+[data-theme="dark"] .admin-table-container,
+[data-theme="dark"] .table-toolbar,
+[data-theme="dark"] .data-table-container,
+[data-theme="dark"] .modal-card,
+[data-theme="dark"] .modal-header,
+[data-theme="dark"] .modal-footer,
+[data-theme="dark"] .modal-body,
+[data-theme="dark"] .nav-notif-dropdown,
+[data-theme="dark"] .notif-dropdown-header,
+[data-theme="dark"] .notif-dropdown-footer,
+[data-theme="dark"] .notif-item,
+[data-theme="dark"] .theme-picker-card,
+[data-theme="dark"] .hero-stat-card,
+[data-theme="dark"] .session-card,
+[data-theme="dark"] .request-card,
+[data-theme="dark"] .feature-card,
+[data-theme="dark"] .feature-item,
+[data-theme="dark"] .how-step-card,
+[data-theme="dark"] .testimonial-card,
+[data-theme="dark"] .pricing-card,
+[data-theme="dark"] .pricing-tier-card,
+[data-theme="dark"] .faq-card,
+[data-theme="dark"] .faq-item,
+[data-theme="dark"] .auth-box,
+[data-theme="dark"] .auth-card,
+[data-theme="dark"] .auth-container,
+[data-theme="dark"] .auth-modal-card,
+[data-theme="dark"] .auth-page-card,
+[data-theme="dark"] .tutor-filter-bar,
+[data-theme="dark"] .booking-modal-card,
+[data-theme="dark"] .portal-sidebar,
+[data-theme="dark"] .portal-nav-item,
+[data-theme="dark"] .whiteboard-container,
+[data-theme="dark"] .chat-sidebar,
+[data-theme="dark"] .site-footer {
+  background-color: #000000 !important;
+  background-image: none !important;
+  border-color: rgba(216, 170, 60, 0.3) !important;
+  color: #FFFFFF !important;
 }
 
+[data-theme="dark"] .theme-picker-card.active {
+  background-color: #050505 !important;
+  border-color: var(--gold-500) !important;
+  box-shadow: 0 0 0 1px var(--gold-500), 0 4px 14px rgba(198, 138, 40, 0.3) !important;
+}
+
+/* Ensure ALL text in dark mode is WHITE or GOLD (No black or invisible dark text) */
+[data-theme="dark"] h1,
+[data-theme="dark"] h2,
+[data-theme="dark"] h3,
+[data-theme="dark"] h4,
+[data-theme="dark"] h5,
+[data-theme="dark"] h6,
+[data-theme="dark"] p,
+[data-theme="dark"] span:not(.text-gold):not(.badge-gold):not([class*="gold"]):not(.nav-notif-badge),
+[data-theme="dark"] label,
+[data-theme="dark"] .form-label,
+[data-theme="dark"] .nav-link,
+[data-theme="dark"] .brand-title,
+[data-theme="dark"] .portal-title,
+[data-theme="dark"] .portal-subtitle,
+[data-theme="dark"] .profile-card-title,
+[data-theme="dark"] .profile-card-sub,
+[data-theme="dark"] .setting-switch-title,
+[data-theme="dark"] .setting-switch-desc,
+[data-theme="dark"] .theme-picker-title,
+[data-theme="dark"] .theme-picker-desc,
+[data-theme="dark"] .tutor-name,
+[data-theme="dark"] .tutor-headline,
+[data-theme="dark"] .card-title,
+[data-theme="dark"] .modal-title,
+[data-theme="dark"] .dash-section-title,
+[data-theme="dark"] .stat-val,
+[data-theme="dark"] td,
+[data-theme="dark"] th,
+[data-theme="dark"] li,
+[data-theme="dark"] strong,
+[data-theme="dark"] b,
+[data-theme="dark"] .notif-item-title,
+[data-theme="dark"] .notif-dropdown-heading,
+[data-theme="dark"] .text-secondary,
+[data-theme="dark"] .text-muted,
+[data-theme="dark"] .profile-meta,
+[data-theme="dark"] .tutor-meta,
+[data-theme="dark"] .notif-item-msg,
+[data-theme="dark"] .notif-item-time {
+  color: #FFFFFF !important;
+}
+
+[data-theme="dark"] a:not(.btn):not(.brand-title-gold):not([class*="gold"]) {
+  color: #FFFFFF !important;
+}
+[data-theme="dark"] a:not(.btn):hover {
+  color: #E5A93C !important;
+}
+
+/* Gold text accents in dark mode */
+[data-theme="dark"] .brand-title-gold,
+[data-theme="dark"] .text-gold,
+[data-theme="dark"] .gold-text,
+[data-theme="dark"] .stat-label,
+[data-theme="dark"] .tutor-rate,
+[data-theme="dark"] .sub-price,
+[data-theme="dark"] .pricing-amount,
+[data-theme="dark"] .notif-active-pill,
+[data-theme="dark"] .setting-switch-title svg,
+[data-theme="dark"] .badge-gold,
+[data-theme="dark"] a:hover {
+  color: #E5A93C !important;
+}
+
+/* Form Controls (Inputs, Selects, Textareas) in Dark Mode */
+[data-theme="dark"] input,
+[data-theme="dark"] textarea,
+[data-theme="dark"] select,
+[data-theme="dark"] .form-control {
+  background-color: #000000 !important;
+  color: #FFFFFF !important;
+  border: 1.5px solid rgba(216, 170, 60, 0.4) !important;
+}
+[data-theme="dark"] input::placeholder,
+[data-theme="dark"] textarea::placeholder {
+  color: #888888 !important;
+}
+[data-theme="dark"] select option {
+  background-color: #000000 !important;
+  color: #FFFFFF !important;
+}
+
+/* Badges & Pills in Dark Mode */
+[data-theme="dark"] .badge-gold {
+  background: #000000 !important;
+  border-color: rgba(216, 170, 60, 0.5) !important;
+  color: #E5A93C !important;
+}
+
+/* Switch Toggles in Dark Mode */
+[data-theme="dark"] .switch-slider {
+  background-color: #222222 !important;
+  border: 1px solid rgba(255, 255, 255, 0.25) !important;
+}
+[data-theme="dark"] .switch-control input:checked + .switch-slider {
+  background-color: var(--gold-500) !important;
+}
+
+/* Calendar Cells in Dark Mode */
 [data-theme="dark"] .cal-day-cell {
-  background: #1A1E26 !important;
-  color: #E5E7EB !important;
+  background: #000000 !important;
+  color: #FFFFFF !important;
+  border-color: rgba(255, 255, 255, 0.15) !important;
 }
 [data-theme="dark"] .calendar-nav-btn {
-  background: #1A1E26 !important;
-  color: #E5E7EB !important;
-  border-color: rgba(255, 255, 255, 0.12) !important;
+  background: #000000 !important;
+  color: #FFFFFF !important;
+  border-color: rgba(216, 170, 60, 0.35) !important;
 }
 [data-theme="dark"] .cal-day-cell.available {
-  background: #1A1E26 !important;
-  border-color: rgba(198, 138, 40, 0.45) !important;
-}
-
-/* Modals & Dialogs in Dark Mode */
-[data-theme="dark"] .modal-card {
-  background: #161920 !important;
-  border-color: rgba(198, 138, 40, 0.35) !important;
-  color: var(--text-primary) !important;
-}
-[data-theme="dark"] .modal-header {
-  background: #12151C !important;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
-}
-[data-theme="dark"] .modal-footer {
-  background: #12151C !important;
-  border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
-}
-[data-theme="dark"] .modal-close-btn {
-  background: #1F232E !important;
-  color: #9CA3AF !important;
-  border-color: rgba(255, 255, 255, 0.1) !important;
-}
-[data-theme="dark"] .modal-close-btn:hover {
-  background: #2D3342 !important;
-  color: #FFFFFF !important;
+  background: #000000 !important;
+  border-color: var(--gold-500) !important;
 }
 
 /* Tables in Dark Mode */
 [data-theme="dark"] .admin-table,
 [data-theme="dark"] .table,
 [data-theme="dark"] table {
-  color: var(--text-primary) !important;
+  color: #FFFFFF !important;
+  background-color: #000000 !important;
 }
 [data-theme="dark"] .admin-table th,
 [data-theme="dark"] .table th,
 [data-theme="dark"] table th {
-  background: #1A1E26 !important;
-  color: #E5E7EB !important;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.12) !important;
+  background: #000000 !important;
+  color: #FFFFFF !important;
+  border-bottom: 1px solid rgba(216, 170, 60, 0.35) !important;
 }
 [data-theme="dark"] .admin-table td,
 [data-theme="dark"] .table td,
 [data-theme="dark"] table td {
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
-  color: #D1D5DB !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+  color: #FFFFFF !important;
 }
 [data-theme="dark"] .admin-table tr:hover td {
-  background: rgba(255, 255, 255, 0.03) !important;
-}
-[data-theme="dark"] .data-table-container,
-[data-theme="dark"] .table-toolbar {
-  background: var(--bg-surface) !important;
-  border-color: rgba(255, 255, 255, 0.08) !important;
+  background: rgba(216, 170, 60, 0.08) !important;
 }
 
-/* Notifications Popover in Dark Mode */
-[data-theme="dark"] .notification-dropdown,
-[data-theme="dark"] .notif-dropdown,
-[data-theme="dark"] .notifications-popover {
-  background: #161920 !important;
-  border-color: rgba(255, 255, 255, 0.12) !important;
-  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.6) !important;
-}
-[data-theme="dark"] .notification-item {
-  border-bottom-color: rgba(255, 255, 255, 0.06) !important;
-}
-[data-theme="dark"] .notification-item:hover {
-  background: rgba(255, 255, 255, 0.04) !important;
-}
-[data-theme="dark"] .notification-item.unread {
-  background: rgba(198, 138, 40, 0.08) !important;
-}
-
-/* Buddy & Arena in Dark Mode */
-[data-theme="dark"] .buddy-hero-banner {
-  background: linear-gradient(135deg, #161920 0%, #1A1E27 50%, #1F2430 100%) !important;
-  border-color: rgba(198, 138, 40, 0.35) !important;
-}
-[data-theme="dark"] .buddy-card,
-[data-theme="dark"] .buddy-feature-card,
-[data-theme="dark"] .arena-lobby-box,
-[data-theme="dark"] .arena-question-card {
-  background: #161920 !important;
-  border-color: rgba(255, 255, 255, 0.08) !important;
-}
-[data-theme="dark"] .buddy-pricing-pill {
-  background: #1A1E26 !important;
-  color: var(--gold-400) !important;
-  border-color: var(--gold-500) !important;
-}
-
-/* Settings Theme & Font Picker Cards */
-.theme-picker-cards,
-.font-picker-cards {
+/* Settings Theme Picker Grid */
+.theme-picker-cards {
   display: grid;
+  grid-template-columns: repeat(2, 1fr);
   gap: 0.75rem;
 }
-.theme-picker-cards {
-  grid-template-columns: repeat(2, 1fr);
-}
-.font-picker-cards {
-  grid-template-columns: repeat(3, 1fr);
-}
 @media (max-width: 640px) {
-  .theme-picker-cards,
-  .font-picker-cards {
+  .theme-picker-cards {
     grid-template-columns: 1fr;
   }
 }
-.font-picker-card {
-  background: var(--bg-surface);
-  border: 1.5px solid var(--border-color);
-  border-radius: var(--radius-md);
-  padding: 0.85rem 1rem;
-  cursor: pointer;
-  transition: all var(--transition-fast);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  user-select: none;
-}
-.font-picker-card:hover {
-  border-color: var(--gold-500);
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-sm);
-}
-.font-picker-card.active {
-  border-color: var(--gold-500);
-  background: var(--gold-50);
-  box-shadow: 0 0 0 1px var(--gold-500), 0 4px 14px rgba(198, 138, 40, 0.15);
-}
-.font-picker-card-left {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-.font-picker-badge {
-  font-weight: 800;
-  border-radius: 6px;
-  background: rgba(198, 138, 40, 0.12);
-  color: var(--gold-600);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-}
-.font-picker-title {
-  font-weight: 700;
-  font-size: 0.88rem;
-  color: var(--text-primary);
-}
-.font-picker-desc {
-  font-size: 0.75rem;
-  color: var(--text-muted);
-}
-.font-picker-check {
-  font-size: 0.9rem;
-  color: var(--gold-600);
-  font-weight: 800;
-  opacity: 0;
-  transition: opacity var(--transition-fast);
-}
-.font-picker-card.active .font-picker-check {
-  opacity: 1;
-}
 
-[data-theme="dark"] .font-picker-card {
-  background: #161920 !important;
-  border-color: rgba(255, 255, 255, 0.1) !important;
-}
-[data-theme="dark"] .font-picker-card.active {
-  background: #231F17 !important;
-  border-color: var(--gold-400) !important;
-  box-shadow: 0 0 0 1px var(--gold-400), 0 4px 14px rgba(198, 138, 40, 0.3) !important;
-}
-[data-theme="dark"] .theme-picker-card.active {
-  background: #231F17 !important;
-  border-color: var(--gold-400) !important;
-}
-
-/* =========================================
-   AVIORA EDUCATION - SYSTEM FONT SCALING
-   ========================================= */
-html[data-font-size="small"] {
-  font-size: 14px !important;
-}
-html[data-font-size="normal"],
-html:not([data-font-size]) {
-  font-size: 16px !important;
-}
-html[data-font-size="large"] {
-  font-size: 18px !important;
-}
 
 

@@ -297,8 +297,8 @@ const Router = {
       window.scrollTo(0, 0);
     }
 
-    if (typeof I18n !== 'undefined' && I18n.translateStandardElements) {
-      I18n.translateStandardElements();
+    if (typeof I18n !== 'undefined' && I18n.applyLanguage) {
+      I18n.applyLanguage(I18n.currentLanguage, false);
     }
   }
 };

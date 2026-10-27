@@ -6,6 +6,7 @@ const jwt = require('jsonwebtoken');
 const multer = require('multer');
 const fs = require('fs');
 const { db, ensureKrystelAccount, getUserPreferences } = require('./database/db');
+const { inspectDocument } = require('./utils/documentDetector');
 
 try {
   if (typeof process.loadEnvFile === 'function') {
@@ -2879,6 +2880,26 @@ app.get('/api/teacher/application-status', authenticateToken, requireRole('teach
   }
 });
 
+// Document Detection Tool Endpoint (Real-time detection for single uploaded requirement)
+app.post('/api/teacher/detect-document', authenticateToken, requireRole('teacher'), upload.single('document_file'), async (req, res) => {
+  try {
+    const expectedType = req.body.expected_type === 'diploma' ? 'diploma' : 'resume';
+    if (!req.file) {
+      return res.status(400).json({ error: 'No document file provided for detection.' });
+    }
+    const inspection = await inspectDocument(req.file, expectedType);
+    // Remove the temp file
+    try { fs.unlinkSync(req.file.path); } catch (e) {}
+    return res.json(inspection);
+  } catch (error) {
+    console.error('Document detection error:', error);
+    if (req.file && req.file.path) {
+      try { fs.unlinkSync(req.file.path); } catch (e) {}
+    }
+    return res.status(500).json({ error: 'Failed to inspect document.' });
+  }
+});
+
 // Teacher submits/updates their full application with credential upload
 const teacherUploadMiddleware = upload.fields([
   { name: 'resume_document', maxCount: 1 },
@@ -2887,7 +2908,7 @@ const teacherUploadMiddleware = upload.fields([
 ]);
 
 // Teacher submits/updates their application with required resume and diploma
-app.post('/api/teacher/apply', authenticateToken, requireRole('teacher'), teacherUploadMiddleware, (req, res) => {
+app.post('/api/teacher/apply', authenticateToken, requireRole('teacher'), teacherUploadMiddleware, async (req, res) => {
   try {
     const userId = req.user.id;
     const {
@@ -2915,18 +2936,40 @@ app.post('/api/teacher/apply', authenticateToken, requireRole('teacher'), teache
     let diplomaFilename = existingApp ? (existingApp.diploma_filename || existingApp.credentials_filename) : null;
 
     if (req.files) {
+      // 1. Validate Resume Document
       if (req.files['resume_document'] && req.files['resume_document'][0]) {
         const rf = req.files['resume_document'][0];
+        const check = await inspectDocument(rf, 'resume');
+        if (!check.valid) {
+          try { fs.unlinkSync(rf.path); } catch (e) {}
+          if (req.files['diploma_document'] && req.files['diploma_document'][0]) {
+            try { fs.unlinkSync(req.files['diploma_document'][0].path); } catch (e) {}
+          }
+          return res.status(400).json({ error: check.error });
+        }
         resumeFile = `/uploads/${rf.filename}`;
         resumeFilename = rf.originalname;
       }
+
+      // 2. Validate Diploma Document
       if (req.files['diploma_document'] && req.files['diploma_document'][0]) {
         const df = req.files['diploma_document'][0];
+        const check = await inspectDocument(df, 'diploma');
+        if (!check.valid) {
+          try { fs.unlinkSync(df.path); } catch (e) {}
+          return res.status(400).json({ error: check.error });
+        }
         diplomaFile = `/uploads/${df.filename}`;
         diplomaFilename = df.originalname;
       }
+
       if (req.files['credential_document'] && req.files['credential_document'][0] && !diplomaFile) {
         const cf = req.files['credential_document'][0];
+        const check = await inspectDocument(cf, 'diploma');
+        if (!check.valid) {
+          try { fs.unlinkSync(cf.path); } catch (e) {}
+          return res.status(400).json({ error: check.error });
+        }
         diplomaFile = `/uploads/${cf.filename}`;
         diplomaFilename = cf.originalname;
       }

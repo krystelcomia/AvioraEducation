@@ -10,3 +10,5 @@ database/aviora.db-wal
 database/aviora.db-shm
 *.sqlite
 database.sqlite
+*.traineddata
+scratch/

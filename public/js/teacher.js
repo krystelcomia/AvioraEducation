@@ -23,6 +23,10 @@ const Teacher = {
   viewingDashboard: false,
   classFilter: 'all',
   taskFilter: 'all',
+  uploadValidation: {
+    resume: { valid: null, checking: false, error: null, warning: null },
+    diploma: { valid: null, checking: false, error: null, warning: null }
+  },
 
   async init() {
     this.setupEventListeners();
@@ -41,13 +45,19 @@ const Teacher = {
     const resumeInput = document.getElementById('resume-file-input');
     const resumeBadge = document.getElementById('resume-file-badge');
     const resumeZone = document.getElementById('resume-upload-zone');
+    const resumeFeedback = document.getElementById('resume-feedback-box');
     if (resumeInput && resumeBadge) {
       resumeInput.addEventListener('change', (e) => {
         if (e.target.files.length > 0) {
+          const file = e.target.files[0];
           resumeBadge.style.display = 'inline-flex';
-          resumeBadge.innerHTML = `${Icons.paperclip(14)} ${e.target.files[0].name} (${(e.target.files[0].size / 1024 / 1024).toFixed(2)} MB)`;
+          resumeBadge.innerHTML = `${Icons.paperclip(14)} ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`;
+          this.validateUploadedFile(file, 'resume');
         } else {
           resumeBadge.style.display = 'none';
+          if (resumeFeedback) resumeFeedback.style.display = 'none';
+          if (resumeZone) resumeZone.style.borderColor = '';
+          this.uploadValidation.resume = { valid: null, checking: false, error: null, warning: null };
         }
       });
     }
@@ -71,13 +81,19 @@ const Teacher = {
     const diplomaInput = document.getElementById('diploma-file-input');
     const diplomaBadge = document.getElementById('diploma-file-badge');
     const diplomaZone = document.getElementById('diploma-upload-zone');
+    const diplomaFeedback = document.getElementById('diploma-feedback-box');
     if (diplomaInput && diplomaBadge) {
       diplomaInput.addEventListener('change', (e) => {
         if (e.target.files.length > 0) {
+          const file = e.target.files[0];
           diplomaBadge.style.display = 'inline-flex';
-          diplomaBadge.innerHTML = `${Icons.paperclip(14)} ${e.target.files[0].name} (${(e.target.files[0].size / 1024 / 1024).toFixed(2)} MB)`;
+          diplomaBadge.innerHTML = `${Icons.paperclip(14)} ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`;
+          this.validateUploadedFile(file, 'diploma');
         } else {
           diplomaBadge.style.display = 'none';
+          if (diplomaFeedback) diplomaFeedback.style.display = 'none';
+          if (diplomaZone) diplomaZone.style.borderColor = '';
+          this.uploadValidation.diploma = { valid: null, checking: false, error: null, warning: null };
         }
       });
     }
@@ -1620,6 +1636,215 @@ const Teacher = {
     window.location.hash = '#teacher-application';
   },
 
+  async validateUploadedFile(file, expectedType) {
+    const feedbackBox = document.getElementById(expectedType === 'resume' ? 'resume-feedback-box' : 'diploma-feedback-box');
+    const uploadZone = document.getElementById(expectedType === 'resume' ? 'resume-upload-zone' : 'diploma-upload-zone');
+    if (!feedbackBox || !uploadZone) return;
+
+    this.uploadValidation[expectedType] = { valid: null, checking: true, error: null, warning: null };
+
+    uploadZone.style.borderColor = 'var(--gold-400)';
+    feedbackBox.style.display = 'block';
+    feedbackBox.style.background = 'rgba(217, 119, 6, 0.1)';
+    feedbackBox.style.border = '1px solid rgba(217, 119, 6, 0.25)';
+    feedbackBox.style.color = '#F59E0B';
+    feedbackBox.innerHTML = `
+      <div style="display: flex; align-items: center; gap: 0.5rem;">
+        <span class="spinner-sm" style="display: inline-block; width: 14px; height: 14px; border: 2px solid #F59E0B; border-top-color: transparent; border-radius: 50%; animation: docDetectSpin 0.8s linear infinite;"></span>
+        <span>Scanning document criteria (authenticity, clarity, completeness)...</span>
+      </div>
+    `;
+
+    // 1. Instant client-side check on filename anti-patterns
+    const lowerName = file.name.toLowerCase();
+    const RANDOM_PATTERNS = [
+      'pickleball', 'tournament', 'poster', 'flyer', 'championship',
+      'bracket', 'party', 'meme', 'connected learning', 'marketing',
+      'sports', 'festival', 'concert', 'match', 'league', 'banner', 'graphic'
+    ];
+    const antiMatch = RANDOM_PATTERNS.find(p => lowerName.includes(p));
+    if (antiMatch) {
+      this.uploadValidation[expectedType] = {
+        valid: false,
+        checking: false,
+        error: expectedType === 'resume'
+          ? `Document Rejected: The file "${file.name}" appears to be a promotional poster/graphic (${antiMatch}), not an applicant resume/CV. Please upload an official resume.`
+          : `Document Rejected: The file "${file.name}" appears to be a promotional poster/graphic (${antiMatch}), not a degree diploma. Please upload an official diploma.`
+      };
+      this.renderFeedbackBox(expectedType);
+      return;
+    }
+
+    // 2. Client-side image dimensions check (clarity & completeness/cropping)
+    if (file.type && file.type.startsWith('image/')) {
+      try {
+        const dimensions = await this.readImageDimensions(file);
+        if (dimensions) {
+          const { width, height } = dimensions;
+          const ratio = height / width;
+
+          // Clarity check
+          if (width < 450 || height < 500 || (width * height < 280000)) {
+            this.uploadValidation[expectedType] = {
+              valid: false,
+              checking: false,
+              error: `Document Rejected: Low resolution / blurry scan (${width}x${height}px). Scans must be legible, clear, and uncompressed.`
+            };
+            this.renderFeedbackBox(expectedType);
+            return;
+          }
+
+          // Completeness & Cropping check
+          if (expectedType === 'resume') {
+            if (ratio < 0.95) {
+              this.uploadValidation[expectedType] = {
+                valid: false,
+                checking: false,
+                error: `Document Rejected: A resume must be a complete, uncropped portrait document. Landscape format (${width}x${height}px) detected. Please upload the complete vertical document.`
+              };
+              this.renderFeedbackBox(expectedType);
+              return;
+            } else if (ratio > 2.6) {
+              this.uploadValidation[expectedType] = {
+                valid: false,
+                checking: false,
+                error: `Document Rejected: Cropped vertical strip (${width}x${height}px) detected. Please upload the complete uncropped resume page.`
+              };
+              this.renderFeedbackBox(expectedType);
+              return;
+            }
+          }
+
+          if (expectedType === 'diploma') {
+            const maxDim = Math.max(width, height);
+            const minDim = Math.min(width, height);
+            if ((maxDim / minDim) > 2.2) {
+              this.uploadValidation[expectedType] = {
+                valid: false,
+                checking: false,
+                error: `Document Rejected: The uploaded certificate appears severely cropped or panoramic. Please upload the full diploma showing all seals and signatures.`
+              };
+              this.renderFeedbackBox(expectedType);
+              return;
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('Client image check error:', err);
+      }
+    }
+
+    // 3. Server-side deep inspection via open-source OCR / parser
+    try {
+      const formData = new FormData();
+      formData.append('document_file', file);
+      formData.append('expected_type', expectedType);
+
+      const inspection = await API.detectDocument(formData);
+      if (!inspection.valid) {
+        this.uploadValidation[expectedType] = {
+          valid: false,
+          checking: false,
+          error: inspection.error || `Document does not meet the specified criteria for ${expectedType}.`
+        };
+      } else if (inspection.warning) {
+        this.uploadValidation[expectedType] = {
+          valid: true,
+          checking: false,
+          warning: inspection.warning
+        };
+      } else {
+        this.uploadValidation[expectedType] = {
+          valid: true,
+          checking: false
+        };
+      }
+    } catch (err) {
+      console.warn('Server document inspection note:', err);
+      if (!this.uploadValidation[expectedType].error) {
+        this.uploadValidation[expectedType] = {
+          valid: true,
+          checking: false,
+          warning: 'Initial format verified. Final credentials will be reviewed by the administrator.'
+        };
+      }
+    }
+
+    this.renderFeedbackBox(expectedType);
+  },
+
+  readImageDimensions(file) {
+    return new Promise((resolve) => {
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        resolve({ width: img.naturalWidth, height: img.naturalHeight });
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+        resolve(null);
+      };
+      img.src = url;
+    });
+  },
+
+  renderFeedbackBox(type) {
+    const feedbackBox = document.getElementById(type === 'resume' ? 'resume-feedback-box' : 'diploma-feedback-box');
+    const uploadZone = document.getElementById(type === 'resume' ? 'resume-upload-zone' : 'diploma-upload-zone');
+    if (!feedbackBox || !uploadZone) return;
+
+    const state = this.uploadValidation[type];
+    if (!state) return;
+
+    if (state.valid === false) {
+      uploadZone.style.borderColor = '#EF4444';
+      feedbackBox.style.display = 'block';
+      feedbackBox.style.background = 'rgba(239, 68, 68, 0.12)';
+      feedbackBox.style.border = '1px solid rgba(239, 68, 68, 0.35)';
+      feedbackBox.style.color = '#EF4444';
+      feedbackBox.innerHTML = `
+        <div style="display: flex; align-items: flex-start; gap: 0.5rem; line-height: 1.45;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#EF4444" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0; margin-top: 2px;"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>
+          <div>
+            <div style="font-weight: 700; margin-bottom: 0.2rem; color: #EF4444;">Upload Rejected</div>
+            <div style="font-size: 0.78rem; color: #FCA5A5;">${state.error}</div>
+          </div>
+        </div>
+      `;
+    } else if (state.warning) {
+      uploadZone.style.borderColor = '#F59E0B';
+      feedbackBox.style.display = 'block';
+      feedbackBox.style.background = 'rgba(245, 158, 11, 0.12)';
+      feedbackBox.style.border = '1px solid rgba(245, 158, 11, 0.35)';
+      feedbackBox.style.color = '#F59E0B';
+      feedbackBox.innerHTML = `
+        <div style="display: flex; align-items: flex-start; gap: 0.5rem; line-height: 1.45;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0; margin-top: 2px;"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+          <div>
+            <div style="font-weight: 700; margin-bottom: 0.2rem; color: #F59E0B;">Document Warning</div>
+            <div style="font-size: 0.78rem; color: #FCD34D;">${state.warning}</div>
+          </div>
+        </div>
+      `;
+    } else if (state.valid === true) {
+      uploadZone.style.borderColor = '#10B981';
+      feedbackBox.style.display = 'block';
+      feedbackBox.style.background = 'rgba(16, 185, 129, 0.12)';
+      feedbackBox.style.border = '1px solid rgba(16, 185, 129, 0.35)';
+      feedbackBox.style.color = '#10B981';
+      feedbackBox.innerHTML = `
+        <div style="display: flex; align-items: flex-start; gap: 0.5rem; line-height: 1.45;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0; margin-top: 2px;"><polyline points="20 6 9 17 4 12"></polyline></svg>
+          <div>
+            <div style="font-weight: 700; margin-bottom: 0.2rem; color: #10B981;">Document Verified</div>
+            <div style="font-size: 0.78rem; color: #6EE7B7;">Clear, complete, and authentic ${type === 'resume' ? 'Resume / CV' : 'Degree Diploma'} format detected.</div>
+          </div>
+        </div>
+      `;
+    }
+  },
+
   async handleApplicationSubmit(e) {
     e.preventDefault();
     const form = e.target;
@@ -1633,6 +1858,29 @@ const Teacher = {
 
     if (!hasResume || !hasDiploma) {
       showToast('Applicants are required to upload both a Resume (CV) and a Degree Diploma.', 'warning');
+      return;
+    }
+
+    // Verify document checks
+    if (this.uploadValidation.resume && this.uploadValidation.resume.checking) {
+      showToast('Please wait while your Applicant Resume is being verified...', 'info');
+      return;
+    }
+    if (this.uploadValidation.diploma && this.uploadValidation.diploma.checking) {
+      showToast('Please wait while your Degree Diploma is being verified...', 'info');
+      return;
+    }
+
+    if (this.uploadValidation.resume && this.uploadValidation.resume.valid === false) {
+      showToast(this.uploadValidation.resume.error || 'Your uploaded Resume does not meet the specified criteria.', 'error');
+      const rZone = document.getElementById('resume-upload-zone');
+      if (rZone) rZone.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+    if (this.uploadValidation.diploma && this.uploadValidation.diploma.valid === false) {
+      showToast(this.uploadValidation.diploma.error || 'Your uploaded Degree Diploma does not meet the specified criteria.', 'error');
+      const dZone = document.getElementById('diploma-upload-zone');
+      if (dZone) dZone.scrollIntoView({ behavior: 'smooth', block: 'center' });
       return;
     }
 

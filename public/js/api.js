@@ -137,6 +137,7 @@ const API = {
 
   // Teacher & Tutor Portal
   getTeacherStatus: () => apiRequest('/teacher/application-status'),
+  detectDocument: (formData) => apiRequest('/teacher/detect-document', { method: 'POST', body: formData }),
   submitTeacherApplication: (formData) => apiRequest('/teacher/apply', { method: 'POST', body: formData }),
   getTeacherDashboard: () => apiRequest('/teacher/dashboard'),
   updateRequestStatus: (id, body) => apiRequest(`/teacher/requests/${id}/status`, { method: 'POST', body }),

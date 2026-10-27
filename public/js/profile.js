@@ -255,12 +255,23 @@ const Profile = {
             this.userPreferences = res.preferences;
             Storage.setUserPreferences(Auth.currentUser.id, res.preferences);
           }
+          if (typeof NotificationsUI !== 'undefined') {
+            if (res && res.unreadNotifications !== undefined) {
+              NotificationsUI.updateBadge(res.unreadNotifications);
+            }
+            NotificationsUI.fetchAndRender();
+          }
           this.setSaveStatus('saved');
         })
         .catch(e => {
           console.warn('Notification preference sync warning:', e);
           this.setSaveStatus('error', 'Saved Locally');
         });
+    }
+
+    // Immediately trigger local notification filtering if open
+    if (typeof NotificationsUI !== 'undefined') {
+      NotificationsUI.fetchAndRender();
     }
 
     if (notify) {

@@ -81,6 +81,71 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/uploads', express.static(uploadsDir));
 
+// ==========================================
+// NOTIFICATION PREFERENCE FILTERS & DELIVERY
+// ==========================================
+
+function getNotificationFilterClause(prefs) {
+  if (!prefs) return '';
+  const ignoredTypes = [];
+  if (!prefs.notif_lessons) {
+    ignoredTypes.push("'reminder'", "'lesson_reminder'", "'lesson_alert'");
+  }
+  if (!prefs.notif_calendar) {
+    ignoredTypes.push("'calendar'", "'schedule'", "'booking'", "'booking_update'", "'status'", "'subscription'", "'request'");
+  }
+  if (!prefs.notif_messages) {
+    ignoredTypes.push("'message'", "'chat'", "'inquiry'");
+  }
+  if (!prefs.notif_reports) {
+    ignoredTypes.push("'report'", "'digest'", "'weekly_digest'");
+  }
+  if (ignoredTypes.length > 0) {
+    return ` AND type NOT IN (${ignoredTypes.join(', ')})`;
+  }
+  return '';
+}
+
+function isNotificationAllowed(userId, type) {
+  try {
+    const prefs = getUserPreferences(userId);
+    if (!prefs) return true;
+
+    if (['reminder', 'lesson_reminder', 'lesson_alert'].includes(type) && !prefs.notif_lessons) {
+      return false;
+    }
+    if (['calendar', 'schedule', 'booking', 'booking_update', 'status', 'subscription', 'request'].includes(type) && !prefs.notif_calendar) {
+      return false;
+    }
+    if (['message', 'chat', 'inquiry'].includes(type) && !prefs.notif_messages) {
+      return false;
+    }
+    if (['report', 'digest', 'weekly_digest'].includes(type) && !prefs.notif_reports) {
+      return false;
+    }
+    return true;
+  } catch (e) {
+    return true;
+  }
+}
+
+function sendNotification(userId, title, message, type = 'info', link = null) {
+  try {
+    if (!isNotificationAllowed(userId, type)) {
+      return null;
+    }
+    const stmt = db.prepare(`
+      INSERT INTO notifications (user_id, title, message, type, is_read, link)
+      VALUES (?, ?, ?, ?, 0, ?)
+    `);
+    const res = stmt.run(userId, title, message, type, link || null);
+    return res.lastInsertRowid;
+  } catch (err) {
+    console.error('Error in sendNotification:', err);
+    return null;
+  }
+}
+
 // Authentication Middleware
 function authenticateToken(req, res, next) {
   const authHeader = req.headers['authorization'];
@@ -196,13 +261,12 @@ app.post('/api/auth/register', (req, res) => {
       // Notify admin of new student account
       const admin = db.prepare("SELECT id FROM users WHERE role = 'admin' LIMIT 1").get();
       if (admin) {
-        db.prepare(`
-          INSERT INTO notifications (user_id, title, message, type, link)
-          VALUES (?, ?, ?, 'registration', '/#admin')
-        `).run(
+        sendNotification(
           admin.id,
           'New Student Account Created',
-          `${name} (${cleanEmail}) has registered a student account.`
+          `${name} (${cleanEmail}) has registered a student account.`,
+          'registration',
+          '/#admin'
         );
       }
     } else if (role === 'teacher') {
@@ -239,13 +303,12 @@ app.post('/api/auth/register', (req, res) => {
       // Notify admin
       const admin = db.prepare("SELECT id FROM users WHERE role = 'admin' LIMIT 1").get();
       if (admin) {
-        db.prepare(`
-          INSERT INTO notifications (user_id, title, message, type, link)
-          VALUES (?, ?, ?, 'application', '/#admin')
-        `).run(
+        sendNotification(
           admin.id,
           'New Teacher Registered',
-          `${name} has registered and submitted an initial tutor application.`
+          `${name} has registered and submitted an initial tutor application.`,
+          'application',
+          '/#admin'
         );
       }
     }
@@ -427,13 +490,12 @@ function linkOrRegisterOAuthUser(provider, profile) {
       // Notify admin
       const admin = db.prepare("SELECT id FROM users WHERE role = 'admin' LIMIT 1").get();
       if (admin) {
-        db.prepare(`
-          INSERT INTO notifications (user_id, title, message, type, link)
-          VALUES (?, ?, ?, 'registration', '/#admin')
-        `).run(
+        sendNotification(
           admin.id,
           'New Social Account Created',
-          `${name} (${email}) registered via ${provider} as a ${role}.`
+          `${name} (${email}) registered via ${provider} as a ${role}.`,
+          'registration',
+          '/#admin'
         );
       }
 
@@ -1338,10 +1400,12 @@ app.get('/api/auth/me', authenticateToken, (req, res) => {
       extra.tutorProfile = tutorProfile;
     }
 
-    // Unread notifications count
-    const unreadCount = db.prepare('SELECT COUNT(*) as count FROM notifications WHERE user_id = ? AND is_read = 0').get(userId).count;
+    // Unread notifications count (filtered by user notification preferences)
+    const userPrefs = getUserPreferences(userId);
+    const filterClause = getNotificationFilterClause(userPrefs);
+    const unreadCount = db.prepare(`SELECT COUNT(*) as count FROM notifications WHERE user_id = ? AND is_read = 0 ${filterClause}`).get(userId).count;
     extra.unreadNotifications = unreadCount;
-    extra.preferences = getUserPreferences(userId);
+    extra.preferences = userPrefs;
 
     return res.json({
       user: req.user,
@@ -1481,21 +1545,26 @@ app.put('/api/user/preferences', authenticateToken, (req, res) => {
       updates.push('timezone = ?');
       params.push(timezone);
     }
+    const parseBool = (val) => {
+      if (val === true || val === 1 || val === '1' || val === 'true') return 1;
+      return 0;
+    };
+
     if (notif_lessons !== undefined) {
       updates.push('notif_lessons = ?');
-      params.push(notif_lessons ? 1 : 0);
+      params.push(parseBool(notif_lessons));
     }
     if (notif_calendar !== undefined) {
       updates.push('notif_calendar = ?');
-      params.push(notif_calendar ? 1 : 0);
+      params.push(parseBool(notif_calendar));
     }
     if (notif_messages !== undefined) {
       updates.push('notif_messages = ?');
-      params.push(notif_messages ? 1 : 0);
+      params.push(parseBool(notif_messages));
     }
     if (notif_reports !== undefined) {
       updates.push('notif_reports = ?');
-      params.push(notif_reports ? 1 : 0);
+      params.push(parseBool(notif_reports));
     }
 
     if (updates.length > 0) {
@@ -1505,7 +1574,9 @@ app.put('/api/user/preferences', authenticateToken, (req, res) => {
     }
 
     const updated = db.prepare('SELECT * FROM user_preferences WHERE user_id = ?').get(userId);
-    return res.json({ message: 'Preferences updated successfully.', preferences: updated });
+    const filterClause = getNotificationFilterClause(updated);
+    const unreadCount = db.prepare(`SELECT COUNT(*) as count FROM notifications WHERE user_id = ? AND is_read = 0 ${filterClause}`).get(userId).count;
+    return res.json({ message: 'Preferences updated successfully.', preferences: updated, unreadNotifications: unreadCount });
   } catch (error) {
     console.error('Update preferences error:', error);
     return res.status(500).json({ error: 'Failed to update preferences.' });
@@ -1953,13 +2024,12 @@ app.post('/api/tutors/:id/messages', (req, res) => {
     );
 
     // Also notify tutor in notifications table
-    db.prepare(`
-      INSERT INTO notifications (user_id, title, message, type, link)
-      VALUES (?, ?, ?, 'message', '#teacher-requests')
-    `).run(
+    sendNotification(
       tutor.user_id,
       `New Message from ${senderName}`,
-      message.trim().substring(0, 120) + (message.length > 120 ? '...' : '')
+      message.trim().substring(0, 120) + (message.length > 120 ? '...' : ''),
+      'message',
+      '#teacher-requests'
     );
 
     res.json({
@@ -2335,13 +2405,12 @@ app.post('/api/student/subscription/purchase', authenticateToken, requireRole('s
         );
 
         // Notify tutor
-        db.prepare(`
-          INSERT INTO notifications (user_id, title, message, type, link)
-          VALUES (?, ?, ?, 'booking', '/#teacher-requests')
-        `).run(
+        sendNotification(
           vl.tutor_id,
           'New Session Scheduled',
-          `${req.user.name} scheduled Lesson ${vl.index} of ${selectedPkg.lessons} (${vl.subject}, ${selectedPkg.duration_minutes} min) for ${vl.scheduled_date} (${vl.scheduled_time})${selectedPkg.is_trial ? ' (Free Trial)' : ` at $${vl.rate.toFixed(2)}`}.`
+          `${req.user.name} scheduled Lesson ${vl.index} of ${selectedPkg.lessons} (${vl.subject}, ${selectedPkg.duration_minutes} min) for ${vl.scheduled_date} (${vl.scheduled_time})${selectedPkg.is_trial ? ' (Free Trial)' : ` at $${vl.rate.toFixed(2)}`}.`,
+          'booking',
+          '/#teacher-requests'
         );
       }
 
@@ -2369,13 +2438,12 @@ app.post('/api/student/subscription/purchase', authenticateToken, requireRole('s
       );
 
       // Student notification
-      db.prepare(`
-        INSERT INTO notifications (user_id, title, message, type, link)
-        VALUES (?, ?, ?, 'subscription', '#subscriptions')
-      `).run(
+      sendNotification(
         studentId,
         `${selectedPkg.name} Confirmed`,
-        `Your ${selectedPkg.name} enrollment has been confirmed! Total cost paid: $${totalCalculatedPrice.toFixed(2)}${selectedPkg.is_trial ? ' (Free Trial)' : " based on your instructors' rates"}. All ${selectedPkg.lessons} lesson${selectedPkg.lessons > 1 ? 's have' : ' has'} been scheduled.`
+        `Your ${selectedPkg.name} enrollment has been confirmed! Total cost paid: $${totalCalculatedPrice.toFixed(2)}${selectedPkg.is_trial ? ' (Free Trial)' : " based on your instructors' rates"}. All ${selectedPkg.lessons} lesson${selectedPkg.lessons > 1 ? 's have' : ' has'} been scheduled.`,
+        'subscription',
+        '#subscriptions'
       );
 
       return res.status(201).json({
@@ -2473,13 +2541,12 @@ app.post('/api/student/subscription/purchase', authenticateToken, requireRole('s
       finalRemainingLessons = Math.max(0, selectedPkg.lessons - 1);
 
       // Notify tutor
-      db.prepare(`
-        INSERT INTO notifications (user_id, title, message, type, link)
-        VALUES (?, ?, ?, 'booking', '/#teacher-requests')
-      `).run(
+      sendNotification(
         tutor_id,
         'New Session Scheduled',
-        `${req.user.name} scheduled a ${selectedPkg.duration_minutes}-minute ${chosenSubject} session for ${scheduled_date} (${scheduled_time}) via ${selectedPkg.name}.`
+        `${req.user.name} scheduled a ${selectedPkg.duration_minutes}-minute ${chosenSubject} session for ${scheduled_date} (${scheduled_time}) via ${selectedPkg.name}.`,
+        'booking',
+        '/#teacher-requests'
       );
     }
 
@@ -2517,13 +2584,12 @@ app.post('/api/student/subscription/purchase', authenticateToken, requireRole('s
       ? `Your ${selectedPkg.name} is confirmed! 1 lesson (${selectedPkg.duration_minutes} min) is scheduled with ${tutorUser?.name || 'your tutor'} on ${scheduled_date} at ${scheduled_time}. Remaining lessons: ${finalRemainingLessons}. Total paid: $${calculatedPrice.toFixed(2)}.`
       : `Your ${selectedPkg.name} ($${calculatedPrice.toFixed(2)}) has been successfully activated with ${selectedPkg.lessons} lessons valid for ${selectedPkg.days} days.`;
 
-    db.prepare(`
-      INSERT INTO notifications (user_id, title, message, type, link)
-      VALUES (?, ?, ?, 'subscription', '#subscriptions')
-    `).run(
+    sendNotification(
       studentId,
       selectedPkg.is_trial ? 'Free Trial Activated & Scheduled' : 'Subscription Activated',
-      studentNotifMsg
+      studentNotifMsg,
+      'subscription',
+      '#subscriptions'
     );
 
     res.status(201).json({
@@ -2626,13 +2692,12 @@ app.post('/api/student/requests', authenticateToken, requireRole('student'), (re
     );
 
     // Notify tutor
-    db.prepare(`
-      INSERT INTO notifications (user_id, title, message, type, link)
-      VALUES (?, ?, ?, 'request', '/#teacher-requests')
-    `).run(
+    sendNotification(
       tutor_user_id,
       'New Tutoring Request Received',
-      `${req.user.name} booked a ${subject} tutoring session on ${requested_date} (${requested_time}). Payment: ${finalPaymentMethod === 'subscription' ? 'Subscription Credit Applied' : 'Paid via Card'}.`
+      `${req.user.name} booked a ${subject} tutoring session on ${requested_date} (${requested_time}). Payment: ${finalPaymentMethod === 'subscription' ? 'Subscription Credit Applied' : 'Paid via Card'}.`,
+      'request',
+      '/#teacher-requests'
     );
 
     // Notify student confirmation
@@ -2640,13 +2705,12 @@ app.post('/api/student/requests', authenticateToken, requireRole('student'), (re
       ? `1 subscription lesson credit was applied ($0.00 charged). You have ${remainingCreditsAfter} lesson${remainingCreditsAfter === 1 ? '' : 's'} remaining.`
       : `Payment of $${calculatedAmount.toFixed(2)} was processed successfully via Card.`;
 
-    db.prepare(`
-      INSERT INTO notifications (user_id, title, message, type, link)
-      VALUES (?, ?, ?, 'booking', '#student-portal')
-    `).run(
+    sendNotification(
       studentId,
       'Tutoring Session Confirmed',
-      `Your 50-minute ${subject} session with ${tutorUser?.name || 'your tutor'} on ${requested_date} at ${requested_time} has been submitted! ${paymentMsg}`
+      `Your 50-minute ${subject} session with ${tutorUser?.name || 'your tutor'} on ${requested_date} at ${requested_time} has been submitted! ${paymentMsg}`,
+      'booking',
+      '#student-portal'
     );
 
     res.status(201).json({
@@ -2708,12 +2772,12 @@ app.post('/api/student/requests/:id/cancel', authenticateToken, requireRole('stu
     }
 
     // Notify tutor
-    db.prepare(`
-      INSERT INTO notifications (user_id, title, message, type, link)
-      VALUES (?, 'Booking Cancelled', ?, 'booking', '#teacher-requests')
-    `).run(
+    sendNotification(
       request.tutor_id,
-      `${req.user.name} cancelled their ${request.subject} class scheduled for ${request.requested_date} (${request.requested_time}).`
+      'Booking Cancelled',
+      `${req.user.name} cancelled their ${request.subject} class scheduled for ${request.requested_date} (${request.requested_time}).`,
+      'booking',
+      '#teacher-requests'
     );
 
     res.json({ message: 'Booking cancelled successfully.' });
@@ -2782,13 +2846,12 @@ app.post('/api/student/requests/:id/review', authenticateToken, requireRole('stu
     const tutorProfile = db.prepare('SELECT id FROM tutor_profiles WHERE user_id = ?').get(request.tutor_id);
 
     // Send in-app notification to the tutor
-    db.prepare(`
-      INSERT INTO notifications (user_id, title, message, type, link)
-      VALUES (?, ?, ?, 'review', '#teacher-portal')
-    `).run(
+    sendNotification(
       request.tutor_id,
       'New Student Rating & Review Received!',
-      `${student?.name || 'Your student'} gave you a ${rating}-star rating for ${request.subject}. It is now proudly reflected on your public tutor profile!`
+      `${student?.name || 'Your student'} gave you a ${rating}-star rating for ${request.subject}. It is now proudly reflected on your public tutor profile!`,
+      'calendar',
+      '#teacher-portal'
     );
 
     res.json({
@@ -2914,13 +2977,12 @@ app.post('/api/teacher/apply', authenticateToken, requireRole('teacher'), upload
     // Notify all admins
     const admins = db.prepare("SELECT id FROM users WHERE role = 'admin'").all();
     for (const admin of admins) {
-      db.prepare(`
-        INSERT INTO notifications (user_id, title, message, type, link)
-        VALUES (?, ?, ?, 'application', '/#admin')
-      `).run(
+      sendNotification(
         admin.id,
         'Teacher Application Submitted',
-        `${req.user.name} submitted their tutor credentials for review.`
+        `${req.user.name} submitted their tutor credentials for review.`,
+        'application',
+        '/#admin'
       );
     }
 
@@ -3020,10 +3082,13 @@ app.post('/api/teacher/requests/:id/status', authenticateToken, requireRole('tea
       completed: `Your session on ${request.subject} has been marked completed. You can now leave a review for your tutor!`
     };
 
-    db.prepare(`
-      INSERT INTO notifications (user_id, title, message, type, link)
-      VALUES (?, ?, ?, 'status', '/#student-requests')
-    `).run(request.student_id, statusTitles[status], statusMessages[status]);
+    sendNotification(
+      request.student_id,
+      statusTitles[status],
+      statusMessages[status],
+      'status',
+      '/#student-requests'
+    );
 
     res.json({ message: `Request successfully marked as ${status}.` });
   } catch (error) {
@@ -3180,13 +3245,12 @@ app.post('/api/sessions/:id/room/open', authenticateToken, (req, res) => {
     }
 
     // Notify the student that room has been opened
-    db.prepare(`
-      INSERT INTO notifications (user_id, title, message, type, link)
-      VALUES (?, ?, ?, 'booking', '#student-portal')
-    `).run(
+    sendNotification(
       request.student_id,
       'Virtual Classroom is Live!',
-      `${request.tutor_name} has opened the virtual room for your ${request.subject} class. Click to connect now!`
+      `${request.tutor_name} has opened the virtual room for your ${request.subject} class. Click to connect now!`,
+      'booking',
+      '#student-portal'
     );
 
     res.json({
@@ -3459,17 +3523,23 @@ app.post('/api/buddy/create', authenticateToken, (req, res) => {
     const creatorName = req.user.name;
 
     if (s2) {
-      db.prepare(`
-        INSERT INTO notifications (user_id, title, message, type, link)
-        VALUES (?, 'Aviora Buddy Invitation ($6)', ?, 'booking', '#aviora-buddy')
-      `).run(s2, `${creatorName} set up an Aviora Buddy session for two students: "${finalSubject}". Cost: $6. Code: ${sessionCode}`);
+      sendNotification(
+        s2,
+        'Aviora Buddy Invitation ($6)',
+        `${creatorName} set up an Aviora Buddy session for two students: "${finalSubject}". Cost: $6. Code: ${sessionCode}`,
+        'booking',
+        '#aviora-buddy'
+      );
     }
 
     if (assignedTutorId && assignedTutorId !== userId) {
-      db.prepare(`
-        INSERT INTO notifications (user_id, title, message, type, link)
-        VALUES (?, 'New Aviora Buddy Class ($6/student)', ?, 'booking', '#aviora-buddy')
-      `).run(assignedTutorId, `${creatorName} booked a 2-student Aviora Buddy class for ${finalDate} (${finalTime}): "${finalSubject}".`);
+      sendNotification(
+        assignedTutorId,
+        'New Aviora Buddy Class ($6/student)',
+        `${creatorName} booked a 2-student Aviora Buddy class for ${finalDate} (${finalTime}): "${finalSubject}".`,
+        'booking',
+        '#aviora-buddy'
+      );
     }
 
     // Add first chat announcement
@@ -3543,10 +3613,13 @@ app.post('/api/buddy/join', authenticateToken, (req, res) => {
       `).run(userId, session.id);
 
       // Notify student 1
-      db.prepare(`
-        INSERT INTO notifications (user_id, title, message, type, link)
-        VALUES (?, 'Buddy Joined Your Session!', ?, 'info', '#aviora-buddy')
-      `).run(session.student1_id, `${req.user.name} joined your Aviora Buddy session (${session.session_code})! Cost: $6.`);
+      sendNotification(
+        session.student1_id,
+        'Buddy Joined Your Session!',
+        `${req.user.name} joined your Aviora Buddy session (${session.session_code})! Cost: $6.`,
+        'booking',
+        '#aviora-buddy'
+      );
 
       // Post message
       db.prepare(`
@@ -4012,25 +4085,23 @@ app.post('/api/admin/teacher-applications/:id/review', authenticateToken, requir
       }
 
       // Notify teacher
-      db.prepare(`
-        INSERT INTO notifications (user_id, title, message, type, link)
-        VALUES (?, ?, ?, 'approval', '/#teacher-portal')
-      `).run(
+      sendNotification(
         application.user_id,
         'Application Approved! Welcome to Aviora Education',
-        'Congratulations! Your teacher credentials have been verified and approved. Your tutor profile is now live in the Aviora directory.'
+        'Congratulations! Your teacher credentials have been verified and approved. Your tutor profile is now live in the Aviora directory.',
+        'approval',
+        '/#teacher-portal'
       );
     } else if (status === 'rejected') {
       // Deactivate tutor profile if previously active
       db.prepare('UPDATE tutor_profiles SET is_active = 0 WHERE user_id = ?').run(application.user_id);
 
-      db.prepare(`
-        INSERT INTO notifications (user_id, title, message, type, link)
-        VALUES (?, ?, ?, 'rejection', '/#teacher-application')
-      `).run(
+      sendNotification(
         application.user_id,
         'Teacher Application Status Update',
-        `Your application was reviewed. Note from Academic Board: ${admin_notes || 'Credentials could not be verified at this time.'}`
+        `Your application was reviewed. Note from Academic Board: ${admin_notes || 'Credentials could not be verified at this time.'}`,
+        'rejection',
+        '/#teacher-application'
       );
     }
 
@@ -4200,10 +4271,13 @@ app.post('/api/inquiries', (req, res) => {
     // Inquiries are intended solely for the admin -> notify admin users
     const admins = db.prepare("SELECT id FROM users WHERE role = 'admin'").all();
     for (const adm of admins) {
-      db.prepare(`
-        INSERT INTO notifications (user_id, title, message, type, link)
-        VALUES (?, 'New User Inquiry (Admin Only)', ?, 'inquiry', '#admin-portal')
-      `).run(adm.id, `New inquiry from ${name.trim()} (${finalRole}): "${finalSubject}". Review and respond in Admin Console.`);
+      sendNotification(
+        adm.id,
+        'New User Inquiry (Admin Only)',
+        `New inquiry from ${name.trim()} (${finalRole}): "${finalSubject}". Review and respond in Admin Console.`,
+        'inquiry',
+        '#admin-portal'
+      );
     }
 
     res.status(201).json({
@@ -4297,10 +4371,13 @@ app.post('/api/admin/inquiries/:id/respond', authenticateToken, requireRole('adm
     // If inquirer email belongs to an existing user, send them an in-app notification
     const matchedUser = db.prepare('SELECT id FROM users WHERE email = ?').get(inquiry.email);
     if (matchedUser) {
-      db.prepare(`
-        INSERT INTO notifications (user_id, title, message, type, link)
-        VALUES (?, 'Administrator Response to Your Inquiry', ?, 'inquiry', '#profile')
-      `).run(matchedUser.id, `Aviora Administrator ${adminName} responded to your inquiry regarding "${inquiry.subject}". Check your email or notifications.`);
+      sendNotification(
+        matchedUser.id,
+        'Administrator Response to Your Inquiry',
+        `Aviora Administrator ${adminName} responded to your inquiry regarding "${inquiry.subject}". Check your email or notifications.`,
+        'inquiry',
+        '#profile'
+      );
     }
 
     const updated = db.prepare(`
@@ -4331,34 +4408,21 @@ app.get('/api/notifications', authenticateToken, (req, res) => {
   try {
     const userId = req.user.id;
     const prefs = getUserPreferences(userId);
-
-    const ignoredTypes = [];
-    if (!prefs.notif_lessons) {
-      ignoredTypes.push("'reminder'", "'lesson_reminder'");
-    }
-    if (!prefs.notif_calendar) {
-      ignoredTypes.push("'calendar'", "'schedule'", "'booking_update'");
-    }
-    if (!prefs.notif_messages) {
-      ignoredTypes.push("'message'", "'chat'");
-    }
-    if (!prefs.notif_reports) {
-      ignoredTypes.push("'report'", "'digest'");
-    }
-
-    let filterClause = '';
-    if (ignoredTypes.length > 0) {
-      filterClause = ` AND type NOT IN (${ignoredTypes.join(', ')})`;
-    }
+    const filterClause = getNotificationFilterClause(prefs);
 
     const notifications = db.prepare(`
       SELECT * FROM notifications 
       WHERE user_id = ? ${filterClause}
       ORDER BY created_at DESC 
-      LIMIT 20
+      LIMIT 30
     `).all(userId);
 
-    res.json({ notifications });
+    const unreadCount = db.prepare(`
+      SELECT COUNT(*) as count FROM notifications 
+      WHERE user_id = ? AND is_read = 0 ${filterClause}
+    `).get(userId).count;
+
+    res.json({ notifications, unreadCount, preferences: prefs });
   } catch (error) {
     console.error('Notifications error:', error);
     res.status(500).json({ error: 'Failed to fetch notifications.' });
@@ -4369,12 +4433,93 @@ app.post('/api/notifications/mark-read', authenticateToken, (req, res) => {
   try {
     const userId = req.user.id;
     db.prepare('UPDATE notifications SET is_read = 1 WHERE user_id = ?').run(userId);
-    res.json({ message: 'Notifications marked as read.' });
+    res.json({ message: 'Notifications marked as read.', unreadCount: 0 });
   } catch (error) {
     console.error('Mark read error:', error);
     res.status(500).json({ error: 'Failed to update notifications.' });
   }
 });
+
+// Test Notification Delivery according to active user preferences
+app.post('/api/notifications/test-delivery', authenticateToken, (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { type, title, message } = req.body;
+    const notifType = type || 'lesson_reminder';
+
+    if (!isNotificationAllowed(userId, notifType)) {
+      return res.json({
+        sent: false,
+        blocked: true,
+        type: notifType,
+        message: `Notification delivery blocked: User has disabled "${notifType}" notifications in preferences.`
+      });
+    }
+
+    const notifId = sendNotification(
+      userId,
+      title || 'Aviora Notification Alert',
+      message || 'This notification was delivered based on your active delivery settings.',
+      notifType,
+      '#profile'
+    );
+
+    const prefs = getUserPreferences(userId);
+    const filterClause = getNotificationFilterClause(prefs);
+    const unreadCount = db.prepare(`SELECT COUNT(*) as count FROM notifications WHERE user_id = ? AND is_read = 0 ${filterClause}`).get(userId).count;
+
+    return res.json({
+      sent: true,
+      blocked: false,
+      notificationId: notifId,
+      unreadCount,
+      message: 'Notification delivered successfully in accordance with your preferences.'
+    });
+  } catch (error) {
+    console.error('Test notification delivery error:', error);
+    return res.status(500).json({ error: 'Failed to test notification delivery.' });
+  }
+});
+
+// 3-Hour Lesson Reminders & Digest Dispatchers
+function dispatch3HourLessonReminders() {
+  try {
+    const upcomingSessions = db.prepare(`
+      SELECT tr.*, u.name as tutor_name
+      FROM tutoring_requests tr
+      JOIN users u ON tr.tutor_id = u.id
+      WHERE tr.status IN ('accepted', 'pending')
+        AND tr.requested_date = date('now')
+    `).all();
+
+    for (const session of upcomingSessions) {
+      if (isNotificationAllowed(session.student_id, 'lesson_reminder')) {
+        const alreadyNotified = db.prepare(`
+          SELECT id FROM notifications 
+          WHERE user_id = ? AND type = 'lesson_reminder' 
+            AND title LIKE '%Lesson Reminder%' AND link LIKE ?
+        `).get(session.student_id, `%#student-portal%`);
+
+        if (!alreadyNotified) {
+          sendNotification(
+            session.student_id,
+            `3-Hour Lesson Reminder: ${session.subject}`,
+            `Reminder: Your 50-minute ${session.subject} class with ${session.tutor_name} is scheduled for ${session.requested_time}. Please prepare your study materials!`,
+            'lesson_reminder',
+            '#student-portal'
+          );
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('Lesson reminder dispatcher notice:', e.message);
+  }
+}
+
+// Run dispatch checks periodically (every 10 minutes)
+setInterval(() => {
+  dispatch3HourLessonReminders();
+}, 10 * 60 * 1000);
 
 // Catch-all for SPA client routing (Express 5 compatible)
 app.use((req, res, next) => {

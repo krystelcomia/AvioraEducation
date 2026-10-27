@@ -24,12 +24,6 @@ const I18N_TRANSLATIONS = {
     'nav.logout': 'Log Out',
     'nav.how_it_works': 'How It Works',
     'nav.dashboard': 'Dashboard',
-    'nav.class': 'Klase',
-    'nav.students': 'Mga Mag-aaral',
-    'nav.schedule': 'Iskedyul',
-    'nav.class': 'Unterricht',
-    'nav.students': 'Schüler',
-    'nav.schedule': 'Zeitplan',
     'nav.class': 'Class',
     'nav.students': 'Students',
     'nav.schedule': 'Schedule',
@@ -235,6 +229,9 @@ const I18N_TRANSLATIONS = {
     'nav.logout': 'Déconnexion',
     'nav.how_it_works': 'Comment ça marche',
     'nav.dashboard': 'Tableau de bord',
+    'nav.class': 'Cours',
+    'nav.students': 'Étudiants',
+    'nav.schedule': 'Emploi du temps',
 
     'settings.title': 'Paramètres & Préférences',
     'settings.subtitle': 'Configurez les thèmes d’affichage, l’internationalisation, les alertes et la sécurité.',
@@ -332,6 +329,9 @@ const I18N_TRANSLATIONS = {
     'nav.logout': 'Abmelden',
     'nav.how_it_works': 'So funktioniert es',
     'nav.dashboard': 'Dashboard',
+    'nav.class': 'Unterricht',
+    'nav.students': 'Schüler',
+    'nav.schedule': 'Zeitplan',
 
     'settings.title': 'Einstellungen & Präferenzen',
     'settings.subtitle': 'Passen Sie Anzeigedesigns, Internationalisierung, Benachrichtigungen und Sicherheit an.',
@@ -429,6 +429,9 @@ const I18N_TRANSLATIONS = {
     'nav.logout': '登出',
     'nav.how_it_works': '服务流程',
     'nav.dashboard': '控制台',
+    'nav.class': '课堂',
+    'nav.students': '学生管理',
+    'nav.schedule': '日程安排',
 
     'settings.title': '设置与偏好',
     'settings.subtitle': '自定义系统外观主题、多语言环境、通知偏好和账户安全。',
@@ -626,6 +629,9 @@ const I18N_TRANSLATIONS = {
     'nav.logout': 'Mag-log Out',
     'nav.how_it_works': 'Paano Gumagana',
     'nav.dashboard': 'Dashboard',
+    'nav.class': 'Klase',
+    'nav.students': 'Mga Mag-aaral',
+    'nav.schedule': 'Iskedyul',
 
     'settings.title': 'Mga Setting at Kagustuhan',
     'settings.subtitle': 'I-configure ang tema ng kulay, wika, mga abiso, at seguridad ng account.',
@@ -710,6 +716,9 @@ const I18N_TRANSLATIONS = {
 const PHRASE_DICTIONARY = {
   'es-ES': {
     // Nav & Common
+    'Class': 'Clases',
+    'Students': 'Estudiantes',
+    'Schedule': 'Horario',
     'Home': 'Inicio',
     'About': 'Acerca de',
     'Subscription': 'Suscripción',
@@ -890,6 +899,9 @@ const PHRASE_DICTIONARY = {
 
   'fr-FR': {
     // Nav & Common
+    'Class': 'Cours',
+    'Students': 'Étudiants',
+    'Schedule': 'Emploi du temps',
     'Home': 'Accueil',
     'About': 'À propos',
     'Subscription': 'Abonnement',
@@ -1070,6 +1082,9 @@ const PHRASE_DICTIONARY = {
 
   'de-DE': {
     // Nav & Common
+    'Class': 'Unterricht',
+    'Students': 'Schüler',
+    'Schedule': 'Zeitplan',
     'Home': 'Startseite',
     'About': 'Über uns',
     'Subscription': 'Abonnement',
@@ -1250,6 +1265,9 @@ const PHRASE_DICTIONARY = {
 
   'zh-CN': {
     // Nav & Common
+    'Class': '课堂',
+    'Students': '学生管理',
+    'Schedule': '日程安排',
     'Home': '首页',
     'About': '关于我们',
     'Subscription': '课程订阅',
@@ -1430,6 +1448,9 @@ const PHRASE_DICTIONARY = {
 
   'ja-JP': {
     // Nav & Common
+    'Class': '授業',
+    'Students': '生徒管理',
+    'Schedule': 'スケジュール',
     'Home': 'ホーム',
     'About': '会社概要',
     'Subscription': 'サブスクリプション',
@@ -1610,6 +1631,9 @@ const PHRASE_DICTIONARY = {
 
   'fil-PH': {
     // Nav & Common
+    'Class': 'Klase',
+    'Students': 'Mga Mag-aaral',
+    'Schedule': 'Iskedyul',
     'Home': 'Tahanan',
     'About': 'Tungkol sa Amin',
     'Subscription': 'Subskripsyon',
@@ -2044,10 +2068,6 @@ const I18n = {
         el.value = this.translatePhrase(el.__avioraOrigValue, cleanLang);
       }
     });
-  },
-
-  150);
-    }
   },
 
   applyLanguage(lang, dispatchEvent = true) {

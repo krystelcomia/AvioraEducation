@@ -245,6 +245,35 @@ function initSchema() {
       UNIQUE(provider, email)
     );
 
+    CREATE TABLE IF NOT EXISTS tutor_tasks (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      tutor_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      student_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      subject TEXT NOT NULL,
+      title TEXT NOT NULL,
+      description TEXT,
+      due_date TEXT,
+      status TEXT DEFAULT 'assigned' CHECK(status IN ('assigned', 'submitted', 'graded')),
+      student_submission TEXT,
+      submitted_at DATETIME,
+      grade TEXT,
+      feedback TEXT,
+      graded_at DATETIME,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS tutor_occupied_slots (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      tutor_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      day_of_week TEXT NOT NULL,
+      time_slot TEXT NOT NULL,
+      date TEXT,
+      reason TEXT DEFAULT 'Occupied / Unavailable',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(tutor_id, day_of_week, time_slot)
+    );
+
     -- Enforce case-insensitive uniqueness and relational indexes across the entire system
     CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email_nocase ON users(email COLLATE NOCASE);
     CREATE INDEX IF NOT EXISTS idx_student_profiles_user_id ON student_profiles(user_id);
@@ -252,6 +281,9 @@ function initSchema() {
     CREATE INDEX IF NOT EXISTS idx_teacher_applications_user_id ON teacher_applications(user_id);
     CREATE INDEX IF NOT EXISTS idx_tutoring_requests_student ON tutoring_requests(student_id);
     CREATE INDEX IF NOT EXISTS idx_tutoring_requests_tutor ON tutoring_requests(tutor_id);
+    CREATE INDEX IF NOT EXISTS idx_tutor_tasks_tutor ON tutor_tasks(tutor_id);
+    CREATE INDEX IF NOT EXISTS idx_tutor_tasks_student ON tutor_tasks(student_id);
+    CREATE INDEX IF NOT EXISTS idx_tutor_occupied_tutor ON tutor_occupied_slots(tutor_id);
     CREATE INDEX IF NOT EXISTS idx_reviews_tutor ON reviews(tutor_id);
     CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id);
     CREATE INDEX IF NOT EXISTS idx_subscriptions_user ON student_subscriptions(user_id);
@@ -1086,10 +1118,144 @@ function ensureInquirySeedData() {
   }
 }
 
+function ensureTutorSeedData() {
+  try {
+    const elena = db.prepare("SELECT id FROM users WHERE email = 'elena.vance@aviora.edu'").get();
+    const krystel = db.prepare("SELECT id FROM users WHERE email = 'comiakrystel65@gmail.com'").get();
+    const lucas = db.prepare("SELECT id FROM users WHERE email = 'student@aviora.edu'").get();
+    const sophia = db.prepare("SELECT id FROM users WHERE email = 'sophia.martinez@gmail.com'").get();
+
+    if (!elena) return;
+
+    // 1. Seed Occupied Slots
+    const existingOccupied = db.prepare("SELECT id FROM tutor_occupied_slots WHERE tutor_id = ? LIMIT 1").get(elena.id);
+    if (!existingOccupied) {
+      const occupiedSlots = [
+        { day: 'Wednesday', slot: '04:00 PM', reason: 'Department Research & Lab Seminar' },
+        { day: 'Friday', slot: '07:00 PM', reason: 'Personal Time / Academic Colloquium' },
+        { day: 'Sunday', slot: '09:00 AM', reason: 'Curriculum Planning & Rest' }
+      ];
+      for (const s of occupiedSlots) {
+        db.prepare(`
+          INSERT OR IGNORE INTO tutor_occupied_slots (tutor_id, day_of_week, time_slot, reason)
+          VALUES (?, ?, ?, ?)
+        `).run(elena.id, s.day, s.slot, s.reason);
+      }
+    }
+
+    // 2. Seed Student Academic Tasks & Grading
+    const existingTasks = db.prepare("SELECT id FROM tutor_tasks WHERE tutor_id = ? LIMIT 1").get(elena.id);
+    if (!existingTasks && (krystel || lucas)) {
+      if (krystel) {
+        // Task 1: Graded
+        db.prepare(`
+          INSERT INTO tutor_tasks (
+            tutor_id, student_id, subject, title, description, due_date, status,
+            student_submission, submitted_at, grade, feedback, graded_at
+          ) VALUES (
+            ?, ?, 'Calculus BC', 'Taylor Polynomial Convergence & Error Bounds',
+            'Work through Problems 1-8 on Maclaurin expansions for sin(x), e^x, and cos(x). Derive Lagrange error bounds up to n=5.',
+            '2026-10-22', 'graded',
+            'Completed all 8 problems with derivations. Derived Lagrange bound |R_n(x)| <= M|x|^(n+1)/(n+1)! with M=1 on [-pi, pi]. Scanned PDF attached.',
+            datetime('now', '-4 days'), '98/100 (A+)',
+            'Outstanding rigor and conceptual clarity! Your derivation of the error bound on Problem 5 was exemplary.',
+            datetime('now', '-3 days')
+          )
+        `).run(elena.id, krystel.id);
+
+        // Task 2: Submitted (Pending Grading)
+        db.prepare(`
+          INSERT INTO tutor_tasks (
+            tutor_id, student_id, subject, title, description, due_date, status,
+            student_submission, submitted_at
+          ) VALUES (
+            ?, ?, 'Calculus BC', 'Integration by Parts Diagnostic Problem Set',
+            'Apply tabular integration by parts to evaluate definite integrals with oscillating factors. Show step-by-step reduction formulas.',
+            '2026-10-26', 'submitted',
+            'Finished all 5 definite integrals. Verified reduction formulas for int(x^n * e^(-x) dx) from 0 to inf. Solution sheet uploaded.',
+            datetime('now', '-6 hours')
+          )
+        `).run(elena.id, krystel.id);
+
+        // Task 3: Assigned (In Progress)
+        db.prepare(`
+          INSERT INTO tutor_tasks (
+            tutor_id, student_id, subject, title, description, due_date, status
+          ) VALUES (
+            ?, ?, 'Calculus BC', 'Parametric Curves & Arc Length Formulations',
+            'Analyze cycloid trajectories and calculate exact arc length between cusps using standard Riemann integration.',
+            '2026-10-30', 'assigned'
+          )
+        `).run(elena.id, krystel.id);
+      }
+
+      if (lucas) {
+        // Task for Lucas: Graded
+        db.prepare(`
+          INSERT INTO tutor_tasks (
+            tutor_id, student_id, subject, title, description, due_date, status,
+            student_submission, submitted_at, grade, feedback, graded_at
+          ) VALUES (
+            ?, ?, 'Calculus BC', 'Derivatives Optimization Practice Exam',
+            'Complete the 6 free-response optimization problems focusing on profit maximization and minimal surface area cylinders.',
+            '2026-10-20', 'graded',
+            'All critical points derived with first and second derivative tests documented.',
+            datetime('now', '-6 days'), '94/100 (A)',
+            'Great job using the second derivative test to confirm relative extrema. Keep up the disciplined notation.',
+            datetime('now', '-5 days')
+          )
+        `).run(elena.id, lucas.id);
+      }
+    }
+
+    // 3. Ensure Historical Monthly Sessions for Rich Earnings Ledger
+    if (lucas && sophia) {
+      const historicalCheck = db.prepare("SELECT COUNT(*) as count FROM tutoring_requests WHERE tutor_id = ? AND status = 'completed'").get(elena.id);
+      if (historicalCheck.count < 4) {
+        // September 2026 completed session
+        db.prepare(`
+          INSERT INTO tutoring_requests (
+            student_id, tutor_id, subject, grade_level, requested_date, requested_time,
+            duration_hours, hourly_rate, total_amount, status, room_status, created_at
+          ) VALUES (
+            ?, ?, 'Calculus BC', 'Grade 11 - High School', '2026-09-24', '15:00',
+            1.0, 65.0, 65.0, 'completed', 'ended', '2026-09-24 15:00:00'
+          )
+        `).run(lucas.id, elena.id);
+
+        // September 2026 completed session 2
+        db.prepare(`
+          INSERT INTO tutoring_requests (
+            student_id, tutor_id, subject, grade_level, requested_date, requested_time,
+            duration_hours, hourly_rate, total_amount, status, room_status, created_at
+          ) VALUES (
+            ?, ?, 'Calculus BC', 'Grade 12 - High School', '2026-09-18', '16:30',
+            1.5, 65.0, 97.50, 'completed', 'ended', '2026-09-18 16:30:00'
+          )
+        `).run(sophia.id, elena.id);
+
+        // August 2026 completed session
+        db.prepare(`
+          INSERT INTO tutoring_requests (
+            student_id, tutor_id, subject, grade_level, requested_date, requested_time,
+            duration_hours, hourly_rate, total_amount, status, room_status, created_at
+          ) VALUES (
+            ?, ?, 'Calculus BC', 'Grade 11 - High School', '2026-08-28', '14:00',
+            1.0, 65.0, 65.0, 'completed', 'ended', '2026-08-28 14:00:00'
+          )
+        `).run(lucas.id, elena.id);
+      }
+    }
+  } catch (err) {
+    console.error('Error seeding tutor data:', err);
+  }
+}
+
 // Automatically ensure account and seed data on startup
 ensureKrystelAccount();
 ensureBuddySeedData();
 ensureInquirySeedData();
+ensureTutorSeedData();
 
 try {
   db.pragma('wal_checkpoint(TRUNCATE)');
@@ -1101,6 +1267,7 @@ module.exports = {
   ensureKrystelAccount,
   ensureBuddySeedData,
   ensureInquirySeedData,
+  ensureTutorSeedData,
   getUserPreferences
 };
 

@@ -3173,108 +3173,450 @@
         </div>
 
         <!-- 1. TEACHER PORTAL DASHBOARD (Visible when Approved) -->
+                <!-- 1. TEACHER PORTAL DASHBOARD (Visible when Approved) -->
         <div id="teacher-dashboard-section" style="display: none;">
-          <div class="portal-header">
-            <div>
-              <span class="badge-gold">Teacher Dashboard</span>
-              <h1 class="portal-title" style="margin-top: 0.5rem;">Tutoring Management Console</h1>
-              <p class="portal-subtitle">Review incoming session requests, manage accepted bookings, and track completed student hours.</p>
-            </div>
-            <div>
-              <a href="#tutors" class="btn btn-secondary btn-sm">View Public Listing</a>
-            </div>
-          </div>
-
-          <!-- Teacher Stats Widgets -->
-          <div class="stats-cards-grid">
-            <div class="stat-widget">
-              <div class="stat-widget-icon">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+          
+          <!-- Tutor Profile Header & Command Deck -->
+          <div class="teacher-portal-hero">
+            <div class="teacher-hero-left">
+              <div class="teacher-hero-avatar-wrap">
+                <img id="teacher-hero-avatar" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80" alt="Educator Avatar" class="teacher-hero-avatar" />
+                <span class="teacher-verified-badge" title="Verified Academic Educator">✓</span>
               </div>
-              <div class="stat-widget-info">
-                <h3 id="teacher-stat-earnings" style="color: var(--success);">$0.00</h3>
-                <p>Gross Tutoring Earnings</p>
-              </div>
-            </div>
-            <div class="stat-widget">
-              <div class="stat-widget-icon">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"></polyline><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"></path></svg>
-              </div>
-              <div class="stat-widget-info">
-                <h3 id="teacher-stat-requests" style="color: var(--warning);">0</h3>
-                <p>Pending Student Requests</p>
-              </div>
-            </div>
-            <div class="stat-widget">
-              <div class="stat-widget-icon">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-              </div>
-              <div class="stat-widget-info">
-                <h3 id="teacher-stat-active" style="color: var(--gold-400);">0</h3>
-                <p>Active Upcoming Sessions</p>
-              </div>
-            </div>
-            <div class="stat-widget">
-              <div class="stat-widget-icon">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="#F59E0B" stroke="#F59E0B" stroke-width="1.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
-              </div>
-              <div class="stat-widget-info">
-                <h3 id="teacher-stat-rating" style="color: #F59E0B;">5.0</h3>
-                <p>Tutor Rating Score</p>
-              </div>
-            </div>
-          </div>
-
-          <!-- Incoming Requests Table -->
-          <div class="data-table-container">
-            <div class="table-toolbar">
-              <h3 style="color: var(--white); font-size: 1.15rem;">Incoming & Scheduled Tutoring Requests</h3>
-              <span class="badge-gold">Live Updates</span>
-            </div>
-            <div style="overflow-x: auto;">
-              <table class="admin-table">
-                <thead>
-                  <tr>
-                    <th>Student</th>
-                    <th>Subject & Goal</th>
-                    <th>Requested Date/Time</th>
-                    <th>Fee</th>
-                    <th>Status</th>
-                    <th style="text-align: right;">Actions</th>
-                  </tr>
-                </thead>
-                <tbody id="teacher-requests-table-body">
-                  <!-- Populated via teacher.js -->
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          <!-- Teacher Profile & Hourly Rate Settings -->
-          <div class="data-table-container" style="margin-top: 3.5rem; padding: 2.5rem;">
-            <h3 style="font-size: 1.3rem; color: var(--white); margin-bottom: 0.5rem;">Tutor Profile & Rate Settings</h3>
-            <p style="font-size: 0.875rem; color: var(--charcoal-400); margin-bottom: 2rem;">Adjust your public directory headline, hourly tutoring rate, and biography.</p>
-
-            <form id="teacher-profile-settings-form">
-              <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.25rem;">
-                <div class="form-group">
-                  <label class="form-label">Professional Headline</label>
-                  <input type="text" id="t-profile-headline" class="form-control" placeholder="e.g. Ph.D. in Applied Mathematics | Stanford University" required />
+              <div class="teacher-hero-meta">
+                <div style="display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;">
+                  <span class="badge-gold">Verified Educator</span>
+                  <span class="badge-accent" id="teacher-headline-tag">Stanford Ph.D. • Applied Mathematics</span>
                 </div>
-                <div class="form-group">
-                  <label class="form-label">Hourly Rate ($ USD / hr)</label>
-                  <input type="number" id="t-profile-rate" class="form-control" min="20" max="250" step="1" required />
+                <h1 class="teacher-hero-name" id="teacher-hero-name">Dr. Elena Vance</h1>
+                <p class="teacher-hero-bio" id="teacher-hero-bio">
+                  Educator workspace for live virtual classroom sessions, student coursework management, schedule availability, and financial earnings tracking.
+                </p>
+              </div>
+            </div>
+            <div class="teacher-hero-actions">
+              <button type="button" class="btn btn-primary btn-sm" id="btn-quick-launch-instant-class" onclick="Teacher.openInstantClassModal()">
+                🚀 Launch Instant 1-on-1 Class
+              </button>
+              <a href="#tutors" class="btn btn-secondary btn-sm" style="display: inline-flex; align-items: center; gap: 0.4rem;">
+                Public Directory
+              </a>
+            </div>
+          </div>
+
+          <!-- Tutor Sub-Navigation Tab Bar -->
+          <div class="teacher-subnav-deck">
+            <button type="button" class="teacher-nav-pill active" id="teacher-pill-dashboard" onclick="Teacher.switchTab('dashboard')">
+              📊 Dashboard & Financials
+            </button>
+            <button type="button" class="teacher-nav-pill" id="teacher-pill-classes" onclick="Teacher.switchTab('classes')">
+              🎓 Virtual Classes
+            </button>
+            <button type="button" class="teacher-nav-pill" id="teacher-pill-students" onclick="Teacher.switchTab('students')">
+              👥 Students & Grading
+            </button>
+            <button type="button" class="teacher-nav-pill" id="teacher-pill-schedule" onclick="Teacher.switchTab('schedule')">
+              📅 Schedule & Availability
+            </button>
+            <button type="button" class="teacher-nav-pill" id="teacher-pill-buddy" onclick="Teacher.switchTab('buddy')">
+              🤝 Aviora Buddy Cohorts
+            </button>
+            <button type="button" class="teacher-nav-pill" id="teacher-pill-profile" onclick="Teacher.switchTab('profile')">
+              ⚙️ Profile & Rates
+            </button>
+          </div>
+
+          <!-- ============================================================== -->
+          <!-- TAB 1: DASHBOARD & FINANCIAL EARNINGS                          -->
+          <!-- ============================================================== -->
+          <div id="teacher-tab-dashboard" class="teacher-tab-content" style="display: block;">
+            
+            <!-- Financial Analytics Cards Grid -->
+            <div class="teacher-financial-cards-grid">
+              
+              <!-- 1. Gross Generated from Students -->
+              <div class="stat-widget financial-widget card-gross">
+                <div class="stat-widget-icon" style="background: rgba(198, 138, 40, 0.15); color: var(--gold-400);">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+                </div>
+                <div class="stat-widget-info">
+                  <div class="stat-widget-sublabel">Amount Generated from Students</div>
+                  <h3 id="teacher-stat-gross-revenue" style="color: var(--gold-400); font-size: 1.85rem; font-weight: 800;">$0.00</h3>
+                  <p style="margin-top: 0.25rem; font-size: 0.8rem; color: var(--text-secondary);">
+                    Gross Student Revenue (100%) • <span id="teacher-stat-completed-count">0</span> completed sessions
+                  </p>
                 </div>
               </div>
 
-              <div class="form-group">
-                <label class="form-label">Public Biography & Teaching Methodology</label>
-                <textarea id="t-profile-bio" class="form-control" rows="4" required></textarea>
+              <!-- 2. Aviora Platform Commission / Cut -->
+              <div class="stat-widget financial-widget card-commission">
+                <div class="stat-widget-icon" style="background: rgba(239, 68, 68, 0.15); color: #EF4444;">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="m15 9-6 6"></path><path d="M9 9h.01"></path><path d="M15 15h.01"></path></svg>
+                </div>
+                <div class="stat-widget-info">
+                  <div class="stat-widget-sublabel">Company Cut / Commission (15%)</div>
+                  <h3 id="teacher-stat-commission-cut" style="color: #EF4444; font-size: 1.85rem; font-weight: 800;">$0.00</h3>
+                  <p style="margin-top: 0.25rem; font-size: 0.8rem; color: var(--text-secondary);">
+                    Website's platform cut • Infrastructure & matching
+                  </p>
+                </div>
               </div>
 
-              <button type="submit" class="btn btn-primary btn-sm">Save Public Profile</button>
-            </form>
-          </div>
+              <!-- 3. Net Tutor Take-Home Earnings -->
+              <div class="stat-widget financial-widget card-net">
+                <div class="stat-widget-icon" style="background: rgba(16, 185, 129, 0.15); color: #10B981;">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 12V8H6a2 2 0 0 1-2-2c0-1.1.9-2 2-2h12v4"></path><path d="M4 6v12c0 1.1.9 2 2 2h14v-4"></path><path d="M18 12a2 2 0 0 0-2 2c0 1.1.9 2 2 2h4v-4h-4z"></path></svg>
+                </div>
+                <div class="stat-widget-info">
+                  <div class="stat-widget-sublabel">Net Tutor Take-Home Earnings</div>
+                  <h3 id="teacher-stat-net-earnings" style="color: #10B981; font-size: 1.85rem; font-weight: 800;">$0.00</h3>
+                  <p style="margin-top: 0.25rem; font-size: 0.8rem; color: var(--text-secondary);">
+                    85% Net tutor payout • Direct bank deposit ready
+                  </p>
+                </div>
+              </div>
+
+              <!-- 4. Current Month & Rating -->
+              <div class="stat-widget financial-widget card-current-month">
+                <div class="stat-widget-icon" style="background: rgba(59, 130, 246, 0.15); color: #3B82F6;">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                </div>
+                <div class="stat-widget-info">
+                  <div class="stat-widget-sublabel">This Month's Net Payout</div>
+                  <h3 id="teacher-stat-month-net" style="color: #3B82F6; font-size: 1.85rem; font-weight: 800;">$0.00</h3>
+                  <p style="margin-top: 0.25rem; font-size: 0.8rem; color: var(--text-secondary);">
+                    Rating: <strong id="teacher-stat-rating" style="color: #F59E0B;">5.0 ★</strong> • <span id="teacher-stat-active-sessions">0</span> active sessions
+                  </p>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- Monthly Financial Statements Table Ledger -->
+            <div class="data-table-container" style="margin-top: 2rem;">
+              <div class="table-toolbar">
+                <div>
+                  <h3 style="color: var(--text-primary); font-size: 1.15rem; margin-bottom: 0.25rem;">
+                    Monthly Financial Statements & Commission Breakdown
+                  </h3>
+                  <p style="font-size: 0.85rem; color: var(--text-secondary); margin: 0;">
+                    Official financial ledger displaying student billing, Aviora's 15% platform cut, and net educator take-home earnings.
+                  </p>
+                </div>
+                <span class="badge-gold">Automated Settlement</span>
+              </div>
+              <div style="overflow-x: auto;">
+                <table class="admin-table">
+                  <thead>
+                    <tr>
+                      <th>Billing Month</th>
+                      <th>Students Taught</th>
+                      <th>Completed Lessons</th>
+                      <th>Gross Generated from Students</th>
+                      <th>Aviora Commission Cut (15%)</th>
+                      <th>Net Tutor Payout (85%)</th>
+                      <th style="text-align: right;">Settlement Status</th>
+                    </tr>
+                  </thead>
+                  <tbody id="teacher-monthly-financials-tbody">
+                    <!-- Populated dynamically via teacher.js -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Student Revenue Breakdown Ledger -->
+            <div class="data-table-container" style="margin-top: 2rem;">
+              <div class="table-toolbar">
+                <div>
+                  <h3 style="color: var(--text-primary); font-size: 1.15rem; margin-bottom: 0.25rem;">
+                    Student Revenue Distribution
+                  </h3>
+                  <p style="font-size: 0.85rem; color: var(--text-secondary); margin: 0;">
+                    Amount generated per student and their respective academic subjects.
+                  </p>
+                </div>
+                <span class="badge-gold">Student Billing</span>
+              </div>
+              <div style="overflow-x: auto;">
+                <table class="admin-table">
+                  <thead>
+                    <tr>
+                      <th>Student</th>
+                      <th>Respective Subject</th>
+                      <th>Completed Sessions</th>
+                      <th>Gross Student Payment</th>
+                      <th>Aviora Cut (15%)</th>
+                      <th>Net Tutor Payout</th>
+                    </tr>
+                  </thead>
+                  <tbody id="teacher-student-revenue-tbody">
+                    <!-- Populated dynamically via teacher.js -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Incoming & Scheduled Requests Table -->
+            <div class="data-table-container" style="margin-top: 2rem;">
+              <div class="table-toolbar">
+                <div>
+                  <h3 style="color: var(--text-primary); font-size: 1.15rem; margin-bottom: 0.25rem;">
+                    Incoming Student Tutoring Requests
+                  </h3>
+                  <p style="font-size: 0.85rem; color: var(--text-secondary); margin: 0;">
+                    Review requests from students to accept or decline.
+                  </p>
+                </div>
+                <span class="badge-gold">Live Updates</span>
+              </div>
+              <div style="overflow-x: auto;">
+                <table class="admin-table">
+                  <thead>
+                    <tr>
+                      <th>Student</th>
+                      <th>Subject & Goal</th>
+                      <th>Requested Date/Time</th>
+                      <th>Fee</th>
+                      <th>Status</th>
+                      <th style="text-align: right;">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="teacher-requests-table-body">
+                    <!-- Populated via teacher.js -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+          </div><!-- END TAB 1 -->
+
+
+          <!-- ============================================================== -->
+          <!-- TAB 2: CLASS & VIRTUAL SESSIONS                                -->
+          <!-- ============================================================== -->
+          <div id="teacher-tab-classes" class="teacher-tab-content" style="display: none;">
+            
+            <div class="teacher-tab-header">
+              <div>
+                <span class="badge-gold">Live Virtual Classroom</span>
+                <h2 style="color: var(--text-primary); font-size: 1.6rem; margin-top: 0.35rem;">
+                  Virtual Classes & Live Rooms
+                </h2>
+                <p style="color: var(--text-secondary); font-size: 0.925rem; max-width: 800px; margin-top: 0.35rem; line-height: 1.55;">
+                  This is where virtual classes take place. View your classes here and launch a virtual session for specific students. Once launched, students can join the virtual room, and the entire class session will occur here with interactive whiteboard, video, audio, and screen sharing.
+                </p>
+              </div>
+              <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
+                <button type="button" class="btn btn-primary btn-sm" onclick="Teacher.openInstantClassModal()">
+                  🚀 Launch Instant Session with Student
+                </button>
+              </div>
+            </div>
+
+            <!-- Classes Filter Pills -->
+            <div class="teacher-filter-bar">
+              <button type="button" class="teacher-filter-btn active" data-class-filter="all" onclick="Teacher.filterClasses('all', this)">All Classes</button>
+              <button type="button" class="teacher-filter-btn" data-class-filter="open" onclick="Teacher.filterClasses('open', this)">🟢 Live Rooms Open</button>
+              <button type="button" class="teacher-filter-btn" data-class-filter="accepted" onclick="Teacher.filterClasses('accepted', this)">Upcoming Accepted</button>
+              <button type="button" class="teacher-filter-btn" data-class-filter="pending" onclick="Teacher.filterClasses('pending', this)">Pending Requests</button>
+              <button type="button" class="teacher-filter-btn" data-class-filter="completed" onclick="Teacher.filterClasses('completed', this)">Completed Archive</button>
+            </div>
+
+            <!-- Virtual Classes Cards Grid -->
+            <div id="teacher-classes-cards-grid" class="teacher-classes-grid">
+              <!-- Populated dynamically via teacher.js -->
+            </div>
+
+          </div><!-- END TAB 2 -->
+
+
+          <!-- ============================================================== -->
+          <!-- TAB 3: STUDENTS & ACADEMIC TASK GRADING                        -->
+          <!-- ============================================================== -->
+          <div id="teacher-tab-students" class="teacher-tab-content" style="display: none;">
+            
+            <div class="teacher-tab-header">
+              <div>
+                <span class="badge-gold">Student Roster & Coursework</span>
+                <h2 style="color: var(--text-primary); font-size: 1.6rem; margin-top: 0.35rem;">
+                  Students & Academic Task Management
+                </h2>
+                <p style="color: var(--text-secondary); font-size: 0.925rem; max-width: 800px; margin-top: 0.35rem; line-height: 1.55;">
+                  Manage your students, view the list of students and their respective subjects, assign homework and diagnostic tasks, and grade their submitted coursework with educator feedback.
+                </p>
+              </div>
+              <div>
+                <button type="button" class="btn btn-primary btn-sm" onclick="Teacher.openAssignTaskModal()">
+                  + Assign New Task
+                </button>
+              </div>
+            </div>
+
+            <!-- Section 1: Enrolled Students Directory -->
+            <div class="teacher-section-title-wrap">
+              <h3 style="color: var(--text-primary); font-size: 1.25rem; margin: 0;">Enrolled Students & Respective Subjects</h3>
+              <span class="badge-gold" id="teacher-students-count-badge">0 Students Enrolled</span>
+            </div>
+            
+            <div id="teacher-students-roster-grid" class="teacher-students-grid">
+              <!-- Populated dynamically via teacher.js -->
+            </div>
+
+            <!-- Section 2: Tasks & Grading Interface -->
+            <div class="teacher-section-title-wrap" style="margin-top: 3rem;">
+              <div>
+                <h3 style="color: var(--text-primary); font-size: 1.25rem; margin: 0;">Academic Tasks & Coursework Submissions</h3>
+                <p style="font-size: 0.85rem; color: var(--text-secondary); margin: 0.25rem 0 0 0;">
+                  Review student submissions, assign letter grades / percentages, and provide structured qualitative guidance.
+                </p>
+              </div>
+              <div class="teacher-filter-bar" style="margin: 0;">
+                <button type="button" class="teacher-filter-btn active" data-task-filter="all" onclick="Teacher.filterTasks('all', this)">All Tasks</button>
+                <button type="button" class="teacher-filter-btn" data-task-filter="submitted" onclick="Teacher.filterTasks('submitted', this)">Needs Grading ⭐</button>
+                <button type="button" class="teacher-filter-btn" data-task-filter="graded" onclick="Teacher.filterTasks('graded', this)">Graded</button>
+                <button type="button" class="teacher-filter-btn" data-task-filter="assigned" onclick="Teacher.filterTasks('assigned', this)">Pending Submission</button>
+              </div>
+            </div>
+
+            <div id="teacher-tasks-list-container" class="teacher-tasks-container">
+              <!-- Populated dynamically via teacher.js -->
+            </div>
+
+          </div><!-- END TAB 3 -->
+
+
+          <!-- ============================================================== -->
+          <!-- TAB 4: SCHEDULE & OCCUPIED TIME SLOTS                          -->
+          <!-- ============================================================== -->
+          <div id="teacher-tab-schedule" class="teacher-tab-content" style="display: none;">
+            
+            <div class="teacher-tab-header">
+              <div>
+                <span class="badge-gold">Calendar & Availability</span>
+                <h2 style="color: var(--text-primary); font-size: 1.6rem; margin-top: 0.35rem;">
+                  Schedule & Availability Management
+                </h2>
+                <p style="color: var(--text-secondary); font-size: 0.925rem; max-width: 800px; margin-top: 0.35rem; line-height: 1.55;">
+                  A calendar displaying your appointments and weekly timetable. Click any time slot to mark it as <strong>"Occupied"</strong> to indicate unavailability and block student bookings, or click an occupied slot to make it available again.
+                </p>
+              </div>
+            </div>
+
+            <!-- Schedule Legend & Quick Status -->
+            <div class="schedule-legend-bar">
+              <div class="schedule-legend-item">
+                <span class="legend-color-box slot-booked"></span>
+                <span><strong>Booked Appointment:</strong> Confirmed student session</span>
+              </div>
+              <div class="schedule-legend-item">
+                <span class="legend-color-box slot-occupied"></span>
+                <span><strong>Occupied:</strong> Marked unavailable by you (Click to Free)</span>
+              </div>
+              <div class="schedule-legend-item">
+                <span class="legend-color-box slot-available"></span>
+                <span><strong>Open Slot:</strong> Bookable by students (Click to Mark Occupied)</span>
+              </div>
+            </div>
+
+            <!-- Weekly Calendar Timetable Grid -->
+            <div class="schedule-timetable-container">
+              <div class="schedule-timetable-header">
+                <h3 style="color: var(--text-primary); font-size: 1.15rem; margin: 0;">Weekly Interactive Timetable</h3>
+                <span style="font-size: 0.85rem; color: var(--gold-400); font-weight: 600;">⚡ Click any slot to toggle Occupied / Available</span>
+              </div>
+              <div id="teacher-timetable-calendar" class="schedule-timetable-grid">
+                <!-- Populated dynamically via teacher.js -->
+              </div>
+            </div>
+
+            <!-- Upcoming Booked Appointments List -->
+            <div class="data-table-container" style="margin-top: 2.5rem;">
+              <div class="table-toolbar">
+                <div>
+                  <h3 style="color: var(--text-primary); font-size: 1.15rem; margin-bottom: 0.25rem;">
+                    Upcoming Confirmed Appointments
+                  </h3>
+                  <p style="font-size: 0.85rem; color: var(--text-secondary); margin: 0;">
+                    Chronological order of your scheduled student sessions.
+                  </p>
+                </div>
+                <span class="badge-gold" id="teacher-upcoming-count-badge">0 Appointments</span>
+              </div>
+              <div id="teacher-upcoming-appointments-list" class="upcoming-appointments-grid">
+                <!-- Populated via teacher.js -->
+              </div>
+            </div>
+
+          </div><!-- END TAB 4 -->
+
+
+          <!-- ============================================================== -->
+          <!-- TAB 5: AVIORA BUDDY COHORTS                                    -->
+          <!-- ============================================================== -->
+          <div id="teacher-tab-buddy" class="teacher-tab-content" style="display: none;">
+            
+            <div class="teacher-tab-header">
+              <div>
+                <span class="badge-gold">Collaborative Co-Learning</span>
+                <h2 style="color: var(--text-primary); font-size: 1.6rem; margin-top: 0.35rem;">
+                  Aviora Buddy Assigned Students
+                </h2>
+                <p style="color: var(--text-secondary); font-size: 0.925rem; max-width: 800px; margin-top: 0.35rem; line-height: 1.55;">
+                  Where the tutor manages their assigned duo students. Review paired study buddy duos, conduct tutor-led collaborative peer classes, and guide competitive learning battles.
+                </p>
+              </div>
+              <div>
+                <a href="#aviora-buddy" class="btn btn-secondary btn-sm">
+                  Open Aviora Buddy Studio 🎮
+                </a>
+              </div>
+            </div>
+
+            <div id="teacher-buddy-cohorts-container" class="teacher-buddy-grid">
+              <!-- Populated dynamically via teacher.js -->
+            </div>
+
+          </div><!-- END TAB 5 -->
+
+
+          <!-- ============================================================== -->
+          <!-- TAB 6: PROFILE & RATE SETTINGS                                 -->
+          <!-- ============================================================== -->
+          <div id="teacher-tab-profile" class="teacher-tab-content" style="display: none;">
+            
+            <div class="data-table-container" style="padding: 2.5rem;">
+              <div class="table-toolbar" style="margin-bottom: 1.5rem;">
+                <div>
+                  <h3 style="font-size: 1.3rem; color: var(--text-primary); margin-bottom: 0.25rem;">Tutor Profile & Rate Settings</h3>
+                  <p style="font-size: 0.875rem; color: var(--text-secondary); margin: 0;">Adjust your public directory headline, hourly tutoring rate, and teaching methodology biography.</p>
+                </div>
+                <span class="badge-gold">Live in Public Directory</span>
+              </div>
+
+              <form id="teacher-profile-settings-form">
+                <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.25rem;">
+                  <div class="form-group">
+                    <label class="form-label">Professional Headline</label>
+                    <input type="text" id="t-profile-headline" class="form-control" placeholder="e.g. Ph.D. in Applied Mathematics | Stanford University" required />
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Hourly Rate ($ USD / hr)</label>
+                    <input type="number" id="t-profile-rate" class="form-control" min="20" max="250" step="1" required />
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label">Public Biography & Teaching Methodology</label>
+                  <textarea id="t-profile-bio" class="form-control" rows="5" required></textarea>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-sm">Save Public Profile</button>
+              </form>
+            </div>
+
+          </div><!-- END TAB 6 -->
+
         </div><!-- END TEACHER DASHBOARD -->
 
 
@@ -5312,6 +5654,167 @@
           <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center; font-weight: 700; padding: 0.85rem;">
             Join Aviora Buddy Session ($6) →
           </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+
+    <!-- =========================================
+       MODAL: TUTOR ASSIGN TASK
+       ========================================= -->
+  <div class="modal-overlay" id="modal-teacher-assign-task">
+    <div class="modal-card" style="max-width: 600px;">
+      <div class="modal-header">
+        <div>
+          <span class="badge-gold">Academic Coursework</span>
+          <h3 class="modal-title text-gold" style="margin-top: 0.25rem;">Assign Task to Student</h3>
+        </div>
+        <button class="modal-close-btn" onclick="Teacher.closeModal('modal-teacher-assign-task')">✕</button>
+      </div>
+      <div class="modal-body" style="padding: 1.5rem 1.75rem;">
+        <form id="form-teacher-assign-task" onsubmit="event.preventDefault(); Teacher.handleAssignTaskSubmit();">
+          <div class="form-group">
+            <label class="form-label">Select Enrolled Student *</label>
+            <select id="assign-task-student-id" class="form-control" required onchange="Teacher.handleStudentSelectChange(this.value)">
+              <option value="">-- Choose an enrolled student --</option>
+            </select>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div class="form-group">
+              <label class="form-label">Respective Subject *</label>
+              <input type="text" id="assign-task-subject" class="form-control" placeholder="e.g. Calculus BC" required />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Due Date *</label>
+              <input type="date" id="assign-task-due-date" class="form-control" required />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Task Title *</label>
+            <input type="text" id="assign-task-title" class="form-control" placeholder="e.g. Integration by Parts Diagnostic Problem Set" required />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Instructions / Problem Description *</label>
+            <textarea id="assign-task-desc" class="form-control" rows="4" placeholder="Detail the questions, exercises, or diagnostic prompt for the student..." required></textarea>
+          </div>
+
+          <div style="display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1.5rem;">
+            <button type="button" class="btn btn-secondary btn-sm" onclick="Teacher.closeModal('modal-teacher-assign-task')">Cancel</button>
+            <button type="submit" class="btn btn-primary btn-sm" id="btn-submit-assign-task">Assign Coursework Task</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- =========================================
+       MODAL: TUTOR GRADE TASK
+       ========================================= -->
+  <div class="modal-overlay" id="modal-teacher-grade-task">
+    <div class="modal-card" style="max-width: 640px;">
+      <div class="modal-header">
+        <div>
+          <span class="badge-gold">Educator Evaluation</span>
+          <h3 class="modal-title text-gold" style="margin-top: 0.25rem;">Grade Student Task</h3>
+        </div>
+        <button class="modal-close-btn" onclick="Teacher.closeModal('modal-teacher-grade-task')">✕</button>
+      </div>
+      <div class="modal-body" style="padding: 1.5rem 1.75rem;">
+        <input type="hidden" id="grade-task-id" />
+
+        <!-- Student & Task Details Banner -->
+        <div class="task-eval-summary-box">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+            <div>
+              <div style="font-size: 0.8rem; color: var(--gold-400); text-transform: uppercase; font-weight: 700;" id="grade-task-subject-tag">Calculus BC</div>
+              <h4 style="color: var(--text-primary); font-size: 1.15rem; margin: 0.25rem 0;" id="grade-task-title-disp">Taylor Polynomial Convergence</h4>
+            </div>
+            <span class="status-pill submitted" id="grade-task-status-pill">Submitted</span>
+          </div>
+          <div style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.5rem;" id="grade-task-student-meta">
+            Student: <strong>Krystel Comia</strong> • Due: 2026-10-26
+          </div>
+          <div style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.5rem; background: rgba(0,0,0,0.04); padding: 0.75rem; border-radius: 6px;" id="grade-task-instructions-disp">
+            Instructions
+          </div>
+        </div>
+
+        <!-- Student's Submission Text / Work -->
+        <div style="margin: 1.25rem 0;">
+          <label class="form-label" style="font-weight: 700; color: var(--text-primary);">Student's Submitted Work:</label>
+          <div id="grade-task-submission-content" class="student-submission-preview-box">
+            No submission recorded yet.
+          </div>
+          <div id="grade-task-submission-time" style="font-size: 0.775rem; color: var(--text-secondary); margin-top: 0.35rem;">
+            Submitted on: 2026-10-27
+          </div>
+        </div>
+
+        <form id="form-teacher-grade-task" onsubmit="event.preventDefault(); Teacher.handleGradeTaskSubmit();">
+          <div class="form-group">
+            <label class="form-label">Grade / Score *</label>
+            <input type="text" id="grade-task-grade-input" class="form-control" placeholder="e.g. 98/100 (A+) or Exemplary" required />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Educator Feedback & Qualitative Guidance *</label>
+            <textarea id="grade-task-feedback-input" class="form-control" rows="4" placeholder="Highlight conceptual mastery, areas for improvement, and advice..." required></textarea>
+          </div>
+
+          <div style="display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1.5rem;">
+            <button type="button" class="btn btn-secondary btn-sm" onclick="Teacher.closeModal('modal-teacher-grade-task')">Cancel</button>
+            <button type="submit" class="btn btn-primary btn-sm" id="btn-submit-grade-task">Save Grade & Feedback</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- =========================================
+       MODAL: LAUNCH INSTANT 1-ON-1 CLASS
+       ========================================= -->
+  <div class="modal-overlay" id="modal-teacher-instant-class">
+    <div class="modal-card" style="max-width: 540px;">
+      <div class="modal-header">
+        <div>
+          <span class="badge-gold">Live Virtual Classroom</span>
+          <h3 class="modal-title text-gold" style="margin-top: 0.25rem;">Launch Instant Virtual Class</h3>
+        </div>
+        <button class="modal-close-btn" onclick="Teacher.closeModal('modal-teacher-instant-class')">✕</button>
+      </div>
+      <div class="modal-body" style="padding: 1.5rem 1.75rem;">
+        <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1.25rem; line-height: 1.5;">
+          Launch a 50-minute virtual classroom session immediately for a specific student. The virtual room will open right away and the student will receive an instant notification to join.
+        </p>
+
+        <form id="form-teacher-instant-class" onsubmit="event.preventDefault(); Teacher.handleInstantClassSubmit();">
+          <div class="form-group">
+            <label class="form-label">Select Enrolled Student *</label>
+            <select id="instant-class-student-id" class="form-control" required onchange="Teacher.handleInstantStudentChange(this.value)">
+              <option value="">-- Choose a student --</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Subject *</label>
+            <input type="text" id="instant-class-subject" class="form-control" placeholder="e.g. Calculus BC" required />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Lesson Focus / Topic Notes</label>
+            <textarea id="instant-class-notes" class="form-control" rows="2" placeholder="e.g. Rapid review on Taylor series and parametric curves before exam."></textarea>
+          </div>
+
+          <div style="display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1.5rem;">
+            <button type="button" class="btn btn-secondary btn-sm" onclick="Teacher.closeModal('modal-teacher-instant-class')">Cancel</button>
+            <button type="submit" class="btn btn-primary btn-sm" id="btn-submit-instant-class">🚀 Open Room & Start Class Now</button>
+          </div>
         </form>
       </div>
     </div>

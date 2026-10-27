@@ -24,6 +24,15 @@ const I18N_TRANSLATIONS = {
     'nav.logout': 'Log Out',
     'nav.how_it_works': 'How It Works',
     'nav.dashboard': 'Dashboard',
+    'nav.class': 'Klase',
+    'nav.students': 'Mga Mag-aaral',
+    'nav.schedule': 'Iskedyul',
+    'nav.class': 'Unterricht',
+    'nav.students': 'Schüler',
+    'nav.schedule': 'Zeitplan',
+    'nav.class': 'Class',
+    'nav.students': 'Students',
+    'nav.schedule': 'Schedule',
 
     // Profile & Settings
     'settings.title': 'Settings & Preferences',
@@ -126,6 +135,9 @@ const I18N_TRANSLATIONS = {
     'nav.logout': 'Cerrar Sesión',
     'nav.how_it_works': 'Cómo Funciona',
     'nav.dashboard': 'Panel Principal',
+    'nav.class': 'Clases',
+    'nav.students': 'Estudiantes',
+    'nav.schedule': 'Horario',
 
     'settings.title': 'Ajustes y Preferencias',
     'settings.subtitle': 'Configura temas de visualización, internacionalización, notificaciones y seguridad.',
@@ -514,6 +526,9 @@ const I18N_TRANSLATIONS = {
     'nav.logout': 'ログアウト',
     'nav.how_it_works': 'ご利用の流れ',
     'nav.dashboard': 'ダッシュボード',
+    'nav.class': '授業',
+    'nav.students': '生徒管理',
+    'nav.schedule': 'スケジュール',
 
     'settings.title': '設定と環境設定',
     'settings.subtitle': '表示テーマ、言語設定、通知、アカウントセキュリティを管理できます。',
@@ -2182,7 +2197,12 @@ const I18n = {
       'user-logout-btn': 'nav.logout',
       'nav-login-btn': 'nav.login',
       'nav-signup-btn': 'nav.signup',
-      'notif-mark-read-btn': 'common.mark_all_read'
+      'notif-mark-read-btn': 'common.mark_all_read',
+      'nav-link-teacher-classes': 'nav.class',
+      'nav-link-teacher-students': 'nav.students',
+      'nav-link-teacher-schedule': 'nav.schedule',
+      'nav-link-teacher-buddy': 'nav.buddy',
+      'nav-link-teacher-dashboard': 'nav.dashboard'
     };
 
     Object.keys(navMap).forEach(id => {

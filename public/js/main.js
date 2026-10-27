@@ -113,7 +113,7 @@ function showConfirm(title, message, onConfirm, options = {}) {
 
 // Router
 const Router = {
-  routes: ['#home', '#about', '#tutors', '#aviora-buddy', '#buddy', '#how-it-works', '#book-now', '#book-lesson', '#subscriptions', '#subscription', '#student-subscriptions', '#login', '#signup', '#student-portal', '#dashboard', '#student-lessons', '#student-tutors', '#student-history', '#student-schedule', '#student-profile', '#teacher-portal', '#admin-portal'],
+  routes: ['#home', '#about', '#tutors', '#aviora-buddy', '#buddy', '#aviora-buddy-studio', '#how-it-works', '#book-now', '#book-lesson', '#subscriptions', '#subscription', '#student-subscriptions', '#login', '#signup', '#student-portal', '#dashboard', '#student-lessons', '#student-tutors', '#student-history', '#student-schedule', '#student-profile', '#teacher-portal', '#teacher-classes', '#teacher-class', '#teacher-students', '#teacher-schedule', '#teacher-buddy', '#teacher-dashboard', '#admin-portal'],
 
   init() {
     window.addEventListener('hashchange', () => this.handleRoute());
@@ -131,10 +131,22 @@ const Router = {
       if (!isActive && (href === '#student-profile' || href === '#profile' || link.id === 'nav-user-profile-btn') && (hash === '#student-profile' || hash === '#profile')) {
         isActive = true;
       }
+      if (!isActive && (href === '#teacher-portal' || href === '#teacher-dashboard' || link.id === 'nav-link-teacher-dashboard') && (hash === '#teacher-portal' || hash === '#teacher-dashboard')) {
+        isActive = true;
+      }
+      if (!isActive && (href === '#teacher-classes' || href === '#teacher-class' || link.id === 'nav-link-teacher-classes') && (hash === '#teacher-classes' || hash === '#teacher-class')) {
+        isActive = true;
+      }
+      if (!isActive && (href === '#teacher-students' || link.id === 'nav-link-teacher-students') && hash === '#teacher-students') {
+        isActive = true;
+      }
+      if (!isActive && (href === '#teacher-schedule' || link.id === 'nav-link-teacher-schedule') && hash === '#teacher-schedule') {
+        isActive = true;
+      }
       if (!isActive && href === '#tutors' && (hash === '#tutors' || hash.startsWith('#tutor-profile') || hash.startsWith('#book-lesson') || hash.startsWith('#book-now'))) {
         isActive = true;
       }
-      if (!isActive && (href === '#aviora-buddy' || href === '#buddy') && (hash.startsWith('#aviora-buddy') || hash.startsWith('#buddy'))) {
+      if (!isActive && (href === '#aviora-buddy' || href === '#buddy' || link.id === 'nav-link-teacher-buddy') && (hash.startsWith('#aviora-buddy') || hash.startsWith('#buddy') || hash === '#teacher-buddy')) {
         isActive = true;
       }
       if (!isActive && (href === '#subscriptions' || href === '#subscription') && (hash === '#subscriptions' || hash === '#subscription' || hash === '#student-subscriptions')) {
@@ -161,15 +173,15 @@ const Router = {
       }
     }
 
-    if (hash === '#teacher-portal') {
+    if (hash === '#teacher-portal' || hash.startsWith('#teacher-')) {
       const user = Auth.currentUser;
       if (!user) {
-        showToast('Please sign in to access the Teacher Portal.', 'info');
+        showToast('Please sign in to access the Tutor Portal.', 'info');
         window.location.hash = '#login';
         return;
       }
       if (user.role !== 'teacher') {
-        showToast('You are currently signed in as ' + user.role + '. Please switch to a teacher account.', 'warning');
+        showToast('You are currently signed in as ' + user.role + '. Please switch to an educator account.', 'warning');
         return;
       }
     }
@@ -274,12 +286,20 @@ const Router = {
       if (view) view.style.display = 'block';
       window.scrollTo(0, 0);
       await Tutors.fetchTutors();
-    } else if (hash === '#aviora-buddy' || hash.startsWith('#aviora-buddy') || hash === '#buddy' || hash.startsWith('#buddy')) {
-      const view = document.getElementById('view-aviora-buddy');
-      if (view) view.style.display = 'block';
-      window.scrollTo(0, 0);
-      if (typeof AvioraBuddy !== 'undefined' && AvioraBuddy.init) {
-        await AvioraBuddy.init();
+    } else if (hash === '#aviora-buddy' || hash.startsWith('#aviora-buddy') || hash === '#buddy' || hash.startsWith('#buddy') || hash === '#teacher-buddy') {
+      const user = Auth.currentUser;
+      if (user && user.role === 'teacher' && hash !== '#aviora-buddy-studio') {
+        const view = document.getElementById('view-teacher-portal');
+        if (view) view.style.display = 'block';
+        window.scrollTo(0, 0);
+        await Teacher.loadTeacherView('#teacher-buddy');
+      } else {
+        const view = document.getElementById('view-aviora-buddy');
+        if (view) view.style.display = 'block';
+        window.scrollTo(0, 0);
+        if (typeof AvioraBuddy !== 'undefined' && AvioraBuddy.init) {
+          await AvioraBuddy.init();
+        }
       }
     } else if (hash === '#student-profile' || hash === '#profile') {
       const user = Auth.currentUser;
@@ -318,11 +338,11 @@ const Router = {
       } else {
         await Student.loadDashboard();
       }
-    } else if (hash === '#teacher-portal') {
+    } else if (hash === '#teacher-portal' || hash.startsWith('#teacher-')) {
       const view = document.getElementById('view-teacher-portal');
       if (view) view.style.display = 'block';
       window.scrollTo(0, 0);
-      await Teacher.loadTeacherView();
+      await Teacher.loadTeacherView(hash);
     } else if (hash === '#admin-portal') {
       const view = document.getElementById('view-admin-portal');
       if (view) view.style.display = 'block';

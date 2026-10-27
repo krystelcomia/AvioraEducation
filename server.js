@@ -2993,7 +2993,7 @@ app.post('/api/teacher/apply', authenticateToken, requireRole('teacher'), upload
   }
 });
 
-// Teacher Dashboard (Requests & Sessions)
+// Teacher Dashboard (Monthly Earnings, Student Revenue & Platform Commission / Cut)
 app.get('/api/teacher/dashboard', authenticateToken, requireRole('teacher'), (req, res) => {
   try {
     const teacherId = req.user.id;
@@ -3013,11 +3013,91 @@ app.get('/api/teacher/dashboard', authenticateToken, requireRole('teacher'), (re
       JOIN users u ON tr.student_id = u.id
       LEFT JOIN student_profiles sp ON sp.user_id = u.id
       WHERE tr.tutor_id = ?
-      ORDER BY tr.created_at DESC
+      ORDER BY tr.requested_date DESC, tr.requested_time DESC
     `).all(teacherId);
 
     const completed = requests.filter(r => r.status === 'completed');
-    const totalEarnings = completed.reduce((sum, r) => sum + r.total_amount, 0);
+    const grossRevenue = completed.reduce((sum, r) => sum + r.total_amount, 0);
+    const platformCommissionRate = 0.15; // 15% platform cut for company
+    const platformCommissionAmount = Math.round(grossRevenue * platformCommissionRate * 100) / 100;
+    const netEarnings = Math.round((grossRevenue - platformCommissionAmount) * 100) / 100;
+
+    // Current month calculations
+    const now = new Date();
+    const currentMonthPrefix = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const currentMonthCompleted = completed.filter(r => (r.requested_date || '').startsWith(currentMonthPrefix));
+    const currentMonthGross = currentMonthCompleted.reduce((sum, r) => sum + r.total_amount, 0);
+    const currentMonthCommission = Math.round(currentMonthGross * platformCommissionRate * 100) / 100;
+    const currentMonthNet = Math.round((currentMonthGross - currentMonthCommission) * 100) / 100;
+
+    // Monthly breakdown (grouped by month YYYY-MM)
+    const monthlyGroups = {};
+    for (const r of completed) {
+      const monthKey = (r.requested_date || '').substring(0, 7) || currentMonthPrefix;
+      if (!monthlyGroups[monthKey]) {
+        monthlyGroups[monthKey] = {
+          month: monthKey,
+          gross: 0,
+          sessions_count: 0,
+          students_set: new Set()
+        };
+      }
+      monthlyGroups[monthKey].gross += r.total_amount;
+      monthlyGroups[monthKey].sessions_count += 1;
+      monthlyGroups[monthKey].students_set.add(r.student_id);
+    }
+
+    const monthlyFinancials = Object.values(monthlyGroups).map(m => {
+      const gross = Math.round(m.gross * 100) / 100;
+      const commission = Math.round(gross * platformCommissionRate * 100) / 100;
+      const net = Math.round((gross - commission) * 100) / 100;
+      const isPastMonth = m.month < currentMonthPrefix;
+      return {
+        month_key: m.month,
+        month_label: new Date(`${m.month}-01T00:00:00`).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
+        students_count: m.students_set.size,
+        sessions_count: m.sessions_count,
+        gross_amount: gross,
+        commission_rate: 15,
+        commission_cut: commission,
+        net_payout: net,
+        status: isPastMonth ? 'Disbursed' : 'Pending Settlement'
+      };
+    }).sort((a, b) => b.month_key.localeCompare(a.month_key));
+
+    // Per-Student Revenue Breakdown
+    const studentGroups = {};
+    for (const r of completed) {
+      if (!studentGroups[r.student_id]) {
+        studentGroups[r.student_id] = {
+          student_id: r.student_id,
+          student_name: r.student_name,
+          student_avatar: r.student_avatar,
+          student_email: r.student_email,
+          student_grade: r.student_grade,
+          subject: r.subject,
+          sessions_count: 0,
+          gross_amount: 0
+        };
+      }
+      studentGroups[r.student_id].sessions_count += 1;
+      studentGroups[r.student_id].gross_amount += r.total_amount;
+    }
+
+    const studentRevenueBreakdown = Object.values(studentGroups).map(s => {
+      const gross = Math.round(s.gross_amount * 100) / 100;
+      const commission = Math.round(gross * platformCommissionRate * 100) / 100;
+      const net = Math.round((gross - commission) * 100) / 100;
+      return {
+        ...s,
+        gross_amount: gross,
+        commission_cut: commission,
+        net_tutor_share: net
+      };
+    });
+
+    const totalHours = completed.reduce((sum, r) => sum + (r.duration_hours || 1), 0);
+    const pendingTasks = db.prepare("SELECT COUNT(*) as count FROM tutor_tasks WHERE tutor_id = ? AND status = 'submitted'").get(teacherId);
 
     const stats = {
       is_approved: application ? application.status === 'approved' : false,
@@ -3027,15 +3107,377 @@ app.get('/api/teacher/dashboard', authenticateToken, requireRole('teacher'), (re
       pending_requests: requests.filter(r => r.status === 'pending').length,
       active_sessions: requests.filter(r => r.status === 'accepted').length,
       completed_sessions: completed.length,
-      total_earnings: totalEarnings,
+      total_hours: totalHours,
+      gross_revenue_students: grossRevenue,
+      platform_commission_rate: 15,
+      platform_commission_amount: platformCommissionAmount,
+      net_earnings_tutor: netEarnings,
+      current_month_gross: currentMonthGross,
+      current_month_commission: currentMonthCommission,
+      current_month_net: currentMonthNet,
       rating: tutorProfile ? tutorProfile.rating : 5.0,
-      reviews_count: tutorProfile ? tutorProfile.reviews_count : 0
+      reviews_count: tutorProfile ? tutorProfile.reviews_count : 0,
+      pending_tasks_count: pendingTasks ? pendingTasks.count : 0
     };
 
-    res.json({ stats, requests, tutorProfile });
+    res.json({ stats, requests, tutorProfile, monthlyFinancials, studentRevenueBreakdown });
   } catch (error) {
     console.error('Teacher dashboard error:', error);
     res.status(500).json({ error: 'Failed to retrieve teacher dashboard data.' });
+  }
+});
+
+// Teacher Classes List (Virtual Classes & Sessions)
+app.get('/api/teacher/classes', authenticateToken, requireRole('teacher'), (req, res) => {
+  try {
+    const teacherId = req.user.id;
+    const classes = db.prepare(`
+      SELECT 
+        tr.*,
+        u.name as student_name,
+        u.email as student_email,
+        u.avatar_url as student_avatar,
+        sp.school as student_school,
+        sp.grade_level as student_grade
+      FROM tutoring_requests tr
+      JOIN users u ON tr.student_id = u.id
+      LEFT JOIN student_profiles sp ON sp.user_id = u.id
+      WHERE tr.tutor_id = ?
+      ORDER BY 
+        CASE 
+          WHEN tr.room_status = 'open' THEN 1
+          WHEN tr.status = 'accepted' THEN 2
+          WHEN tr.status = 'pending' THEN 3
+          ELSE 4
+        END,
+        tr.requested_date ASC, tr.requested_time ASC
+    `).all(teacherId);
+
+    res.json({ classes });
+  } catch (error) {
+    console.error('Teacher classes error:', error);
+    res.status(500).json({ error: 'Failed to retrieve classes.' });
+  }
+});
+
+// Launch Instant 1-on-1 Class with Enrolled Student
+app.post('/api/teacher/classes/launch-instant', authenticateToken, requireRole('teacher'), (req, res) => {
+  try {
+    const teacherId = req.user.id;
+    const { student_id, subject, notes } = req.body;
+
+    if (!student_id || !subject) {
+      return res.status(400).json({ error: 'Student and subject are required to launch a class.' });
+    }
+
+    const student = db.prepare('SELECT id, name, email FROM users WHERE id = ?').get(student_id);
+    if (!student) {
+      return res.status(404).json({ error: 'Student not found.' });
+    }
+
+    const tutorProfile = db.prepare('SELECT hourly_rate FROM tutor_profiles WHERE user_id = ?').get(teacherId);
+    const rate = tutorProfile ? tutorProfile.hourly_rate : 50.0;
+    const today = new Date().toISOString().split('T')[0];
+    const nowTime = new Date().toTimeString().substring(0, 5);
+
+    const result = db.prepare(`
+      INSERT INTO tutoring_requests (
+        student_id, tutor_id, subject, grade_level, requested_date,
+        requested_time, duration_hours, hourly_rate, total_amount,
+        status, room_status, room_started_at, notes, tutor_response_note
+      ) VALUES (
+        ?, ?, ?, 'Enrolled Scholar', ?,
+        ?, 1.0, ?, ?,
+        'accepted', 'open', CURRENT_TIMESTAMP, ?, 'Live class launched by educator.'
+      )
+    `).run(
+      student_id,
+      teacherId,
+      subject,
+      today,
+      nowTime,
+      rate,
+      rate,
+      notes || 'Live 1-on-1 pedagogical session.'
+    );
+
+    // Notify student
+    sendNotification(
+      student_id,
+      'Live Virtual Class Launched!',
+      `${req.user.name} has launched your virtual classroom for ${subject}! Join the session now.`,
+      'status',
+      `/#virtual-room?session=${result.lastInsertRowid}`
+    );
+
+    const createdSession = db.prepare('SELECT * FROM tutoring_requests WHERE id = ?').get(result.lastInsertRowid);
+    res.status(201).json({
+      message: 'Virtual room launched! Class is now live.',
+      sessionId: result.lastInsertRowid,
+      session: createdSession
+    });
+  } catch (error) {
+    console.error('Launch instant class error:', error);
+    res.status(500).json({ error: 'Failed to launch class: ' + error.message });
+  }
+});
+
+// Teacher Students Directory (Roster, Subjects, Tasks)
+app.get('/api/teacher/students', authenticateToken, requireRole('teacher'), (req, res) => {
+  try {
+    const teacherId = req.user.id;
+
+    // Get unique students from tutoring requests
+    const students = db.prepare(`
+      SELECT 
+        u.id as student_id,
+        u.name as student_name,
+        u.email as student_email,
+        u.avatar_url as student_avatar,
+        sp.school as student_school,
+        sp.grade_level as student_grade,
+        GROUP_CONCAT(DISTINCT tr.subject) as enrolled_subjects,
+        COUNT(CASE WHEN tr.status = 'completed' THEN 1 END) as completed_sessions,
+        COUNT(CASE WHEN tr.status = 'accepted' THEN 1 END) as upcoming_sessions
+      FROM tutoring_requests tr
+      JOIN users u ON tr.student_id = u.id
+      LEFT JOIN student_profiles sp ON sp.user_id = u.id
+      WHERE tr.tutor_id = ?
+      GROUP BY u.id
+      ORDER BY u.name ASC
+    `).all(teacherId);
+
+    // Attach tasks count per student
+    const studentIds = students.map(s => s.student_id);
+    let tasks = [];
+    if (studentIds.length > 0) {
+      tasks = db.prepare(`
+        SELECT * FROM tutor_tasks 
+        WHERE tutor_id = ? 
+        ORDER BY created_at DESC
+      `).all(teacherId);
+    }
+
+    const studentsWithTasks = students.map(s => {
+      const studentTasks = tasks.filter(t => t.student_id === s.student_id);
+      return {
+        ...s,
+        enrolled_subjects: s.enrolled_subjects ? s.enrolled_subjects.split(',') : [],
+        total_tasks: studentTasks.length,
+        pending_grade_tasks: studentTasks.filter(t => t.status === 'submitted').length,
+        completed_tasks: studentTasks.filter(t => t.status === 'graded').length,
+        tasks: studentTasks
+      };
+    });
+
+    res.json({ students: studentsWithTasks });
+  } catch (error) {
+    console.error('Teacher students error:', error);
+    res.status(500).json({ error: 'Failed to retrieve student roster.' });
+  }
+});
+
+// Teacher Tasks List
+app.get('/api/teacher/tasks', authenticateToken, requireRole('teacher'), (req, res) => {
+  try {
+    const teacherId = req.user.id;
+    const tasks = db.prepare(`
+      SELECT 
+        tt.*,
+        u.name as student_name,
+        u.email as student_email,
+        u.avatar_url as student_avatar,
+        sp.grade_level as student_grade
+      FROM tutor_tasks tt
+      JOIN users u ON tt.student_id = u.id
+      LEFT JOIN student_profiles sp ON sp.user_id = u.id
+      WHERE tt.tutor_id = ?
+      ORDER BY 
+        CASE 
+          WHEN tt.status = 'submitted' THEN 1
+          WHEN tt.status = 'assigned' THEN 2
+          ELSE 3
+        END,
+        tt.due_date ASC, tt.created_at DESC
+    `).all(teacherId);
+
+    res.json({ tasks });
+  } catch (error) {
+    console.error('Get teacher tasks error:', error);
+    res.status(500).json({ error: 'Failed to retrieve tasks.' });
+  }
+});
+
+// Teacher Assigns New Task to Student
+app.post('/api/teacher/tasks', authenticateToken, requireRole('teacher'), (req, res) => {
+  try {
+    const teacherId = req.user.id;
+    const { student_id, subject, title, description, due_date } = req.body;
+
+    if (!student_id || !title) {
+      return res.status(400).json({ error: 'Student and task title are required.' });
+    }
+
+    const student = db.prepare('SELECT id, name FROM users WHERE id = ?').get(student_id);
+    if (!student) {
+      return res.status(404).json({ error: 'Student not found.' });
+    }
+
+    const result = db.prepare(`
+      INSERT INTO tutor_tasks (tutor_id, student_id, subject, title, description, due_date, status)
+      VALUES (?, ?, ?, ?, ?, ?, 'assigned')
+    `).run(
+      teacherId,
+      student_id,
+      subject || 'General Study',
+      title,
+      description || null,
+      due_date || null
+    );
+
+    // Notify student
+    sendNotification(
+      student_id,
+      'New Academic Task Assigned',
+      `${req.user.name} assigned you a new task: "${title}" in ${subject || 'your course'}.`,
+      'assignment',
+      '/#student-portal'
+    );
+
+    const createdTask = db.prepare('SELECT * FROM tutor_tasks WHERE id = ?').get(result.lastInsertRowid);
+    res.status(201).json({ message: 'Task successfully assigned to student!', taskId: result.lastInsertRowid, task: createdTask });
+  } catch (error) {
+    console.error('Assign task error:', error);
+    res.status(500).json({ error: 'Failed to assign task: ' + error.message });
+  }
+});
+
+// Teacher Grades a Student Task
+app.post('/api/teacher/tasks/:id/grade', authenticateToken, requireRole('teacher'), (req, res) => {
+  try {
+    const teacherId = req.user.id;
+    const taskId = req.params.id;
+    const { grade, feedback } = req.body;
+
+    if (!grade) {
+      return res.status(400).json({ error: 'Grade is required.' });
+    }
+
+    const task = db.prepare('SELECT * FROM tutor_tasks WHERE id = ? AND tutor_id = ?').get(taskId, teacherId);
+    if (!task) {
+      return res.status(404).json({ error: 'Task not found.' });
+    }
+
+    db.prepare(`
+      UPDATE tutor_tasks 
+      SET grade = ?, feedback = ?, status = 'graded', graded_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `).run(grade, feedback || null, taskId);
+
+    // Notify student
+    sendNotification(
+      task.student_id,
+      'Task Graded & Reviewed',
+      `${req.user.name} graded your task "${task.title}": ${grade}. Feedback provided.`,
+      'status',
+      '/#student-portal'
+    );
+
+    const updatedTask = db.prepare('SELECT * FROM tutor_tasks WHERE id = ?').get(taskId);
+    res.json({ message: 'Task successfully graded and feedback returned to student!', task: updatedTask });
+  } catch (error) {
+    console.error('Grade task error:', error);
+    res.status(500).json({ error: 'Failed to grade task: ' + error.message });
+  }
+});
+
+// Teacher Schedule & Occupied Slots
+app.get('/api/teacher/schedule', authenticateToken, requireRole('teacher'), (req, res) => {
+  try {
+    const teacherId = req.user.id;
+
+    // Get all appointments (accepted, pending, completed)
+    const appointments = db.prepare(`
+      SELECT 
+        tr.*,
+        u.name as student_name,
+        u.email as student_email,
+        u.avatar_url as student_avatar
+      FROM tutoring_requests tr
+      JOIN users u ON tr.student_id = u.id
+      WHERE tr.tutor_id = ? AND tr.status IN ('accepted', 'pending', 'completed')
+      ORDER BY tr.requested_date ASC, tr.requested_time ASC
+    `).all(teacherId);
+
+    // Get occupied slots
+    const occupiedSlots = db.prepare(`
+      SELECT * FROM tutor_occupied_slots
+      WHERE tutor_id = ?
+      ORDER BY day_of_week ASC, time_slot ASC
+    `).all(teacherId);
+
+    res.json({ appointments, occupiedSlots });
+  } catch (error) {
+    console.error('Teacher schedule error:', error);
+    res.status(500).json({ error: 'Failed to retrieve schedule.' });
+  }
+});
+
+// Toggle Occupied Time Slot (Mark as Unavailable / Available)
+app.post('/api/teacher/schedule/toggle-slot', authenticateToken, requireRole('teacher'), (req, res) => {
+  try {
+    const teacherId = req.user.id;
+    const { day_of_week, time_slot, reason } = req.body;
+
+    if (!day_of_week || !time_slot) {
+      return res.status(400).json({ error: 'Day of week and time slot are required.' });
+    }
+
+    const existing = db.prepare(`
+      SELECT id FROM tutor_occupied_slots 
+      WHERE tutor_id = ? AND day_of_week = ? AND time_slot = ?
+    `).get(teacherId, day_of_week, time_slot);
+
+    if (existing) {
+      db.prepare('DELETE FROM tutor_occupied_slots WHERE id = ?').run(existing.id);
+      res.json({ message: `${day_of_week} ${time_slot} is now marked as Available for student bookings.`, isOccupied: false });
+    } else {
+      db.prepare(`
+        INSERT INTO tutor_occupied_slots (tutor_id, day_of_week, time_slot, reason)
+        VALUES (?, ?, ?, ?)
+      `).run(teacherId, day_of_week, time_slot, reason || 'Occupied / Unavailable');
+      res.json({ message: `${day_of_week} ${time_slot} is now marked as Occupied (Unavailable).`, isOccupied: true });
+    }
+  } catch (error) {
+    console.error('Toggle occupied slot error:', error);
+    res.status(500).json({ error: 'Failed to toggle slot: ' + error.message });
+  }
+});
+
+// Teacher Aviora Buddy Assigned Sessions
+app.get('/api/teacher/buddy-sessions', authenticateToken, requireRole('teacher'), (req, res) => {
+  try {
+    const teacherId = req.user.id;
+    const sessions = db.prepare(`
+      SELECT 
+        bs.*,
+        u1.name as student1_name,
+        u1.email as student1_email,
+        u1.avatar_url as student1_avatar,
+        u2.name as student2_name,
+        u2.email as student2_email,
+        u2.avatar_url as student2_avatar
+      FROM buddy_sessions bs
+      LEFT JOIN users u1 ON bs.student1_id = u1.id
+      LEFT JOIN users u2 ON bs.student2_id = u2.id
+      WHERE bs.tutor_id = ?
+      ORDER BY bs.scheduled_date DESC, bs.scheduled_time DESC
+    `).all(teacherId);
+
+    res.json({ sessions });
+  } catch (error) {
+    console.error('Teacher buddy sessions error:', error);
+    res.status(500).json({ error: 'Failed to retrieve buddy sessions.' });
   }
 });
 

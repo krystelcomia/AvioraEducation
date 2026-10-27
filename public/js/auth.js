@@ -1052,7 +1052,7 @@ const Auth = {
       if (guestActions) guestActions.style.display = 'none';
       if (userActions) {
         userActions.style.display = 'flex';
-        const profileHash = user.role === 'student' ? '#student-profile' : (user.role === 'teacher' ? '#teacher-portal' : '#admin-portal');
+        const profileHash = '#student-profile';
         userActions.innerHTML = `
           <!-- Notification Bell & Dropdown -->
           <div class="nav-notif-container" id="nav-notif-container">
@@ -1116,10 +1116,11 @@ const Auth = {
           mainNavLinks.innerHTML = `
             <li><a href="#home" class="nav-link" id="nav-link-home">Home</a></li>
             <li><a href="#about" class="nav-link" id="nav-link-about">About</a></li>
-            <li><a href="#tutors" class="nav-link" id="nav-link-tutors">Tutors</a></li>
-            <li><a href="#aviora-buddy" class="nav-link" id="nav-link-buddy">Aviora Buddy</a></li>
-            <li><a href="#how-it-works" class="nav-link" id="nav-link-how">How It Works</a></li>
-            <li><a href="#teacher-portal" class="nav-link" id="nav-link-teacher-portal">Teacher Portal</a></li>
+            <li><a href="#teacher-classes" class="nav-link" id="nav-link-teacher-classes">Class</a></li>
+            <li><a href="#teacher-students" class="nav-link" id="nav-link-teacher-students">Students</a></li>
+            <li><a href="#teacher-schedule" class="nav-link" id="nav-link-teacher-schedule">Schedule</a></li>
+            <li><a href="#aviora-buddy" class="nav-link" id="nav-link-teacher-buddy">Aviora Buddy</a></li>
+            <li><a href="#teacher-portal" class="nav-link" id="nav-link-teacher-dashboard">Dashboard</a></li>
           `;
         } else if (user.role === 'admin') {
           mainNavLinks.innerHTML = `

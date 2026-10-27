@@ -128,11 +128,20 @@ const API = {
   cancelRequest: (id) => apiRequest(`/student/requests/${id}/cancel`, { method: 'POST' }),
   submitReview: (id, body) => apiRequest(`/student/requests/${id}/review`, { method: 'POST', body }),
 
-  // Teacher
+  // Teacher & Tutor Portal
   getTeacherStatus: () => apiRequest('/teacher/application-status'),
   submitTeacherApplication: (formData) => apiRequest('/teacher/apply', { method: 'POST', body: formData }),
   getTeacherDashboard: () => apiRequest('/teacher/dashboard'),
   updateRequestStatus: (id, body) => apiRequest(`/teacher/requests/${id}/status`, { method: 'POST', body }),
+  getTeacherClasses: () => apiRequest('/teacher/classes'),
+  launchInstantClass: (body) => apiRequest('/teacher/classes/launch-instant', { method: 'POST', body }),
+  getTeacherStudents: () => apiRequest('/teacher/students'),
+  getTeacherTasks: () => apiRequest('/teacher/tasks'),
+  assignStudentTask: (body) => apiRequest('/teacher/tasks', { method: 'POST', body }),
+  gradeStudentTask: (id, body) => apiRequest(`/teacher/tasks/${id}/grade`, { method: 'POST', body }),
+  getTeacherSchedule: () => apiRequest('/teacher/schedule'),
+  toggleOccupiedSlot: (body) => apiRequest('/teacher/schedule/toggle-slot', { method: 'POST', body }),
+  getTeacherBuddySessions: () => apiRequest('/teacher/buddy-sessions'),
 
   // Admin
   getAdminDashboard: () => apiRequest('/admin/dashboard'),

@@ -682,19 +682,36 @@ const Admin = {
         </div>
 
         <div style="margin-bottom: 1.25rem;">
-          <h4 style="color: var(--charcoal-900); margin-bottom: 0.35rem; font-size: 0.95rem;">Uploaded Credential Document</h4>
-          ${app.credentials_file ? `
-            <div style="display: flex; align-items: center; gap: 0.75rem; background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.3); padding: 0.75rem 1rem; border-radius: var(--radius-md);">
-              <span style="display: inline-flex; align-items: center; justify-content: center; color: #10B981;">${Icons.fileText(22)}</span>
-              <div style="flex: 1;">
-                <div style="font-size: 0.85rem; font-weight: 600; color: #10B981;">${app.credentials_filename || 'Verified_Academic_Diploma.pdf'}</div>
-                <div style="font-size: 0.75rem; color: var(--text-secondary);">Official credential file submitted for verification</div>
+          <h4 style="color: var(--charcoal-900); margin-bottom: 0.5rem; font-size: 0.95rem;">Uploaded Verification Documents (Resume & Diploma)</h4>
+          <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+            <!-- Resume Document -->
+            ${(app.resume_file || app.resume_filename) ? `
+              <div style="display: flex; align-items: center; gap: 0.75rem; background: rgba(59, 130, 246, 0.08); border: 1px solid rgba(59, 130, 246, 0.3); padding: 0.75rem 1rem; border-radius: var(--radius-md);">
+                <span style="display: inline-flex; align-items: center; justify-content: center; color: #3B82F6;">${Icons.fileText(22)}</span>
+                <div style="flex: 1;">
+                  <div style="font-size: 0.85rem; font-weight: 600; color: #1D4ED8;">${app.resume_filename || 'Applicant_Resume_CV.pdf'}</div>
+                  <div style="font-size: 0.75rem; color: var(--text-secondary);">Applicant Resume / Curriculum Vitae</div>
+                </div>
+                <a href="${app.resume_file || '#'}" target="_blank" class="btn btn-outline-gold btn-sm">Inspect Resume</a>
               </div>
-              <a href="${app.credentials_file}" target="_blank" class="btn btn-outline-gold btn-sm">Inspect File</a>
-            </div>
-          ` : `
-            <p style="color: var(--text-secondary); font-size: 0.85rem;">Standard verified document cleared via institutional portal.</p>
-          `}
+            ` : `
+              <div style="font-size: 0.82rem; color: var(--text-muted); font-style: italic;">No separate resume uploaded (legacy application).</div>
+            `}
+
+            <!-- Diploma Document -->
+            ${(app.diploma_file || app.credentials_file) ? `
+              <div style="display: flex; align-items: center; gap: 0.75rem; background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.3); padding: 0.75rem 1rem; border-radius: var(--radius-md);">
+                <span style="display: inline-flex; align-items: center; justify-content: center; color: #10B981;">${Icons.award(22)}</span>
+                <div style="flex: 1;">
+                  <div style="font-size: 0.85rem; font-weight: 600; color: #10B981;">${app.diploma_filename || app.credentials_filename || 'Degree_Diploma.pdf'}</div>
+                  <div style="font-size: 0.75rem; color: var(--text-secondary);">Official degree diploma / university credential</div>
+                </div>
+                <a href="${app.diploma_file || app.credentials_file}" target="_blank" class="btn btn-outline-gold btn-sm">Inspect Diploma</a>
+              </div>
+            ` : `
+              <p style="color: var(--text-secondary); font-size: 0.85rem;">Standard verified document cleared via institutional portal.</p>
+            `}
+          </div>
         </div>
       `;
     }

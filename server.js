@@ -2907,7 +2907,14 @@ app.get('/api/teacher/application-status', authenticateToken, requireRole('teach
 });
 
 // Teacher submits/updates their full application with credential upload
-app.post('/api/teacher/apply', authenticateToken, requireRole('teacher'), upload.single('credential_document'), (req, res) => {
+const teacherUploadMiddleware = upload.fields([
+  { name: 'resume_document', maxCount: 1 },
+  { name: 'diploma_document', maxCount: 1 },
+  { name: 'credential_document', maxCount: 1 }
+]);
+
+// Teacher submits/updates their application with required resume and diploma
+app.post('/api/teacher/apply', authenticateToken, requireRole('teacher'), teacherUploadMiddleware, (req, res) => {
   try {
     const userId = req.user.id;
     const {
@@ -2929,12 +2936,32 @@ app.post('/api/teacher/apply', authenticateToken, requireRole('teacher'), upload
 
     const existingApp = db.prepare('SELECT * FROM teacher_applications WHERE user_id = ?').get(userId);
 
-    let credentialFile = existingApp ? existingApp.credentials_file : null;
-    let credentialFilename = existingApp ? existingApp.credentials_filename : null;
+    let resumeFile = existingApp ? existingApp.resume_file : null;
+    let resumeFilename = existingApp ? existingApp.resume_filename : null;
+    let diplomaFile = existingApp ? (existingApp.diploma_file || existingApp.credentials_file) : null;
+    let diplomaFilename = existingApp ? (existingApp.diploma_filename || existingApp.credentials_filename) : null;
 
-    if (req.file) {
-      credentialFile = `/uploads/${req.file.filename}`;
-      credentialFilename = req.file.originalname;
+    if (req.files) {
+      if (req.files['resume_document'] && req.files['resume_document'][0]) {
+        const rf = req.files['resume_document'][0];
+        resumeFile = `/uploads/${rf.filename}`;
+        resumeFilename = rf.originalname;
+      }
+      if (req.files['diploma_document'] && req.files['diploma_document'][0]) {
+        const df = req.files['diploma_document'][0];
+        diplomaFile = `/uploads/${df.filename}`;
+        diplomaFilename = df.originalname;
+      }
+      if (req.files['credential_document'] && req.files['credential_document'][0] && !diplomaFile) {
+        const cf = req.files['credential_document'][0];
+        diplomaFile = `/uploads/${cf.filename}`;
+        diplomaFilename = cf.originalname;
+      }
+    }
+
+    // Step 4 Requirement: Both resume and diploma are required
+    if (!resumeFile || !diplomaFile) {
+      return res.status(400).json({ error: 'Applicants are required to upload both a Resume (CV) and a Degree Diploma before submitting for review.' });
     }
 
     if (existingApp) {
@@ -2942,9 +2969,13 @@ app.post('/api/teacher/apply', authenticateToken, requireRole('teacher'), upload
         UPDATE teacher_applications
         SET headline = ?, highest_degree = ?, institution = ?, graduation_year = ?,
             years_experience = ?, subjects = ?, grade_levels = ?, hourly_rate = ?,
-            bio = ?, teaching_philosophy = ?, credentials_file = COALESCE(?, credentials_file),
+            bio = ?, teaching_philosophy = ?,
+            credentials_file = COALESCE(?, credentials_file),
             credentials_filename = COALESCE(?, credentials_filename),
-            availability_schedule = ?, status = 'pending', updated_at = CURRENT_TIMESTAMP
+            resume_file = ?, resume_filename = ?,
+            diploma_file = ?, diploma_filename = ?,
+            availability_schedule = ?, status = 'pending',
+            interview_status = 'pending', updated_at = CURRENT_TIMESTAMP
         WHERE user_id = ?
       `).run(
         headline || existingApp.headline,
@@ -2957,8 +2988,12 @@ app.post('/api/teacher/apply', authenticateToken, requireRole('teacher'), upload
         parseFloat(hourly_rate) || existingApp.hourly_rate,
         bio || existingApp.bio,
         teaching_philosophy || existingApp.teaching_philosophy,
-        credentialFile,
-        credentialFilename,
+        diplomaFile,
+        diplomaFilename,
+        resumeFile,
+        resumeFilename,
+        diplomaFile,
+        diplomaFilename,
         typeof availability_schedule === 'string' ? availability_schedule : JSON.stringify(availability_schedule || {}),
         userId
       );
@@ -2968,8 +3003,9 @@ app.post('/api/teacher/apply', authenticateToken, requireRole('teacher'), upload
           user_id, headline, highest_degree, institution, graduation_year,
           years_experience, subjects, grade_levels, hourly_rate, bio,
           teaching_philosophy, credentials_file, credentials_filename,
-          availability_schedule, status
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')
+          resume_file, resume_filename, diploma_file, diploma_filename,
+          interview_status, availability_schedule, status
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, 'pending')
       `).run(
         userId,
         headline,
@@ -2982,25 +3018,49 @@ app.post('/api/teacher/apply', authenticateToken, requireRole('teacher'), upload
         parseFloat(hourly_rate) || 45.0,
         bio,
         teaching_philosophy,
-        credentialFile,
-        credentialFilename,
+        diplomaFile,
+        diplomaFilename,
+        resumeFile,
+        resumeFilename,
+        diplomaFile,
+        diplomaFilename,
         typeof availability_schedule === 'string' ? availability_schedule : JSON.stringify(availability_schedule || {})
       );
     }
+
+    // Send notification to applicant
+    sendNotification(
+      userId,
+      'Application Under Review - Virtual Interview Pending',
+      'Your resume and diploma have been received and are undergoing review by the Academic Board. You will be notified once a schedule for your virtual interview is set. In the meantime, you may explore your dashboard in view mode.',
+      'application',
+      '#teacher-portal'
+    );
 
     // Notify all admins
     const admins = db.prepare("SELECT id FROM users WHERE role = 'admin'").all();
     for (const admin of admins) {
       sendNotification(
         admin.id,
-        'Teacher Application Submitted',
-        `${req.user.name} submitted their tutor credentials for review.`,
+        'Tutor Resume & Diploma Submitted',
+        `${req.user.name} submitted their resume and diploma for review and interview scheduling.`,
         'application',
         '/#admin'
       );
     }
 
-    res.json({ message: 'Your application and credentials have been submitted for review! Our academic board typically reviews submissions within 24-48 hours.' });
+    res.json({
+      success: true,
+      status: 'pending',
+      message: 'Your resume and diploma have been submitted successfully and are now undergoing review. You will be notified once a schedule for your virtual interview is set. In the meantime, you may proceed to your dashboard.',
+      application: {
+        status: 'pending',
+        resume_file: resumeFile,
+        resume_filename: resumeFilename,
+        diploma_file: diplomaFile,
+        diploma_filename: diplomaFilename
+      }
+    });
   } catch (error) {
     console.error('Teacher application error:', error);
     res.status(500).json({ error: 'Failed to submit application. ' + error.message });
@@ -3178,6 +3238,10 @@ app.get('/api/teacher/classes', authenticateToken, requireRole('teacher'), (req,
 app.post('/api/teacher/classes/launch-instant', authenticateToken, requireRole('teacher'), (req, res) => {
   try {
     const teacherId = req.user.id;
+    const appRecord = db.prepare('SELECT status FROM teacher_applications WHERE user_id = ?').get(teacherId);
+    if (!appRecord || appRecord.status !== 'approved') {
+      return res.status(403).json({ error: 'Your account is currently under review. Live virtual class operations will be unlocked once approved by the administrator following your virtual interview.' });
+    }
     const { student_id, subject, notes } = req.body;
 
     if (!student_id || !subject) {
@@ -3326,6 +3390,10 @@ app.get('/api/teacher/tasks', authenticateToken, requireRole('teacher'), (req, r
 app.post('/api/teacher/tasks', authenticateToken, requireRole('teacher'), (req, res) => {
   try {
     const teacherId = req.user.id;
+    const appRecord = db.prepare('SELECT status FROM teacher_applications WHERE user_id = ?').get(teacherId);
+    if (!appRecord || appRecord.status !== 'approved') {
+      return res.status(403).json({ error: 'Your account is currently under review. Assigning student tasks will unlock once approved by the administrator.' });
+    }
     const { student_id, subject, title, description, due_date } = req.body;
 
     if (!student_id || !title) {
@@ -3370,6 +3438,10 @@ app.post('/api/teacher/tasks', authenticateToken, requireRole('teacher'), (req, 
 app.post('/api/teacher/tasks/:id/grade', authenticateToken, requireRole('teacher'), (req, res) => {
   try {
     const teacherId = req.user.id;
+    const appRecord = db.prepare('SELECT status FROM teacher_applications WHERE user_id = ?').get(teacherId);
+    if (!appRecord || appRecord.status !== 'approved') {
+      return res.status(403).json({ error: 'Your account is currently under review. Task grading will unlock once approved by the administrator.' });
+    }
     const taskId = req.params.id;
     const { grade, feedback } = req.body;
 
@@ -3441,6 +3513,10 @@ app.get('/api/teacher/schedule', authenticateToken, requireRole('teacher'), (req
 app.post('/api/teacher/schedule/toggle-slot', authenticateToken, requireRole('teacher'), (req, res) => {
   try {
     const teacherId = req.user.id;
+    const appRecord = db.prepare('SELECT status FROM teacher_applications WHERE user_id = ?').get(teacherId);
+    if (!appRecord || appRecord.status !== 'approved') {
+      return res.status(403).json({ error: 'Your account is currently under review. Schedule slot management will unlock once approved by the administrator.' });
+    }
     const { day_of_week, time_slot, reason } = req.body;
 
     if (!day_of_week || !time_slot) {

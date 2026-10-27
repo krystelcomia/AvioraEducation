@@ -20,6 +20,7 @@ const Teacher = {
   buddySessions: [],
   dashboardData: null,
   currentTab: 'dashboard',
+  viewingDashboard: false,
   classFilter: 'all',
   taskFilter: 'all',
 
@@ -36,16 +37,62 @@ const Teacher = {
       appForm.addEventListener('submit', (e) => this.handleApplicationSubmit(e));
     }
 
-    // Teacher file upload change
-    const fileInput = document.getElementById('credential-file-input');
-    const fileBadge = document.getElementById('selected-file-name');
-    if (fileInput && fileBadge) {
-      fileInput.addEventListener('change', (e) => {
+    // 1. Resume file upload change & drag-drop
+    const resumeInput = document.getElementById('resume-file-input');
+    const resumeBadge = document.getElementById('resume-file-badge');
+    const resumeZone = document.getElementById('resume-upload-zone');
+    if (resumeInput && resumeBadge) {
+      resumeInput.addEventListener('change', (e) => {
         if (e.target.files.length > 0) {
-          fileBadge.style.display = 'inline-flex';
-          fileBadge.innerHTML = `${Icons.paperclip(14)} ${e.target.files[0].name} (${(e.target.files[0].size / 1024 / 1024).toFixed(2)} MB)`;
+          resumeBadge.style.display = 'inline-flex';
+          resumeBadge.innerHTML = `${Icons.paperclip(14)} ${e.target.files[0].name} (${(e.target.files[0].size / 1024 / 1024).toFixed(2)} MB)`;
         } else {
-          fileBadge.style.display = 'none';
+          resumeBadge.style.display = 'none';
+        }
+      });
+    }
+    if (resumeZone && resumeInput) {
+      resumeZone.addEventListener('click', (e) => {
+        if (e.target !== resumeInput) resumeInput.click();
+      });
+      resumeZone.addEventListener('dragover', (e) => { e.preventDefault(); resumeZone.classList.add('dragover'); });
+      resumeZone.addEventListener('dragleave', () => resumeZone.classList.remove('dragover'));
+      resumeZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        resumeZone.classList.remove('dragover');
+        if (e.dataTransfer.files.length > 0) {
+          resumeInput.files = e.dataTransfer.files;
+          resumeInput.dispatchEvent(new Event('change'));
+        }
+      });
+    }
+
+    // 2. Diploma file upload change & drag-drop
+    const diplomaInput = document.getElementById('diploma-file-input');
+    const diplomaBadge = document.getElementById('diploma-file-badge');
+    const diplomaZone = document.getElementById('diploma-upload-zone');
+    if (diplomaInput && diplomaBadge) {
+      diplomaInput.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) {
+          diplomaBadge.style.display = 'inline-flex';
+          diplomaBadge.innerHTML = `${Icons.paperclip(14)} ${e.target.files[0].name} (${(e.target.files[0].size / 1024 / 1024).toFixed(2)} MB)`;
+        } else {
+          diplomaBadge.style.display = 'none';
+        }
+      });
+    }
+    if (diplomaZone && diplomaInput) {
+      diplomaZone.addEventListener('click', (e) => {
+        if (e.target !== diplomaInput) diplomaInput.click();
+      });
+      diplomaZone.addEventListener('dragover', (e) => { e.preventDefault(); diplomaZone.classList.add('dragover'); });
+      diplomaZone.addEventListener('dragleave', () => diplomaZone.classList.remove('dragover'));
+      diplomaZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        diplomaZone.classList.remove('dragover');
+        if (e.dataTransfer.files.length > 0) {
+          diplomaInput.files = e.dataTransfer.files;
+          diplomaInput.dispatchEvent(new Event('change'));
         }
       });
     }
@@ -212,23 +259,90 @@ const Teacher = {
         if (portalDashboardSection) portalDashboardSection.style.display = 'none';
         this.populateApplicationForm();
       } else {
-        // Pending Status
-        if (bannerContainer) {
-          bannerContainer.innerHTML = `
-            <div class="app-status-banner pending">
-              <div class="status-icon-circle">${Icons.hourglass(18)}</div>
-              <div class="status-banner-content">
-                <h3 style="color: var(--text-primary);">Application Under Review by Academic Board</h3>
-                <p style="color: var(--text-secondary);">Thank you for applying to Aviora Education! Our academic evaluation committee is actively verifying your academic credentials, teaching experience, and background. You will receive an in-app notification once approved.</p>
-                <p style="margin-top: 0.5rem; font-size: 0.85rem; color: var(--text-secondary);">Status: <strong>PENDING REVIEW</strong> • Applied: ${new Date(this.application?.created_at || Date.now()).toLocaleDateString()}</p>
-              </div>
-            </div>
-          `;
-        }
+        // Pending Status - Documents under review & virtual interview pending
+        const hasSubmittedDocs = !!(this.application?.resume_file || this.application?.diploma_file || this.application?.credentials_file);
+        const wantsApplicationForm = (hash === '#teacher-application');
 
-        if (appFormSection) appFormSection.style.display = 'block';
-        if (portalDashboardSection) portalDashboardSection.style.display = 'none';
-        this.populateApplicationForm();
+        if (!wantsApplicationForm) {
+          // The applicant may proceed to their dashboard in view mode
+          if (appFormSection) appFormSection.style.display = 'none';
+          if (portalDashboardSection) portalDashboardSection.style.display = 'block';
+
+          if (bannerContainer) {
+            bannerContainer.innerHTML = `
+              <div class="app-status-banner pending-dashboard" style="margin-bottom: 1.5rem; background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.35); border-radius: var(--radius-md); padding: 1.25rem; display: flex; gap: 1rem; align-items: flex-start;">
+                <div class="status-icon-circle" style="background: rgba(245, 158, 11, 0.18); color: #F59E0B; width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                  ${Icons.hourglass(22)}
+                </div>
+                <div class="status-banner-content" style="flex: 1;">
+                  <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
+                    <h3 style="color: var(--text-primary); margin: 0; font-size: 1.1rem; font-weight: 700;">Application Under Review • Virtual Interview Pending</h3>
+                    <span class="badge" style="background: rgba(245, 158, 11, 0.2); color: #D97706; font-weight: 700; font-size: 0.78rem; padding: 0.3rem 0.75rem; border-radius: 9999px;">Pending Admin Approval</span>
+                  </div>
+                  <p style="color: var(--text-secondary); margin: 0.5rem 0 0 0; font-size: 0.88rem; line-height: 1.5;">
+                    Your submitted resume and diploma are currently undergoing review by the Academic Board. You will be notified once a schedule for your virtual interview is set.
+                  </p>
+                  <div style="margin-top: 0.65rem; background: rgba(0, 0, 0, 0.04); border-left: 3px solid #F59E0B; padding: 0.5rem 0.75rem; font-size: 0.82rem; color: var(--text-primary);">
+                    <strong>🔒 Operational Notice:</strong> You may explore your dashboard and timetable in view-only mode; however, live operations (launching live virtual sessions, accepting student bookings, and assigning or grading coursework) remain locked until your account is approved by an administrator following your interview.
+                  </div>
+                  <div style="margin-top: 0.75rem; display: flex; gap: 0.75rem; flex-wrap: wrap;">
+                    <button class="btn btn-outline-gold btn-sm" onclick="Teacher.toggleEditApplication()">View / Update Submitted Documents</button>
+                  </div>
+                </div>
+              </div>
+            `;
+          }
+
+          // Update educator hero info
+          const heroName = document.getElementById('teacher-hero-name');
+          const heroBio = document.getElementById('teacher-hero-bio');
+          const heroTag = document.getElementById('teacher-headline-tag');
+          const heroAvatar = document.getElementById('teacher-hero-avatar');
+
+          if (heroName) heroName.textContent = user.name || 'Educator Applicant';
+          if (heroBio) heroBio.textContent = this.application?.bio || 'Tutor workspace (View-Only Mode pending academic approval).';
+          if (heroTag) heroTag.textContent = this.application?.headline || 'Prospective Tutor Applicant';
+          if (heroAvatar && (user.avatar || this.tutorProfile?.avatar)) {
+            heroAvatar.src = user.avatar || this.tutorProfile.avatar;
+          }
+
+          // Open requested tab
+          const currentHash = hash || window.location.hash || '#teacher-portal';
+          if (currentHash === '#teacher-classes' || currentHash === '#teacher-class') {
+            this.switchTab('classes');
+          } else if (currentHash === '#teacher-students') {
+            this.switchTab('students');
+          } else if (currentHash === '#teacher-schedule') {
+            this.switchTab('schedule');
+          } else if (currentHash === '#teacher-buddy' || currentHash === '#aviora-buddy') {
+            this.switchTab('buddy');
+          } else {
+            this.switchTab('dashboard');
+          }
+        } else {
+          // Explicitly viewing the application form
+          if (appFormSection) appFormSection.style.display = 'block';
+          if (portalDashboardSection) portalDashboardSection.style.display = 'none';
+
+          if (bannerContainer) {
+            bannerContainer.innerHTML = `
+              <div class="app-status-banner pending">
+                <div class="status-icon-circle">${Icons.hourglass(18)}</div>
+                <div class="status-banner-content">
+                  <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
+                    <h3 style="color: var(--text-primary); margin: 0;">Step 4: Resume & Diploma Verification</h3>
+                    <button class="btn btn-secondary btn-sm" onclick="Teacher.proceedToDashboard()">Proceed to Dashboard (View Mode) →</button>
+                  </div>
+                  <p style="color: var(--text-secondary); margin-top: 0.4rem;">
+                    Applicants are required to upload both a resume and a diploma. Once submitted, these documents will undergo review, and you will be notified once a schedule for your virtual interview is set.
+                  </p>
+                </div>
+              </div>
+            `;
+          }
+
+          this.populateApplicationForm();
+        }
       }
     } catch (err) {
       console.error('Failed to load teacher view:', err);
@@ -610,6 +724,10 @@ const Teacher = {
 
   // Instant 1-on-1 class modal
   openInstantClassModal(preselectedStudentId = null) {
+    if (this.application?.status !== 'approved') {
+      showToast('Operational Lock: Live virtual class operations unlock once your account has been approved by the Administrator following your virtual interview.', 'warning');
+      return;
+    }
     const studentSelect = document.getElementById('instant-class-student-id');
     const subjectInput = document.getElementById('instant-class-subject');
 
@@ -904,6 +1022,10 @@ const Teacher = {
 
   // Modal: Assign Task
   openAssignTaskModal(preselectedStudentId = null) {
+    if (this.application?.status !== 'approved') {
+      showToast('Operational Lock: Assigning coursework tasks unlocks once your tutor account has been approved by the Administrator.', 'warning');
+      return;
+    }
     const studentSelect = document.getElementById('assign-task-student-id');
     const subjectInput = document.getElementById('assign-task-subject');
     const dueDateInput = document.getElementById('assign-task-due-date');
@@ -990,6 +1112,10 @@ const Teacher = {
 
   // Modal: Grade Task
   openGradeTaskModal(taskId) {
+    if (this.application?.status !== 'approved') {
+      showToast('Operational Lock: Grading operations unlock once your tutor account has been approved by the Administrator.', 'warning');
+      return;
+    }
     const task = this.tasks.find(t => t.id === taskId);
     if (!task) return;
 
@@ -1180,6 +1306,10 @@ const Teacher = {
   },
 
   async toggleOccupiedSlot(dayOfWeek, timeSlot, reason = 'Occupied') {
+    if (this.application?.status !== 'approved') {
+      showToast('Operational Lock: Schedule availability and student bookings unlock once your account has been approved by the Administrator following your virtual interview.', 'warning');
+      return;
+    }
     try {
       const res = await API.toggleOccupiedSlot({
         day_of_week: dayOfWeek,
@@ -1286,6 +1416,16 @@ const Teacher = {
     if (!this.application) return;
 
     const app = this.application;
+    const resumeBadge = document.getElementById('resume-file-badge');
+    const diplomaBadge = document.getElementById('diploma-file-badge');
+    if (resumeBadge && app.resume_filename) {
+      resumeBadge.style.display = 'inline-flex';
+      resumeBadge.innerHTML = `${Icons.paperclip(14)} Uploaded: ${app.resume_filename} (Attached)`;
+    }
+    if (diplomaBadge && (app.diploma_filename || app.credentials_filename)) {
+      diplomaBadge.style.display = 'inline-flex';
+      diplomaBadge.innerHTML = `${Icons.paperclip(14)} Uploaded: ${app.diploma_filename || app.credentials_filename} (Attached)`;
+    }
     const headline = document.getElementById('app-headline');
     const degree = document.getElementById('app-degree');
     const institution = document.getElementById('app-institution');
@@ -1307,6 +1447,12 @@ const Teacher = {
     if (subjects) subjects.value = (app.subjects || []).join(', ');
   },
 
+  proceedToDashboard() {
+    this.viewingDashboard = true;
+    window.location.hash = '#teacher-portal';
+    this.loadTeacherView('#teacher-portal');
+  },
+
   toggleEditApplication() {
     const formSec = document.getElementById('teacher-application-section');
     if (formSec) {
@@ -1323,6 +1469,17 @@ const Teacher = {
     const form = e.target;
     const submitBtn = form.querySelector('button[type="submit"]');
 
+    const resumeInput = document.getElementById('resume-file-input');
+    const diplomaInput = document.getElementById('diploma-file-input');
+
+    const hasResume = (resumeInput && resumeInput.files && resumeInput.files.length > 0) || (this.application && this.application.resume_file);
+    const hasDiploma = (diplomaInput && diplomaInput.files && diplomaInput.files.length > 0) || (this.application && (this.application.diploma_file || this.application.credentials_file));
+
+    if (!hasResume || !hasDiploma) {
+      showToast('Applicants are required to upload both a Resume (CV) and a Degree Diploma.', 'warning');
+      return;
+    }
+
     const formData = new FormData(form);
 
     try {
@@ -1330,8 +1487,10 @@ const Teacher = {
       submitBtn.textContent = 'Uploading & Submitting...';
 
       const res = await API.submitTeacherApplication(formData);
-      showToast(res.message, 'success');
-      await this.loadTeacherView();
+      showToast(res.message || 'Application submitted! Your documents are undergoing review and you will be notified once an interview schedule is set.', 'success');
+      this.viewingDashboard = true;
+      window.location.hash = '#teacher-portal';
+      await this.loadTeacherView('#teacher-portal');
       window.scrollTo(0, 0);
     } catch (err) {
       showToast(err.message, 'error');

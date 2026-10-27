@@ -3760,30 +3760,64 @@
               </div>
             </div>
 
-            <!-- Step 4: Credential File Upload -->
+            <!-- Step 4: Credential & Document Upload (Resume & Diploma) -->
             <div class="form-step-section">
               <h3 class="form-step-title">
                 <span class="step-num-circle">4</span>
-                <span>Credential & Diploma Verification</span>
+                <span>Resume &amp; Diploma Verification</span>
               </h3>
-              <p style="font-size: 0.85rem; color: var(--charcoal-300); margin-bottom: 1rem;">
-                Upload your degree diploma, university transcript, or teaching certificate (PDF, Word, or Image). Files are encrypted and audited solely by the Academic Board.
+              <p style="font-size: 0.88rem; color: var(--charcoal-300); margin-bottom: 1.25rem; line-height: 1.55;">
+                Applicants are initially required to upload both their <strong>Resume / Curriculum Vitae (CV)</strong> and their <strong>Degree Diploma</strong>. Once submitted, these documents will undergo academic review, and you will be notified once a schedule for your virtual interview is set. In the meantime, you may proceed to your dashboard; however, live operations will unlock once your account has been approved by the Administrator.
               </p>
 
-              <div class="file-upload-box">
-                <input type="file" name="credential_document" id="credential-file-input" class="file-input-hidden" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg" />
-                <div class="upload-icon">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.25rem;">
+                <!-- 1. Resume Upload Box -->
+                <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: var(--radius-md); padding: 1.25rem;">
+                  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
+                    <label class="form-label" style="font-weight: 700; font-size: 0.9rem; margin-bottom: 0; color: var(--text-primary); display: flex; align-items: center; gap: 0.4rem;">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--gold-400);"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+                      1. Applicant Resume / CV <span style="color: #EF4444;">*</span>
+                    </label>
+                  </div>
+                  <div class="file-upload-box" id="resume-upload-zone" style="cursor: pointer; padding: 1.5rem 1rem;">
+                    <input type="file" name="resume_document" id="resume-file-input" class="file-input-hidden" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg" />
+                    <div class="upload-icon" style="color: var(--gold-400); margin-bottom: 0.5rem;">
+                      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                    </div>
+                    <div class="upload-text" style="font-weight: 600; font-size: 0.9rem;">Upload Resume or CV</div>
+                    <div class="upload-sub" style="font-size: 0.78rem;">PDF, DOC, DOCX, PNG, JPG (Max 10MB)</div>
+                    <div id="resume-file-badge" class="selected-file-badge" style="display: none; margin-top: 0.65rem;"></div>
+                  </div>
                 </div>
-                <div class="upload-text">Drag & drop your credential document here, or click to browse</div>
-                <div class="upload-sub">Supports PDF, DOC, DOCX, PNG, JPG (Max 10MB)</div>
-                <div id="selected-file-name" class="selected-file-badge" style="display: none;"></div>
+
+                <!-- 2. Diploma Upload Box -->
+                <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: var(--radius-md); padding: 1.25rem;">
+                  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
+                    <label class="form-label" style="font-weight: 700; font-size: 0.9rem; margin-bottom: 0; color: var(--text-primary); display: flex; align-items: center; gap: 0.4rem;">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--gold-400);"><path d="M22 10v6M2 10l10-5 10 5-10 5z"></path><path d="M6 12v5c0 2 2 3 6 3s6-1 6-3v-5"></path></svg>
+                      2. Degree Diploma / Certificate <span style="color: #EF4444;">*</span>
+                    </label>
+                  </div>
+                  <div class="file-upload-box" id="diploma-upload-zone" style="cursor: pointer; padding: 1.5rem 1rem;">
+                    <input type="file" name="diploma_document" id="diploma-file-input" class="file-input-hidden" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg" />
+                    <div class="upload-icon" style="color: var(--gold-400); margin-bottom: 0.5rem;">
+                      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"></path><path d="M6 12v5c0 2 2 3 6 3s6-1 6-3v-5"></path></svg>
+                    </div>
+                    <div class="upload-text" style="font-weight: 600; font-size: 0.9rem;">Upload Degree Diploma</div>
+                    <div class="upload-sub" style="font-size: 0.78rem;">PDF, DOC, DOCX, PNG, JPG (Max 10MB)</div>
+                    <div id="diploma-file-badge" class="selected-file-badge" style="display: none; margin-top: 0.65rem;"></div>
+                  </div>
+                </div>
               </div>
             </div>
 
-            <div style="text-align: center; margin-top: 2rem;">
+            <div style="text-align: center; margin-top: 2rem; display: flex; justify-content: center; align-items: center; gap: 1rem; flex-wrap: wrap;">
               <button type="submit" class="btn btn-primary btn-lg" id="submit-teacher-app-btn">
                 <span>Submit Application for Academic Review</span>
+                <span>→</span>
+              </button>
+              <button type="button" class="btn btn-outline-gold btn-lg" onclick="Teacher.proceedToDashboard()">
+                <span>Proceed to Dashboard (View Mode)</span>
                 <span>→</span>
               </button>
             </div>

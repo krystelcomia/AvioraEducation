@@ -137,6 +137,20 @@ function initSchema() {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
+    CREATE TABLE IF NOT EXISTS user_preferences (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER UNIQUE NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      theme TEXT DEFAULT 'light',
+      language TEXT DEFAULT 'en-US',
+      font_size TEXT DEFAULT 'normal',
+      timezone TEXT DEFAULT 'America/New_York',
+      notif_lessons INTEGER DEFAULT 1,
+      notif_calendar INTEGER DEFAULT 1,
+      notif_messages INTEGER DEFAULT 1,
+      notif_reports INTEGER DEFAULT 0,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
     CREATE TABLE IF NOT EXISTS student_subscriptions (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -258,6 +272,12 @@ function initSchema() {
   } catch (e) {}
   try {
     db.prepare("ALTER TABLE tutoring_requests ADD COLUMN room_started_at DATETIME").run();
+  } catch (e) {}
+  try {
+    const prefCols = db.prepare("PRAGMA table_info(user_preferences)").all();
+    if (prefCols.length > 0 && !prefCols.some(c => c.name === 'font_size')) {
+      db.prepare("ALTER TABLE user_preferences ADD COLUMN font_size TEXT DEFAULT 'normal'").run();
+    }
   } catch (e) {}
 }
 
@@ -914,9 +934,39 @@ function ensureKrystelAccount(customPassword) {
       `).run(userId);
     }
 
+    // 6. Ensure default preferences
+    getUserPreferences(userId);
+
     return user;
   } catch (err) {
     console.error('Error ensuring Krystel account:', err);
+  }
+}
+
+function getUserPreferences(userId) {
+  try {
+    let prefs = db.prepare('SELECT * FROM user_preferences WHERE user_id = ?').get(userId);
+    if (!prefs) {
+      db.prepare(`
+        INSERT OR IGNORE INTO user_preferences (user_id, theme, language, font_size, timezone, notif_lessons, notif_calendar, notif_messages, notif_reports)
+        VALUES (?, 'light', 'en-US', 'normal', 'America/New_York', 1, 1, 1, 0)
+      `).run(userId);
+      prefs = db.prepare('SELECT * FROM user_preferences WHERE user_id = ?').get(userId);
+    }
+    return prefs;
+  } catch (err) {
+    console.error('Error fetching user preferences:', err);
+    return {
+      user_id: userId,
+      theme: 'light',
+      language: 'en-US',
+      font_size: 'normal',
+      timezone: 'America/New_York',
+      notif_lessons: 1,
+      notif_calendar: 1,
+      notif_messages: 1,
+      notif_reports: 0
+    };
   }
 }
 
@@ -1050,6 +1100,7 @@ module.exports = {
   initSchema,
   ensureKrystelAccount,
   ensureBuddySeedData,
-  ensureInquirySeedData
+  ensureInquirySeedData,
+  getUserPreferences
 };
 

@@ -296,6 +296,10 @@ const Router = {
       if (view) view.style.display = 'block';
       window.scrollTo(0, 0);
     }
+
+    if (typeof I18n !== 'undefined' && I18n.translateStandardElements) {
+      I18n.translateStandardElements();
+    }
   }
 };
 

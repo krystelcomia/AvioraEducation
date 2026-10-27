@@ -1,42 +1,366 @@
 /**
  * AVIORA EDUCATION - DEDICATED STUDENT PROFILE & SETTINGS LOGIC
+ * Manages User Preferences (Color Mode, Font Size, Language, Timezone, Notifications)
+ * with instant UI updates, persistent database storage, and account-level isolation.
  */
+
+window.getTimezoneAbbr = function(tz) {
+  const currentTz = tz || localStorage.getItem('aviora_timezone') || 'America/New_York';
+  const abbrs = {
+    'America/New_York': 'EST',
+    'America/Chicago': 'CST',
+    'America/Denver': 'MST',
+    'America/Los_Angeles': 'PST',
+    'Europe/London': 'GMT',
+    'Europe/Paris': 'CET',
+    'Asia/Manila': 'PHT',
+    'Asia/Tokyo': 'JST',
+    'UTC': 'UTC'
+  };
+  return abbrs[currentTz] || '';
+};
 
 const Profile = {
   currentUser: null,
   studentProfile: null,
   activeSubscription: null,
+  userPreferences: null,
+  saveStatusTimeout: null,
 
   init() {
-    this.initTheme();
+    this.initPreferences();
     this.setupEventListeners();
   },
 
-  initTheme() {
-    const savedTheme = localStorage.getItem('aviora_theme') || 'light';
-    this.applyTheme(savedTheme, false);
+  getUserKey() {
+    const u = (typeof Auth !== 'undefined' && Auth.currentUser) || (typeof Storage !== 'undefined' ? Storage.getUser() : null);
+    return u && u.id ? `_${u.id}` : '';
   },
 
-  applyTheme(theme, notify = true) {
-    if (theme === 'dark') {
+  initPreferences() {
+    const key = this.getUserKey();
+    const savedTheme = localStorage.getItem(`aviora_theme${key}`) || localStorage.getItem('aviora_theme') || 'light';
+    this.applyTheme(savedTheme, false, false);
+
+    const savedFontSize = localStorage.getItem(`aviora_font_size${key}`) || localStorage.getItem('aviora_font_size') || 'normal';
+    this.applyFontSize(savedFontSize, false, false);
+
+    const savedLang = localStorage.getItem(`aviora_language${key}`) || localStorage.getItem('aviora_language') || 'en-US';
+    this.applyLanguage(savedLang, false, false);
+
+    const savedTz = localStorage.getItem(`aviora_timezone${key}`) || localStorage.getItem('aviora_timezone') || 'America/New_York';
+    this.applyTimezone(savedTz, false, false);
+  },
+
+  setSaveStatus(status, text) {
+    const pill = document.getElementById('settings-status-pill');
+    const textEl = document.getElementById('settings-status-text');
+    const dotEl = document.getElementById('settings-status-dot');
+    if (!pill || !textEl) return;
+
+    if (this.saveStatusTimeout) clearTimeout(this.saveStatusTimeout);
+
+    if (status === 'saving') {
+      pill.style.display = 'inline-flex';
+      pill.style.background = 'rgba(198, 138, 40, 0.18)';
+      pill.style.borderColor = 'rgba(198, 138, 40, 0.4)';
+      pill.style.color = 'var(--gold-700)';
+      if (dotEl) dotEl.style.background = 'var(--gold-500)';
+      textEl.textContent = text || (typeof I18n !== 'undefined' ? I18n.t('common.saving', 'Saving...') : 'Saving...');
+    } else if (status === 'saved') {
+      pill.style.display = 'inline-flex';
+      pill.style.background = 'rgba(16, 185, 129, 0.12)';
+      pill.style.borderColor = 'rgba(16, 185, 129, 0.3)';
+      pill.style.color = '#059669';
+      if (dotEl) dotEl.style.background = '#10B981';
+      textEl.textContent = text || (typeof I18n !== 'undefined' ? I18n.t('common.saved', 'Saved to Account') : 'Saved to Account');
+
+      this.saveStatusTimeout = setTimeout(() => {
+        pill.style.background = 'rgba(198, 138, 40, 0.12)';
+        pill.style.borderColor = 'rgba(198, 138, 40, 0.25)';
+        pill.style.color = 'var(--gold-600)';
+        if (dotEl) dotEl.style.background = 'var(--gold-500)';
+        textEl.textContent = 'Saved to Account';
+      }, 4000);
+    } else if (status === 'error') {
+      pill.style.display = 'inline-flex';
+      pill.style.background = 'rgba(239, 68, 68, 0.12)';
+      pill.style.borderColor = 'rgba(239, 68, 68, 0.3)';
+      pill.style.color = '#DC2626';
+      if (dotEl) dotEl.style.background = '#EF4444';
+      textEl.textContent = text || 'Sync Failed';
+    }
+  },
+
+  applyTheme(theme, notify = true, persistToServer = true) {
+    const isDark = (theme === 'dark');
+    if (isDark) {
       document.documentElement.setAttribute('data-theme', 'dark');
-      localStorage.setItem('aviora_theme', 'dark');
     } else {
       document.documentElement.removeAttribute('data-theme');
-      localStorage.setItem('aviora_theme', 'light');
+    }
+
+    const key = this.getUserKey();
+    if (key) localStorage.setItem(`aviora_theme${key}`, isDark ? 'dark' : 'light');
+    localStorage.setItem('aviora_theme', isDark ? 'dark' : 'light');
+
+    const lightCard = document.getElementById('theme-card-light');
+    const darkCard = document.getElementById('theme-card-dark');
+    if (lightCard) lightCard.classList.toggle('active', !isDark);
+    if (darkCard) darkCard.classList.toggle('active', isDark);
+
+    if (persistToServer && typeof Auth !== 'undefined' && Auth.currentUser && typeof API !== 'undefined') {
+      this.setSaveStatus('saving');
+      API.updateUserPreferences({ theme: isDark ? 'dark' : 'light' })
+        .then(res => {
+          if (res && res.preferences) {
+            this.userPreferences = res.preferences;
+            Storage.setUserPreferences(Auth.currentUser.id, res.preferences);
+          }
+          this.setSaveStatus('saved');
+        })
+        .catch(e => {
+          console.warn('Theme preference sync warning:', e);
+          this.setSaveStatus('error', 'Saved Locally');
+        });
+    }
+
+    if (notify) {
+      const msg = typeof I18n !== 'undefined' ? I18n.t('toast.theme_saved') : `${isDark ? 'Dark' : 'Light'} theme activated across the website`;
+      showToast(msg, 'info');
+    }
+  },
+
+  applyFontSize(size, notify = true, persistToServer = true) {
+    const validSizes = ['small', 'normal', 'large'];
+    const activeSize = validSizes.includes(size) ? size : 'normal';
+
+    document.documentElement.setAttribute('data-font-size', activeSize);
+
+    const key = this.getUserKey();
+    if (key) localStorage.setItem(`aviora_font_size${key}`, activeSize);
+    localStorage.setItem('aviora_font_size', activeSize);
+
+    const smallCard = document.getElementById('font-card-small');
+    const normalCard = document.getElementById('font-card-normal');
+    const largeCard = document.getElementById('font-card-large');
+    if (smallCard) smallCard.classList.toggle('active', activeSize === 'small');
+    if (normalCard) normalCard.classList.toggle('active', activeSize === 'normal');
+    if (largeCard) largeCard.classList.toggle('active', activeSize === 'large');
+
+    if (persistToServer && typeof Auth !== 'undefined' && Auth.currentUser && typeof API !== 'undefined') {
+      this.setSaveStatus('saving');
+      API.updateUserPreferences({ font_size: activeSize })
+        .then(res => {
+          if (res && res.preferences) {
+            this.userPreferences = res.preferences;
+            Storage.setUserPreferences(Auth.currentUser.id, res.preferences);
+          }
+          this.setSaveStatus('saved');
+        })
+        .catch(e => {
+          console.warn('Font size preference sync warning:', e);
+          this.setSaveStatus('error', 'Saved Locally');
+        });
+    }
+
+    if (notify) {
+      const msg = typeof I18n !== 'undefined' ? I18n.t('toast.font_saved') : 'Interface font size updated across the website';
+      showToast(msg, 'info');
+    }
+  },
+
+  applyLanguage(lang, notify = true, persistToServer = true) {
+    const activeLang = lang || 'en-US';
+    const langSelect = document.getElementById('profile-language-select');
+    if (langSelect) langSelect.value = activeLang;
+
+    const key = this.getUserKey();
+    if (key) localStorage.setItem(`aviora_language${key}`, activeLang);
+    localStorage.setItem('aviora_language', activeLang);
+
+    if (typeof I18n !== 'undefined') {
+      I18n.applyLanguage(activeLang);
+    } else {
+      document.documentElement.setAttribute('lang', activeLang);
+    }
+
+    if (persistToServer && typeof Auth !== 'undefined' && Auth.currentUser && typeof API !== 'undefined') {
+      this.setSaveStatus('saving');
+      API.updateUserPreferences({ language: activeLang })
+        .then(res => {
+          if (res && res.preferences) {
+            this.userPreferences = res.preferences;
+            Storage.setUserPreferences(Auth.currentUser.id, res.preferences);
+          }
+          this.setSaveStatus('saved');
+        })
+        .catch(e => {
+          console.warn('Language preference sync warning:', e);
+          this.setSaveStatus('error', 'Saved Locally');
+        });
+    }
+
+    if (notify) {
+      const msg = typeof I18n !== 'undefined' ? I18n.t('toast.lang_saved') : 'Language preference updated across the website';
+      showToast(msg, 'success');
+    }
+  },
+
+  applyTimezone(tz, notify = true, persistToServer = true) {
+    const activeTz = tz || 'America/New_York';
+    const tzSelect = document.getElementById('profile-timezone-select');
+    if (tzSelect) tzSelect.value = activeTz;
+
+    const key = this.getUserKey();
+    if (key) localStorage.setItem(`aviora_timezone${key}`, activeTz);
+    localStorage.setItem('aviora_timezone', activeTz);
+
+    if (persistToServer && typeof Auth !== 'undefined' && Auth.currentUser && typeof API !== 'undefined') {
+      this.setSaveStatus('saving');
+      API.updateUserPreferences({ timezone: activeTz })
+        .then(res => {
+          if (res && res.preferences) {
+            this.userPreferences = res.preferences;
+            Storage.setUserPreferences(Auth.currentUser.id, res.preferences);
+          }
+          this.setSaveStatus('saved');
+        })
+        .catch(e => {
+          console.warn('Timezone preference sync warning:', e);
+          this.setSaveStatus('error', 'Saved Locally');
+        });
+    }
+
+    if (notify) {
+      const msg = typeof I18n !== 'undefined' ? I18n.t('toast.tz_saved') : `Preferred timezone updated to ${window.getTimezoneAbbr(activeTz)} (${activeTz})`;
+      showToast(msg, 'success');
+    }
+  },
+
+  applyNotification(prefKey, isChecked, notify = true, persistToServer = true) {
+    const elementId = prefKey.replace('_', '-');
+    const toggle = document.getElementById(elementId);
+    if (toggle) toggle.checked = Boolean(isChecked);
+
+    const key = this.getUserKey();
+    if (key) localStorage.setItem(`aviora_${elementId}${key}`, isChecked);
+    localStorage.setItem(`aviora_${elementId}`, isChecked);
+
+    if (persistToServer && typeof Auth !== 'undefined' && Auth.currentUser && typeof API !== 'undefined') {
+      this.setSaveStatus('saving');
+      API.updateUserPreferences({ [prefKey]: Boolean(isChecked) })
+        .then(res => {
+          if (res && res.preferences) {
+            this.userPreferences = res.preferences;
+            Storage.setUserPreferences(Auth.currentUser.id, res.preferences);
+          }
+          this.setSaveStatus('saved');
+        })
+        .catch(e => {
+          console.warn('Notification preference sync warning:', e);
+          this.setSaveStatus('error', 'Saved Locally');
+        });
+    }
+
+    if (notify) {
+      const msg = typeof I18n !== 'undefined' ? I18n.t('toast.notif_saved') : 'Notification preference updated and saved to your account';
+      showToast(msg, 'info');
+    }
+  },
+
+  syncAllPreferences(prefs, notify = false) {
+    if (!prefs) return;
+    this.userPreferences = prefs;
+
+    const user = (typeof Auth !== 'undefined' && Auth.currentUser) || (typeof Storage !== 'undefined' ? Storage.getUser() : null);
+    if (user && user.id && typeof Storage !== 'undefined') {
+      Storage.setUserPreferences(user.id, prefs);
+    }
+
+    if (prefs.theme) {
+      this.applyTheme(prefs.theme, notify, false);
+    }
+    if (prefs.font_size) {
+      this.applyFontSize(prefs.font_size, notify, false);
+    }
+    if (prefs.language) {
+      this.applyLanguage(prefs.language, notify, false);
+    }
+    if (prefs.timezone) {
+      this.applyTimezone(prefs.timezone, notify, false);
+    }
+
+    const notifMap = {
+      'notif_lessons': 'notif-lessons',
+      'notif_calendar': 'notif-calendar',
+      'notif_messages': 'notif-messages',
+      'notif_reports': 'notif-reports'
+    };
+
+    Object.keys(notifMap).forEach(key => {
+      if (prefs[key] !== undefined && prefs[key] !== null) {
+        this.applyNotification(key, prefs[key], false, false);
+      }
+    });
+
+    this.setSaveStatus('saved');
+  },
+
+  resetToDefaults() {
+    // Reset DOM styling to clean default state upon logout
+    document.documentElement.removeAttribute('data-theme');
+    document.documentElement.setAttribute('data-font-size', 'normal');
+    if (typeof I18n !== 'undefined') {
+      I18n.applyLanguage('en-US', true);
+    } else {
+      document.documentElement.setAttribute('lang', 'en-US');
     }
 
     const lightCard = document.getElementById('theme-card-light');
     const darkCard = document.getElementById('theme-card-dark');
-    if (lightCard) lightCard.classList.toggle('active', theme === 'light');
-    if (darkCard) darkCard.classList.toggle('active', theme === 'dark');
+    if (lightCard) lightCard.classList.add('active');
+    if (darkCard) darkCard.classList.remove('active');
 
-    if (notify) {
-      showToast(`${theme === 'dark' ? 'Dark' : 'Light'} theme activated`, 'info');
-    }
+    const normalCard = document.getElementById('font-card-normal');
+    const smallCard = document.getElementById('font-card-small');
+    const largeCard = document.getElementById('font-card-large');
+    if (normalCard) normalCard.classList.add('active');
+    if (smallCard) smallCard.classList.remove('active');
+    if (largeCard) largeCard.classList.remove('active');
+
+    const langSelect = document.getElementById('profile-language-select');
+    if (langSelect) langSelect.value = 'en-US';
   },
 
   setupEventListeners() {
+    // Top Hero Avatar Click & File Upload
+    const avatarWrap = document.getElementById('profile-hero-avatar-wrap');
+    const fileInput = document.getElementById('profile-hero-file-input');
+    if (avatarWrap && fileInput) {
+      avatarWrap.addEventListener('click', () => {
+        fileInput.click();
+      });
+
+      fileInput.addEventListener('change', (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (file) {
+          this.handleAvatarUpload(file);
+        }
+      });
+    }
+
+    // Dashboard avatar shortcut to view profile
+    const dashAvatar = document.getElementById('student-display-avatar');
+    if (dashAvatar) {
+      dashAvatar.style.cursor = 'pointer';
+      dashAvatar.title = 'Click to view profile & change picture';
+      dashAvatar.addEventListener('click', (e) => {
+        e.preventDefault();
+        window.location.hash = '#student-profile';
+      });
+    }
+
     // Theme Cards
     const lightCard = document.getElementById('theme-card-light');
     if (lightCard) {
@@ -47,39 +371,48 @@ const Profile = {
       darkCard.addEventListener('click', () => this.applyTheme('dark'));
     }
 
+    // Font Size Cards
+    const fontCards = document.querySelectorAll('.font-picker-card');
+    fontCards.forEach(card => {
+      card.addEventListener('click', () => {
+        const size = card.getAttribute('data-size') || 'normal';
+        this.applyFontSize(size);
+      });
+    });
+
     // Language selector
     const langSelect = document.getElementById('profile-language-select');
     if (langSelect) {
-      const savedLang = localStorage.getItem('aviora_language') || 'en-US';
-      langSelect.value = savedLang;
       langSelect.addEventListener('change', (e) => {
-        localStorage.setItem('aviora_language', e.target.value);
-        showToast('Language preference saved', 'success');
+        this.applyLanguage(e.target.value);
       });
     }
 
     // Timezone selector
     const tzSelect = document.getElementById('profile-timezone-select');
     if (tzSelect) {
-      const savedTz = localStorage.getItem('aviora_timezone') || 'America/New_York';
-      tzSelect.value = savedTz;
       tzSelect.addEventListener('change', (e) => {
-        localStorage.setItem('aviora_timezone', e.target.value);
-        showToast('Timezone preference saved', 'success');
+        this.applyTimezone(e.target.value);
+        if (typeof Student !== 'undefined' && Student.loadDashboard) {
+          Student.loadDashboard();
+        }
       });
     }
 
     // Notification toggles
-    ['notif-lessons', 'notif-calendar', 'notif-messages', 'notif-reports'].forEach(id => {
+    const notifMap = {
+      'notif-lessons': 'notif_lessons',
+      'notif-calendar': 'notif_calendar',
+      'notif-messages': 'notif_messages',
+      'notif-reports': 'notif_reports'
+    };
+
+    Object.keys(notifMap).forEach(id => {
       const toggle = document.getElementById(id);
       if (toggle) {
-        const saved = localStorage.getItem(`aviora_${id}`);
-        if (saved !== null) {
-          toggle.checked = saved === 'true';
-        }
+        const prefKey = notifMap[id];
         toggle.addEventListener('change', (e) => {
-          localStorage.setItem(`aviora_${id}`, e.target.checked);
-          showToast('Notification preference updated', 'info');
+          this.applyNotification(prefKey, e.target.checked);
         });
       }
     });
@@ -95,37 +428,66 @@ const Profile = {
     if (passForm) {
       passForm.addEventListener('submit', (e) => this.handlePasswordSubmit(e));
     }
+  },
 
-    // Avatar Presets
-    document.querySelectorAll('.avatar-preset-thumb').forEach(thumb => {
-      thumb.addEventListener('click', () => {
-        const url = thumb.dataset.avatarUrl;
-        const mainAvatar = document.getElementById('profile-page-avatar-display');
-        const headerAvatar = document.getElementById('profile-hero-avatar');
-        const customUrlInput = document.getElementById('profile-avatar-url');
-
-        if (mainAvatar) mainAvatar.src = url;
-        if (headerAvatar) headerAvatar.src = url;
-        if (customUrlInput) customUrlInput.value = url;
-
-        document.querySelectorAll('.avatar-preset-thumb').forEach(t => t.classList.remove('selected'));
-        thumb.classList.add('selected');
-      });
-    });
-
-    // Custom avatar url input change
-    const customUrlInput = document.getElementById('profile-avatar-url');
-    if (customUrlInput) {
-      customUrlInput.addEventListener('input', (e) => {
-        const url = e.target.value.trim();
-        if (url.startsWith('http')) {
-          const mainAvatar = document.getElementById('profile-page-avatar-display');
-          const headerAvatar = document.getElementById('profile-hero-avatar');
-          if (mainAvatar) mainAvatar.src = url;
-          if (headerAvatar) headerAvatar.src = url;
-        }
-      });
+  async handleAvatarUpload(file) {
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      showToast('Please select a valid image file (PNG, JPG, WebP, etc.).', 'error');
+      return;
     }
+    if (file.size > 10 * 1024 * 1024) {
+      showToast('Image size should be less than 10MB.', 'error');
+      return;
+    }
+
+    // Immediate preview
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      const dataUrl = event.target.result;
+      this.updateAllAvatars(dataUrl);
+
+      try {
+        showToast('Saving profile picture...', 'info');
+        const formData = new FormData();
+        formData.append('avatar', file);
+
+        let finalUrl = dataUrl;
+        try {
+          const res = await API.uploadAvatar(formData);
+          if (res && res.avatar_url) {
+            finalUrl = res.avatar_url;
+          }
+        } catch (uploadErr) {
+          console.warn('Multer upload failed, falling back to base64 save:', uploadErr);
+          await API.updateProfile({ avatar_url: dataUrl });
+        }
+
+        if (typeof Auth !== 'undefined' && Auth.currentUser) {
+          Auth.currentUser.avatar_url = finalUrl;
+          Storage.setUser(Auth.currentUser);
+        }
+        this.updateAllAvatars(finalUrl);
+        showToast('Profile picture saved! It will remain in place on your account.', 'success');
+      } catch (err) {
+        console.error('Error saving avatar:', err);
+        showToast(err.message || 'Failed to save profile picture.', 'error');
+      }
+    };
+    reader.readAsDataURL(file);
+  },
+
+  updateAllAvatars(url) {
+    if (!url) return;
+    const heroAvatar = document.getElementById('profile-hero-avatar');
+    const studentAvatar = document.getElementById('student-display-avatar');
+    const subAvatar = document.getElementById('student-sub-avatar');
+    if (heroAvatar) heroAvatar.src = url;
+    if (studentAvatar) studentAvatar.src = url;
+    if (subAvatar) subAvatar.src = url;
+    document.querySelectorAll('.user-avatar, .nav-user-avatar').forEach(img => {
+      img.src = url;
+    });
   },
 
   async loadProfilePage() {
@@ -140,6 +502,7 @@ const Profile = {
       const data = await API.getMe();
       this.currentUser = data.user || user;
       this.studentProfile = data.studentProfile || {};
+      this.userPreferences = data.preferences || null;
 
       // Load subscription
       try {
@@ -160,6 +523,7 @@ const Profile = {
     const u = this.currentUser || {};
     const sp = this.studentProfile || {};
     const sub = this.activeSubscription;
+    const prefs = this.userPreferences || u.preferences || {};
 
     // Hero Section
     const heroName = document.getElementById('profile-hero-name');
@@ -170,8 +534,13 @@ const Profile = {
 
     if (heroName) heroName.textContent = u.name || 'Student';
     if (heroEmail) heroEmail.textContent = u.email || '';
-    if (heroAvatar) heroAvatar.src = u.avatar_url || '/assets/favicon.png';
     if (heroGradeBadge) heroGradeBadge.textContent = sp.grade_level || 'Grade 11 - High School';
+
+    if (u.avatar_url) {
+      this.updateAllAvatars(u.avatar_url);
+    } else if (heroAvatar) {
+      heroAvatar.src = '/assets/favicon.png';
+    }
 
     if (heroSubBadge) {
       if (sub && sub.status === 'active') {
@@ -191,8 +560,6 @@ const Profile = {
     const schoolInput = document.getElementById('profile-school');
     const goalsInput = document.getElementById('profile-goals');
     const subjectsInput = document.getElementById('profile-subjects');
-    const avatarInput = document.getElementById('profile-avatar-url');
-    const displayAvatar = document.getElementById('profile-page-avatar-display');
 
     if (nameInput) nameInput.value = u.name || '';
     if (emailInput) emailInput.value = u.email || '';
@@ -201,22 +568,15 @@ const Profile = {
     if (schoolInput) schoolInput.value = sp.school || '';
     if (goalsInput) goalsInput.value = sp.learning_goals || '';
     if (subjectsInput) subjectsInput.value = sp.target_subjects || '';
-    if (avatarInput) avatarInput.value = u.avatar_url || '';
-    if (displayAvatar) displayAvatar.src = u.avatar_url || '/assets/favicon.png';
 
-    // Highlight current theme
-    const currentTheme = localStorage.getItem('aviora_theme') || 'light';
-    const lightCard = document.getElementById('theme-card-light');
-    const darkCard = document.getElementById('theme-card-dark');
-    if (lightCard) lightCard.classList.toggle('active', currentTheme === 'light');
-    if (darkCard) darkCard.classList.toggle('active', currentTheme === 'dark');
+    // Synchronize All Saved Preferences from DB to UI controls
+    this.syncAllPreferences(prefs, false);
   },
 
   async handleProfileSubmit(e) {
     e.preventDefault();
     const name = document.getElementById('profile-name')?.value.trim();
     const phone = document.getElementById('profile-phone')?.value.trim();
-    const avatar_url = document.getElementById('profile-avatar-url')?.value.trim();
     const grade_level = document.getElementById('profile-grade')?.value;
     const school = document.getElementById('profile-school')?.value.trim();
     const learning_goals = document.getElementById('profile-goals')?.value.trim();
@@ -227,13 +587,12 @@ const Profile = {
     try {
       if (submitBtn) {
         submitBtn.disabled = true;
-        submitBtn.textContent = 'Saving Changes...';
+        submitBtn.textContent = typeof I18n !== 'undefined' ? I18n.t('settings.saving_profile') : 'Saving Changes...';
       }
 
       await API.updateProfile({
         name,
         phone,
-        avatar_url: avatar_url || null,
         studentData: { grade_level, school, learning_goals, target_subjects }
       });
 
@@ -245,7 +604,7 @@ const Profile = {
     } finally {
       if (submitBtn) {
         submitBtn.disabled = false;
-        submitBtn.textContent = 'Save Profile Changes';
+        submitBtn.textContent = typeof I18n !== 'undefined' ? I18n.t('settings.save_profile') : 'Save Profile Changes';
       }
     }
   },
@@ -275,7 +634,7 @@ const Profile = {
     try {
       if (submitBtn) {
         submitBtn.disabled = true;
-        submitBtn.textContent = 'Updating Password...';
+        submitBtn.textContent = typeof I18n !== 'undefined' ? I18n.t('settings.updating_password') : 'Updating Password...';
       }
 
       const res = await API.changePassword({ currentPassword, newPassword });
@@ -290,14 +649,14 @@ const Profile = {
     } finally {
       if (submitBtn) {
         submitBtn.disabled = false;
-        submitBtn.textContent = 'Update Password';
+        submitBtn.textContent = typeof I18n !== 'undefined' ? I18n.t('settings.update_password') : 'Update Password';
       }
     }
   }
 };
 
-// Initialize theme immediately on script load
-Profile.initTheme();
+// Initialize immediately on script load
+Profile.initPreferences();
 
 document.addEventListener('DOMContentLoaded', () => {
   Profile.init();

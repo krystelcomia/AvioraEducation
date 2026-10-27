@@ -153,6 +153,27 @@
   background: #FFFFFF;
 }
 
+.profile-avatar-wrap {
+  position: relative;
+  cursor: pointer;
+  display: inline-block;
+  border-radius: 50%;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.profile-avatar-wrap:hover {
+  transform: scale(1.03);
+}
+
+.profile-avatar-wrap:hover .avatar-hover-overlay {
+  opacity: 1 !important;
+}
+
+.profile-avatar-wrap:hover .avatar-camera-pill {
+  transform: scale(1.15);
+  background: var(--gold-600) !important;
+}
+
 .deck-pulse-ring {
   position: absolute;
   inset: -3px;

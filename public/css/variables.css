@@ -204,3 +204,196 @@
   border-color: rgba(198, 138, 40, 0.45) !important;
 }
 
+/* Modals & Dialogs in Dark Mode */
+[data-theme="dark"] .modal-card {
+  background: #161920 !important;
+  border-color: rgba(198, 138, 40, 0.35) !important;
+  color: var(--text-primary) !important;
+}
+[data-theme="dark"] .modal-header {
+  background: #12151C !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+[data-theme="dark"] .modal-footer {
+  background: #12151C !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+[data-theme="dark"] .modal-close-btn {
+  background: #1F232E !important;
+  color: #9CA3AF !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+[data-theme="dark"] .modal-close-btn:hover {
+  background: #2D3342 !important;
+  color: #FFFFFF !important;
+}
+
+/* Tables in Dark Mode */
+[data-theme="dark"] .admin-table,
+[data-theme="dark"] .table,
+[data-theme="dark"] table {
+  color: var(--text-primary) !important;
+}
+[data-theme="dark"] .admin-table th,
+[data-theme="dark"] .table th,
+[data-theme="dark"] table th {
+  background: #1A1E26 !important;
+  color: #E5E7EB !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12) !important;
+}
+[data-theme="dark"] .admin-table td,
+[data-theme="dark"] .table td,
+[data-theme="dark"] table td {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  color: #D1D5DB !important;
+}
+[data-theme="dark"] .admin-table tr:hover td {
+  background: rgba(255, 255, 255, 0.03) !important;
+}
+[data-theme="dark"] .data-table-container,
+[data-theme="dark"] .table-toolbar {
+  background: var(--bg-surface) !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* Notifications Popover in Dark Mode */
+[data-theme="dark"] .notification-dropdown,
+[data-theme="dark"] .notif-dropdown,
+[data-theme="dark"] .notifications-popover {
+  background: #161920 !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.6) !important;
+}
+[data-theme="dark"] .notification-item {
+  border-bottom-color: rgba(255, 255, 255, 0.06) !important;
+}
+[data-theme="dark"] .notification-item:hover {
+  background: rgba(255, 255, 255, 0.04) !important;
+}
+[data-theme="dark"] .notification-item.unread {
+  background: rgba(198, 138, 40, 0.08) !important;
+}
+
+/* Buddy & Arena in Dark Mode */
+[data-theme="dark"] .buddy-hero-banner {
+  background: linear-gradient(135deg, #161920 0%, #1A1E27 50%, #1F2430 100%) !important;
+  border-color: rgba(198, 138, 40, 0.35) !important;
+}
+[data-theme="dark"] .buddy-card,
+[data-theme="dark"] .buddy-feature-card,
+[data-theme="dark"] .arena-lobby-box,
+[data-theme="dark"] .arena-question-card {
+  background: #161920 !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+[data-theme="dark"] .buddy-pricing-pill {
+  background: #1A1E26 !important;
+  color: var(--gold-400) !important;
+  border-color: var(--gold-500) !important;
+}
+
+/* Settings Theme & Font Picker Cards */
+.theme-picker-cards,
+.font-picker-cards {
+  display: grid;
+  gap: 0.75rem;
+}
+.theme-picker-cards {
+  grid-template-columns: repeat(2, 1fr);
+}
+.font-picker-cards {
+  grid-template-columns: repeat(3, 1fr);
+}
+@media (max-width: 640px) {
+  .theme-picker-cards,
+  .font-picker-cards {
+    grid-template-columns: 1fr;
+  }
+}
+.font-picker-card {
+  background: var(--bg-surface);
+  border: 1.5px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 0.85rem 1rem;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  user-select: none;
+}
+.font-picker-card:hover {
+  border-color: var(--gold-500);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
+}
+.font-picker-card.active {
+  border-color: var(--gold-500);
+  background: var(--gold-50);
+  box-shadow: 0 0 0 1px var(--gold-500), 0 4px 14px rgba(198, 138, 40, 0.15);
+}
+.font-picker-card-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.font-picker-badge {
+  font-weight: 800;
+  border-radius: 6px;
+  background: rgba(198, 138, 40, 0.12);
+  color: var(--gold-600);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+}
+.font-picker-title {
+  font-weight: 700;
+  font-size: 0.88rem;
+  color: var(--text-primary);
+}
+.font-picker-desc {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+.font-picker-check {
+  font-size: 0.9rem;
+  color: var(--gold-600);
+  font-weight: 800;
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+}
+.font-picker-card.active .font-picker-check {
+  opacity: 1;
+}
+
+[data-theme="dark"] .font-picker-card {
+  background: #161920 !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+[data-theme="dark"] .font-picker-card.active {
+  background: #231F17 !important;
+  border-color: var(--gold-400) !important;
+  box-shadow: 0 0 0 1px var(--gold-400), 0 4px 14px rgba(198, 138, 40, 0.3) !important;
+}
+[data-theme="dark"] .theme-picker-card.active {
+  background: #231F17 !important;
+  border-color: var(--gold-400) !important;
+}
+
+/* =========================================
+   AVIORA EDUCATION - SYSTEM FONT SCALING
+   ========================================= */
+html[data-font-size="small"] {
+  font-size: 14px !important;
+}
+html[data-font-size="normal"],
+html:not([data-font-size]) {
+  font-size: 16px !important;
+}
+html[data-font-size="large"] {
+  font-size: 18px !important;
+}
+
+

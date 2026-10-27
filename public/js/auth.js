@@ -108,12 +108,33 @@ const Auth = {
       const data = await API.getMe();
       this.currentUser = data.user;
       Storage.setUser(data.user);
+      if (data.preferences) {
+        this.syncUserPreferences(data.preferences);
+      }
       this.updateNavUI(data.user, data.unreadNotifications);
     } catch (err) {
       console.warn('Session restore failed:', err.message);
       Storage.clearSession();
       this.currentUser = null;
       this.updateNavUI(null);
+    }
+  },
+
+  syncUserPreferences(prefs) {
+    if (!prefs) return;
+    if (typeof Profile !== 'undefined' && Profile.syncAllPreferences) {
+      Profile.syncAllPreferences(prefs, false);
+    } else {
+      if (prefs.theme) {
+        if (prefs.theme === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+        else document.documentElement.removeAttribute('data-theme');
+      }
+      if (prefs.font_size) {
+        document.documentElement.setAttribute('data-font-size', prefs.font_size);
+      }
+      if (prefs.language && typeof I18n !== 'undefined') {
+        I18n.applyLanguage(prefs.language);
+      }
     }
   },
 
@@ -815,6 +836,9 @@ const Auth = {
       Storage.setToken(res.token);
       Storage.setUser(res.user);
       this.currentUser = res.user;
+      if (res.preferences) {
+        this.syncUserPreferences(res.preferences);
+      }
       this.updateNavUI(res.user);
       showToast(`Welcome, ${res.user.name}! Switched to ${res.user.role.toUpperCase()} session.`, 'success');
 
@@ -878,6 +902,9 @@ const Auth = {
       Storage.setToken(res.token);
       Storage.setUser(res.user);
       this.currentUser = res.user;
+      if (res.preferences) {
+        this.syncUserPreferences(res.preferences);
+      }
 
       this.closeModal();
       this.updateNavUI(res.user);
@@ -954,6 +981,9 @@ const Auth = {
       Storage.setToken(res.token);
       Storage.setUser(res.user);
       this.currentUser = res.user;
+      if (res.preferences) {
+        this.syncUserPreferences(res.preferences);
+      }
 
       this.closeModal();
       this.updateNavUI(res.user);
@@ -973,6 +1003,9 @@ const Auth = {
     this.currentUser = null;
     this.updateNavUI(null);
     this.updateLinkedAccountBadges();
+    if (typeof Profile !== 'undefined' && Profile.resetToDefaults) {
+      Profile.resetToDefaults();
+    }
     showToast('You have been securely logged out.', 'info');
     window.location.hash = '#home';
     Router.handleRoute();

@@ -7,6 +7,30 @@
   <meta name="description" content="Aviora Education is a premier online academic tutoring platform connecting students with elite, verified educators from top institutions in mathematics, sciences, languages, and exam preparation." />
   <meta name="keywords" content="tutoring, academic tutoring, calculus tutor, physics tutor, online learning, sat prep, mcat, chemistry tutor, coding mentor, aviora education" />
   
+  <script>
+    (function() {
+      try {
+        var activeUser = null;
+        try { activeUser = JSON.parse(localStorage.getItem('aviora_user')); } catch(e){}
+        var userKey = activeUser && activeUser.id ? ('_' + activeUser.id) : '';
+        var t = localStorage.getItem('aviora_theme' + userKey) || (activeUser ? null : localStorage.getItem('aviora_theme'));
+        if (t === 'dark') {
+          document.documentElement.setAttribute('data-theme', 'dark');
+        } else if (t === 'light') {
+          document.documentElement.removeAttribute('data-theme');
+        }
+        var fs = localStorage.getItem('aviora_font_size' + userKey);
+        if (fs) {
+          document.documentElement.setAttribute('data-font-size', fs);
+        }
+        var l = localStorage.getItem('aviora_language' + userKey) || localStorage.getItem('aviora_language');
+        if (l) {
+          document.documentElement.setAttribute('lang', l);
+        }
+      } catch(e) {}
+    })();
+  </script>
+  
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="/assets/favicon.png" />
   <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg" />
@@ -2058,11 +2082,11 @@
         <!-- High-Tech Command Deck Header -->
         <div class="portal-header portal-command-deck">
           <div class="portal-user-meta">
-            <div class="avatar-deck-container">
+            <a href="#student-profile" class="avatar-deck-container" title="Click to view profile &amp; change photo" style="text-decoration: none; cursor: pointer; display: block;">
               <img src="/assets/favicon.png" alt="Student Avatar" class="portal-avatar-lg" id="student-display-avatar" />
               <div class="deck-pulse-ring"></div>
               <span class="deck-online-beacon" title="Active Scholar"></span>
-            </div>
+            </a>
             <div>
               <div class="deck-greeting-line">
                 <span id="student-greeting-prefix" class="deck-greeting-prefix">Welcome back,</span>
@@ -2290,7 +2314,17 @@
           </a>
           <div class="portal-header" style="margin-bottom: 1rem; border-bottom: none; padding: 1.75rem 2.25rem;">
             <div class="portal-user-meta" style="gap: 1.5rem;">
-              <img src="/assets/favicon.png" alt="Student Profile Avatar" class="portal-avatar-lg" id="profile-hero-avatar" style="width: 76px; height: 76px; border: 3px solid var(--gold-500); box-shadow: 0 4px 14px rgba(198, 138, 40, 0.25);" />
+              <div class="profile-avatar-wrap" id="profile-hero-avatar-wrap" title="Click to upload profile picture" style="position: relative; cursor: pointer; display: inline-block;">
+                <img src="/assets/favicon.png" alt="Student Profile Avatar" class="portal-avatar-lg" id="profile-hero-avatar" style="width: 76px; height: 76px; border: 3px solid var(--gold-500); box-shadow: 0 4px 14px rgba(198, 138, 40, 0.25); border-radius: 50%; object-fit: cover; display: block;" />
+                <div class="avatar-hover-overlay" style="position: absolute; inset: 0; background: rgba(0, 0, 0, 0.45); border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.2s ease; color: #FFFFFF; pointer-events: none;">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+                  <span style="font-size: 0.65rem; font-weight: 700; margin-top: 2px;">Change</span>
+                </div>
+                <div class="avatar-camera-pill" style="position: absolute; bottom: -2px; right: -2px; width: 26px; height: 26px; border-radius: 50%; background: var(--gold-500); color: #FFFFFF; display: flex; align-items: center; justify-content: center; border: 2px solid #FFFFFF; box-shadow: 0 2px 6px rgba(0,0,0,0.25); transition: transform 0.2s ease;">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+                </div>
+                <input type="file" id="profile-hero-file-input" accept="image/*" style="display: none;" />
+              </div>
               <div>
                 <div style="display: flex; align-items: center; gap: 0.65rem; flex-wrap: wrap;">
                   <h1 class="portal-title" id="profile-hero-name" style="margin: 0; font-size: 2rem;">Student Profile</h1>
@@ -2321,27 +2355,6 @@
             <!-- Profile Form -->
             <form id="profile-page-form" style="display: flex; flex-direction: column; flex: 1;">
               
-              <!-- Avatar Selector Row -->
-              <div style="background: rgba(198, 138, 40, 0.05); border: 1px dashed rgba(198, 138, 40, 0.3); border-radius: var(--radius-md); padding: 1rem; margin-bottom: 1.25rem;">
-                <div style="display: flex; align-items: center; gap: 1rem;">
-                  <img src="/assets/favicon.png" id="profile-page-avatar-display" alt="Current Avatar" style="width: 56px; height: 56px; border-radius: 50%; object-fit: cover; border: 2px solid var(--gold-500);" />
-                  <div style="flex: 1; min-width: 0;">
-                    <div style="font-size: 0.85rem; font-weight: 700; color: var(--charcoal-900); margin-bottom: 0.2rem;">Profile Avatar</div>
-                    <div style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.4rem;">Select a verified scholar avatar preset or paste an image URL:</div>
-                    <div class="avatar-presets-bar">
-                      <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80" class="avatar-preset-thumb" data-avatar-url="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80" alt="Preset 1" title="Scholar 1" />
-                      <img src="https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&w=150&q=80" class="avatar-preset-thumb" data-avatar-url="https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&w=150&q=80" alt="Preset 2" title="Scholar 2" />
-                      <img src="https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=150&q=80" class="avatar-preset-thumb" data-avatar-url="https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=150&q=80" alt="Preset 3" title="Scholar 3" />
-                      <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80" class="avatar-preset-thumb" data-avatar-url="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80" alt="Preset 4" title="Scholar 4" />
-                      <img src="/assets/favicon.png" class="avatar-preset-thumb" data-avatar-url="/assets/favicon.png" alt="Aviora Crest" title="Aviora Crest" />
-                    </div>
-                  </div>
-                </div>
-                <div style="margin-top: 0.75rem;">
-                  <input type="url" id="profile-avatar-url" class="form-control" placeholder="Or enter custom avatar image URL (https://...)" style="font-size: 0.8rem; padding: 0.45rem 0.75rem;" />
-                </div>
-              </div>
-
               <!-- Personal Information Fields -->
               <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
                 <div class="form-group" style="margin-bottom: 0;">
@@ -2397,16 +2410,22 @@
 
           <!-- RIGHT COLUMN: Settings & Customization -->
           <div class="profile-card-box">
-            <div class="profile-card-header">
-              <h3 class="profile-card-title"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: -2px; margin-right: 6px;"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>Settings &amp; Preferences</h3>
-              <p class="profile-card-sub">Configure display themes, internationalization, session notifications, and account security.</p>
+            <div class="profile-card-header" style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 0.75rem;">
+              <div>
+                <h3 class="profile-card-title"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: -2px; margin-right: 6px;"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg><span data-i18n="settings.title">Settings &amp; Preferences</span></h3>
+                <p class="profile-card-sub" data-i18n="settings.subtitle">Configure display themes, font size, internationalization, session notifications, and account security.</p>
+              </div>
+              <span id="settings-status-pill" style="font-size: 0.72rem; font-weight: 700; color: var(--gold-600); background: rgba(198, 138, 40, 0.12); border: 1px solid rgba(198, 138, 40, 0.25); border-radius: 999px; padding: 4px 10px; display: inline-flex; align-items: center; gap: 5px; white-space: nowrap;">
+                <span id="settings-status-dot" style="width: 7px; height: 7px; border-radius: 50%; background: var(--gold-500); display: inline-block;"></span>
+                <span id="settings-status-text">Saved to Account</span>
+              </span>
             </div>
 
             <div style="display: flex; flex-direction: column; gap: 1.5rem; flex: 1;">
               
               <!-- 1. Theme / Dark Mode -->
               <div>
-                <label class="form-label" style="font-weight: 700; font-size: 0.85rem; margin-bottom: 0.5rem; display: block;">
+                <label class="form-label" style="font-weight: 700; font-size: 0.85rem; margin-bottom: 0.5rem; display: block;" data-i18n="settings.appearance_theme">
                   Appearance Theme
                 </label>
                 <div class="theme-picker-cards">
@@ -2414,8 +2433,8 @@
                     <div class="theme-picker-card-left">
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--gold-600);"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
                       <div>
-                        <div class="theme-picker-title">Light Mode</div>
-                        <div class="theme-picker-desc">Warm cream &amp; gold</div>
+                        <div class="theme-picker-title" data-i18n="settings.light_mode">Light Mode</div>
+                        <div class="theme-picker-desc" data-i18n="settings.light_mode_desc">Warm cream &amp; gold</div>
                       </div>
                     </div>
                     <span style="font-size: 0.9rem; color: var(--gold-600); font-weight: 800;">✓</span>
@@ -2425,8 +2444,8 @@
                     <div class="theme-picker-card-left">
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--gold-500);"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
                       <div>
-                        <div class="theme-picker-title">Dark Mode</div>
-                        <div class="theme-picker-desc">Obsidian &amp; luxury gold</div>
+                        <div class="theme-picker-title" data-i18n="settings.dark_mode">Dark Mode</div>
+                        <div class="theme-picker-desc" data-i18n="settings.dark_mode_desc">Obsidian &amp; luxury gold</div>
                       </div>
                     </div>
                     <span style="font-size: 0.9rem; color: var(--gold-600); font-weight: 800;">✓</span>
@@ -2434,7 +2453,48 @@
                 </div>
               </div>
 
-              <!-- 2. Language Selection & Timezone -->
+              <!-- 2. Font Size Selection -->
+              <div style="border-top: 1px solid rgba(0,0,0,0.06); padding-top: 1.25rem;">
+                <label class="form-label" style="font-weight: 700; font-size: 0.85rem; margin-bottom: 0.5rem; display: block;" data-i18n="settings.font_size">
+                  Interface Font Size
+                </label>
+                <div class="font-picker-cards">
+                  <div class="font-picker-card" id="font-card-small" data-size="small">
+                    <div class="font-picker-card-left">
+                      <div class="font-picker-badge" style="font-size: 0.78rem;">14</div>
+                      <div>
+                        <div class="font-picker-title" data-i18n="settings.font_small">Small (14px)</div>
+                        <div class="font-picker-desc" data-i18n="settings.font_small_desc">Compact view</div>
+                      </div>
+                    </div>
+                    <span class="font-picker-check">✓</span>
+                  </div>
+
+                  <div class="font-picker-card active" id="font-card-normal" data-size="normal">
+                    <div class="font-picker-card-left">
+                      <div class="font-picker-badge" style="font-size: 0.88rem;">16</div>
+                      <div>
+                        <div class="font-picker-title" data-i18n="settings.font_normal">Normal (16px)</div>
+                        <div class="font-picker-desc" data-i18n="settings.font_normal_desc">Standard scale</div>
+                      </div>
+                    </div>
+                    <span class="font-picker-check">✓</span>
+                  </div>
+
+                  <div class="font-picker-card" id="font-card-large" data-size="large">
+                    <div class="font-picker-card-left">
+                      <div class="font-picker-badge" style="font-size: 0.98rem;">18</div>
+                      <div>
+                        <div class="font-picker-title" data-i18n="settings.font_large">Large (18px)</div>
+                        <div class="font-picker-desc" data-i18n="settings.font_large_desc">Enhanced clarity</div>
+                      </div>
+                    </div>
+                    <span class="font-picker-check">✓</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 3. Language Selection & Timezone -->
               <div style="border-top: 1px solid rgba(0,0,0,0.06); padding-top: 1.25rem;">
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
                   <div class="form-group" style="margin-bottom: 0;">
@@ -5239,6 +5299,7 @@
   <!-- JavaScript Modules -->
   <script src="/js/icons.js"></script>
   <script src="/js/api.js"></script>
+  <script src="/js/i18n.js"></script>
   <script src="/js/auth.js"></script>
   <script src="/js/tutors.js"></script>
   <script src="/js/student.js"></script>

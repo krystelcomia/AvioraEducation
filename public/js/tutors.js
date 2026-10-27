@@ -366,7 +366,7 @@ const Tutors = {
                 </div>
               </div>
               <div style="color: #F59E0B; display: inline-flex; align-items: center; gap: 2px;">
-                ${Array.from({length: Math.min(5, Math.max(1, Math.round(r.rating || 5)))}).map(() => Icons.star(13)).join('')} <span style="font-size: 0.8rem; color: var(--text-muted); font-weight: normal; margin-left: 4px;">(${r.rating}.0)</span>
+                ${Array.from({ length: Math.min(5, Math.max(1, Math.round(r.rating || 5))) }).map(() => Icons.star(13)).join('')} <span style="font-size: 0.8rem; color: var(--text-muted); font-weight: normal; margin-left: 4px;">(${r.rating}.0)</span>
               </div>
             </div>
             <p class="tutor-review-comment">"${escapeHtmlStr(r.comment || 'Outstanding academic guidance and support.')}"</p>
@@ -745,7 +745,7 @@ const Tutors = {
       thread = [initialGreeting];
       try {
         localStorage.setItem(threadKey, JSON.stringify(thread));
-      } catch (e) {}
+      } catch (e) { }
     }
 
     // Render messages in thread
@@ -843,7 +843,7 @@ const Tutors = {
     thread.push(studentMsg);
     try {
       localStorage.setItem(threadKey, JSON.stringify(thread));
-    } catch (e) {}
+    } catch (e) { }
 
     // Re-render student bubble
     this.renderMessengerThread(thread, tutor);
@@ -894,7 +894,7 @@ const Tutors = {
       updatedThread.push(tutorReply);
       try {
         localStorage.setItem(threadKey, JSON.stringify(updatedThread));
-      } catch (e) {}
+      } catch (e) { }
 
       this.renderMessengerThread(updatedThread, tutor);
     }, replyDelay);
@@ -1092,7 +1092,7 @@ const Tutors = {
 
     // 4. Populate Subjects for Selected Tutor
     if (subjectSelect) {
-      subjectSelect.innerHTML = (tutor.subjects || []).map(s => `
+      subjectSelect.innerHTML = (tutor.subjects || []).map(s => `                             
         <option value="${s}">${s}</option>
       `).join('');
     }
@@ -1332,8 +1332,8 @@ const Tutors = {
     const payText = document.getElementById('btn-pay-text');
 
     const hasActiveCredits = this.studentSubscription &&
-                             this.studentSubscription.status === 'active' &&
-                             this.studentSubscription.lessons_remaining > 0;
+      this.studentSubscription.status === 'active' &&
+      this.studentSubscription.lessons_remaining > 0;
 
     if (hasActiveCredits) {
       const remaining = this.studentSubscription.lessons_remaining;

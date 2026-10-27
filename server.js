@@ -5,7 +5,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const multer = require('multer');
 const fs = require('fs');
-const { db, ensureKrystelAccount } = require('./database/db');
+const { db, ensureKrystelAccount, getUserPreferences } = require('./database/db');
 
 try {
   if (typeof process.loadEnvFile === 'function') {
@@ -269,7 +269,8 @@ app.post('/api/auth/register', (req, res) => {
     return res.status(201).json({
       message: 'Account successfully registered.',
       token,
-      user: userObj
+      user: userObj,
+      preferences: getUserPreferences(userId)
     });
   } catch (error) {
     console.error('Registration error:', error);
@@ -349,7 +350,8 @@ app.post('/api/auth/login', (req, res) => {
     return res.json({
       message: 'Logged in successfully.',
       token,
-      user: sanitizedUser
+      user: sanitizedUser,
+      preferences: getUserPreferences(user.id)
     });
   } catch (error) {
     console.error('Login error:', error);
@@ -1339,6 +1341,7 @@ app.get('/api/auth/me', authenticateToken, (req, res) => {
     // Unread notifications count
     const unreadCount = db.prepare('SELECT COUNT(*) as count FROM notifications WHERE user_id = ? AND is_read = 0').get(userId).count;
     extra.unreadNotifications = unreadCount;
+    extra.preferences = getUserPreferences(userId);
 
     return res.json({
       user: req.user,
@@ -1356,9 +1359,24 @@ app.put('/api/auth/profile', authenticateToken, (req, res) => {
     const { name, phone, avatar_url, studentData, tutorData } = req.body;
     const userId = req.user.id;
 
-    if (name) {
-      db.prepare('UPDATE users SET name = ?, phone = ?, avatar_url = COALESCE(?, avatar_url) WHERE id = ?')
-        .run(name.trim(), phone || null, avatar_url || null, userId);
+    const updates = [];
+    const params = [];
+    if (name !== undefined && name !== null) {
+      updates.push('name = ?');
+      params.push(name.trim());
+    }
+    if (phone !== undefined) {
+      updates.push('phone = ?');
+      params.push(phone || null);
+    }
+    if (avatar_url !== undefined && avatar_url !== null) {
+      updates.push('avatar_url = ?');
+      params.push(avatar_url);
+    }
+
+    if (updates.length > 0) {
+      params.push(userId);
+      db.prepare(`UPDATE users SET ${updates.join(', ')} WHERE id = ?`).run(...params);
     }
 
     if (req.user.role === 'student' && studentData) {
@@ -1389,10 +1407,108 @@ app.put('/api/auth/profile', authenticateToken, (req, res) => {
       );
     }
 
-    return res.json({ message: 'Profile updated successfully.' });
+    const updatedUser = db.prepare('SELECT id, name, email, role, phone, avatar_url, status FROM users WHERE id = ?').get(userId);
+    return res.json({ message: 'Profile updated successfully.', user: updatedUser });
   } catch (error) {
     console.error('Profile update error:', error);
     return res.status(500).json({ error: 'Failed to update profile.' });
+  }
+});
+
+// Upload Avatar (supports file uploads and base64 payloads)
+app.post('/api/auth/upload-avatar', authenticateToken, (req, res) => {
+  upload.single('avatar')(req, res, (err) => {
+    if (err) {
+      return res.status(400).json({ error: err.message || 'File upload error.' });
+    }
+    try {
+      let avatarUrl = null;
+      if (req.file) {
+        avatarUrl = `/uploads/${req.file.filename}`;
+      } else if (req.body && req.body.avatar_data) {
+        avatarUrl = req.body.avatar_data;
+      } else {
+        return res.status(400).json({ error: 'No avatar image file provided.' });
+      }
+
+      db.prepare('UPDATE users SET avatar_url = ? WHERE id = ?').run(avatarUrl, req.user.id);
+      const user = db.prepare('SELECT id, name, email, role, phone, avatar_url, status FROM users WHERE id = ?').get(req.user.id);
+      return res.json({ message: 'Profile avatar updated successfully.', avatar_url: avatarUrl, user });
+    } catch (error) {
+      console.error('Avatar upload error:', error);
+      return res.status(500).json({ error: 'Failed to save avatar image.' });
+    }
+  });
+});
+
+// Get user preferences
+app.get('/api/user/preferences', authenticateToken, (req, res) => {
+  try {
+    const preferences = getUserPreferences(req.user.id);
+    return res.json({ preferences });
+  } catch (error) {
+    console.error('Get preferences error:', error);
+    return res.status(500).json({ error: 'Failed to retrieve preferences.' });
+  }
+});
+
+// Update user preferences
+app.put('/api/user/preferences', authenticateToken, (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { theme, language, font_size, timezone, notif_lessons, notif_calendar, notif_messages, notif_reports } = req.body;
+
+    getUserPreferences(userId); // ensure row exists
+
+    const updates = [];
+    const params = [];
+
+    if (theme !== undefined) {
+      updates.push('theme = ?');
+      params.push(theme === 'dark' ? 'dark' : 'light');
+    }
+    if (language !== undefined) {
+      updates.push('language = ?');
+      params.push(language);
+    }
+    if (font_size !== undefined) {
+      const validSizes = ['small', 'normal', 'large'];
+      const sanitizedSize = validSizes.includes(font_size) ? font_size : 'normal';
+      updates.push('font_size = ?');
+      params.push(sanitizedSize);
+    }
+    if (timezone !== undefined) {
+      updates.push('timezone = ?');
+      params.push(timezone);
+    }
+    if (notif_lessons !== undefined) {
+      updates.push('notif_lessons = ?');
+      params.push(notif_lessons ? 1 : 0);
+    }
+    if (notif_calendar !== undefined) {
+      updates.push('notif_calendar = ?');
+      params.push(notif_calendar ? 1 : 0);
+    }
+    if (notif_messages !== undefined) {
+      updates.push('notif_messages = ?');
+      params.push(notif_messages ? 1 : 0);
+    }
+    if (notif_reports !== undefined) {
+      updates.push('notif_reports = ?');
+      params.push(notif_reports ? 1 : 0);
+    }
+
+    if (updates.length > 0) {
+      updates.push('updated_at = CURRENT_TIMESTAMP');
+      params.push(userId);
+      db.prepare(`UPDATE user_preferences SET ${updates.join(', ')} WHERE user_id = ?`).run(...params);
+    }
+
+    const updated = db.prepare('SELECT * FROM user_preferences WHERE user_id = ?').get(userId);
+    return res.json({ message: 'Preferences updated successfully.', preferences: updated });
+  } catch (error) {
+    console.error('Update preferences error:', error);
+    return res.status(500).json({ error: 'Failed to update preferences.' });
   }
 });
 
@@ -4214,9 +4330,30 @@ app.post('/api/admin/inquiries/:id/respond', authenticateToken, requireRole('adm
 app.get('/api/notifications', authenticateToken, (req, res) => {
   try {
     const userId = req.user.id;
+    const prefs = getUserPreferences(userId);
+
+    const ignoredTypes = [];
+    if (!prefs.notif_lessons) {
+      ignoredTypes.push("'reminder'", "'lesson_reminder'");
+    }
+    if (!prefs.notif_calendar) {
+      ignoredTypes.push("'calendar'", "'schedule'", "'booking_update'");
+    }
+    if (!prefs.notif_messages) {
+      ignoredTypes.push("'message'", "'chat'");
+    }
+    if (!prefs.notif_reports) {
+      ignoredTypes.push("'report'", "'digest'");
+    }
+
+    let filterClause = '';
+    if (ignoredTypes.length > 0) {
+      filterClause = ` AND type NOT IN (${ignoredTypes.join(', ')})`;
+    }
+
     const notifications = db.prepare(`
       SELECT * FROM notifications 
-      WHERE user_id = ? 
+      WHERE user_id = ? ${filterClause}
       ORDER BY created_at DESC 
       LIMIT 20
     `).all(userId);

@@ -348,7 +348,7 @@ const Student = {
             <div style="font-size: 0.88rem; color: var(--gold-900); font-weight: 700; display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
               <span style="display: inline-flex; align-items: center; gap: 0.3rem;">${Icons.calendar(15)} ${nextSession.requested_date}</span>
               <span>&nbsp;•&nbsp;</span>
-              <span style="display: inline-flex; align-items: center; gap: 0.3rem;">${Icons.clock(15)} ${nextSession.requested_time} (${is30Min ? '30 mins' : '50 mins focused'})</span>
+              <span style="display: inline-flex; align-items: center; gap: 0.3rem;">${Icons.clock(15)} ${nextSession.requested_time}${window.getTimezoneAbbr ? ' ' + window.getTimezoneAbbr() : ''} (${is30Min ? '30 mins' : '50 mins focused'})</span>
             </div>
 
             ${nextSession.notes ? `
@@ -574,7 +574,7 @@ const Student = {
           </div>
 
           <div style="font-size: 0.88rem; color: var(--charcoal-900);">
-            <div style="font-weight: 700; display: flex; align-items: center; gap: 0.3rem;">${Icons.clock(14)} ${r.requested_time}</div>
+            <div style="font-weight: 700; display: flex; align-items: center; gap: 0.3rem;">${Icons.clock(14)} ${r.requested_time}${window.getTimezoneAbbr ? ' ' + window.getTimezoneAbbr() : ''}</div>
             <div style="font-size: 0.78rem; color: var(--gold-800); font-weight: 600;">${(r.duration_hours === 0.5 || r.payment_method === 'free_trial') ? '30-Minute Trial Class' : '50-Minute Class'}</div>
           </div>
 
@@ -632,7 +632,7 @@ const Student = {
 
         <div class="request-datetime-info">
           <strong style="display: flex; align-items: center; gap: 0.3rem;">${Icons.calendar(14)} ${r.requested_date}</strong>
-          <span style="display: flex; align-items: center; gap: 0.3rem;">${Icons.clock(14)} ${r.requested_time} (50 mins)</span>
+          <span style="display: flex; align-items: center; gap: 0.3rem;">${Icons.clock(14)} ${r.requested_time}${window.getTimezoneAbbr ? ' ' + window.getTimezoneAbbr() : ''} (50 mins)</span>
         </div>
 
         <div class="request-pricing-info">

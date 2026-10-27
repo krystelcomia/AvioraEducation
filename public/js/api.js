@@ -23,6 +23,36 @@ const Storage = {
   clearSession: () => {
     localStorage.removeItem('aviora_token');
     localStorage.removeItem('aviora_user');
+  },
+
+  getUserPreferences: (userId) => {
+    try {
+      const u = Storage.getUser();
+      const id = userId || (u ? u.id : null);
+      if (!id) return null;
+      const p = localStorage.getItem(`aviora_prefs_${id}`);
+      return p ? JSON.parse(p) : null;
+    } catch (e) {
+      return null;
+    }
+  },
+  setUserPreferences: (userId, prefs) => {
+    try {
+      const u = Storage.getUser();
+      const id = userId || (u ? u.id : null);
+      if (id && prefs) {
+        localStorage.setItem(`aviora_prefs_${id}`, JSON.stringify(prefs));
+      }
+    } catch (e) {}
+  },
+  clearUserPreferences: (userId) => {
+    try {
+      const u = Storage.getUser();
+      const id = userId || (u ? u.id : null);
+      if (id) {
+        localStorage.removeItem(`aviora_prefs_${id}`);
+      }
+    } catch (e) {}
   }
 };
 
@@ -65,6 +95,22 @@ const API = {
   getMe: () => apiRequest('/auth/me'),
   updateProfile: (body) => apiRequest('/auth/profile', { method: 'PUT', body }),
   changePassword: (body) => apiRequest('/auth/change-password', { method: 'PUT', body }),
+  uploadAvatar: (formData) => {
+    const token = Storage.getToken();
+    return fetch('/api/auth/upload-avatar', {
+      method: 'POST',
+      headers: {
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+      },
+      body: formData
+    }).then(async res => {
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Failed to upload profile picture.');
+      return data;
+    });
+  },
+  getUserPreferences: () => apiRequest('/user/preferences'),
+  updateUserPreferences: (body) => apiRequest('/user/preferences', { method: 'PUT', body }),
 
   // Public
   getStats: () => apiRequest('/public/stats'),

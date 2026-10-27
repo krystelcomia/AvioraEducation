@@ -303,7 +303,7 @@ const Auth = {
         if (role === 'student') {
           await this.fastDemoLogin('student@aviora.edu', 'student123', '#student-portal');
         } else if (role === 'teacher' || role === 'tutor') {
-          await this.fastDemoLogin('elena.vance@aviora.edu', 'teacher123', '#teacher-portal');
+          await this.fastDemoLogin('elena.vance@aviora.edu', 'teacher123', '#teacher-dashboard');
         } else if (role === 'admin') {
           await this.fastDemoLogin('admin@aviora.edu', 'admin123', '#admin-portal');
         }
@@ -572,7 +572,7 @@ const Auth = {
       showToast(`Welcome, ${userObj.name}! Account linked with ${provider === 'google' ? 'Google' : 'Facebook'}.`, 'success');
 
       // Clear the auth-success token from the URL hash and navigate to dashboard
-      const targetHash = (userObj.role === 'teacher' || userObj.role === 'tutor') ? '#teacher-portal' : '#student-portal';
+      const targetHash = (userObj.role === 'teacher' || userObj.role === 'tutor') ? '#teacher-dashboard' : '#student-portal';
       window.location.hash = targetHash;
       if (typeof Router !== 'undefined' && Router.handleRoute) {
         Router.handleRoute();
@@ -743,7 +743,7 @@ const Auth = {
     if (user.role === 'admin') {
       window.location.hash = '#admin-portal';
     } else if (user.role === 'teacher' || user.role === 'tutor') {
-      window.location.hash = '#teacher-portal';
+      window.location.hash = '#teacher-dashboard';
     } else {
       window.location.hash = '#student-portal';
     }
@@ -1162,8 +1162,8 @@ const Auth = {
             <li><a href="#teacher-classes" class="nav-link" id="nav-link-teacher-classes">Class</a></li>
             <li><a href="#teacher-students" class="nav-link" id="nav-link-teacher-students">Students</a></li>
             <li><a href="#teacher-schedule" class="nav-link" id="nav-link-teacher-schedule">Schedule</a></li>
-            <li><a href="#aviora-buddy" class="nav-link" id="nav-link-teacher-buddy">Aviora Buddy</a></li>
-            <li><a href="#teacher-portal" class="nav-link" id="nav-link-teacher-dashboard">Dashboard</a></li>
+            <li><a href="#teacher-buddy" class="nav-link" id="nav-link-teacher-buddy">Aviora Buddy</a></li>
+            <li><a href="#teacher-dashboard" class="nav-link" id="nav-link-teacher-dashboard">Dashboard</a></li>
           `;
         } else if (user.role === 'admin') {
           mainNavLinks.innerHTML = `

@@ -113,7 +113,7 @@ function showConfirm(title, message, onConfirm, options = {}) {
 
 // Router
 const Router = {
-  routes: ['#home', '#about', '#tutors', '#aviora-buddy', '#buddy', '#aviora-buddy-studio', '#how-it-works', '#book-now', '#book-lesson', '#subscriptions', '#subscription', '#student-subscriptions', '#login', '#signup', '#student-portal', '#dashboard', '#student-lessons', '#student-tutors', '#student-history', '#student-schedule', '#student-profile', '#teacher-portal', '#teacher-classes', '#teacher-class', '#teacher-students', '#teacher-schedule', '#teacher-buddy', '#teacher-dashboard', '#admin-portal'],
+  routes: ['#home', '#about', '#tutors', '#aviora-buddy', '#buddy', '#aviora-buddy-studio', '#how-it-works', '#book-now', '#book-lesson', '#subscriptions', '#subscription', '#student-subscriptions', '#login', '#signup', '#student-portal', '#dashboard', '#student-lessons', '#student-tutors', '#student-history', '#student-schedule', '#student-profile', '#teacher-portal', '#teacher-classes', '#teacher-class', '#teacher-students', '#teacher-schedule', '#teacher-buddy', '#teacher-dashboard', '#teacher-application', '#admin-portal'],
 
   init() {
     window.addEventListener('hashchange', () => this.handleRoute());
@@ -146,7 +146,7 @@ const Router = {
       if (!isActive && href === '#tutors' && (hash === '#tutors' || hash.startsWith('#tutor-profile') || hash.startsWith('#book-lesson') || hash.startsWith('#book-now'))) {
         isActive = true;
       }
-      if (!isActive && (href === '#aviora-buddy' || href === '#buddy' || link.id === 'nav-link-teacher-buddy') && (hash.startsWith('#aviora-buddy') || hash.startsWith('#buddy') || hash === '#teacher-buddy')) {
+      if (!isActive && (href === '#teacher-buddy' || href === '#aviora-buddy' || href === '#buddy' || link.id === 'nav-link-teacher-buddy') && (hash.startsWith('#aviora-buddy') || hash.startsWith('#buddy') || hash === '#teacher-buddy')) {
         isActive = true;
       }
       if (!isActive && (href === '#subscriptions' || href === '#subscription') && (hash === '#subscriptions' || hash === '#subscription' || hash === '#student-subscriptions')) {
@@ -173,7 +173,7 @@ const Router = {
       }
     }
 
-    if (hash === '#teacher-portal' || hash.startsWith('#teacher-')) {
+    if (hash === '#teacher-portal' || hash === '#teacher-dashboard' || hash.startsWith('#teacher-')) {
       const user = Auth.currentUser;
       if (!user) {
         showToast('Please sign in to access the Tutor Portal.', 'info');
@@ -289,10 +289,10 @@ const Router = {
     } else if (hash === '#aviora-buddy' || hash.startsWith('#aviora-buddy') || hash === '#buddy' || hash.startsWith('#buddy') || hash === '#teacher-buddy') {
       const user = Auth.currentUser;
       if (user && (user.role === 'teacher' || user.role === 'tutor') && hash !== '#aviora-buddy-studio') {
-        const view = document.getElementById('view-teacher-portal');
+        const view = document.getElementById('view-teacher-buddy');
         if (view) view.style.display = 'block';
         window.scrollTo(0, 0);
-        await Teacher.loadTeacherView('#teacher-buddy');
+        await Teacher.loadBuddyPage();
       } else {
         const view = document.getElementById('view-aviora-buddy');
         if (view) view.style.display = 'block';
@@ -338,11 +338,41 @@ const Router = {
       } else {
         await Student.loadDashboard();
       }
-    } else if (hash === '#teacher-portal' || hash.startsWith('#teacher-')) {
-      const view = document.getElementById('view-teacher-portal');
+    } else if (hash === '#teacher-classes' || hash === '#teacher-class') {
+      const view = document.getElementById('view-teacher-classes');
       if (view) view.style.display = 'block';
       window.scrollTo(0, 0);
-      await Teacher.loadTeacherView(hash);
+      await Teacher.loadClassesPage();
+    } else if (hash === '#teacher-students') {
+      const view = document.getElementById('view-teacher-students');
+      if (view) view.style.display = 'block';
+      window.scrollTo(0, 0);
+      await Teacher.loadStudentsPage();
+    } else if (hash === '#teacher-schedule') {
+      const view = document.getElementById('view-teacher-schedule');
+      if (view) view.style.display = 'block';
+      window.scrollTo(0, 0);
+      await Teacher.loadSchedulePage();
+    } else if (hash === '#teacher-buddy') {
+      const view = document.getElementById('view-teacher-buddy');
+      if (view) view.style.display = 'block';
+      window.scrollTo(0, 0);
+      await Teacher.loadBuddyPage();
+    } else if (hash === '#teacher-application') {
+      const view = document.getElementById('view-teacher-application');
+      if (view) view.style.display = 'block';
+      window.scrollTo(0, 0);
+      await Teacher.loadApplicationPage();
+    } else if (hash === '#teacher-dashboard' || hash === '#teacher-portal' || (hash === '#dashboard' && Auth.currentUser && (Auth.currentUser.role === 'teacher' || Auth.currentUser.role === 'tutor'))) {
+      const view = document.getElementById('view-teacher-dashboard');
+      if (view) view.style.display = 'block';
+      window.scrollTo(0, 0);
+      await Teacher.loadDashboardPage();
+    } else if (hash.startsWith('#teacher-')) {
+      const view = document.getElementById('view-teacher-dashboard');
+      if (view) view.style.display = 'block';
+      window.scrollTo(0, 0);
+      await Teacher.loadDashboardPage();
     } else if (hash === '#admin-portal') {
       const view = document.getElementById('view-admin-portal');
       if (view) view.style.display = 'block';

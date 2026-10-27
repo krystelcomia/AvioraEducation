@@ -139,213 +139,193 @@ const Teacher = {
     }
   },
 
-  // Tab switcher
-  switchTab(tabId) {
-    this.currentTab = tabId;
-
-    // Hide all tab contents
-    document.querySelectorAll('.teacher-tab-content').forEach(el => {
-      el.style.display = 'none';
-    });
-
-    // Remove active class from all pills
-    document.querySelectorAll('.teacher-nav-pill').forEach(el => {
-      el.classList.remove('active');
-    });
-
-    // Show selected content and activate pill
-    const targetContent = document.getElementById(`teacher-tab-${tabId}`);
-    const targetPill = document.getElementById(`teacher-pill-${tabId}`);
-
-    if (targetContent) targetContent.style.display = 'block';
-    if (targetPill) targetPill.classList.add('active');
-
-    // Trigger lazy loading of specific tab data
-    if (tabId === 'dashboard') {
-      this.loadTeacherDashboard();
-    } else if (tabId === 'classes') {
-      this.loadClasses();
-    } else if (tabId === 'students') {
-      this.loadStudents();
-      this.loadTasks();
-    } else if (tabId === 'schedule') {
-      this.loadSchedule();
-    } else if (tabId === 'buddy') {
-      this.loadBuddySessions();
-    }
-
-    // Update active nav link in header
-    if (typeof Router !== 'undefined' && Router.updateActiveNav) {
-      Router.updateActiveNav();
-    }
-  },
-
-  async loadTeacherView(hash = null) {
+  // ==============================================================
+  // DEDICATED SEPARATE PAGE LOADERS (Class, Students, Schedule, Buddy, Dashboard)
+  // ==============================================================
+  async ensureTeacherStatus() {
     const user = Auth.currentUser;
-    if (!user || (user.role !== 'teacher' && user.role !== 'tutor')) return;
+    if (!user || (user.role !== 'teacher' && user.role !== 'tutor')) return null;
 
     try {
       const statusData = await API.getTeacherStatus();
       this.application = statusData.application;
       this.tutorProfile = statusData.tutorProfile;
-
-      const appStatus = this.application ? this.application.status : 'pending';
-
-      const bannerContainer = document.getElementById('teacher-status-banner-wrap');
-      const appFormSection = document.getElementById('teacher-application-section');
-      const portalDashboardSection = document.getElementById('teacher-dashboard-section');
-
-      if (appStatus === 'approved') {
-        if (bannerContainer) {
-          bannerContainer.innerHTML = `
-            <div class="app-status-banner approved" style="margin-bottom: 1.5rem;">
-              <div class="status-icon-circle">${Icons.check(18)}</div>
-              <div class="status-banner-content">
-                <h3 style="color: var(--text-primary);">Approved Aviora Academic Tutor</h3>
-                <p style="color: var(--text-secondary);">Your academic credentials have been verified by the Aviora Academic Board. Your profile is live in the public tutor directory and students can schedule sessions with you.</p>
-                <div style="margin-top: 0.75rem; display: flex; gap: 0.75rem;">
-                  <a href="#tutors" class="btn btn-secondary btn-sm">View in Directory</a>
-                  <button class="btn btn-outline-gold btn-sm" onclick="Teacher.toggleEditApplication()">Update Credentials</button>
-                </div>
-              </div>
-            </div>
-          `;
-        }
-
-        if (appFormSection) appFormSection.style.display = 'none';
-        if (portalDashboardSection) portalDashboardSection.style.display = 'block';
-
-        // Update educator hero info
-        const heroName = document.getElementById('teacher-hero-name');
-        const heroBio = document.getElementById('teacher-hero-bio');
-        const heroTag = document.getElementById('teacher-headline-tag');
-        const heroAvatar = document.getElementById('teacher-hero-avatar');
-
-        if (heroName) heroName.textContent = user.name || 'Dr. Elena Vance';
-        if (heroBio && this.tutorProfile?.bio) heroBio.textContent = this.tutorProfile.bio;
-        if (heroTag && this.tutorProfile?.headline) heroTag.textContent = this.tutorProfile.headline;
-        if (heroAvatar && (user.avatar || this.tutorProfile?.avatar)) {
-          heroAvatar.src = user.avatar || this.tutorProfile.avatar;
-        }
-
-        // Determine which tab to open based on current URL hash
-        const currentHash = hash || window.location.hash || '#teacher-portal';
-        if (currentHash === '#teacher-classes' || currentHash === '#teacher-class') {
-          this.switchTab('classes');
-        } else if (currentHash === '#teacher-students') {
-          this.switchTab('students');
-        } else if (currentHash === '#teacher-schedule') {
-          this.switchTab('schedule');
-        } else if (currentHash === '#teacher-buddy' || currentHash === '#aviora-buddy') {
-          this.switchTab('buddy');
-        } else {
-          this.switchTab('dashboard');
-        }
-      } else if (appStatus === 'rejected') {
-        if (bannerContainer) {
-          bannerContainer.innerHTML = `
-            <div class="app-status-banner rejected">
-              <div class="status-icon-circle">${Icons.x(18)}</div>
-              <div class="status-banner-content">
-                <h3 style="color: var(--text-primary);">Application Requires Revisions</h3>
-                <p style="color: var(--text-secondary);">The Academic Board reviewed your application with feedback: <em>"${this.application?.admin_notes || 'Please provide updated degree verification or teaching credentials.'}"</em></p>
-                <p style="margin-top: 0.5rem; color: var(--gold-400);">You may update your details below and resubmit for reconsideration.</p>
-              </div>
-            </div>
-          `;
-        }
-
-        if (appFormSection) appFormSection.style.display = 'block';
-        if (portalDashboardSection) portalDashboardSection.style.display = 'none';
-        this.populateApplicationForm();
-      } else {
-        // Pending Status - Documents under review & virtual interview pending
-        const hasSubmittedDocs = !!(this.application?.resume_file || this.application?.diploma_file || this.application?.credentials_file);
-        const wantsApplicationForm = (hash === '#teacher-application');
-
-        if (!wantsApplicationForm) {
-          // The applicant may proceed to their dashboard in view mode
-          if (appFormSection) appFormSection.style.display = 'none';
-          if (portalDashboardSection) portalDashboardSection.style.display = 'block';
-
-          if (bannerContainer) {
-            bannerContainer.innerHTML = `
-              <div class="app-status-banner pending-dashboard" style="margin-bottom: 1.5rem; background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.35); border-radius: var(--radius-md); padding: 1.25rem; display: flex; gap: 1rem; align-items: flex-start;">
-                <div class="status-icon-circle" style="background: rgba(245, 158, 11, 0.18); color: #F59E0B; width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                  ${Icons.hourglass(22)}
-                </div>
-                <div class="status-banner-content" style="flex: 1;">
-                  <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
-                    <h3 style="color: var(--text-primary); margin: 0; font-size: 1.1rem; font-weight: 700;">Application Under Review • Virtual Interview Pending</h3>
-                    <span class="badge" style="background: rgba(245, 158, 11, 0.2); color: #D97706; font-weight: 700; font-size: 0.78rem; padding: 0.3rem 0.75rem; border-radius: 9999px;">Pending Admin Approval</span>
-                  </div>
-                  <p style="color: var(--text-secondary); margin: 0.5rem 0 0 0; font-size: 0.88rem; line-height: 1.5;">
-                    Your submitted resume and diploma are currently undergoing review by the Academic Board. You will be notified once a schedule for your virtual interview is set.
-                  </p>
-                  <div style="margin-top: 0.65rem; background: rgba(0, 0, 0, 0.04); border-left: 3px solid #F59E0B; padding: 0.5rem 0.75rem; font-size: 0.82rem; color: var(--text-primary);">
-                    <strong>🔒 Operational Notice:</strong> You may explore your dashboard and timetable in view-only mode; however, live operations (launching live virtual sessions, accepting student bookings, and assigning or grading coursework) remain locked until your account is approved by an administrator following your interview.
-                  </div>
-                  <div style="margin-top: 0.75rem; display: flex; gap: 0.75rem; flex-wrap: wrap;">
-                    <button class="btn btn-outline-gold btn-sm" onclick="Teacher.toggleEditApplication()">View / Update Submitted Documents</button>
-                  </div>
-                </div>
-              </div>
-            `;
-          }
-
-          // Update educator hero info
-          const heroName = document.getElementById('teacher-hero-name');
-          const heroBio = document.getElementById('teacher-hero-bio');
-          const heroTag = document.getElementById('teacher-headline-tag');
-          const heroAvatar = document.getElementById('teacher-hero-avatar');
-
-          if (heroName) heroName.textContent = user.name || 'Educator Applicant';
-          if (heroBio) heroBio.textContent = this.application?.bio || 'Tutor workspace (View-Only Mode pending academic approval).';
-          if (heroTag) heroTag.textContent = this.application?.headline || 'Prospective Tutor Applicant';
-          if (heroAvatar && (user.avatar || this.tutorProfile?.avatar)) {
-            heroAvatar.src = user.avatar || this.tutorProfile.avatar;
-          }
-
-          // Open requested tab
-          const currentHash = hash || window.location.hash || '#teacher-portal';
-          if (currentHash === '#teacher-classes' || currentHash === '#teacher-class') {
-            this.switchTab('classes');
-          } else if (currentHash === '#teacher-students') {
-            this.switchTab('students');
-          } else if (currentHash === '#teacher-schedule') {
-            this.switchTab('schedule');
-          } else if (currentHash === '#teacher-buddy' || currentHash === '#aviora-buddy') {
-            this.switchTab('buddy');
-          } else {
-            this.switchTab('dashboard');
-          }
-        } else {
-          // Explicitly viewing the application form
-          if (appFormSection) appFormSection.style.display = 'block';
-          if (portalDashboardSection) portalDashboardSection.style.display = 'none';
-
-          if (bannerContainer) {
-            bannerContainer.innerHTML = `
-              <div class="app-status-banner pending">
-                <div class="status-icon-circle">${Icons.hourglass(18)}</div>
-                <div class="status-banner-content">
-                  <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
-                    <h3 style="color: var(--text-primary); margin: 0;">Step 4: Resume & Diploma Verification</h3>
-                    <button class="btn btn-secondary btn-sm" onclick="Teacher.proceedToDashboard()">Proceed to Dashboard (View Mode) →</button>
-                  </div>
-                  <p style="color: var(--text-secondary); margin-top: 0.4rem;">
-                    Applicants are required to upload both a resume and a diploma. Once submitted, these documents will undergo review, and you will be notified once a schedule for your virtual interview is set.
-                  </p>
-                </div>
-              </div>
-            `;
-          }
-
-          this.populateApplicationForm();
-        }
-      }
+      return statusData;
     } catch (err) {
-      console.error('Failed to load teacher view:', err);
+      console.error('Failed to get teacher status:', err);
+      return null;
+    }
+  },
+
+  renderStatusBanner(targetContainerId) {
+    const bannerContainer = document.getElementById(targetContainerId);
+    if (!bannerContainer) return;
+
+    const appStatus = this.application ? this.application.status : 'pending';
+
+    if (appStatus === 'approved') {
+      bannerContainer.innerHTML = '';
+    } else if (appStatus === 'rejected') {
+      bannerContainer.innerHTML = `
+        <div class="app-status-banner rejected" style="margin-bottom: 1.5rem;">
+          <div class="status-icon-circle">${Icons.x(18)}</div>
+          <div class="status-banner-content">
+            <h3 style="color: var(--text-primary);">Application Requires Revisions</h3>
+            <p style="color: var(--text-secondary);">The Academic Board reviewed your application with feedback: <em>"${this.application?.admin_notes || 'Please provide updated degree verification or teaching credentials.'}"</em></p>
+            <div style="margin-top: 0.75rem;">
+              <button class="btn btn-primary btn-sm" onclick="Teacher.toggleEditApplication()">Update Credentials & Resubmit</button>
+            </div>
+          </div>
+        </div>
+      `;
+    } else {
+      // Pending Admin Approval (Step 4 Documents submitted)
+      bannerContainer.innerHTML = `
+        <div class="app-status-banner pending-dashboard" style="margin-bottom: 1.5rem; background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.35); border-radius: var(--radius-md); padding: 1.25rem; display: flex; gap: 1rem; align-items: flex-start;">
+          <div class="status-icon-circle" style="background: rgba(245, 158, 11, 0.18); color: #F59E0B; width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+            ${Icons.hourglass(22)}
+          </div>
+          <div class="status-banner-content" style="flex: 1;">
+            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
+              <h3 style="color: var(--text-primary); margin: 0; font-size: 1.1rem; font-weight: 700;">Application Under Review • Virtual Interview Pending</h3>
+              <span class="badge" style="background: rgba(245, 158, 11, 0.2); color: #D97706; font-weight: 700; font-size: 0.78rem; padding: 0.3rem 0.75rem; border-radius: 9999px;">Pending Admin Approval</span>
+            </div>
+            <p style="color: var(--text-secondary); margin: 0.5rem 0 0 0; font-size: 0.88rem; line-height: 1.5;">
+              Your submitted resume and diploma are currently undergoing review by the Academic Board. You will be notified once a schedule for your virtual interview is set.
+            </p>
+            <div style="margin-top: 0.65rem; background: rgba(0, 0, 0, 0.04); border-left: 3px solid #F59E0B; padding: 0.5rem 0.75rem; font-size: 0.82rem; color: var(--text-primary);">
+              <strong>🔒 Operational Notice:</strong> You may explore your dashboard and timetable in view-only mode; however, live operations (launching live virtual sessions, accepting student bookings, and assigning or grading coursework) remain locked until your account is approved by an administrator following your interview.
+            </div>
+            <div style="margin-top: 0.75rem; display: flex; gap: 0.75rem; flex-wrap: wrap;">
+              <button class="btn btn-outline-gold btn-sm" onclick="Teacher.toggleEditApplication()">View / Update Submitted Documents</button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+  },
+
+  // 1. Dedicated Class Page
+  async loadClassesPage() {
+    await this.ensureTeacherStatus();
+    this.renderStatusBanner('teacher-banner-classes');
+    await this.loadClasses();
+    if (typeof Router !== 'undefined' && Router.updateActiveNav) Router.updateActiveNav();
+  },
+
+  // 2. Dedicated Students Page
+  async loadStudentsPage() {
+    await this.ensureTeacherStatus();
+    this.renderStatusBanner('teacher-banner-students');
+    await this.loadStudents();
+    await this.loadTasks();
+    if (typeof Router !== 'undefined' && Router.updateActiveNav) Router.updateActiveNav();
+  },
+
+  // 3. Dedicated Schedule Page
+  async loadSchedulePage() {
+    await this.ensureTeacherStatus();
+    this.renderStatusBanner('teacher-banner-schedule');
+    await this.loadSchedule();
+    if (typeof Router !== 'undefined' && Router.updateActiveNav) Router.updateActiveNav();
+  },
+
+  // 4. Dedicated Aviora Buddy Page
+  async loadBuddyPage() {
+    await this.ensureTeacherStatus();
+    this.renderStatusBanner('teacher-banner-buddy');
+    await this.loadBuddySessions();
+    if (typeof Router !== 'undefined' && Router.updateActiveNav) Router.updateActiveNav();
+  },
+
+  // 5. Dedicated Dashboard Page
+  async loadDashboardPage() {
+    await this.ensureTeacherStatus();
+    this.renderStatusBanner('teacher-banner-dashboard');
+
+    const user = Auth.currentUser;
+    const heroName = document.getElementById('teacher-hero-name');
+    const heroBio = document.getElementById('teacher-hero-bio');
+    const heroTag = document.getElementById('teacher-headline-tag');
+    const heroAvatar = document.getElementById('teacher-hero-avatar');
+
+    if (heroName) heroName.textContent = user?.name || 'Dr. Elena Vance';
+    if (heroBio) heroBio.textContent = this.tutorProfile?.bio || this.application?.bio || 'Educator workspace for live virtual classroom sessions, student coursework management, schedule availability, and financial earnings tracking.';
+    if (heroTag) heroTag.textContent = this.tutorProfile?.headline || this.application?.headline || 'Verified Academic Educator';
+    if (heroAvatar && (user?.avatar || this.tutorProfile?.avatar)) {
+      heroAvatar.src = user?.avatar || this.tutorProfile.avatar;
+    }
+
+    // Populate profile settings fields
+    if (this.tutorProfile) {
+      const h = document.getElementById('t-profile-headline');
+      const r = document.getElementById('t-profile-rate');
+      const b = document.getElementById('t-profile-bio');
+      if (h) h.value = this.tutorProfile.headline || '';
+      if (r) r.value = this.tutorProfile.hourly_rate || 50;
+      if (b) b.value = this.tutorProfile.bio || '';
+    }
+
+    await this.loadTeacherDashboard();
+    if (typeof Router !== 'undefined' && Router.updateActiveNav) Router.updateActiveNav();
+  },
+
+  // 6. Dedicated Application Page
+  async loadApplicationPage() {
+    await this.ensureTeacherStatus();
+    const bannerContainer = document.getElementById('teacher-banner-application');
+    if (bannerContainer) {
+      bannerContainer.innerHTML = `
+        <div class="app-status-banner pending" style="margin-bottom: 1.5rem;">
+          <div class="status-icon-circle">${Icons.hourglass(18)}</div>
+          <div class="status-banner-content">
+            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
+              <h3 style="color: var(--text-primary); margin: 0;">Step 4: Resume & Diploma Verification</h3>
+              <button class="btn btn-secondary btn-sm" onclick="Teacher.proceedToDashboard()">Proceed to Dashboard (View Mode) →</button>
+            </div>
+            <p style="color: var(--text-secondary); margin-top: 0.4rem;">
+              Applicants are required to upload both a resume and a diploma. Once submitted, these documents will undergo review, and you will be notified once a schedule for your virtual interview is set.
+            </p>
+          </div>
+        </div>
+      `;
+    }
+    this.populateApplicationForm();
+    if (typeof Router !== 'undefined' && Router.updateActiveNav) Router.updateActiveNav();
+  },
+
+  // Backward compatibility alias for any existing caller
+  async loadTeacherView(hash = null) {
+    const currentHash = hash || window.location.hash || '#teacher-dashboard';
+    if (currentHash === '#teacher-classes' || currentHash === '#teacher-class') {
+      await this.loadClassesPage();
+    } else if (currentHash === '#teacher-students') {
+      await this.loadStudentsPage();
+    } else if (currentHash === '#teacher-schedule') {
+      await this.loadSchedulePage();
+    } else if (currentHash === '#teacher-buddy' || currentHash === '#aviora-buddy') {
+      await this.loadBuddyPage();
+    } else if (currentHash === '#teacher-application') {
+      await this.loadApplicationPage();
+    } else {
+      await this.loadDashboardPage();
+    }
+  },
+
+  // Separate page navigation helper
+  switchTab(tabId) {
+    if (tabId === 'classes') window.location.hash = '#teacher-classes';
+    else if (tabId === 'students') window.location.hash = '#teacher-students';
+    else if (tabId === 'schedule') window.location.hash = '#teacher-schedule';
+    else if (tabId === 'buddy') window.location.hash = '#teacher-buddy';
+    else if (tabId === 'profile') {
+      window.location.hash = '#teacher-dashboard';
+      setTimeout(() => {
+        const el = document.getElementById('teacher-profile-settings-form');
+        if (el) el.scrollIntoView({ behavior: 'smooth' });
+      }, 100);
+    } else {
+      window.location.hash = '#teacher-dashboard';
     }
   },
 
@@ -1449,19 +1429,11 @@ const Teacher = {
 
   proceedToDashboard() {
     this.viewingDashboard = true;
-    window.location.hash = '#teacher-portal';
-    this.loadTeacherView('#teacher-portal');
+    window.location.hash = '#teacher-dashboard';
   },
 
   toggleEditApplication() {
-    const formSec = document.getElementById('teacher-application-section');
-    if (formSec) {
-      formSec.style.display = formSec.style.display === 'none' ? 'block' : 'none';
-      if (formSec.style.display === 'block') {
-        this.populateApplicationForm();
-        formSec.scrollIntoView({ behavior: 'instant' });
-      }
-    }
+    window.location.hash = '#teacher-application';
   },
 
   async handleApplicationSubmit(e) {
@@ -1489,8 +1461,8 @@ const Teacher = {
       const res = await API.submitTeacherApplication(formData);
       showToast(res.message || 'Application submitted! Your documents are undergoing review and you will be notified once an interview schedule is set.', 'success');
       this.viewingDashboard = true;
-      window.location.hash = '#teacher-portal';
-      await this.loadTeacherView('#teacher-portal');
+      window.location.hash = '#teacher-dashboard';
+      await this.loadDashboardPage();
       window.scrollTo(0, 0);
     } catch (err) {
       showToast(err.message, 'error');

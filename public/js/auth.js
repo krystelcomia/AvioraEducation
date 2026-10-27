@@ -200,7 +200,7 @@ const Auth = {
       btn.addEventListener('click', (e) => {
         e.preventDefault();
         window.location.hash = '#signup';
-        const teacherRadio = document.querySelector('input[name="page_register_role"][value="teacher"]');
+        const teacherRadio = document.querySelector('input[name="page_register_role"][value="tutor"]') || document.querySelector('input[name="page_register_role"][value="teacher"]');
         if (teacherRadio) {
           teacherRadio.checked = true;
           this.togglePageRoleFields('teacher');
@@ -302,7 +302,7 @@ const Auth = {
         const role = btn.dataset.role;
         if (role === 'student') {
           await this.fastDemoLogin('student@aviora.edu', 'student123', '#student-portal');
-        } else if (role === 'teacher') {
+        } else if (role === 'teacher' || role === 'tutor') {
           await this.fastDemoLogin('elena.vance@aviora.edu', 'teacher123', '#teacher-portal');
         } else if (role === 'admin') {
           await this.fastDemoLogin('admin@aviora.edu', 'admin123', '#admin-portal');
@@ -572,7 +572,7 @@ const Auth = {
       showToast(`Welcome, ${userObj.name}! Account linked with ${provider === 'google' ? 'Google' : 'Facebook'}.`, 'success');
 
       // Clear the auth-success token from the URL hash and navigate to dashboard
-      const targetHash = userObj.role === 'teacher' ? '#teacher-portal' : '#student-portal';
+      const targetHash = (userObj.role === 'teacher' || userObj.role === 'tutor') ? '#teacher-portal' : '#student-portal';
       window.location.hash = targetHash;
       if (typeof Router !== 'undefined' && Router.handleRoute) {
         Router.handleRoute();
@@ -742,7 +742,7 @@ const Auth = {
     // 3. Default smart dashboard redirect
     if (user.role === 'admin') {
       window.location.hash = '#admin-portal';
-    } else if (user.role === 'teacher') {
+    } else if (user.role === 'teacher' || user.role === 'tutor') {
       window.location.hash = '#teacher-portal';
     } else {
       window.location.hash = '#student-portal';
@@ -756,7 +756,7 @@ const Auth = {
 
     this.switchTab(tab);
     if (tab === 'register') {
-      const radio = document.querySelector(`input[name="register_role"][value="${role}"]`);
+      const radio = document.querySelector(`input[name="register_role"][value="${role}"]`) || (role === "teacher" ? document.querySelector('input[name="register_role"][value="tutor"]') : null);
       if (radio) {
         radio.checked = true;
         this.toggleRoleFields(role);
@@ -806,7 +806,7 @@ const Auth = {
     const studentFields = document.getElementById('student-extra-fields');
     const teacherFields = document.getElementById('teacher-extra-fields');
 
-    if (role === 'teacher') {
+    if (role === 'teacher' || role === 'tutor') {
       if (studentFields) studentFields.style.display = 'none';
       if (teacherFields) teacherFields.style.display = 'block';
     } else {
@@ -819,7 +819,7 @@ const Auth = {
     const studentFields = document.getElementById('page-student-extra-fields');
     const teacherFields = document.getElementById('page-teacher-extra-fields');
 
-    if (role === 'teacher') {
+    if (role === 'teacher' || role === 'tutor') {
       if (studentFields) studentFields.style.display = 'none';
       if (teacherFields) teacherFields.style.display = 'block';
     } else {
@@ -987,7 +987,7 @@ const Auth = {
       const schoolEl = document.getElementById('reg-student-school');
       payload.grade_level = gradeEl ? gradeEl.value : 'Grade 11 - High School';
       payload.school = schoolEl ? schoolEl.value.trim() : 'Aviora Student Academy';
-    } else if (role === 'teacher') {
+    } else if (role === 'tutor' || role === 'teacher') {
       const headlineEl = document.getElementById('reg-teacher-headline');
       const subjectsEl = document.getElementById(isPage ? 'page-reg-subjects' : 'reg-teacher-subjects');
       payload.headline = headlineEl ? headlineEl.value.trim() : 'Educator & Academic Specialist';
@@ -1155,7 +1155,7 @@ const Auth = {
             <li><a href="#aviora-buddy" class="nav-link" id="nav-link-buddy">Aviora Buddy</a></li>
             <li><a href="#student-portal" class="nav-link" id="nav-link-dashboard">Dashboard</a></li>
           `;
-        } else if (user.role === 'teacher') {
+        } else if (user.role === 'teacher' || user.role === 'tutor') {
           mainNavLinks.innerHTML = `
             <li><a href="#home" class="nav-link" id="nav-link-home">Home</a></li>
             <li><a href="#about" class="nav-link" id="nav-link-about">About</a></li>

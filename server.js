@@ -176,7 +176,11 @@ function authenticateToken(req, res, next) {
 // Role Authorization Middleware
 function requireRole(...roles) {
   return (req, res, next) => {
-    if (!req.user || !roles.includes(req.user.role)) {
+    if (!req.user) {
+      return res.status(403).json({ error: 'Access denied. You do not have permission to access this resource.' });
+    }
+    const acceptedRoles = roles.flatMap(r => (r === 'teacher' || r === 'tutor') ? ['teacher', 'tutor'] : [r]);
+    if (!acceptedRoles.includes(req.user.role)) {
       return res.status(403).json({ error: 'Access denied. You do not have permission to access this resource.' });
     }
     next();
@@ -196,13 +200,23 @@ app.post('/api/auth/register', (req, res) => {
       return res.status(400).json({ error: 'Name, email, password, and account type are required.' });
     }
 
+    // Normalize and designate account role:
+    // Student or parent -> 'student'
+    // Prospective tutor -> 'tutor'
+    let designatedRole = (role || '').toLowerCase().trim();
+    if (designatedRole === 'parent' || designatedRole === 'student') {
+      designatedRole = 'student';
+    } else if (designatedRole === 'prospective tutor' || designatedRole === 'tutor' || designatedRole === 'teacher') {
+      designatedRole = 'tutor';
+    }
+
     // CRITICAL: Protect admin role from public registration
-    if (role === 'admin') {
+    if (designatedRole === 'admin') {
       return res.status(403).json({ error: 'Administrator accounts cannot be created via public registration.' });
     }
 
-    if (!['student', 'teacher'].includes(role)) {
-      return res.status(400).json({ error: 'Invalid role selected.' });
+    if (!['student', 'tutor', 'teacher'].includes(designatedRole)) {
+      return res.status(400).json({ error: 'Invalid account type selected.' });
     }
 
     // Strict Strong Password Requirement (8+ chars, upper, lower, number, special)
@@ -232,7 +246,7 @@ app.post('/api/auth/register', (req, res) => {
     const passwordHash = bcrypt.hashSync(password, salt);
 
     // Default avatars based on role
-    const defaultAvatar = role === 'teacher'
+    const defaultAvatar = (designatedRole === 'tutor' || designatedRole === 'teacher')
       ? 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80'
       : 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=300&q=80';
 
@@ -245,14 +259,14 @@ app.post('/api/auth/register', (req, res) => {
       name.trim(),
       cleanEmail,
       passwordHash,
-      role,
+      designatedRole,
       phone || null,
       defaultAvatar
     );
 
     const userId = result.lastInsertRowid;
 
-    if (role === 'student') {
+    if (designatedRole === 'student') {
       db.prepare(`
         INSERT INTO student_profiles (user_id, grade_level, school, learning_goals, target_subjects)
         VALUES (?, ?, ?, ?, ?)
@@ -269,8 +283,8 @@ app.post('/api/auth/register', (req, res) => {
           '/#admin'
         );
       }
-    } else if (role === 'teacher') {
-      // Create draft teacher application
+    } else if (designatedRole === 'tutor' || designatedRole === 'teacher') {
+      // Create draft tutor application and profile
       const defaultSchedule = JSON.stringify({
         Monday: ['09:00 - 12:00', '14:00 - 17:00'],
         Tuesday: ['10:00 - 13:00', '15:00 - 18:00'],
@@ -314,7 +328,7 @@ app.post('/api/auth/register', (req, res) => {
     }
 
     const token = jwt.sign(
-      { id: userId, email: cleanEmail, role },
+      { id: userId, email: cleanEmail, role: designatedRole },
       JWT_SECRET,
       { expiresIn: '7d' }
     );
@@ -323,7 +337,7 @@ app.post('/api/auth/register', (req, res) => {
       id: userId,
       name: name.trim(),
       email: cleanEmail,
-      role,
+      role: designatedRole,
       phone: phone || null,
       avatar_url: defaultAvatar,
       status: 'active'
@@ -458,7 +472,7 @@ function linkOrRegisterOAuthUser(provider, profile) {
           INSERT INTO student_profiles (user_id, grade_level, school, learning_goals, target_subjects)
           VALUES (?, 'Grade 11 - High School', 'Aviora Learning Cohort', 'Academic excellence & mastery', 'Mathematics, Natural Sciences')
         `).run(newUserId);
-      } else if (role === 'teacher') {
+      } else if (role === 'teacher' || role === 'tutor') {
         const subjectsJson = JSON.stringify(['Mathematics', 'Natural Sciences']);
         const gradeLevelsJson = JSON.stringify(['High School', 'College / Undergraduate']);
         const defaultSchedule = JSON.stringify({
@@ -1393,7 +1407,7 @@ app.get('/api/auth/me', authenticateToken, (req, res) => {
     if (req.user.role === 'student') {
       const studentProfile = db.prepare('SELECT * FROM student_profiles WHERE user_id = ?').get(userId);
       extra.studentProfile = studentProfile;
-    } else if (req.user.role === 'teacher') {
+    } else if ((req.user.role === 'teacher' || req.user.role === 'tutor')) {
       const teacherApp = db.prepare('SELECT * FROM teacher_applications WHERE user_id = ?').get(userId);
       const tutorProfile = db.prepare('SELECT * FROM tutor_profiles WHERE user_id = ?').get(userId);
       extra.teacherApplication = teacherApp;
@@ -1457,7 +1471,7 @@ app.put('/api/auth/profile', authenticateToken, (req, res) => {
       );
     }
 
-    if (req.user.role === 'teacher' && tutorData) {
+    if ((req.user.role === 'teacher' || req.user.role === 'tutor') && tutorData) {
       db.prepare(`
         UPDATE tutor_profiles
         SET headline = ?, bio = ?, hourly_rate = ?, availability_schedule = ?, updated_at = CURRENT_TIMESTAMP
@@ -3863,7 +3877,7 @@ app.get('/api/buddy/sessions', authenticateToken, (req, res) => {
       SELECT u.id, u.name, u.avatar_url, tp.hourly_rate, tp.headline, tp.subjects
       FROM users u
       JOIN tutor_profiles tp ON u.id = tp.user_id
-      WHERE u.role = 'teacher' AND tp.is_active = 1
+      WHERE (u.role = 'teacher' OR u.role = 'tutor') AND tp.is_active = 1
     `).all();
 
     res.json({
@@ -3901,7 +3915,7 @@ app.post('/api/buddy/create', authenticateToken, (req, res) => {
     let s2 = student2_id ? parseInt(student2_id, 10) : null;
 
     if (sessionType === 'tutor_led') {
-      if (userRole === 'teacher') {
+      if (userRole === 'teacher' || userRole === 'tutor') {
         assignedTutorId = userId;
         s1 = student1_id ? parseInt(student1_id, 10) : null;
       } else {
@@ -3992,7 +4006,7 @@ app.post('/api/buddy/create', authenticateToken, (req, res) => {
       newSessionId,
       userId,
       req.user.name,
-      userRole === 'teacher' ? 'tutor' : 'student',
+      (userRole === 'teacher' || userRole === 'tutor') ? 'tutor' : 'student',
       `Welcome to this Aviora Buddy session! Cost: $6 per student. Share code ${sessionCode} to invite your buddy.`
     );
 
@@ -4139,7 +4153,7 @@ app.post('/api/buddy/session/:id/message', authenticateToken, (req, res) => {
       return res.status(404).json({ error: 'Buddy session not found.' });
     }
 
-    const role = (userRole === 'teacher' && session.tutor_id === userId) ? 'tutor' : 'student';
+    const role = ((userRole === 'teacher' || userRole === 'tutor') && session.tutor_id === userId) ? 'tutor' : 'student';
 
     db.prepare(`
       INSERT INTO buddy_messages (session_id, sender_id, sender_name, sender_role, message)
@@ -4197,7 +4211,7 @@ app.get('/api/admin/dashboard', authenticateToken, requireRole('admin'), (req, r
   try {
     const totalUsers = db.prepare("SELECT COUNT(*) as count FROM users").get().count;
     const totalStudents = db.prepare("SELECT COUNT(*) as count FROM users WHERE role = 'student'").get().count;
-    const totalTeachers = db.prepare("SELECT COUNT(*) as count FROM users WHERE role = 'teacher'").get().count;
+    const totalTeachers = db.prepare("SELECT COUNT(*) as count FROM users WHERE (role = 'teacher' OR role = 'tutor')").get().count;
     const totalAdmins = db.prepare("SELECT COUNT(*) as count FROM users WHERE role = 'admin'").get().count;
     const approvedTutors = db.prepare("SELECT COUNT(*) as count FROM tutor_profiles WHERE is_active = 1").get().count;
     const pendingApps = db.prepare("SELECT COUNT(*) as count FROM teacher_applications WHERE status = 'pending'").get().count;
@@ -4309,8 +4323,12 @@ app.get('/api/admin/users', authenticateToken, requireRole('admin'), (req, res) 
     `;
     const params = [];
     if (role && role !== 'all') {
-      query += ` WHERE u.role = ?`;
-      params.push(role);
+      if (role === 'teacher' || role === 'tutor') {
+        query += ` WHERE (u.role = 'teacher' OR u.role = 'tutor')`;
+      } else {
+        query += ` WHERE u.role = ?`;
+        params.push(role);
+      }
     }
     query += ` ORDER BY u.created_at DESC`;
 
@@ -4331,7 +4349,7 @@ app.post('/api/admin/users', authenticateToken, requireRole('admin'), (req, res)
       return res.status(400).json({ error: 'Name, email, password, and role are required.' });
     }
 
-    if (!['student', 'teacher', 'admin'].includes(role)) {
+    if (!['student', 'teacher', 'tutor', 'admin'].includes(role)) {
       return res.status(400).json({ error: 'Role must be student, teacher, or admin.' });
     }
 
@@ -4343,7 +4361,7 @@ app.post('/api/admin/users', authenticateToken, requireRole('admin'), (req, res)
     const salt = bcrypt.genSaltSync(10);
     const passwordHash = bcrypt.hashSync(password, salt);
 
-    const defaultAvatar = role === 'teacher'
+    const defaultAvatar = (role === 'teacher' || role === 'tutor')
       ? 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80'
       : (role === 'admin'
         ? 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=300&q=80'
@@ -4361,7 +4379,7 @@ app.post('/api/admin/users', authenticateToken, requireRole('admin'), (req, res)
         INSERT INTO student_profiles (user_id, grade_level, school, learning_goals, target_subjects)
         VALUES (?, ?, ?, 'Achieve academic mastery & excellence.', ?)
       `).run(userId, grade_level || 'Grade 11', school || 'Aviora Academy', subjects || 'Mathematics');
-    } else if (role === 'teacher') {
+    } else if (role === 'teacher' || role === 'tutor') {
       const defaultSchedule = JSON.stringify({
         Monday: ['09:00 - 12:00', '14:00 - 17:00'],
         Wednesday: ['09:00 - 12:00', '14:00 - 17:00'],

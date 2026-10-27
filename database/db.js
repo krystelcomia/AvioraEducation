@@ -33,7 +33,7 @@ function initSchema() {
       name TEXT NOT NULL,
       email TEXT UNIQUE NOT NULL,
       password_hash TEXT NOT NULL,
-      role TEXT NOT NULL CHECK(role IN ('student', 'teacher', 'admin')),
+      role TEXT NOT NULL CHECK(role IN ('student', 'teacher', 'tutor', 'admin')),
       phone TEXT,
       avatar_url TEXT,
       status TEXT DEFAULT 'active' CHECK(status IN ('active', 'inactive', 'suspended')),

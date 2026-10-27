@@ -135,7 +135,7 @@ const Teacher = {
 
   async loadTeacherView(hash = null) {
     const user = Auth.currentUser;
-    if (!user || user.role !== 'teacher') return;
+    if (!user || (user.role !== 'teacher' && user.role !== 'tutor')) return;
 
     try {
       const statusData = await API.getTeacherStatus();

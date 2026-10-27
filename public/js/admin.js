@@ -138,7 +138,7 @@ const Admin = {
         const studentFields = document.getElementById('admin-new-user-student-fields');
         const teacherFields = document.getElementById('admin-new-user-teacher-fields');
         if (studentFields) studentFields.style.display = val === 'student' ? 'block' : 'none';
-        if (teacherFields) teacherFields.style.display = val === 'teacher' ? 'block' : 'none';
+        if (teacherFields) teacherFields.style.display = (val === 'teacher' || val === 'tutor') ? 'block' : 'none';
       });
     }
 
@@ -365,7 +365,7 @@ const Admin = {
       const allData = role === 'all' ? this.users : (await API.getAdminUsers('all')).users || [];
       const countAll = allData.length;
       const countStudent = allData.filter(u => u.role === 'student').length;
-      const countTeacher = allData.filter(u => u.role === 'teacher').length;
+      const countTeacher = allData.filter(u => u.role === 'teacher' || u.role === 'tutor').length;
       const countAdmin = allData.filter(u => u.role === 'admin').length;
 
       const cAll = document.getElementById('count-all-users');
@@ -427,7 +427,7 @@ const Admin = {
       let roleLabel = 'Student';
       let detailsHtml = '';
 
-      if (u.role === 'teacher') {
+      if (u.role === 'teacher' || u.role === 'tutor') {
         roleIcon = Icons.user(14);
         roleClass = 'teacher';
         roleLabel = 'Teacher / Tutor';
@@ -533,7 +533,7 @@ const Admin = {
       payload.grade_level = document.getElementById('admin-new-user-grade')?.value.trim();
       payload.school = document.getElementById('admin-new-user-school')?.value.trim();
       payload.subjects = document.getElementById('admin-new-user-student-subjects')?.value.trim();
-    } else if (role === 'teacher') {
+    } else if (role === 'teacher' || role === 'tutor') {
       payload.headline = document.getElementById('admin-new-user-headline')?.value.trim();
       payload.hourly_rate = parseFloat(document.getElementById('admin-new-user-rate')?.value) || 50;
       payload.highest_degree = document.getElementById('admin-new-user-degree')?.value.trim();
@@ -553,7 +553,7 @@ const Admin = {
       this.closeCreateUserModal();
       await this.loadUsers(this.currentRoleFilter || 'all');
       await this.loadDashboardMetrics();
-      if (role === 'teacher') await Tutors.fetchTutors();
+      if (role === 'teacher' || role === 'tutor') await Tutors.fetchTutors();
     } catch (err) {
       showToast(err.message, 'error');
     } finally {

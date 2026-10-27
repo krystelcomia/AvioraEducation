@@ -180,7 +180,7 @@ const Router = {
         window.location.hash = '#login';
         return;
       }
-      if (user.role !== 'teacher') {
+      if (user.role !== 'teacher' && user.role !== 'tutor') {
         showToast('You are currently signed in as ' + user.role + '. Please switch to an educator account.', 'warning');
         return;
       }
@@ -288,7 +288,7 @@ const Router = {
       await Tutors.fetchTutors();
     } else if (hash === '#aviora-buddy' || hash.startsWith('#aviora-buddy') || hash === '#buddy' || hash.startsWith('#buddy') || hash === '#teacher-buddy') {
       const user = Auth.currentUser;
-      if (user && user.role === 'teacher' && hash !== '#aviora-buddy-studio') {
+      if (user && (user.role === 'teacher' || user.role === 'tutor') && hash !== '#aviora-buddy-studio') {
         const view = document.getElementById('view-teacher-portal');
         if (view) view.style.display = 'block';
         window.scrollTo(0, 0);

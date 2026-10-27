@@ -76,6 +76,33 @@
 
       <!-- Nav Actions & User Bar -->
       <div class="nav-actions">
+        <!-- Global Header Language Selector -->
+        <div class="nav-lang-picker-wrap" id="nav-lang-picker-wrap">
+          <select id="header-language-select" class="header-language-select" aria-label="Select Website Language" title="Select Website Language">
+            <option value="en-US">🌐 English</option>
+            <option value="es-ES">🌐 Español</option>
+            <option value="fr-FR">🌐 Français</option>
+            <option value="de-DE">🌐 Deutsch</option>
+            <option value="zh-CN">🌐 中文 (简体)</option>
+            <option value="zh-TW">🌐 中文 (繁體)</option>
+            <option value="ja-JP">🌐 日本語</option>
+            <option value="fil-PH">🌐 Filipino</option>
+            <option value="ko-KR">🌐 한국어</option>
+            <option value="it-IT">🌐 Italiano</option>
+            <option value="pt-BR">🌐 Português</option>
+            <option value="ru-RU">🌐 Русский</option>
+            <option value="ar-SA">🌐 العربية</option>
+            <option value="hi-IN">🌐 हिन्दी</option>
+            <option value="vi-VN">🌐 Tiếng Việt</option>
+            <option value="id-ID">🌐 Indonesia</option>
+            <option value="tr-TR">🌐 Türkçe</option>
+            <option value="nl-NL">🌐 Nederlands</option>
+            <option value="pl-PL">🌐 Polski</option>
+            <option value="sv-SE">🌐 Svenska</option>
+            <option value="th-TH">🌐 ภาษาไทย</option>
+          </select>
+        </div>
+
         <!-- Guest Actions: Unboxed Log In & Sign Up links (matching header items like Home) -->
         <div id="nav-guest-actions" style="display: flex; align-items: center; gap: 1.6rem;">
           <a href="#login" class="nav-link open-login-btn" id="nav-login-btn">Log In</a>
@@ -2484,12 +2511,26 @@
                     <label class="form-label" style="font-weight: 700; font-size: 0.82rem;">Language</label>
                     <select id="profile-language-select" class="form-control">
                       <option value="en-US">English (US)</option>
-                      <option value="es-ES">Español</option>
-                      <option value="fr-FR">Français</option>
-                      <option value="de-DE">Deutsch</option>
-                      <option value="zh-CN">中文 (Mandarin)</option>
-                      <option value="ja-JP">日本語</option>
+                      <option value="es-ES">Español (Spanish)</option>
+                      <option value="fr-FR">Français (French)</option>
+                      <option value="de-DE">Deutsch (German)</option>
+                      <option value="zh-CN">中文 (简体 / Simplified Chinese)</option>
+                      <option value="zh-TW">中文 (繁體 / Traditional Chinese)</option>
+                      <option value="ja-JP">日本語 (Japanese)</option>
                       <option value="fil-PH">Filipino (Tagalog)</option>
+                      <option value="ko-KR">한국어 (Korean)</option>
+                      <option value="it-IT">Italiano (Italian)</option>
+                      <option value="pt-BR">Português (Portuguese)</option>
+                      <option value="ru-RU">Русский (Russian)</option>
+                      <option value="ar-SA">العربية (Arabic)</option>
+                      <option value="hi-IN">हिन्दी (Hindi)</option>
+                      <option value="vi-VN">Tiếng Việt (Vietnamese)</option>
+                      <option value="id-ID">Bahasa Indonesia (Indonesian)</option>
+                      <option value="tr-TR">Türkçe (Turkish)</option>
+                      <option value="nl-NL">Nederlands (Dutch)</option>
+                      <option value="pl-PL">Polski (Polish)</option>
+                      <option value="sv-SE">Svenska (Swedish)</option>
+                      <option value="th-TH">ไทย (Thai)</option>
                     </select>
                   </div>
                   <div class="form-group" style="margin-bottom: 0;">
@@ -5295,5 +5336,19 @@
   <script src="/js/buddy.js"></script>
   <script src="/js/virtual-room.js"></script>
   <script src="/js/main.js"></script>
+  <!-- Google Translate Client Engine for Autonomous Full-Site Translation -->
+  <div id="google_translate_element" style="display: none;"></div>
+  <script type="text/javascript">
+    function googleTranslateElementInit() {
+      if (window.google && window.google.translate) {
+        new window.google.translate.TranslateElement({
+          pageLanguage: 'en',
+          includedLanguages: 'en,es,fr,de,zh-CN,zh-TW,ja,tl,ko,it,pt,ru,ar,hi,vi,id,tr,nl,pl,sv,th',
+          autoDisplay: false
+        }, 'google_translate_element');
+      }
+    }
+  </script>
+  <script type="text/javascript" src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
 </body>
 </html>

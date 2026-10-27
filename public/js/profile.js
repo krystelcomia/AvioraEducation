@@ -137,6 +137,8 @@ const Profile = {
     const activeLang = lang || 'en-US';
     const langSelect = document.getElementById('profile-language-select');
     if (langSelect) langSelect.value = activeLang;
+    const headerLangSelect = document.getElementById('header-language-select');
+    if (headerLangSelect) headerLangSelect.value = activeLang;
 
     const key = this.getUserKey();
     if (key) localStorage.setItem(`aviora_language${key}`, activeLang);
@@ -338,10 +340,17 @@ const Profile = {
       darkCard.addEventListener('click', () => this.applyTheme('dark'));
     }
 
-    // Language selector
+    // Language selector (Profile and Header)
     const langSelect = document.getElementById('profile-language-select');
     if (langSelect) {
       langSelect.addEventListener('change', (e) => {
+        this.applyLanguage(e.target.value);
+      });
+    }
+
+    const headerLangSelect = document.getElementById('header-language-select');
+    if (headerLangSelect) {
+      headerLangSelect.addEventListener('change', (e) => {
         this.applyLanguage(e.target.value);
       });
     }

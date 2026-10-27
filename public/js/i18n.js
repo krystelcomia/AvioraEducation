@@ -801,6 +801,60 @@ const PHRASE_DICTIONARY = {
     'Join with Buddy Code': 'Unirse con Código Buddy',
     'Instant Passcode': 'Código Instantáneo',
     'Join Aviora Buddy Session': 'Unirse a Sesión de Aviora Buddy',
+    
+    // Hero & Landing Headlines
+    'Premier Academic Mentorship Platform': 'Plataforma Premier de Mentoría Académica',
+    'Your Potential': 'Tu Potencial',
+    'Your Path': 'Tu Camino',
+    'Your Future': 'Tu Futuro',
+    'Your Potential.': 'Tu Potencial.',
+    'Your Path.': 'Tu Camino.',
+    'Your Future.': 'Tu Futuro.',
+    'Aviora Education bridges ambitious students with rigorously vetted academic tutors from Stanford, MIT, Harvard, and Columbia. Master calculus, physics, coding, chemistry, and literature with personalized 1-on-1 mentorship.': 'Aviora Education conecta a estudiantes ambiciosos con tutores académicos rigurosamente seleccionados de Stanford, MIT, Harvard y Columbia. Domina cálculo, física, programación, química y literatura con mentoría personalizada 1 a 1.',
+    'Find Your Tutor': 'Encuentra a tu Tutor',
+    'Become an Aviora Tutor': 'Conviértete en Tutor de Aviora',
+    'Top 1% Educators': 'Educadores del Top 1%',
+    'Strict Degree Verification': 'Verificación Estricta de Títulos',
+    '98% Grade Boost': '98% de Mejora de Calificaciones',
+    'Proven Conceptual Mastery': 'Dominio Conceptual Comprobado',
+    'Faculty Pedigree & University Network': 'Red Universitaria y Prestigio Docente',
+    'Faculty Pedigree & University Network:': 'Red Universitaria y Prestigio Docente:',
+    'Stanford University': 'Universidad de Stanford',
+    'Harvard University': 'Universidad de Harvard',
+    'MIT': 'MIT',
+    'Columbia University': 'Universidad de Columbia',
+    'University of Cambridge': 'Universidad de Cambridge',
+    'Princeton University': 'Universidad de Princeton',
+    '1-on-1 Bespoke Instruction': 'Instrucción Personalizada 1 a 1',
+    'Diagnostic assessments mapped directly to the student\'s exact school syllabus, AP exam, or Olympiad curriculum.': 'Evaluaciones diagnósticas adaptadas al plan de estudios exacto del estudiante, exámenes AP o concursos.',
+    'Diagnostic assessments mapped directly to the student\'s exact school syllabus, AP exam, or university curriculum.': 'Evaluaciones diagnósticas adaptadas al plan de estudios exacto del estudiante, exámenes AP o plan universitario.',
+    '100% Vetted Faculty': 'Profesorado 100% Verificado',
+    'Comprehensive background audits, diploma verification, and pedagogical screenings conducted by our Academic Board.': 'Auditorías de antecedentes, verificación de diplomas y evaluaciones pedagógicas por nuestro Consejo Académico.',
+    'Complete Schedule Sovereignty': 'Soberanía Completa de Horarios',
+    'Flexible dates and time slots determined entirely by the student, with upfront payments and personalized learning pace.': 'Fechas y horarios flexibles elegidos por el estudiante, con pagos transparentes y ritmo a medida.',
+    'Explore Student Achievements & Top Tutors': 'Explorar Logros de Estudiantes y Mejores Tutores',
+    'Student\'s Achievement': 'Logros de Estudiantes',
+    'Explore exceptional original works—from precision structural crafts and physical models to fine arts and mathematical drawings—crafted by Aviora students under 1-on-1 mentorship.': 'Explora trabajos originales excepcionales creados por estudiantes de Aviora bajo mentoría individual.',
+    'Ready to create university-level capstones, portfolio pieces, and mastery projects?': '¿Listo para crear proyectos y portafolios de nivel universitario?',
+    'Connect with a Mentor': 'Conectar con un Mentor',
+    'Connect with a Mentor →': 'Conectar con un Mentor →',
+    'Verified Faculty': 'Profesorado Verificado',
+    'Top Tutors': 'Mejores Tutores',
+    'Every Aviora tutor undergoes comprehensive academic credential verification, background audits, and pedagogical screening.': 'Cada tutor de Aviora pasa por verificación de credenciales, antecedentes y evaluación pedagógica.',
+    'Browse All Verified Tutors': 'Ver Todos los Tutores Verificados',
+    'Browse All Verified Tutors →': 'Ver Todos los Tutores Verificados →',
+    'Live Platform Telemetry': 'Telemetría en Vivo de la Plataforma',
+    'Real-Time Platform & Subject Analytics': 'Análisis de Materias y Plataforma en Tiempo Real',
+    'Live telemetry reflecting real-time academic demand and the most frequently accessed curricula across Aviora Education.': 'Telemetría en directo que refleja la demanda académica en tiempo real en Aviora Education.',
+    'Most Frequently Accessed Subjects': 'Materias Más Consultadas',
+    'Updated in Real-Time': 'Actualizado en Tiempo Real',
+    'Frequently Accessed Study Materials': 'Materiales de Estudio Frecuentes',
+    'About Aviora Education': 'Acerca de Aviora Education',
+    'Our Mission': 'Nuestra Misión',
+    'Our Vision': 'Nuestra Visión',
+    'Our Academic Philosophy': 'Filosofía Académica',
+    'Redefining High School & University Academic Excellence': 'Redefiniendo la Excelencia Académica',
+
     'All rights reserved.': 'Todos los derechos reservados.'
   },
 
@@ -927,6 +981,60 @@ const PHRASE_DICTIONARY = {
     'Join with Buddy Code': 'Rejoindre avec un Code Buddy',
     'Instant Passcode': 'Code Instantané',
     'Join Aviora Buddy Session': 'Rejoindre la Session Buddy',
+    
+    // Hero & Landing Headlines
+    'Premier Academic Mentorship Platform': 'Plateforme d’Élite de Mentorat Académique',
+    'Your Potential': 'Votre Potentiel',
+    'Your Path': 'Votre Parcours',
+    'Your Future': 'Votre Avenir',
+    'Your Potential.': 'Votre Potentiel.',
+    'Your Path.': 'Votre Parcours.',
+    'Your Future.': 'Votre Avenir.',
+    'Aviora Education bridges ambitious students with rigorously vetted academic tutors from Stanford, MIT, Harvard, and Columbia. Master calculus, physics, coding, chemistry, and literature with personalized 1-on-1 mentorship.': 'Aviora Education met en relation des étudiants ambitieux avec des tuteurs rigoureusement sélectionnés de Stanford, MIT, Harvard et Columbia. Maîtrisez le calcul, la physique, la programmation, la chimie et la littérature grâce à un mentorat 1-à-1 sur mesure.',
+    'Find Your Tutor': 'Trouver Votre Tuteur',
+    'Become an Aviora Tutor': 'Devenir Tuteur Aviora',
+    'Top 1% Educators': 'Éducateurs du Top 1%',
+    'Strict Degree Verification': 'Vérification Stricte des Diplômes',
+    '98% Grade Boost': '98% de Hausse des Notes',
+    'Proven Conceptual Mastery': 'Maîtrise Conceptuelle Prouvée',
+    'Faculty Pedigree & University Network': 'Réseau Universitaire & Prestigieux Corps Enseignant',
+    'Faculty Pedigree & University Network:': 'Réseau Universitaire & Prestigieux Corps Enseignant :',
+    'Stanford University': 'Université Stanford',
+    'Harvard University': 'Université Harvard',
+    'MIT': 'MIT',
+    'Columbia University': 'Université Columbia',
+    'University of Cambridge': 'Université de Cambridge',
+    'Princeton University': 'Université de Princeton',
+    '1-on-1 Bespoke Instruction': 'Instruction Personnalisée 1-à-1',
+    'Diagnostic assessments mapped directly to the student\'s exact school syllabus, AP exam, or Olympiad curriculum.': 'Évaluations diagnostiques directement alignées sur le programme exact de l’élève ou ses examens AP.',
+    'Diagnostic assessments mapped directly to the student\'s exact school syllabus, AP exam, or university curriculum.': 'Évaluations diagnostiques directement alignées sur le programme exact de l’élève ou ses examens universitaires.',
+    '100% Vetted Faculty': 'Professeurs 100% Vérifiés',
+    'Comprehensive background audits, diploma verification, and pedagogical screenings conducted by our Academic Board.': 'Audits des antécédents, vérification des diplômes et contrôles pédagogiques menés par notre Conseil Académique.',
+    'Complete Schedule Sovereignty': 'Souveraineté Totale des Horaires',
+    'Flexible dates and time slots determined entirely by the student, with upfront payments and personalized learning pace.': 'Dates et créneaux flexibles choisis par l’étudiant, avec paiements transparents et rythme sur mesure.',
+    'Explore Student Achievements & Top Tutors': 'Découvrir les Réussites d’Élèves et Meilleurs Tuteurs',
+    'Student\'s Achievement': 'Réalisations des Étudiants',
+    'Explore exceptional original works—from precision structural crafts and physical models to fine arts and mathematical drawings—crafted by Aviora students under 1-on-1 mentorship.': 'Explorez des œuvres originales exceptionnelles réalisées par les élèves d’Aviora sous mentorat individuel.',
+    'Ready to create university-level capstones, portfolio pieces, and mastery projects?': 'Prêt à créer des projets et portfolios de calibre universitaire ?',
+    'Connect with a Mentor': 'Contacter un Mentor',
+    'Connect with a Mentor →': 'Contacter un Mentor →',
+    'Verified Faculty': 'Corps Enseignant Vérifié',
+    'Top Tutors': 'Meilleurs Tuteurs',
+    'Every Aviora tutor undergoes comprehensive academic credential verification, background audits, and pedagogical screening.': 'Chaque tuteur Aviora fait l’objet d’une vérification complète de diplômes et d’une évaluation pédagogique.',
+    'Browse All Verified Tutors': 'Parcourir Tous les Tuteurs Vérifiés',
+    'Browse All Verified Tutors →': 'Parcourir Tous les Tuteurs Vérifiés →',
+    'Live Platform Telemetry': 'Télémétrie en Direct de la Plateforme',
+    'Real-Time Platform & Subject Analytics': 'Analyses en Temps Réel des Matières et de la Plateforme',
+    'Live telemetry reflecting real-time academic demand and the most frequently accessed curricula across Aviora Education.': 'Données en direct reflétant la demande académique en temps réel au sein d’Aviora Education.',
+    'Most Frequently Accessed Subjects': 'Matières les Plus Consultées',
+    'Updated in Real-Time': 'Mis à Jour en Temps Réel',
+    'Frequently Accessed Study Materials': 'Supports d’Étude les Plus Fréquents',
+    'About Aviora Education': 'À Propos d’Aviora Education',
+    'Our Mission': 'Notre Mission',
+    'Our Vision': 'Notre Vision',
+    'Our Academic Philosophy': 'Philosophie Pédagogique',
+    'Redefining High School & University Academic Excellence': 'Redéfinir l’Excellence Académique au Lycée et à l’Université',
+
     'All rights reserved.': 'Tous droits réservés.'
   },
 
@@ -1053,6 +1161,60 @@ const PHRASE_DICTIONARY = {
     'Join with Buddy Code': 'Mit Buddy-Code beitreten',
     'Instant Passcode': 'Sofort-Code',
     'Join Aviora Buddy Session': 'Buddy-Sitzung beitreten',
+    
+    // Hero & Landing Headlines
+    'Premier Academic Mentorship Platform': 'Erstklassige Plattform für Akademisches Mentoring',
+    'Your Potential': 'Dein Potenzial',
+    'Your Path': 'Dein Weg',
+    'Your Future': 'Deine Zukunft',
+    'Your Potential.': 'Dein Potenzial.',
+    'Your Path.': 'Dein Weg.',
+    'Your Future.': 'Deine Zukunft.',
+    'Aviora Education bridges ambitious students with rigorously vetted academic tutors from Stanford, MIT, Harvard, and Columbia. Master calculus, physics, coding, chemistry, and literature with personalized 1-on-1 mentorship.': 'Aviora Education verbindet ambitionierte Lernende mit streng geprüften Tutoren von Stanford, MIT, Harvard und Columbia. Meistern Sie Analysis, Physik, Programmieren, Chemie und Literatur mit persönlicher 1-zu-1-Betreuung.',
+    'Find Your Tutor': 'Finde deinen Tutor',
+    'Become an Aviora Tutor': 'Aviora-Tutor werden',
+    'Top 1% Educators': 'Top 1% der Lehrkräfte',
+    'Strict Degree Verification': 'Strikte Verifizierung von Abschlüssen',
+    '98% Grade Boost': '98% Notenverbesserung',
+    'Proven Conceptual Mastery': 'Nachgewiesene konzeptionelle Beherrschung',
+    'Faculty Pedigree & University Network': 'Akademische Exzellenz & Universitätsnetzwerk',
+    'Faculty Pedigree & University Network:': 'Akademische Exzellenz & Universitätsnetzwerk:',
+    'Stanford University': 'Stanford University',
+    'Harvard University': 'Harvard University',
+    'MIT': 'MIT',
+    'Columbia University': 'Columbia University',
+    'University of Cambridge': 'University of Cambridge',
+    'Princeton University': 'Princeton University',
+    '1-on-1 Bespoke Instruction': 'Individueller 1-zu-1 Unterricht',
+    'Diagnostic assessments mapped directly to the student\'s exact school syllabus, AP exam, or Olympiad curriculum.': 'Diagnostische Einstufung direkt abgestimmt auf den Lehrplan oder Prüfungen des Schülers.',
+    'Diagnostic assessments mapped directly to the student\'s exact school syllabus, AP exam, or university curriculum.': 'Diagnostische Einstufung direkt abgestimmt auf den Lehrplan oder Universitätsprüfungen des Schülers.',
+    '100% Vetted Faculty': '100% verifizierte Dozenten',
+    'Comprehensive background audits, diploma verification, and pedagogical screenings conducted by our Academic Board.': 'Umfassende Hintergrundüberprüfungen, Diplomverifizierung und pädagogische Auswahl durch unser Akademisches Gremium.',
+    'Complete Schedule Sovereignty': 'Vollständige zeitliche Flexibilität',
+    'Flexible dates and time slots determined entirely by the student, with upfront payments and personalized learning pace.': 'Flexible Termine nach Wahl des Schülers mit transparenter Vorauszahlung und persönlichem Lerntempo.',
+    'Explore Student Achievements & Top Tutors': 'Erfolge der Schüler & Top-Tutoren entdecken',
+    'Student\'s Achievement': 'Erfolge der Schüler',
+    'Explore exceptional original works—from precision structural crafts and physical models to fine arts and mathematical drawings—crafted by Aviora students under 1-on-1 mentorship.': 'Entdecken Sie herausragende Arbeiten von Aviora-Schülern aus 1-zu-1-Mentoring.',
+    'Ready to create university-level capstones, portfolio pieces, and mastery projects?': 'Bereit für Projekte und Portfolios auf Universitätsniveau?',
+    'Connect with a Mentor': 'Mentor kontaktieren',
+    'Connect with a Mentor →': 'Mentor kontaktieren →',
+    'Verified Faculty': 'Verifizierte Dozenten',
+    'Top Tutors': 'Top-Tutoren',
+    'Every Aviora tutor undergoes comprehensive academic credential verification, background audits, and pedagogical screening.': 'Jeder Aviora-Tutor durchläuft eine gründliche Verifizierung seiner akademischen Nachweise und Pädagogik.',
+    'Browse All Verified Tutors': 'Alle verifizierten Tutoren durchsuchen',
+    'Browse All Verified Tutors →': 'Alle verifizierten Tutoren durchsuchen →',
+    'Live Platform Telemetry': 'Live-Plattformdaten',
+    'Real-Time Platform & Subject Analytics': 'Echtzeit-Fach- & Plattformanalysen',
+    'Live telemetry reflecting real-time academic demand and the most frequently accessed curricula across Aviora Education.': 'Live-Telemetrie der akademischen Nachfrage bei Aviora Education.',
+    'Most Frequently Accessed Subjects': 'Meistgefragte Fächer',
+    'Updated in Real-Time': 'In Echtzeit aktualisiert',
+    'Frequently Accessed Study Materials': 'Häufig aufgerufene Lernmaterialien',
+    'About Aviora Education': 'Über Aviora Education',
+    'Our Mission': 'Unsere Mission',
+    'Our Vision': 'Unsere Vision',
+    'Our Academic Philosophy': 'Pädagogische Philosophie',
+    'Redefining High School & University Academic Excellence': 'Akademische Exzellenz für Schule und Universität neu definiert',
+
     'All rights reserved.': 'Alle Rechte vorbehalten.'
   },
 
@@ -1179,6 +1341,60 @@ const PHRASE_DICTIONARY = {
     'Join with Buddy Code': '输入结对码加入',
     'Instant Passcode': '即时结对码',
     'Join Aviora Buddy Session': '加入伴学房间',
+    
+    // Hero & Landing Headlines
+    'Premier Academic Mentorship Platform': '顶尖学术导师个性化指导平台',
+    'Your Potential': '激发潜能',
+    'Your Path': '指引前路',
+    'Your Future': '成就未来',
+    'Your Potential.': '激发潜能。',
+    'Your Path.': '指引前路。',
+    'Your Future.': '成就未来。',
+    'Aviora Education bridges ambitious students with rigorously vetted academic tutors from Stanford, MIT, Harvard, and Columbia. Master calculus, physics, coding, chemistry, and literature with personalized 1-on-1 mentorship.': 'Aviora Education 为心怀远大抱负的学生对接来自斯坦福、麻省理工、哈佛、哥伦比亚大学等顶尖学府的严格认证学者导师。通过量身定制的1对1专属辅导，全面精通微积分、物理、编程、化学及学术文学。',
+    'Find Your Tutor': '寻找专属导师',
+    'Become an Aviora Tutor': '成为 Aviora 导师',
+    'Top 1% Educators': '全球排名前 1% 资深名师',
+    'Strict Degree Verification': '权威学位与资质背景严苛核验',
+    '98% Grade Boost': '98% 学员成绩显著提升',
+    'Proven Conceptual Mastery': '经过实证的概念深度掌握',
+    'Faculty Pedigree & University Network': '顶尖学府学术网络与师资血统',
+    'Faculty Pedigree & University Network:': '顶尖学府学术网络与师资血统:',
+    'Stanford University': '斯坦福大学',
+    'Harvard University': '哈佛大学',
+    'MIT': '麻省理工学院 (MIT)',
+    'Columbia University': '哥伦比亚大学',
+    'University of Cambridge': '剑桥大学',
+    'Princeton University': '普林斯顿大学',
+    '1-on-1 Bespoke Instruction': '1对1 定制化专属指导',
+    'Diagnostic assessments mapped directly to the student\'s exact school syllabus, AP exam, or Olympiad curriculum.': '诊断性评估直接对标学生的校内教学大纲、AP考试或学术奥赛要求。',
+    'Diagnostic assessments mapped directly to the student\'s exact school syllabus, AP exam, or university curriculum.': '诊断性评估直接对标学生的校内教学大纲、AP考试或大学课程要求。',
+    '100% Vetted Faculty': '100% 官方严格认证名师',
+    'Comprehensive background audits, diploma verification, and pedagogical screenings conducted by our Academic Board.': '由学术评审委员会进行全方位的背景审查、学位核验及教学法考核。',
+    'Complete Schedule Sovereignty': '完全自主的课表掌控权',
+    'Flexible dates and time slots determined entirely by the student, with upfront payments and personalized learning pace.': '日期与时间段完全由学生自主选择，透明透明的预付机制，完全依个人节奏学习。',
+    'Explore Student Achievements & Top Tutors': '探索学员卓越成果与明星导师',
+    'Student\'s Achievement': '学员成就与精选作品',
+    'Explore exceptional original works—from precision structural crafts and physical models to fine arts and mathematical drawings—crafted by Aviora students under 1-on-1 mentorship.': '探索 Aviora 学员在1对1专属导师指导下创作的建筑结构模型、美术作品与数学绘图等杰出学术成果。',
+    'Ready to create university-level capstones, portfolio pieces, and mastery projects?': '准备好打造大学级别的高级研究项目与作品集了吗？',
+    'Connect with a Mentor': '立即对接名师导师',
+    'Connect with a Mentor →': '立即对接名师导师 →',
+    'Verified Faculty': '认证教师团队',
+    'Top Tutors': '特级名师阵容',
+    'Every Aviora tutor undergoes comprehensive academic credential verification, background audits, and pedagogical screening.': '每一位 Aviora 导师均需通过全方位的学术资历审查、背景审查与试讲考核。',
+    'Browse All Verified Tutors': '浏览所有认证导师',
+    'Browse All Verified Tutors →': '浏览所有认证导师 →',
+    'Live Platform Telemetry': '实时平台数据监控',
+    'Real-Time Platform & Subject Analytics': '学科热度与平台数据实时分析',
+    'Live telemetry reflecting real-time academic demand and the most frequently accessed curricula across Aviora Education.': '反映 Aviora Education 全球实时学术需求与最常访问课程的动态数据。',
+    'Most Frequently Accessed Subjects': '最受关注的热门学科',
+    'Updated in Real-Time': '实时动态更新中',
+    'Frequently Accessed Study Materials': '常被调阅的精选学习资料',
+    'About Aviora Education': '关于 Aviora Education',
+    'Our Mission': '我们的使命',
+    'Our Vision': '我们的愿景',
+    'Our Academic Philosophy': '学术与教学理念',
+    'Redefining High School & University Academic Excellence': '重新定义高中与大学阶段的学术卓越标准',
+
     'All rights reserved.': '版权所有，保留一切权利。'
   },
 
@@ -1305,6 +1521,60 @@ const PHRASE_DICTIONARY = {
     'Join with Buddy Code': 'バディコードで参加',
     'Instant Passcode': '即時パスコード',
     'Join Aviora Buddy Session': 'バディセッションに参加',
+    
+    // Hero & Landing Headlines
+    'Premier Academic Mentorship Platform': '最高峰の個別学術メンターシッププラットフォーム',
+    'Your Potential': 'あなたの可能性',
+    'Your Path': 'あなたの進む道',
+    'Your Future': 'あなたの未来',
+    'Your Potential.': 'あなたの可能性。',
+    'Your Path.': 'あなたの進む道。',
+    'Your Future.': 'あなたの未来。',
+    'Aviora Education bridges ambitious students with rigorously vetted academic tutors from Stanford, MIT, Harvard, and Columbia. Master calculus, physics, coding, chemistry, and literature with personalized 1-on-1 mentorship.': 'Aviora Education は、志の高い学生と、スタンフォード、MIT、ハーバード、コロンビアなど名門大学出身の厳格に審査された指導講師を結びつけます。オーダーメイドのマンツーマン指導で、微積分、物理、プログラミング、化学、文学などを極めましょう。',
+    'Find Your Tutor': '専属講師を見つける',
+    'Become an Aviora Tutor': 'Aviora の講師になる',
+    'Top 1% Educators': '上位1％の優秀な指導陣',
+    'Strict Degree Verification': '厳格な学位・資格照合済み',
+    '98% Grade Boost': '98％の受講生が成績向上',
+    'Proven Conceptual Mastery': '確かな本質的理解の定着',
+    'Faculty Pedigree & University Network': '一流大学の指導陣ネットワーク',
+    'Faculty Pedigree & University Network:': '一流大学の指導陣ネットワーク:',
+    'Stanford University': 'スタンフォード大学',
+    'Harvard University': 'ハーバード大学',
+    'MIT': 'マサチューセッツ工科大学 (MIT)',
+    'Columbia University': 'コロンビア大学',
+    'University of Cambridge': 'ケンブリッジ大学',
+    'Princeton University': 'プリンストン大学',
+    '1-on-1 Bespoke Instruction': '完全個別オーダーメイド指導',
+    'Diagnostic assessments mapped directly to the student\'s exact school syllabus, AP exam, or Olympiad curriculum.': '受講生の学校カリキュラムやAP試験、オリンピック対策に直結した診断評価を行います。',
+    'Diagnostic assessments mapped directly to the student\'s exact school syllabus, AP exam, or university curriculum.': '受講生の学校カリキュラムやAP試験、大学のシラバスに直結した診断評価を行います。',
+    '100% Vetted Faculty': '100％厳格審査された専任講師',
+    'Comprehensive background audits, diploma verification, and pedagogical screenings conducted by our Academic Board.': '学術委員会による経歴審査、学位照合、模擬授業による指導力選考を通過した講師のみが担当します。',
+    'Complete Schedule Sovereignty': '完全なスケジュール自由度',
+    'Flexible dates and time slots determined entirely by the student, with upfront payments and personalized learning pace.': '受講生自身が日時を柔軟に選択でき、明瞭な事前決済と個別のペースで受講可能です。',
+    'Explore Student Achievements & Top Tutors': '受講生の実績と人気講師を見る',
+    'Student\'s Achievement': '受講生の実績と成果',
+    'Explore exceptional original works—from precision structural crafts and physical models to fine arts and mathematical drawings—crafted by Aviora students under 1-on-1 mentorship.': '個別メンターシップのもとで制作された、建築模型から美術工芸、数理ドローイングまで、受講生たちの優れた作品をご覧ください。',
+    'Ready to create university-level capstones, portfolio pieces, and mastery projects?': '大学レベルのプロジェクトや研究論文、ポートフォリオ制作に挑戦しませんか？',
+    'Connect with a Mentor': 'メンターに相談する',
+    'Connect with a Mentor →': 'メンターに相談する →',
+    'Verified Faculty': '認証済み講師陣',
+    'Top Tutors': '人気のトップ講師',
+    'Every Aviora tutor undergoes comprehensive academic credential verification, background audits, and pedagogical screening.': 'すべての Aviora 講師は、学歴証明の審査、身元確認、教育指導力審査を徹底して受けています。',
+    'Browse All Verified Tutors': 'すべての認証済み講師を見る',
+    'Browse All Verified Tutors →': 'すべての認証済み講師を見る →',
+    'Live Platform Telemetry': 'リアルタイム運用データ',
+    'Real-Time Platform & Subject Analytics': 'リアルタイム科目・需要データ分析',
+    'Live telemetry reflecting real-time academic demand and the most frequently accessed curricula across Aviora Education.': 'Aviora Education 全体で最も学習されている科目とリアルタイムの受講動向を可視化しています。',
+    'Most Frequently Accessed Subjects': '最も受講されている科目',
+    'Updated in Real-Time': 'リアルタイム更新中',
+    'Frequently Accessed Study Materials': 'よく閲覧されている学習教材',
+    'About Aviora Education': 'Aviora Education について',
+    'Our Mission': '私たちの使命',
+    'Our Vision': '私たちのビジョン',
+    'Our Academic Philosophy': '教育理念と指導方針',
+    'Redefining High School & University Academic Excellence': '中高・大学における学業の卓越性を再定義する',
+
     'All rights reserved.': '無断転載を禁じます。'
   },
 
@@ -1431,8 +1701,120 @@ const PHRASE_DICTIONARY = {
     'Join with Buddy Code': 'Sumali Gamit ang Buddy Code',
     'Instant Passcode': 'Agarang Passcode',
     'Join Aviora Buddy Session': 'Sumali sa Sesyon ng Buddy',
+    
+    // Hero & Landing Headlines
+    'Premier Academic Mentorship Platform': 'Nangungunang Plataporma ng Akademikong Mentorship',
+    'Your Potential': 'Iyong Potensyal',
+    'Your Path': 'Iyong Landas',
+    'Your Future': 'Iyong Hinaharap',
+    'Your Potential.': 'Iyong Potensyal.',
+    'Your Path.': 'Iyong Landas.',
+    'Your Future.': 'Iyong Hinaharap.',
+    'Aviora Education bridges ambitious students with rigorously vetted academic tutors from Stanford, MIT, Harvard, and Columbia. Master calculus, physics, coding, chemistry, and literature with personalized 1-on-1 mentorship.': 'Ikinokonekta ng Aviora Education ang mga masisipag na mag-aaral sa mga dalubhasang tutor mula Stanford, MIT, Harvard, at Columbia. Matutong mabuti sa calculus, pisika, coding, kimika, at panitikan gamit ang 1-on-1 mentorship.',
+    'Find Your Tutor': 'Hanapin ang Iyong Tutor',
+    'Become an Aviora Tutor': 'Maging Tutor ng Aviora',
+    'Top 1% Educators': 'Nangungunang 1% na mga Guro',
+    'Strict Degree Verification': 'Mahigpit na Beripikasyon ng Diploma',
+    '98% Grade Boost': '98% Pagtaas ng Grado',
+    'Proven Conceptual Mastery': 'Napatunayang Pagkaunawa sa Konsepto',
+    'Faculty Pedigree & University Network': 'Kalidad ng Guro at Network ng Unibersidad',
+    'Faculty Pedigree & University Network:': 'Kalidad ng Guro at Network ng Unibersidad:',
+    'Stanford University': 'Stanford University',
+    'Harvard University': 'Harvard University',
+    'MIT': 'MIT',
+    'Columbia University': 'Columbia University',
+    'University of Cambridge': 'University of Cambridge',
+    'Princeton University': 'Princeton University',
+    '1-on-1 Bespoke Instruction': '1-on-1 Pasadyang Pagtuturo',
+    'Diagnostic assessments mapped directly to the student\'s exact school syllabus, AP exam, or Olympiad curriculum.': 'Pagsusuri na nakatugma sa kurikulum ng paaralan, pagsusulit sa AP, o Olympiad ng mag-aaral.',
+    'Diagnostic assessments mapped directly to the student\'s exact school syllabus, AP exam, or university curriculum.': 'Pagsusuri na nakatugma sa kurikulum ng paaralan, pagsusulit sa AP, o kurikulum sa unibersidad.',
+    '100% Vetted Faculty': '100% Beripikadong Kaguruan',
+    'Comprehensive background audits, diploma verification, and pedagogical screenings conducted by our Academic Board.': 'Masusing pagsusuri sa background, diploma, at kakayahan sa pagtuturo ng aming Lupon.',
+    'Complete Schedule Sovereignty': 'Ganap na Kalayaan sa Iskedyul',
+    'Flexible dates and time slots determined entirely by the student, with upfront payments and personalized learning pace.': 'Madaling baguhing petsa at oras na pinili ng mag-aaral, may malinaw na bayad at sariling bilis ng aral.',
+    'Explore Student Achievements & Top Tutors': 'Tuklasin ang Tagumpay ng Mag-aaral at Magagaling na Tutor',
+    'Student\'s Achievement': 'Tagumpay ng Mag-aaral',
+    'Explore exceptional original works—from precision structural crafts and physical models to fine arts and mathematical drawings—crafted by Aviora students under 1-on-1 mentorship.': 'Tuklasin ang natatanging gawa ng mga mag-aaral sa Aviora sa ilalim ng 1-on-1 mentorship.',
+    'Ready to create university-level capstones, portfolio pieces, and mastery projects?': 'Handa ka na bang gumawa ng mga proyekto at portfolio na pang-unibersidad?',
+    'Connect with a Mentor': 'Kumonekta sa Mentor',
+    'Connect with a Mentor →': 'Kumonekta sa Mentor →',
+    'Verified Faculty': 'Beripikadong Kaguruan',
+    'Top Tutors': 'Nangungunang Mga Tutor',
+    'Every Aviora tutor undergoes comprehensive academic credential verification, background audits, and pedagogical screening.': 'Bawat tutor sa Aviora ay dumaraan sa masusing pagsusuri ng kredensyal at pagtuturo.',
+    'Browse All Verified Tutors': 'Tingnan Lahat ng Beripikadong Tutor',
+    'Browse All Verified Tutors →': 'Tingnan Lahat ng Beripikadong Tutor →',
+    'Live Platform Telemetry': 'Direktang Datos ng Plataporma',
+    'Real-Time Platform & Subject Analytics': 'Real-Time na Pagsusuri ng Asignatura at Plataporma',
+    'Live telemetry reflecting real-time academic demand and the most frequently accessed curricula across Aviora Education.': 'Direktang datos na nagpapakita ng demand sa pag-aaral sa Aviora Education.',
+    'Most Frequently Accessed Subjects': 'Pinakamadalas Araling Asignatura',
+    'Updated in Real-Time': 'Na-update sa Real-Time',
+    'Frequently Accessed Study Materials': 'Mga Madalas Gamiting Materyal sa Pag-aaral',
+    'About Aviora Education': 'Tungkol sa Aviora Education',
+    'Our Mission': 'Ang Aming Misyon',
+    'Our Vision': 'Ang Aming Bisyon',
+    'Our Academic Philosophy': 'Pilosopiya sa Pagtuturo',
+    'Redefining High School & University Academic Excellence': 'Muling Pagtatakda ng Kahusayan sa Paaralan at Kolehiyo',
+
     'All rights reserved.': 'Lahat ng karapatan ay nakalaan.'
   }
+};
+
+
+const SUPPORTED_LANGUAGES = [
+  'en-US', 'es-ES', 'fr-FR', 'de-DE', 'zh-CN', 'zh-TW', 'ja-JP', 'fil-PH',
+  'ko-KR', 'it-IT', 'pt-BR', 'ru-RU', 'ar-SA', 'hi-IN', 'vi-VN', 'id-ID',
+  'tr-TR', 'nl-NL', 'pl-PL', 'sv-SE', 'th-TH'
+];
+
+const LANGUAGE_ALIASES = {
+  'en': 'en-US',
+  'es': 'es-ES',
+  'fr': 'fr-FR',
+  'de': 'de-DE',
+  'zh': 'zh-CN',
+  'zh-Hans': 'zh-CN',
+  'zh-Hant': 'zh-TW',
+  'ja': 'ja-JP',
+  'fil': 'fil-PH',
+  'tl': 'fil-PH',
+  'tl-PH': 'fil-PH',
+  'ko': 'ko-KR',
+  'it': 'it-IT',
+  'pt': 'pt-BR',
+  'ru': 'ru-RU',
+  'ar': 'ar-SA',
+  'hi': 'hi-IN',
+  'vi': 'vi-VN',
+  'id': 'id-ID',
+  'tr': 'tr-TR',
+  'nl': 'nl-NL',
+  'pl': 'pl-PL',
+  'sv': 'sv-SE',
+  'th': 'th-TH'
+};
+
+const GOOGLE_LANG_MAP = {
+  'en-US': 'en',
+  'es-ES': 'es',
+  'fr-FR': 'fr',
+  'de-DE': 'de',
+  'zh-CN': 'zh-CN',
+  'zh-TW': 'zh-TW',
+  'ja-JP': 'ja',
+  'fil-PH': 'tl',
+  'ko-KR': 'ko',
+  'it-IT': 'it',
+  'pt-BR': 'pt',
+  'ru-RU': 'ru',
+  'ar-SA': 'ar',
+  'hi-IN': 'hi',
+  'vi-VN': 'vi',
+  'id-ID': 'id',
+  'tr-TR': 'tr',
+  'nl-NL': 'nl',
+  'pl-PL': 'pl',
+  'sv-SE': 'sv',
+  'th-TH': 'th'
 };
 
 const I18n = {
@@ -1454,8 +1836,10 @@ const I18n = {
 
   normalizeLanguage(lang) {
     if (!lang) return 'en-US';
-    if (lang === 'tl-PH' || lang === 'fil' || lang === 'tl') return 'fil-PH';
-    if (I18N_TRANSLATIONS[lang]) return lang;
+    if (LANGUAGE_ALIASES[lang]) return LANGUAGE_ALIASES[lang];
+    if (SUPPORTED_LANGUAGES.includes(lang)) return lang;
+    const short = lang.split('-')[0].toLowerCase();
+    if (LANGUAGE_ALIASES[short]) return LANGUAGE_ALIASES[short];
     return 'en-US';
   },
 
@@ -1483,16 +1867,53 @@ const I18n = {
     const trimmed = text.trim();
     if (!trimmed) return text;
 
-    // Direct match
+    // 1. Direct exact match
     if (dict[trimmed] !== undefined) {
       return dict[trimmed];
     }
 
-    // Case-insensitive match
+    // 2. Direct case-insensitive match
     const lowerTrimmed = trimmed.toLowerCase();
     for (const phrase in dict) {
       if (phrase.toLowerCase() === lowerTrimmed) {
         return dict[phrase];
+      }
+    }
+
+    // 3. Multi-line whitespace collapse
+    const collapsed = trimmed.replace(/\s+/g, ' ');
+    if (dict[collapsed] !== undefined) {
+      return dict[collapsed];
+    }
+    const lowerCollapsed = collapsed.toLowerCase();
+    for (const phrase in dict) {
+      if (phrase.toLowerCase() === lowerCollapsed) {
+        return dict[phrase];
+      }
+    }
+
+    // 4. Smart leading symbol and trailing punctuation stripping
+    const leadMatch = collapsed.match(/^([✦★•\-–—►▶︎>\s]+)(.*)$/);
+    const leadSymbols = leadMatch ? leadMatch[1] : '';
+    const bodyWithoutLead = leadMatch ? leadMatch[2] : collapsed;
+
+    const trailMatch = bodyWithoutLead.match(/^(.*?)([\.\:\?\!\,\…\→\↓\>]+)$/);
+    const coreText = trailMatch ? trailMatch[1].trim() : bodyWithoutLead.trim();
+    const trailSymbols = trailMatch ? trailMatch[2] : '';
+
+    if (coreText && (leadSymbols || trailSymbols || coreText !== trimmed)) {
+      if (dict[coreText] !== undefined) {
+        const transCore = dict[coreText];
+        const formattedTrail = (trailSymbols === '.' && ['ja-JP', 'zh-CN', 'zh-TW'].includes(cleanLang)) ? '。' : trailSymbols;
+        return leadSymbols + transCore + formattedTrail;
+      }
+      const lowerCore = coreText.toLowerCase();
+      for (const phrase in dict) {
+        if (phrase.toLowerCase() === lowerCore) {
+          const transCore = dict[phrase];
+          const formattedTrail = (trailSymbols === '.' && ['ja-JP', 'zh-CN', 'zh-TW'].includes(cleanLang)) ? '。' : trailSymbols;
+          return leadSymbols + transCore + formattedTrail;
+        }
       }
     }
 
@@ -1511,10 +1932,15 @@ const I18n = {
         acceptNode(node) {
           if (!node || !node.parentNode) return NodeFilter.FILTER_REJECT;
           const parentTag = node.parentNode.nodeName;
-          if (['SCRIPT', 'STYLE', 'SVG', 'PATH', 'CODE', 'PRE'].includes(parentTag)) {
+          if (['SCRIPT', 'STYLE', 'SVG', 'PATH', 'CODE', 'PRE', 'SELECT', 'OPTION'].includes(parentTag)) {
             return NodeFilter.FILTER_REJECT;
           }
-          if (node.parentNode.classList && node.parentNode.classList.contains('no-translate')) {
+          if (node.parentNode.classList && (
+            node.parentNode.classList.contains('no-translate') ||
+            node.parentNode.classList.contains('skiptranslate') ||
+            node.parentNode.id === 'header-language-select' ||
+            node.parentNode.id === 'profile-language-select'
+          )) {
             return NodeFilter.FILTER_REJECT;
           }
           if (!node.textContent || !node.textContent.trim()) {
@@ -1564,7 +1990,7 @@ const I18n = {
     });
 
     root.querySelectorAll('[title]').forEach(el => {
-      if (['SVG', 'PATH'].includes(el.nodeName)) return;
+      if (['SVG', 'PATH', 'SELECT', 'OPTION'].includes(el.nodeName)) return;
       if (el.__avioraOrigTitle === undefined) {
         el.__avioraOrigTitle = el.getAttribute('title') || '';
       }
@@ -1588,10 +2014,65 @@ const I18n = {
     });
   },
 
+  triggerGoogleTranslate(cleanLang) {
+    const gtCode = GOOGLE_LANG_MAP[cleanLang] || 'en';
+
+    try {
+      const hostname = window.location.hostname;
+      const val = gtCode === 'en' ? '/en/en' : `/en/${gtCode}`;
+      
+      document.cookie = `googtrans=${val}; path=/;`;
+      if (hostname && hostname !== 'localhost') {
+        document.cookie = `googtrans=${val}; path=/; domain=.${hostname};`;
+        document.cookie = `googtrans=${val}; path=/; domain=${hostname};`;
+      }
+
+      if (gtCode === 'en') {
+        document.cookie = 'googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+        if (hostname && hostname !== 'localhost') {
+          document.cookie = `googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=.${hostname};`;
+          document.cookie = `googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=${hostname};`;
+        }
+      }
+    } catch (e) {}
+
+    const fireCombo = () => {
+      const combo = document.querySelector('.goog-te-combo');
+      if (combo) {
+        if (combo.value !== gtCode) {
+          combo.value = gtCode;
+          combo.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+        return true;
+      }
+      return false;
+    };
+
+    if (!fireCombo()) {
+      let attempts = 0;
+      const timer = setInterval(() => {
+        attempts++;
+        if (fireCombo() || attempts >= 30) {
+          clearInterval(timer);
+        }
+      }, 150);
+    }
+  },
+
   applyLanguage(lang, dispatchEvent = true) {
     const cleanLang = this.normalizeLanguage(lang);
     this.currentLanguage = cleanLang;
     document.documentElement.setAttribute('lang', cleanLang);
+
+    // Keep dropdown selectors in sync
+    const headerLangSelect = document.getElementById('header-language-select');
+    if (headerLangSelect && headerLangSelect.value !== cleanLang) {
+      headerLangSelect.value = cleanLang;
+    }
+    const profileLangSelect = document.getElementById('profile-language-select');
+    if (profileLangSelect && profileLangSelect.value !== cleanLang) {
+      profileLangSelect.value = cleanLang;
+    }
 
     try {
       const user = (typeof Storage !== 'undefined' && Storage.getUser) ? Storage.getUser() : null;
@@ -1654,6 +2135,13 @@ const I18n = {
       console.warn('DOM tree translation error:', e);
     } finally {
       this.isTranslating = false;
+    }
+
+    // Trigger full site translation autonomous engine
+    try {
+      this.triggerGoogleTranslate(cleanLang);
+    } catch (e) {
+      console.warn('Full site translation engine warning:', e);
     }
 
     if (dispatchEvent) {
@@ -1752,18 +2240,28 @@ const I18n = {
   },
 
   setupObserver() {
-    if (this.observer) return;
+    if (this.observer || typeof MutationObserver === 'undefined') return;
     let timeout = null;
-    this.observer = new MutationObserver(() => {
+    this.observer = new MutationObserver((mutations) => {
       if (this.isTranslating) return;
       if (this.currentLanguage === 'en-US') return;
+
+      const shouldIgnore = mutations.every(m => {
+        const target = m.target;
+        return target && (
+          target.id === 'google_translate_element' ||
+          (target.classList && (target.classList.contains('skiptranslate') || target.classList.contains('goog-te-combo'))) ||
+          target.nodeName === 'FONT'
+        );
+      });
+      if (shouldIgnore) return;
 
       clearTimeout(timeout);
       timeout = setTimeout(() => {
         if (!this.isTranslating) {
           this.applyLanguage(this.currentLanguage, false);
         }
-      }, 100);
+      }, 150);
     });
 
     if (document.body) {
@@ -1779,3 +2277,13 @@ const I18n = {
 window.I18n = I18n;
 window.I18N_TRANSLATIONS = I18N_TRANSLATIONS;
 window.PHRASE_DICTIONARY = PHRASE_DICTIONARY;
+window.SUPPORTED_LANGUAGES = SUPPORTED_LANGUAGES;
+window.GOOGLE_LANG_MAP = GOOGLE_LANG_MAP;
+
+if (typeof document !== 'undefined') {
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => I18n.init());
+  } else {
+    I18n.init();
+  }
+}

@@ -597,6 +597,64 @@
   }
 }
 
+/* =========================================
+   HEADER LANGUAGE SELECTOR
+   ========================================= */
+.nav-lang-picker-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
 
+.header-language-select {
+  background: rgba(198, 138, 40, 0.08);
+  border: 1.5px solid rgba(198, 138, 40, 0.32);
+  border-radius: var(--radius-full);
+  color: var(--charcoal-900);
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 0.35rem 0.75rem;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  outline: none;
+  max-width: 140px;
+}
 
+.header-language-select:hover {
+  background: rgba(198, 138, 40, 0.16);
+  border-color: var(--gold-500);
+}
 
+[data-theme="dark"] .header-language-select {
+  background: #000000 !important;
+  color: #FFFFFF !important;
+  border-color: rgba(216, 170, 60, 0.45) !important;
+}
+
+[data-theme="dark"] .header-language-select option {
+  background: #000000 !important;
+  color: #FFFFFF !important;
+}
+
+/* =========================================
+   CLEAN GOOGLE TRANSLATE STYLES
+   Suppresses Google toolbars, banners, and frames
+   ========================================= */
+.goog-te-banner-frame,
+.goog-te-banner-frame.skiptranslate,
+#goog-gt-tt,
+.goog-te-balloon-frame {
+  display: none !important;
+  visibility: hidden !important;
+}
+
+body {
+  top: 0px !important;
+  position: static !important;
+}
+
+.goog-text-highlight {
+  background: none !important;
+  box-shadow: none !important;
+}

@@ -1000,6 +1000,16 @@
   color: #FFFFFF !important;
 }
 
+/* 10. Confirmation Dialog Modal Polish */
+[data-theme="dark"] #confirm-modal .modal-card {
+  background: #000000 !important;
+  border: 1.5px solid rgba(216, 170, 60, 0.45) !important;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(216, 170, 60, 0.2) !important;
+}
+[data-theme="dark"] #confirm-modal-msg {
+  color: #E2E8F0 !important;
+}
+
 /* =========================================
    HEADER LANGUAGE SELECTOR
    ========================================= */

@@ -996,7 +996,33 @@ const Auth = {
     }
   },
 
-  logout() {
+  confirmLogout() {
+    const title = (typeof I18n !== 'undefined' && I18n.t) 
+      ? I18n.t('auth.confirm_logout_title', 'Confirm Log Out') 
+      : 'Confirm Log Out';
+    const message = (typeof I18n !== 'undefined' && I18n.t) 
+      ? I18n.t('auth.confirm_logout_msg', 'Are you sure you want to log out of your Aviora Education account? This prevents accidental session loss.') 
+      : 'Are you sure you want to log out of your Aviora Education account? This prevents accidental session loss.';
+    const confirmText = (typeof I18n !== 'undefined' && I18n.t) 
+      ? I18n.t('nav.logout', 'Log Out') 
+      : 'Log Out';
+    const cancelText = (typeof I18n !== 'undefined' && I18n.t) 
+      ? I18n.t('common.cancel', 'Cancel') 
+      : 'Cancel';
+
+    if (typeof showConfirm === 'function') {
+      showConfirm(title, message, () => {
+        this.performLogout();
+      }, {
+        confirmText,
+        cancelText
+      });
+    } else if (window.confirm(message)) {
+      this.performLogout();
+    }
+  },
+
+  performLogout() {
     Storage.clearSession();
     this.currentUser = null;
     this.updateNavUI(null);
@@ -1007,6 +1033,14 @@ const Auth = {
     showToast('You have been securely logged out.', 'info');
     window.location.hash = '#home';
     Router.handleRoute();
+  },
+
+  logout(skipConfirm = false) {
+    if (skipConfirm) {
+      this.performLogout();
+      return;
+    }
+    this.confirmLogout();
   },
 
   updateNavUI(user, unreadCount = 0) {

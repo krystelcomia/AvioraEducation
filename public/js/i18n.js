@@ -96,6 +96,9 @@ const I18N_TRANSLATIONS = {
     'common.no_notifications': 'No new notifications.',
     'common.saving': 'Saving preference...',
     'common.saved': 'Preference saved successfully.',
+    // Auth & Confirmation
+    'auth.confirm_logout_title': 'Confirm Log Out',
+    'auth.confirm_logout_msg': 'Are you sure you want to log out of your Aviora Education account? This prevents accidental session loss.',
 
     // Toasts
     'toast.theme_saved': 'Appearance theme saved and applied across the website.',
@@ -192,6 +195,8 @@ const I18N_TRANSLATIONS = {
     'common.no_notifications': 'No hay nuevas notificaciones.',
     'common.saving': 'Guardando preferencia...',
     'common.saved': 'Preferencia guardada con éxito.',
+    'auth.confirm_logout_title': 'Confirmar Cierre de Sesión',
+    'auth.confirm_logout_msg': '¿Está seguro de que desea cerrar la sesión de su cuenta de Aviora Education? Esto ayuda a prevenir el cierre accidental.',
 
     'toast.theme_saved': 'Tema de apariencia guardado y aplicado en todo el sitio web.',
     'toast.lang_saved': 'Preferencia de idioma guardada y actualizada en todo el sitio web.',
@@ -287,6 +292,8 @@ const I18N_TRANSLATIONS = {
     'common.no_notifications': 'Aucune nouvelle notification.',
     'common.saving': 'Enregistrement des préférences...',
     'common.saved': 'Préférences enregistrées avec succès.',
+    'auth.confirm_logout_title': 'Confirmer la Déconnexion',
+    'auth.confirm_logout_msg': 'Êtes-vous sûr de vouloir vous déconnecter de votre compte Aviora Education ? Cela évite les déconnexions accidentelles.',
 
     'toast.theme_saved': 'Thème d’apparence enregistré et appliqué à tout le site.',
     'toast.lang_saved': 'Langue enregistrée et mise à jour sur tout le site.',
@@ -382,6 +389,8 @@ const I18N_TRANSLATIONS = {
     'common.no_notifications': 'Keine neuen Benachrichtigungen.',
     'common.saving': 'Einstellung wird gespeichert...',
     'common.saved': 'Einstellung erfolgreich gespeichert.',
+    'auth.confirm_logout_title': 'Abmeldung Bestätigen',
+    'auth.confirm_logout_msg': 'Sind Sie sicher, dass Sie sich von Ihrem Aviora Education-Konto abmelden möchten? Dies verhindert versehentliches Abmelden.',
 
     'toast.theme_saved': 'Design gespeichert und auf der gesamten Website angewendet.',
     'toast.lang_saved': 'Sprache gespeichert und überall aktualisiert.',
@@ -477,6 +486,8 @@ const I18N_TRANSLATIONS = {
     'common.no_notifications': '暂无新通知。',
     'common.saving': '正在保存设置...',
     'common.saved': '偏好设置已成功保存。',
+    'auth.confirm_logout_title': '确认登出',
+    'auth.confirm_logout_msg': '您确定要退出您的 Aviora Education 账户吗？这有助于防止误触导致的登出。',
 
     'toast.theme_saved': '外观主题已成功保存并实时应用于全站。',
     'toast.lang_saved': '显示语言已保存并全站更新。',
@@ -572,6 +583,8 @@ const I18N_TRANSLATIONS = {
     'common.no_notifications': '新しい通知はありません。',
     'common.saving': '設定を保存しています...',
     'common.saved': '設定が正常に保存されました。',
+    'auth.confirm_logout_title': 'ログアウトの確認',
+    'auth.confirm_logout_msg': 'Aviora Education アカウントからログアウトしてもよろしいですか？誤操作によるログアウトを防ぐための確認です。',
 
     'toast.theme_saved': '表示テーマが保存され、サイト全体に適用されました。',
     'toast.lang_saved': '言語設定が保存され、サイト全体が更新されました。',
@@ -667,6 +680,8 @@ const I18N_TRANSLATIONS = {
     'common.no_notifications': 'Walang bagong abiso.',
     'common.saving': 'Inise-save ang setting...',
     'common.saved': 'Matagumpay na na-save ang kagustuhan.',
+    'auth.confirm_logout_title': 'Kumpirmahin ang Pag-log Out',
+    'auth.confirm_logout_msg': 'Sigurado ka bang nais mong mag-log out sa iyong Aviora Education account? Pinipigilan nito ang hindi sinasadyang pag-alis.',
 
     'toast.theme_saved': 'Tema ng kulay na-save at inilapat sa buong website.',
     'toast.lang_saved': 'Kagustuhan sa wika na-save at na-update sa buong website.',

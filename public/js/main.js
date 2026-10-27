@@ -33,12 +33,13 @@ function showToast(message, type = 'info') {
 }
 
 // Confirmation Dialog Modal
-function showConfirm(title, message, onConfirm) {
+function showConfirm(title, message, onConfirm, options = {}) {
   const modal = document.getElementById('confirm-modal');
   const titleElem = document.getElementById('confirm-modal-title');
   const msgElem = document.getElementById('confirm-modal-msg');
   const confirmBtn = document.getElementById('confirm-modal-action-btn');
   const cancelBtn = document.getElementById('confirm-modal-cancel-btn');
+  const closeBtn = document.getElementById('confirm-modal-close-btn');
 
   if (!modal) {
     if (confirm(message)) onConfirm();
@@ -47,6 +48,22 @@ function showConfirm(title, message, onConfirm) {
 
   if (titleElem) titleElem.textContent = title;
   if (msgElem) msgElem.textContent = message;
+
+  const defaultConfirmText = (typeof I18n !== 'undefined' && I18n.t) ? I18n.t('common.confirm', 'Confirm') : 'Confirm';
+  const defaultCancelText = (typeof I18n !== 'undefined' && I18n.t) ? I18n.t('common.cancel', 'Cancel') : 'Cancel';
+
+  if (confirmBtn) {
+    confirmBtn.textContent = options.confirmText || defaultConfirmText;
+    if (options.confirmBtnClass) {
+      confirmBtn.className = options.confirmBtnClass;
+    } else {
+      confirmBtn.className = 'btn btn-primary btn-sm';
+    }
+  }
+
+  if (cancelBtn) {
+    cancelBtn.textContent = options.cancelText || defaultCancelText;
+  }
 
   const handleAction = () => {
     modal.classList.remove('active');
@@ -59,15 +76,36 @@ function showConfirm(title, message, onConfirm) {
     modal.classList.remove('active');
     document.body.style.overflow = '';
     cleanup();
+    if (options.onCancel) {
+      options.onCancel();
+    }
+  };
+
+  const handleOverlayClick = (e) => {
+    if (e.target === modal) {
+      handleCancel();
+    }
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Escape') {
+      handleCancel();
+    }
   };
 
   const cleanup = () => {
-    confirmBtn.removeEventListener('click', handleAction);
-    cancelBtn.removeEventListener('click', handleCancel);
+    confirmBtn?.removeEventListener('click', handleAction);
+    cancelBtn?.removeEventListener('click', handleCancel);
+    closeBtn?.removeEventListener('click', handleCancel);
+    modal.removeEventListener('click', handleOverlayClick);
+    document.removeEventListener('keydown', handleKeyDown);
   };
 
-  confirmBtn.addEventListener('click', handleAction);
-  cancelBtn.addEventListener('click', handleCancel);
+  confirmBtn?.addEventListener('click', handleAction);
+  cancelBtn?.addEventListener('click', handleCancel);
+  closeBtn?.addEventListener('click', handleCancel);
+  modal.addEventListener('click', handleOverlayClick);
+  document.addEventListener('keydown', handleKeyDown);
 
   modal.classList.add('active');
   document.body.style.overflow = 'hidden';

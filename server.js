@@ -284,43 +284,13 @@ app.post('/api/auth/register', (req, res) => {
         );
       }
     } else if (designatedRole === 'tutor' || designatedRole === 'teacher') {
-      // Create draft tutor application and profile
-      const defaultSchedule = JSON.stringify({
-        Monday: ['09:00 - 12:00', '14:00 - 17:00'],
-        Tuesday: ['10:00 - 13:00', '15:00 - 18:00'],
-        Wednesday: ['09:00 - 12:00', '14:00 - 17:00'],
-        Thursday: ['13:00 - 18:00'],
-        Friday: ['09:00 - 15:00']
-      });
-
-      db.prepare(`
-        INSERT INTO teacher_applications (
-          user_id, headline, highest_degree, institution, graduation_year,
-          years_experience, subjects, grade_levels, hourly_rate, bio,
-          teaching_philosophy, availability_schedule, status
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')
-      `).run(
-        userId,
-        headline || 'Educator & Subject Specialist',
-        'Bachelor of Science',
-        'University Graduate',
-        2022,
-        2,
-        JSON.stringify(subjects ? subjects.split(',').map(s => s.trim()) : ['Mathematics', 'Science']),
-        JSON.stringify(['High School', 'College / Undergraduate']),
-        45.0,
-        'Passionate educator committed to inspiring students and fostering academic excellence.',
-        'Conceptual understanding followed by deliberate practice creates lasting mastery.',
-        defaultSchedule
-      );
-
-      // Notify admin
+      // Notify admin of new teacher account registration (directed to complete application form)
       const admin = db.prepare("SELECT id FROM users WHERE role = 'admin' LIMIT 1").get();
       if (admin) {
         sendNotification(
           admin.id,
-          'New Teacher Registered',
-          `${name} has registered and submitted an initial tutor application.`,
+          'New Teacher Account Created',
+          `${name} (${cleanEmail}) has created a tutor account and is directed to complete their application.`,
           'application',
           '/#admin'
         );

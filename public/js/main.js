@@ -186,14 +186,14 @@ const Router = {
       }
 
       // If tutor has not submitted their credentials, resume, and diploma yet,
-      // direct them to the short credential form first
+      // direct them to the application form first
       if (hash !== '#teacher-application') {
         if (typeof Teacher !== 'undefined') {
           if (!Teacher.application) {
             await Teacher.ensureTeacherStatus();
           }
-          if (!Teacher.application || !Teacher.application.id) {
-            showToast('Please provide your credentials and upload your resume and diploma to begin exploring the platform.', 'info');
+          if (!Teacher.hasSubmittedApplication()) {
+            showToast('Please complete and submit your application with your resume and diploma first.', 'info');
             window.location.hash = '#teacher-application';
             return;
           }

@@ -161,11 +161,16 @@ const Teacher = {
     return !!(this.application && this.application.status === 'approved');
   },
 
+  hasSubmittedApplication() {
+    return !!(this.application && this.application.resume_file && (this.application.diploma_file || this.application.credentials_file));
+  },
+
   renderStatusBanner(targetContainerId) {
     const bannerContainer = document.getElementById(targetContainerId);
     if (!bannerContainer) return;
 
-    const appStatus = this.application ? this.application.status : 'pending';
+    const hasSubmitted = this.hasSubmittedApplication();
+    const appStatus = this.application ? this.application.status : null;
 
     if (appStatus === 'approved') {
       bannerContainer.innerHTML = '';
@@ -182,8 +187,8 @@ const Teacher = {
           </div>
         </div>
       `;
-    } else {
-      // Pending Admin Approval (Step 4 Documents submitted)
+    } else if (hasSubmitted) {
+      // Pending Admin Approval (Only displayed AFTER application has been submitted!)
       bannerContainer.innerHTML = `
         <div class="app-status-banner pending-dashboard" style="margin-bottom: 1.5rem; background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.35); border-radius: var(--radius-md); padding: 1.25rem; display: flex; gap: 1rem; align-items: flex-start;">
           <div class="status-icon-circle" style="background: rgba(245, 158, 11, 0.18); color: #F59E0B; width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
@@ -206,6 +211,8 @@ const Teacher = {
           </div>
         </div>
       `;
+    } else {
+      bannerContainer.innerHTML = '';
     }
   },
 
@@ -278,10 +285,10 @@ const Teacher = {
   async loadApplicationPage() {
     await this.ensureTeacherStatus();
     const bannerContainer = document.getElementById('teacher-banner-application');
-    const hasApplication = !!(this.application && this.application.id);
+    const hasSubmitted = this.hasSubmittedApplication();
 
     if (bannerContainer) {
-      if (hasApplication) {
+      if (hasSubmitted) {
         bannerContainer.innerHTML = `
           <div class="app-status-banner pending" style="margin-bottom: 1.5rem; background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.35); border-radius: var(--radius-md); padding: 1.25rem; display: flex; gap: 1rem; align-items: flex-start;">
             <div class="status-icon-circle" style="background: rgba(245, 158, 11, 0.18); color: #F59E0B; width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
@@ -299,19 +306,8 @@ const Teacher = {
           </div>
         `;
       } else {
-        bannerContainer.innerHTML = `
-          <div class="app-status-banner pending" style="margin-bottom: 1.5rem; background: rgba(198, 138, 40, 0.08); border: 1px solid rgba(198, 138, 40, 0.35); border-radius: var(--radius-md); padding: 1.25rem; display: flex; gap: 1rem; align-items: flex-start;">
-            <div class="status-icon-circle" style="background: rgba(198, 138, 40, 0.18); color: var(--gold-400); width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-              ${Icons.info(22)}
-            </div>
-            <div class="status-banner-content" style="flex: 1;">
-              <h3 style="color: var(--text-primary); margin: 0; font-size: 1.1rem; font-weight: 700;">Tutor Credential & Document Verification</h3>
-              <p style="color: var(--text-secondary); margin: 0.5rem 0 0 0; font-size: 0.88rem; line-height: 1.5;">
-                Welcome to Aviora Education! Please complete this short credential form and upload both your <strong>Resume (CV)</strong> and <strong>Degree Diploma</strong>. Once this is submitted, you can begin exploring the platform while your application is under review.
-              </p>
-            </div>
-          </div>
-        `;
+        // Status and Proceed to Dashboard button should not yet be displayed; user must first complete the form
+        bannerContainer.innerHTML = '';
       }
     }
 
@@ -319,7 +315,12 @@ const Teacher = {
 
     const proceedBtn = document.getElementById('btn-proceed-dashboard');
     if (proceedBtn) {
-      proceedBtn.style.display = hasApplication ? 'inline-flex' : 'none';
+      proceedBtn.style.display = hasSubmitted ? 'inline-flex' : 'none';
+    }
+
+    const submitBtn = document.getElementById('submit-teacher-app-btn');
+    if (submitBtn) {
+      submitBtn.innerHTML = '<span>Submit Application</span> <span>→</span>';
     }
 
     if (typeof Router !== 'undefined' && Router.updateActiveNav) Router.updateActiveNav();
@@ -1539,7 +1540,7 @@ const Teacher = {
       showToast(err.message, 'error');
     } finally {
       submitBtn.disabled = false;
-      submitBtn.textContent = 'Submit Application for Academic Review';
+      submitBtn.innerHTML = '<span>Submit Application</span> <span>→</span>';
     }
   },
 

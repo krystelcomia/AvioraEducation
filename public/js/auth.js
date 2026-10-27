@@ -747,7 +747,9 @@ const Auth = {
       // If tutor has not submitted credentials and resume/diploma yet, direct to application form
       try {
         const statusData = await API.getTeacherStatus();
-        if (!statusData || !statusData.application) {
+        const app = statusData?.application;
+        const hasSubmitted = !!(app && app.resume_file && (app.diploma_file || app.credentials_file));
+        if (!hasSubmitted) {
           window.location.hash = '#teacher-application';
         } else {
           window.location.hash = '#teacher-dashboard';

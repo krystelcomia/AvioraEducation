@@ -274,23 +274,50 @@ const Teacher = {
   async loadApplicationPage() {
     await this.ensureTeacherStatus();
     const bannerContainer = document.getElementById('teacher-banner-application');
+    const hasApplication = !!(this.application && this.application.id);
+
     if (bannerContainer) {
-      bannerContainer.innerHTML = `
-        <div class="app-status-banner pending" style="margin-bottom: 1.5rem;">
-          <div class="status-icon-circle">${Icons.hourglass(18)}</div>
-          <div class="status-banner-content">
-            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
-              <h3 style="color: var(--text-primary); margin: 0;">Step 4: Resume & Diploma Verification</h3>
-              <button class="btn btn-secondary btn-sm" onclick="Teacher.proceedToDashboard()">Proceed to Dashboard (View Mode) →</button>
+      if (hasApplication) {
+        bannerContainer.innerHTML = `
+          <div class="app-status-banner pending" style="margin-bottom: 1.5rem; background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.35); border-radius: var(--radius-md); padding: 1.25rem; display: flex; gap: 1rem; align-items: flex-start;">
+            <div class="status-icon-circle" style="background: rgba(245, 158, 11, 0.18); color: #F59E0B; width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+              ${Icons.hourglass(22)}
             </div>
-            <p style="color: var(--text-secondary); margin-top: 0.4rem;">
-              Applicants are required to upload both a resume and a diploma. Once submitted, these documents will undergo review, and you will be notified once a schedule for your virtual interview is set.
-            </p>
+            <div class="status-banner-content" style="flex: 1;">
+              <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
+                <h3 style="color: var(--text-primary); margin: 0; font-size: 1.1rem; font-weight: 700;">Application Under Review • Virtual Interview Pending</h3>
+                <button class="btn btn-secondary btn-sm" onclick="Teacher.proceedToDashboard()">Proceed to Dashboard (View Mode) →</button>
+              </div>
+              <p style="color: var(--text-secondary); margin: 0.5rem 0 0 0; font-size: 0.88rem; line-height: 1.5;">
+                Your submitted resume and diploma are currently undergoing review by the Academic Board. You will be notified once a schedule for your virtual interview is set. You may update your credentials below or explore the platform.
+              </p>
+            </div>
           </div>
-        </div>
-      `;
+        `;
+      } else {
+        bannerContainer.innerHTML = `
+          <div class="app-status-banner pending" style="margin-bottom: 1.5rem; background: rgba(198, 138, 40, 0.08); border: 1px solid rgba(198, 138, 40, 0.35); border-radius: var(--radius-md); padding: 1.25rem; display: flex; gap: 1rem; align-items: flex-start;">
+            <div class="status-icon-circle" style="background: rgba(198, 138, 40, 0.18); color: var(--gold-400); width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+              ${Icons.info(22)}
+            </div>
+            <div class="status-banner-content" style="flex: 1;">
+              <h3 style="color: var(--text-primary); margin: 0; font-size: 1.1rem; font-weight: 700;">Tutor Credential & Document Verification</h3>
+              <p style="color: var(--text-secondary); margin: 0.5rem 0 0 0; font-size: 0.88rem; line-height: 1.5;">
+                Welcome to Aviora Education! Please complete this short credential form and upload both your <strong>Resume (CV)</strong> and <strong>Degree Diploma</strong>. Once this is submitted, you can begin exploring the platform while your application is under review.
+              </p>
+            </div>
+          </div>
+        `;
+      }
     }
+
     this.populateApplicationForm();
+
+    const proceedBtn = document.getElementById('btn-proceed-dashboard');
+    if (proceedBtn) {
+      proceedBtn.style.display = hasApplication ? 'inline-flex' : 'none';
+    }
+
     if (typeof Router !== 'undefined' && Router.updateActiveNav) Router.updateActiveNav();
   },
 
@@ -1459,8 +1486,12 @@ const Teacher = {
       submitBtn.textContent = 'Uploading & Submitting...';
 
       const res = await API.submitTeacherApplication(formData);
-      showToast(res.message || 'Application submitted! Your documents are undergoing review and you will be notified once an interview schedule is set.', 'success');
+      showToast('Application submitted! Your documents are undergoing review and you will be notified once a virtual interview schedule is set. You can now explore the platform.', 'success');
+      
+      // Update application state
+      await this.ensureTeacherStatus();
       this.viewingDashboard = true;
+
       window.location.hash = '#teacher-dashboard';
       await this.loadDashboardPage();
       window.scrollTo(0, 0);

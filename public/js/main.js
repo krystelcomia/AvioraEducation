@@ -184,6 +184,21 @@ const Router = {
         showToast('You are currently signed in as ' + user.role + '. Please switch to an educator account.', 'warning');
         return;
       }
+
+      // If tutor has not submitted their credentials, resume, and diploma yet,
+      // direct them to the short credential form first
+      if (hash !== '#teacher-application') {
+        if (typeof Teacher !== 'undefined') {
+          if (!Teacher.application) {
+            await Teacher.ensureTeacherStatus();
+          }
+          if (!Teacher.application || !Teacher.application.id) {
+            showToast('Please provide your credentials and upload your resume and diploma to begin exploring the platform.', 'info');
+            window.location.hash = '#teacher-application';
+            return;
+          }
+        }
+      }
     }
 
     if (hash === '#admin-portal') {

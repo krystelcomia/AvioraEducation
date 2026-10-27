@@ -742,12 +742,24 @@ const Auth = {
     // 3. Default smart dashboard redirect
     if (user.role === 'admin') {
       window.location.hash = '#admin-portal';
+      Router.handleRoute();
     } else if (user.role === 'teacher' || user.role === 'tutor') {
-      window.location.hash = '#teacher-dashboard';
+      // If tutor has not submitted credentials and resume/diploma yet, direct to application form
+      try {
+        const statusData = await API.getTeacherStatus();
+        if (!statusData || !statusData.application) {
+          window.location.hash = '#teacher-application';
+        } else {
+          window.location.hash = '#teacher-dashboard';
+        }
+      } catch (e) {
+        window.location.hash = '#teacher-application';
+      }
+      Router.handleRoute();
     } else {
       window.location.hash = '#student-portal';
+      Router.handleRoute();
     }
-    Router.handleRoute();
   },
 
   openModal(tab = 'login', role = 'student') {
@@ -1008,9 +1020,17 @@ const Auth = {
 
       this.closeModal();
       this.updateNavUI(res.user);
-      showToast(`Account created successfully! Welcome to Aviora, ${res.user.name}.`, 'success');
-
-      this.handlePostAuthRedirect(res.user);
+      
+      if (res.user.role === 'teacher' || res.user.role === 'tutor') {
+        showToast(`Account created successfully! Welcome to Aviora, ${res.user.name}. Please provide your credentials and upload your resume and diploma.`, 'success');
+        window.location.hash = '#teacher-application';
+        if (typeof Router !== 'undefined' && Router.handleRoute) {
+          Router.handleRoute();
+        }
+      } else {
+        showToast(`Account created successfully! Welcome to Aviora, ${res.user.name}.`, 'success');
+        this.handlePostAuthRedirect(res.user);
+      }
     } catch (err) {
       showToast(err.message, 'error');
     } finally {

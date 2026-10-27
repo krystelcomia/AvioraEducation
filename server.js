@@ -1941,7 +1941,9 @@ app.get('/api/tutors', (req, res) => {
         tp.availability_schedule
       FROM tutor_profiles tp
       JOIN users u ON tp.user_id = u.id
+      LEFT JOIN teacher_applications ta ON ta.user_id = tp.user_id
       WHERE tp.is_active = 1 AND u.status = 'active'
+        AND (ta.status = 'approved' OR ta.id IS NULL)
     `;
 
     const params = [];
@@ -2025,7 +2027,9 @@ app.get('/api/tutors/:id', (req, res) => {
         u.email
       FROM tutor_profiles tp
       JOIN users u ON tp.user_id = u.id
+      LEFT JOIN teacher_applications ta ON ta.user_id = tp.user_id
       WHERE tp.id = ? AND tp.is_active = 1 AND u.status = 'active'
+        AND (ta.status = 'approved' OR ta.id IS NULL)
     `).get(tutorId);
 
     if (!tutor) {
@@ -2037,7 +2041,9 @@ app.get('/api/tutors/:id', (req, res) => {
           u.email
         FROM tutor_profiles tp
         JOIN users u ON tp.user_id = u.id
+        LEFT JOIN teacher_applications ta ON ta.user_id = tp.user_id
         WHERE tp.user_id = ? AND tp.is_active = 1 AND u.status = 'active'
+          AND (ta.status = 'approved' OR ta.id IS NULL)
       `).get(tutorId);
     }
 
@@ -4150,12 +4156,14 @@ app.get('/api/buddy/sessions', authenticateToken, (req, res) => {
       LIMIT 15
     `).all(userId);
 
-    // List of active tutors
+    // List of active tutors (only approved / verified)
     const tutors = db.prepare(`
       SELECT u.id, u.name, u.avatar_url, tp.hourly_rate, tp.headline, tp.subjects
       FROM users u
       JOIN tutor_profiles tp ON u.id = tp.user_id
+      LEFT JOIN teacher_applications ta ON ta.user_id = tp.user_id
       WHERE (u.role = 'teacher' OR u.role = 'tutor') AND tp.is_active = 1
+        AND (ta.status = 'approved' OR ta.id IS NULL)
     `).all();
 
     res.json({

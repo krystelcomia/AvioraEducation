@@ -797,18 +797,18 @@ const Auth = {
       window.location.hash = '#admin-portal';
       Router.handleRoute();
     } else if (user.role === 'teacher' || user.role === 'tutor') {
-      // If tutor has not submitted credentials and resume/diploma yet, direct to application form
+      // If tutor has not submitted an application yet, direct to application form; otherwise go to dashboard
       try {
         const statusData = await API.getTeacherStatus();
         const app = statusData?.application;
-        const hasSubmitted = !!(app && app.resume_file && (app.diploma_file || app.credentials_file));
+        const hasSubmitted = !!(app && (app.status || app.id || app.resume_file));
         if (!hasSubmitted) {
           window.location.hash = '#teacher-application';
         } else {
           window.location.hash = '#teacher-dashboard';
         }
       } catch (e) {
-        window.location.hash = '#teacher-application';
+        window.location.hash = '#teacher-dashboard';
       }
       Router.handleRoute();
     } else {

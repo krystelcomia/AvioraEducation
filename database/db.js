@@ -1022,6 +1022,7 @@ function ensureJoshuaAccount(customPassword) {
         INSERT INTO teacher_applications (
           user_id, headline, highest_degree, institution, graduation_year,
           years_experience, subjects, grade_levels, hourly_rate, bio, teaching_philosophy,
+          resume_file, resume_filename, diploma_file, diploma_filename, credentials_file, credentials_filename,
           status, interview_status
         ) VALUES (
           ?, 'Mathematics & Calculus Specialist', 'Bachelor of Science in Education',
@@ -1029,9 +1030,24 @@ function ensureJoshuaAccount(customPassword) {
           ?, 45.0,
           'Dedicated mathematics educator passionate about guiding students through algebra, geometry, and calculus with interactive problem solving.',
           'Inspiring student curiosity through real-world applications and intuitive conceptual frameworks.',
+          'credential_verified_sample.pdf', 'Joshua_Garcia_Resume.pdf',
+          'applicant_diploma.pdf', 'UC_Berkeley_Diploma.pdf',
+          'credential_verified_sample.pdf', 'Joshua_Garcia_Resume.pdf',
           'pending', 'pending'
         )
       `).run(userId, JSON.stringify(['Mathematics', 'Algebra', 'Calculus']), JSON.stringify(['Grade 9-12', 'College Prep']));
+    } else {
+      db.prepare(`
+        UPDATE teacher_applications
+        SET resume_file = COALESCE(resume_file, 'credential_verified_sample.pdf'),
+            resume_filename = COALESCE(resume_filename, 'Joshua_Garcia_Resume.pdf'),
+            diploma_file = COALESCE(diploma_file, 'applicant_diploma.pdf'),
+            diploma_filename = COALESCE(diploma_filename, 'UC_Berkeley_Diploma.pdf'),
+            credentials_file = COALESCE(credentials_file, 'credential_verified_sample.pdf'),
+            credentials_filename = COALESCE(credentials_filename, 'Joshua_Garcia_Resume.pdf'),
+            status = 'pending'
+        WHERE user_id = ?
+      `).run(userId);
     }
 
     // 2. Ensure tutor profile

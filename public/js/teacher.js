@@ -30,95 +30,25 @@ const Teacher = {
   viewingDashboard: false,
   classFilter: 'all',
   taskFilter: 'all',
+  initialApplicationFormHtml: null,
+  showEditApplicationForm: false,
   uploadValidation: {
     resume: { valid: null, checking: false, error: null, warning: null },
     diploma: { valid: null, checking: false, error: null, warning: null }
   },
 
   async init() {
+    const appSection = document.getElementById('teacher-application-section');
+    if (appSection && !this.initialApplicationFormHtml) {
+      this.initialApplicationFormHtml = appSection.innerHTML;
+    }
     this.setupEventListeners();
     const hash = window.location.hash || '#teacher-portal';
     await this.loadTeacherView(hash);
   },
 
   setupEventListeners() {
-    // Teacher application form submission
-    const appForm = document.getElementById('teacher-application-form');
-    if (appForm) {
-      appForm.addEventListener('submit', (e) => this.handleApplicationSubmit(e));
-    }
-
-    // 1. Resume file upload change & drag-drop
-    const resumeInput = document.getElementById('resume-file-input');
-    const resumeBadge = document.getElementById('resume-file-badge');
-    const resumeZone = document.getElementById('resume-upload-zone');
-    const resumeFeedback = document.getElementById('resume-feedback-box');
-    if (resumeInput && resumeBadge) {
-      resumeInput.addEventListener('change', (e) => {
-        if (e.target.files.length > 0) {
-          const file = e.target.files[0];
-          resumeBadge.style.display = 'inline-flex';
-          resumeBadge.innerHTML = `${Icons.paperclip(14)} ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`;
-          this.validateUploadedFile(file, 'resume');
-        } else {
-          resumeBadge.style.display = 'none';
-          if (resumeFeedback) resumeFeedback.style.display = 'none';
-          if (resumeZone) resumeZone.style.borderColor = '';
-          this.uploadValidation.resume = { valid: null, checking: false, error: null, warning: null };
-        }
-      });
-    }
-    if (resumeZone && resumeInput) {
-      resumeZone.addEventListener('click', (e) => {
-        if (e.target !== resumeInput) resumeInput.click();
-      });
-      resumeZone.addEventListener('dragover', (e) => { e.preventDefault(); resumeZone.classList.add('dragover'); });
-      resumeZone.addEventListener('dragleave', () => resumeZone.classList.remove('dragover'));
-      resumeZone.addEventListener('drop', (e) => {
-        e.preventDefault();
-        resumeZone.classList.remove('dragover');
-        if (e.dataTransfer.files.length > 0) {
-          resumeInput.files = e.dataTransfer.files;
-          resumeInput.dispatchEvent(new Event('change'));
-        }
-      });
-    }
-
-    // 2. Diploma file upload change & drag-drop
-    const diplomaInput = document.getElementById('diploma-file-input');
-    const diplomaBadge = document.getElementById('diploma-file-badge');
-    const diplomaZone = document.getElementById('diploma-upload-zone');
-    const diplomaFeedback = document.getElementById('diploma-feedback-box');
-    if (diplomaInput && diplomaBadge) {
-      diplomaInput.addEventListener('change', (e) => {
-        if (e.target.files.length > 0) {
-          const file = e.target.files[0];
-          diplomaBadge.style.display = 'inline-flex';
-          diplomaBadge.innerHTML = `${Icons.paperclip(14)} ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`;
-          this.validateUploadedFile(file, 'diploma');
-        } else {
-          diplomaBadge.style.display = 'none';
-          if (diplomaFeedback) diplomaFeedback.style.display = 'none';
-          if (diplomaZone) diplomaZone.style.borderColor = '';
-          this.uploadValidation.diploma = { valid: null, checking: false, error: null, warning: null };
-        }
-      });
-    }
-    if (diplomaZone && diplomaInput) {
-      diplomaZone.addEventListener('click', (e) => {
-        if (e.target !== diplomaInput) diplomaInput.click();
-      });
-      diplomaZone.addEventListener('dragover', (e) => { e.preventDefault(); diplomaZone.classList.add('dragover'); });
-      diplomaZone.addEventListener('dragleave', () => diplomaZone.classList.remove('dragover'));
-      diplomaZone.addEventListener('drop', (e) => {
-        e.preventDefault();
-        diplomaZone.classList.remove('dragover');
-        if (e.dataTransfer.files.length > 0) {
-          diplomaInput.files = e.dataTransfer.files;
-          diplomaInput.dispatchEvent(new Event('change'));
-        }
-      });
-    }
+    this.setupApplicationFormListeners();
 
     // Teacher profile settings form submit
     const profileForm = document.getElementById('teacher-profile-settings-form');
@@ -143,6 +73,86 @@ const Teacher = {
         });
       }
     });
+  },
+
+  setupApplicationFormListeners() {
+    // Teacher application form submission
+    const appForm = document.getElementById('teacher-application-form');
+    if (appForm) {
+      appForm.onsubmit = (e) => this.handleApplicationSubmit(e);
+    }
+
+    // 1. Resume file upload change & drag-drop
+    const resumeInput = document.getElementById('resume-file-input');
+    const resumeBadge = document.getElementById('resume-file-badge');
+    const resumeZone = document.getElementById('resume-upload-zone');
+    const resumeFeedback = document.getElementById('resume-feedback-box');
+    if (resumeInput && resumeBadge) {
+      resumeInput.onchange = (e) => {
+        if (e.target.files.length > 0) {
+          const file = e.target.files[0];
+          resumeBadge.style.display = 'inline-flex';
+          resumeBadge.innerHTML = `${Icons.paperclip(14)} ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`;
+          this.validateUploadedFile(file, 'resume');
+        } else {
+          resumeBadge.style.display = 'none';
+          if (resumeFeedback) resumeFeedback.style.display = 'none';
+          if (resumeZone) resumeZone.style.borderColor = '';
+          this.uploadValidation.resume = { valid: null, checking: false, error: null, warning: null };
+        }
+      };
+    }
+    if (resumeZone && resumeInput) {
+      resumeZone.onclick = (e) => {
+        if (e.target !== resumeInput) resumeInput.click();
+      };
+      resumeZone.ondragover = (e) => { e.preventDefault(); resumeZone.classList.add('dragover'); };
+      resumeZone.ondragleave = () => resumeZone.classList.remove('dragover');
+      resumeZone.ondrop = (e) => {
+        e.preventDefault();
+        resumeZone.classList.remove('dragover');
+        if (e.dataTransfer.files.length > 0) {
+          resumeInput.files = e.dataTransfer.files;
+          resumeInput.dispatchEvent(new Event('change'));
+        }
+      };
+    }
+
+    // 2. Diploma file upload change & drag-drop
+    const diplomaInput = document.getElementById('diploma-file-input');
+    const diplomaBadge = document.getElementById('diploma-file-badge');
+    const diplomaZone = document.getElementById('diploma-upload-zone');
+    const diplomaFeedback = document.getElementById('diploma-feedback-box');
+    if (diplomaInput && diplomaBadge) {
+      diplomaInput.onchange = (e) => {
+        if (e.target.files.length > 0) {
+          const file = e.target.files[0];
+          diplomaBadge.style.display = 'inline-flex';
+          diplomaBadge.innerHTML = `${Icons.paperclip(14)} ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`;
+          this.validateUploadedFile(file, 'diploma');
+        } else {
+          diplomaBadge.style.display = 'none';
+          if (diplomaFeedback) diplomaFeedback.style.display = 'none';
+          if (diplomaZone) diplomaZone.style.borderColor = '';
+          this.uploadValidation.diploma = { valid: null, checking: false, error: null, warning: null };
+        }
+      };
+    }
+    if (diplomaZone && diplomaInput) {
+      diplomaZone.onclick = (e) => {
+        if (e.target !== diplomaInput) diplomaInput.click();
+      };
+      diplomaZone.ondragover = (e) => { e.preventDefault(); diplomaZone.classList.add('dragover'); };
+      diplomaZone.ondragleave = () => diplomaZone.classList.remove('dragover');
+      diplomaZone.ondrop = (e) => {
+        e.preventDefault();
+        diplomaZone.classList.remove('dragover');
+        if (e.dataTransfer.files.length > 0) {
+          diplomaInput.files = e.dataTransfer.files;
+          diplomaInput.dispatchEvent(new Event('change'));
+        }
+      };
+    }
   },
 
   // Modal open & close helpers
@@ -185,7 +195,11 @@ const Teacher = {
   },
 
   hasSubmittedApplication() {
-    return !!(this.application && this.application.resume_file && (this.application.diploma_file || this.application.credentials_file));
+    if (!this.application) return false;
+    if (this.application.status === 'approved' || this.application.status === 'pending' || this.application.status === 'rejected') {
+      return true;
+    }
+    return !!(this.application.id || this.application.resume_file || this.application.diploma_file || this.application.credentials_file);
   },
 
   // Application stage for the tutor: not_submitted -> under_review -> interview -> approved (or rejected)
@@ -422,48 +436,259 @@ const Teacher = {
   },
 
   // 6. Dedicated Application Page
+  // 6. Dedicated Application Page
   async loadApplicationPage() {
     await this.ensureTeacherStatus();
+    const appSection = document.getElementById('teacher-application-section');
     const bannerContainer = document.getElementById('teacher-banner-application');
+    if (bannerContainer) bannerContainer.innerHTML = '';
+
+    if (!this.initialApplicationFormHtml && appSection) {
+      this.initialApplicationFormHtml = appSection.innerHTML;
+    }
+
     const hasSubmitted = this.hasSubmittedApplication();
 
-    if (bannerContainer) {
-      if (hasSubmitted) {
-        bannerContainer.innerHTML = `
-          <div class="app-status-banner pending" style="margin-bottom: 1.5rem; background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.35); border-radius: var(--radius-md); padding: 1.25rem; display: flex; gap: 1rem; align-items: flex-start;">
-            <div class="status-icon-circle" style="background: rgba(245, 158, 11, 0.18); color: #F59E0B; width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-              ${Icons.hourglass(22)}
+    if (hasSubmitted && !this.showEditApplicationForm) {
+      this.renderApplicationUnderReviewView();
+    } else {
+      if (appSection && this.initialApplicationFormHtml) {
+        appSection.innerHTML = this.initialApplicationFormHtml;
+        this.setupApplicationFormListeners();
+        this.populateApplicationForm();
+
+        const proceedBtn = document.getElementById('btn-proceed-dashboard');
+        if (proceedBtn) {
+          proceedBtn.style.display = hasSubmitted ? 'inline-flex' : 'none';
+        }
+
+        const submitBtn = document.getElementById('submit-teacher-app-btn');
+        if (submitBtn) {
+          submitBtn.innerHTML = '<span>' + (hasSubmitted ? 'Update Submitted Documents' : 'Submit Application') + '</span> <span>→</span>';
+        }
+
+        if (this.showEditApplicationForm) {
+          const banner = document.createElement('div');
+          banner.style.cssText = 'margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center; background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.35); padding: 0.85rem 1.25rem; border-radius: var(--radius-md);';
+          banner.innerHTML = `
+            <div style="font-size: 0.9rem; color: var(--text-primary);">
+              <strong>Updating Application Credentials:</strong> You can update qualifications or replace documents.
             </div>
-            <div class="status-banner-content" style="flex: 1;">
-              <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
-                <h3 style="color: var(--text-primary); margin: 0; font-size: 1.1rem; font-weight: 700;">Application Under Review • Virtual Interview Pending</h3>
-                <button class="btn btn-secondary btn-sm" onclick="Teacher.proceedToDashboard()">Proceed to Dashboard (View Mode) →</button>
-              </div>
-              <p style="color: var(--text-secondary); margin: 0.5rem 0 0 0; font-size: 0.88rem; line-height: 1.5;">
-                Your submitted resume and diploma are currently undergoing review by the Academic Board. You will be notified once a schedule for your virtual interview is set. You may update your credentials below or explore the platform.
-              </p>
-            </div>
-          </div>
-        `;
-      } else {
-        // Status and Proceed to Dashboard button should not yet be displayed; user must first complete the form
-        bannerContainer.innerHTML = '';
+            <button type="button" class="btn btn-secondary btn-sm" onclick="Teacher.toggleEditApplication()">
+              ← Back to Review Status
+            </button>
+          `;
+          appSection.insertBefore(banner, appSection.firstChild);
+        }
       }
     }
 
-    this.populateApplicationForm();
-
-    const proceedBtn = document.getElementById('btn-proceed-dashboard');
-    if (proceedBtn) {
-      proceedBtn.style.display = hasSubmitted ? 'inline-flex' : 'none';
-    }
-
-    const submitBtn = document.getElementById('submit-teacher-app-btn');
-    if (submitBtn) {
-      submitBtn.innerHTML = '<span>Submit Application</span> <span>→</span>';
-    }
-
     if (typeof Router !== 'undefined' && Router.updateActiveNav) Router.updateActiveNav();
+  },
+
+  renderApplicationUnderReviewView() {
+    const appSection = document.getElementById('teacher-application-section');
+    if (!appSection) return;
+
+    const app = this.application || {};
+    const user = (typeof Auth !== 'undefined' && Auth.currentUser) ? Auth.currentUser : {};
+    const applicantName = user.name || app.name || 'Joshua Garcia';
+    const isInterview = app.interview_status === 'scheduled';
+    const accent = isInterview ? '#3B82F6' : '#F59E0B';
+    const accentBg = isInterview ? 'rgba(59, 130, 246, 0.08)' : 'rgba(245, 158, 11, 0.08)';
+    const accentBorder = isInterview ? 'rgba(59, 130, 246, 0.35)' : 'rgba(245, 158, 11, 0.35)';
+
+    const interviewNotice = isInterview
+      ? `Virtual interview is scheduled for <strong>${this.formatInterviewDate(app.interview_scheduled_at)}</strong>. Please check your notification bell in the top header for instructions.`
+      : `Your submitted credentials and academic qualifications are undergoing review by the Academic Board. You will be notified once a schedule for your virtual interview is set.`;
+
+    const subjectsArr = Array.isArray(app.subjects) ? app.subjects : (typeof app.subjects === 'string' ? app.subjects.split(',').map(s => s.trim()).filter(Boolean) : ['Mathematics', 'Algebra', 'Calculus']);
+    const subjectsBadges = subjectsArr.map(s => `<span class="badge-gold" style="font-size: 0.8rem; margin-right: 0.35rem; margin-bottom: 0.35rem; display: inline-block;">${s}</span>`).join('');
+
+    appSection.innerHTML = `
+      <div style="text-align: center; margin-bottom: 2rem;">
+        <span class="badge-gold" style="font-size: 0.8rem; padding: 0.35rem 0.85rem;">EDUCATOR ACCREDITATION • UNDER REVIEW</span>
+        <h2 style="font-size: 1.85rem; color: var(--text-primary); margin-top: 0.65rem; font-weight: 800;">
+          Application Under Review
+        </h2>
+        <p style="font-size: 0.95rem; color: var(--text-secondary); max-width: 680px; margin: 0.5rem auto 0; line-height: 1.6;">
+          Your tutor application is currently under review by the Academic Board. <strong style="color: var(--text-primary);">There is no need to re-apply or fill out the form again.</strong> You can explore and view everything within your account while the review is underway.
+        </p>
+      </div>
+
+      <!-- Main Status Card -->
+      <div style="background: ${accentBg}; border: 1.5px solid ${accentBorder}; border-radius: var(--radius-lg, 16px); padding: 1.75rem; margin-bottom: 2rem;">
+        <div style="display: flex; gap: 1.25rem; align-items: flex-start; flex-wrap: wrap;">
+          <div style="width: 48px; height: 48px; border-radius: 50%; background: ${isInterview ? 'rgba(59, 130, 246, 0.2)' : 'rgba(245, 158, 11, 0.2)'}; color: ${accent}; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+            ${isInterview ? Icons.calendar(24) : Icons.hourglass(24)}
+          </div>
+          <div style="flex: 1; min-width: 260px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+              <span style="font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; color: var(--text-secondary);">
+                Applicant: ${applicantName} • Application ID: #${app.id || 'APP-2026'}
+              </span>
+              <span class="status-pill pending" style="font-size: 0.8rem; background: ${accentBg}; color: ${accent}; border: 1px solid ${accentBorder};">
+                ● ${isInterview ? 'Virtual Interview Scheduled' : 'Status: Under Review'}
+              </span>
+            </div>
+            <h3 style="color: var(--text-primary); font-size: 1.25rem; margin: 0.4rem 0 0.25rem; font-weight: 800;">
+              ${isInterview ? 'Interview Scheduled • Pending Board Confirmation' : 'Credentials Under Review • No Further Action Needed'}
+            </h3>
+            <p style="color: var(--text-secondary); font-size: 0.9rem; line-height: 1.6; margin: 0.4rem 0 0;">
+              ${interviewNotice}
+            </p>
+          </div>
+        </div>
+
+        <!-- 3-Step Verification Pipeline -->
+        <div style="margin-top: 1.5rem; padding-top: 1.25rem; border-top: 1px solid ${accentBorder};">
+          <div style="font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-secondary); margin-bottom: 0.85rem;">
+            Accreditation Progress
+          </div>
+          <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+            <!-- Step 1 -->
+            <div style="display: flex; align-items: center; gap: 0.5rem; flex: 1; min-width: 170px;">
+              <span style="width: 26px; height: 26px; border-radius: 50%; background: #10B981; color: #fff; display: inline-flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 700;">✓</span>
+              <div>
+                <div style="font-size: 0.82rem; font-weight: 700; color: var(--text-primary);">1. Application Submitted</div>
+                <div style="font-size: 0.72rem; color: #10B981; font-weight: 600;">Completed</div>
+              </div>
+              <span style="flex: 1; height: 2px; min-width: 12px; background: #10B981; margin: 0 0.25rem;"></span>
+            </div>
+
+            <!-- Step 2 -->
+            <div style="display: flex; align-items: center; gap: 0.5rem; flex: 1; min-width: 170px;">
+              <span style="width: 26px; height: 26px; border-radius: 50%; background: ${isInterview ? '#3B82F6' : '#F59E0B'}; color: #fff; display: inline-flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 700;">${isInterview ? '✓' : '2'}</span>
+              <div>
+                <div style="font-size: 0.82rem; font-weight: 700; color: var(--text-primary);">2. Virtual Interview</div>
+                <div style="font-size: 0.72rem; color: ${accent}; font-weight: 600;">${isInterview ? 'Interview Scheduled' : 'Pending Scheduling'}</div>
+              </div>
+              <span style="flex: 1; height: 2px; min-width: 12px; background: ${isInterview ? '#3B82F6' : 'rgba(0,0,0,0.1)'}; margin: 0 0.25rem;"></span>
+            </div>
+
+            <!-- Step 3 -->
+            <div style="display: flex; align-items: center; gap: 0.5rem; flex: 0 0 auto;">
+              <span style="width: 26px; height: 26px; border-radius: 50%; background: rgba(0,0,0,0.12); color: var(--text-secondary); display: inline-flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 700;">3</span>
+              <div>
+                <div style="font-size: 0.82rem; font-weight: 600; color: var(--text-secondary);">3. Final Approval</div>
+                <div style="font-size: 0.72rem; color: var(--text-secondary);">Unlocks operations</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Operational Lock Notice Box -->
+        <div style="margin-top: 1.25rem; background: rgba(0,0,0,0.05); border-left: 3px solid ${accent}; padding: 0.75rem 1rem; border-radius: 0 var(--radius-sm) var(--radius-sm) 0; font-size: 0.84rem; color: var(--text-primary); line-height: 1.55;">
+          <strong>🔒 Operational Lock Notice:</strong> While your application is under review, you can freely view and explore everything within your account (Dashboard, Classes, Students, Schedule, and Aviora Buddy). Operational actions (conducting live sessions, assigning tasks, and accepting student bookings) remain locked until your application is approved following your virtual interview.
+        </div>
+      </div>
+
+      <!-- Submitted Information Overview (Read-Only) -->
+      <div style="background: var(--bg-surface); border: 1px solid var(--border-light); border-radius: var(--radius-lg, 16px); padding: 1.75rem; margin-bottom: 2rem; box-shadow: var(--shadow-sm);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; padding-bottom: 0.75rem; border-bottom: 1px solid var(--border-light);">
+          <div>
+            <h3 style="font-size: 1.15rem; color: var(--text-primary); margin: 0; font-weight: 700;">Submitted Qualifications &amp; Credentials</h3>
+            <p style="font-size: 0.82rem; color: var(--text-secondary); margin: 0.2rem 0 0;">These credentials were recorded upon application submission and are under review.</p>
+          </div>
+          <span class="badge-gold" style="font-size: 0.75rem;">Verified on File</span>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.25rem;">
+          <div>
+            <div style="font-size: 0.76rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase;">Professional Headline</div>
+            <div style="font-size: 0.95rem; font-weight: 600; color: var(--text-primary); margin-top: 0.25rem;">
+              ${app.headline || 'Mathematics & Calculus Specialist'}
+            </div>
+          </div>
+
+          <div>
+            <div style="font-size: 0.76rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase;">Academic Degree &amp; University</div>
+            <div style="font-size: 0.95rem; font-weight: 600; color: var(--text-primary); margin-top: 0.25rem;">
+              ${app.highest_degree || 'Bachelor of Science in Education'}
+              <span style="font-size: 0.85rem; color: var(--text-secondary); font-weight: normal;">• ${app.institution || 'University of California, Berkeley'} (${app.graduation_year || 2021})</span>
+            </div>
+          </div>
+
+          <div>
+            <div style="font-size: 0.76rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase;">Tutoring Experience</div>
+            <div style="font-size: 0.95rem; font-weight: 600; color: var(--text-primary); margin-top: 0.25rem;">
+              ${app.years_experience || 3} Years Teaching / Tutoring Experience
+            </div>
+          </div>
+
+          <div>
+            <div style="font-size: 0.76rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase;">Preferred Hourly Rate</div>
+            <div style="font-size: 0.95rem; font-weight: 700; color: var(--gold-600); margin-top: 0.25rem;">
+              $${Number(app.hourly_rate || 45).toFixed(2)} USD / hr
+            </div>
+          </div>
+
+          <div style="grid-column: 1 / -1;">
+            <div style="font-size: 0.76rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 0.35rem;">Subjects Taught</div>
+            <div>${subjectsBadges}</div>
+          </div>
+
+          <div style="grid-column: 1 / -1; display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1rem; margin-top: 0.5rem; padding-top: 1rem; border-top: 1px solid var(--border-light);">
+            <div style="background: rgba(16, 185, 129, 0.05); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: var(--radius-md); padding: 0.85rem 1rem; display: flex; align-items: center; gap: 0.75rem;">
+              <span style="font-size: 1.35rem;">📄</span>
+              <div style="flex: 1; min-width: 0;">
+                <div style="font-size: 0.78rem; font-weight: 700; color: #10B981; text-transform: uppercase;">1. Applicant Resume / CV</div>
+                <div style="font-size: 0.85rem; font-weight: 600; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                  ${app.resume_filename || 'Joshua_Garcia_Resume.pdf'}
+                </div>
+              </div>
+              <span style="color: #10B981; font-weight: 700; font-size: 0.78rem;">✓ Submitted</span>
+            </div>
+
+            <div style="background: rgba(16, 185, 129, 0.05); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: var(--radius-md); padding: 0.85rem 1rem; display: flex; align-items: center; gap: 0.75rem;">
+              <span style="font-size: 1.35rem;">📜</span>
+              <div style="flex: 1; min-width: 0;">
+                <div style="font-size: 0.78rem; font-weight: 700; color: #10B981; text-transform: uppercase;">2. Degree Diploma</div>
+                <div style="font-size: 0.85rem; font-weight: 600; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                  ${app.diploma_filename || 'UC_Berkeley_Diploma.pdf'}
+                </div>
+              </div>
+              <span style="color: #10B981; font-weight: 700; font-size: 0.78rem;">✓ Submitted</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Platform Navigation Links (Explore everything in view mode) -->
+      <div style="background: var(--bg-surface); border: 1px solid var(--border-light); border-radius: var(--radius-lg, 16px); padding: 1.75rem; text-align: center;">
+        <h3 style="font-size: 1.15rem; color: var(--text-primary); margin: 0 0 0.35rem; font-weight: 700;">
+          Explore Your Account Sections (View Mode)
+        </h3>
+        <p style="font-size: 0.88rem; color: var(--text-secondary); max-width: 600px; margin: 0 auto 1.5rem; line-height: 1.55;">
+          You can view everything within your account right now. Check your dashboard metrics, see your scheduled timetable calendar, inspect classes, or explore Aviora Buddy cohorts.
+        </p>
+
+        <div style="display: flex; gap: 0.75rem; justify-content: center; align-items: center; flex-wrap: wrap;">
+          <button type="button" class="btn btn-primary" onclick="Teacher.proceedToDashboard()">
+            Explore Dashboard →
+          </button>
+          <button type="button" class="btn btn-outline-gold" onclick="window.location.hash='#teacher-classes';">
+            View Classes
+          </button>
+          <button type="button" class="btn btn-outline-gold" onclick="window.location.hash='#teacher-students';">
+            View Students
+          </button>
+          <button type="button" class="btn btn-outline-gold" onclick="window.location.hash='#teacher-schedule';">
+            View Schedule Calendar
+          </button>
+          <button type="button" class="btn btn-outline-gold" onclick="window.location.hash='#teacher-buddy';">
+            View Aviora Buddy
+          </button>
+        </div>
+
+        <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--border-light); font-size: 0.82rem; color: var(--text-secondary);">
+          <span>Need to modify or replace your submitted credentials? </span>
+          <button type="button" class="btn btn-link" style="font-size: 0.82rem; color: var(--gold-600); text-decoration: underline; background: none; border: none; cursor: pointer; padding: 0;" onclick="Teacher.toggleEditApplication()">
+            Update Submitted Documents
+          </button>
+        </div>
+      </div>
+    `;
   },
 
   // Backward compatibility alias for any existing caller
@@ -1909,10 +2134,17 @@ const Teacher = {
   proceedToDashboard() {
     this.viewingDashboard = true;
     window.location.hash = '#teacher-dashboard';
+    if (typeof Router !== 'undefined' && Router.handleRoute) {
+      Router.handleRoute();
+    }
   },
 
   toggleEditApplication() {
+    this.showEditApplicationForm = !this.showEditApplicationForm;
     window.location.hash = '#teacher-application';
+    if (typeof Router !== 'undefined' && Router.handleRoute) {
+      Router.handleRoute();
+    }
   },
 
   async validateUploadedFile(file, expectedType) {
@@ -2189,6 +2421,10 @@ const Teacher = {
 
   async handleProfileSettingsSubmit(e) {
     e.preventDefault();
+    if (!this.isApproved()) {
+      showToast('Operational Lock: Updating public profile rates unlocks once your account has been approved by the Administrator following your virtual interview.', 'warning');
+      return;
+    }
     const headline = document.getElementById('t-profile-headline').value.trim();
     const hourly_rate = parseFloat(document.getElementById('t-profile-rate').value);
     const bio = document.getElementById('t-profile-bio').value.trim();

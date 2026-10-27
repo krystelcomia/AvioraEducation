@@ -1762,11 +1762,22 @@
                 <div class="form-group">
                   <label class="form-label" for="page-reg-grade" style="color: var(--charcoal-900); font-weight: 700;">Grade / Educational Level</label>
                   <select id="page-reg-grade" class="form-control">
+                    <option value="Kindergarten">Kindergarten</option>
+                    <option value="Grade 1 - Elementary School">Grade 1 - Elementary School</option>
+                    <option value="Grade 2 - Elementary School">Grade 2 - Elementary School</option>
+                    <option value="Grade 3 - Elementary School">Grade 3 - Elementary School</option>
+                    <option value="Grade 4 - Elementary School">Grade 4 - Elementary School</option>
+                    <option value="Grade 5 - Elementary School">Grade 5 - Elementary School</option>
+                    <option value="Grade 6 - Elementary School">Grade 6 - Elementary School</option>
+                    <option value="Grade 7 - Middle School">Grade 7 - Middle School</option>
+                    <option value="Grade 8 - Middle School">Grade 8 - Middle School</option>
                     <option value="Grade 9 - High School">Grade 9 - High School</option>
                     <option value="Grade 10 - High School">Grade 10 - High School</option>
                     <option value="Grade 11 - High School" selected>Grade 11 - High School</option>
                     <option value="Grade 12 - High School">Grade 12 - High School</option>
-                    <option value="Undergraduate / Collegiate">Undergraduate / Collegiate</option>
+                    <option value="College / Undergraduate">College / Undergraduate</option>
+                    <option value="Graduate / Postgraduate">Graduate / Postgraduate</option>
+                    <option value="Language Learner (Language Learning Only)">Language Learner (Language Learning Only)</option>
                   </select>
                 </div>
               </div>
@@ -1853,10 +1864,13 @@
             <div>
               <select id="tutor-grade-filter" class="form-control">
                 <option value="all" hidden selected>All Grade Levels</option>
+                <option value="Elementary School">Elementary School</option>
                 <option value="Middle School">Middle School</option>
                 <option value="High School">High School</option>
                 <option value="College">College / Undergraduate</option>
+                <option value="Graduate">Graduate / Postgraduate</option>
                 <option value="Advanced Placement">Advanced Placement (AP)</option>
+                <option value="Language">Language Learning</option>
               </select>
             </div>
 
@@ -2439,14 +2453,22 @@
                 <div class="form-group" style="margin-bottom: 0;">
                   <label class="form-label" style="font-weight: 700; font-size: 0.82rem;">Current Grade Level</label>
                   <select id="profile-grade" class="form-control">
+                    <option value="Kindergarten">Kindergarten</option>
+                    <option value="Grade 1 - Elementary School">Grade 1 - Elementary School</option>
+                    <option value="Grade 2 - Elementary School">Grade 2 - Elementary School</option>
+                    <option value="Grade 3 - Elementary School">Grade 3 - Elementary School</option>
+                    <option value="Grade 4 - Elementary School">Grade 4 - Elementary School</option>
+                    <option value="Grade 5 - Elementary School">Grade 5 - Elementary School</option>
+                    <option value="Grade 6 - Elementary School">Grade 6 - Elementary School</option>
+                    <option value="Grade 7 - Middle School">Grade 7 - Middle School</option>
+                    <option value="Grade 8 - Middle School">Grade 8 - Middle School</option>
                     <option value="Grade 9 - High School">Grade 9 - High School</option>
                     <option value="Grade 10 - High School">Grade 10 - High School</option>
                     <option value="Grade 11 - High School">Grade 11 - High School</option>
                     <option value="Grade 12 - High School">Grade 12 - High School</option>
-                    <option value="College Freshman">College Freshman</option>
-                    <option value="College Sophomore">College Sophomore</option>
-                    <option value="College Junior / Senior">College Junior / Senior</option>
-                    <option value="Graduate / Pre-Med">Graduate / Pre-Med</option>
+                    <option value="College / Undergraduate">College / Undergraduate</option>
+                    <option value="Graduate / Postgraduate">Graduate / Postgraduate</option>
+                    <option value="Language Learner (Language Learning Only)">Language Learner (Language Learning Only)</option>
                   </select>
                 </div>
               </div>
@@ -3699,6 +3721,9 @@
                 <label class="form-label">Grade Levels Taught</label>
                 <div style="display: flex; gap: 1.5rem; flex-wrap: wrap; margin-top: 0.5rem;">
                   <label style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; color: var(--charcoal-200); cursor: pointer;">
+                    <input type="checkbox" name="grade_levels" value="Elementary School" /> Elementary School
+                  </label>
+                  <label style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; color: var(--charcoal-200); cursor: pointer;">
                     <input type="checkbox" name="grade_levels" value="Middle School" checked /> Middle School
                   </label>
                   <label style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; color: var(--charcoal-200); cursor: pointer;">
@@ -3708,7 +3733,10 @@
                     <input type="checkbox" name="grade_levels" value="College / Undergraduate" checked /> College / Undergraduate
                   </label>
                   <label style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; color: var(--charcoal-200); cursor: pointer;">
-                    <input type="checkbox" name="grade_levels" value="Graduate / Pre-Med" /> Graduate / Pre-Med
+                    <input type="checkbox" name="grade_levels" value="Graduate / Postgraduate" /> Graduate / Postgraduate
+                  </label>
+                  <label style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; color: var(--charcoal-200); cursor: pointer;">
+                    <input type="checkbox" name="grade_levels" value="Language Learning" /> Language Learning
                   </label>
                 </div>
               </div>
@@ -4401,11 +4429,22 @@
                 <div class="form-group">
                   <label class="form-label">Grade Level</label>
                   <select id="reg-student-grade" class="form-control">
+                    <option value="Kindergarten">Kindergarten</option>
+                    <option value="Grade 1 - Elementary School">Grade 1 - Elementary School</option>
+                    <option value="Grade 2 - Elementary School">Grade 2 - Elementary School</option>
+                    <option value="Grade 3 - Elementary School">Grade 3 - Elementary School</option>
+                    <option value="Grade 4 - Elementary School">Grade 4 - Elementary School</option>
+                    <option value="Grade 5 - Elementary School">Grade 5 - Elementary School</option>
+                    <option value="Grade 6 - Elementary School">Grade 6 - Elementary School</option>
+                    <option value="Grade 7 - Middle School">Grade 7 - Middle School</option>
+                    <option value="Grade 8 - Middle School">Grade 8 - Middle School</option>
                     <option value="Grade 9 - High School">Grade 9 - High School</option>
                     <option value="Grade 10 - High School">Grade 10 - High School</option>
                     <option value="Grade 11 - High School" selected>Grade 11 - High School</option>
                     <option value="Grade 12 - High School">Grade 12 - High School</option>
-                    <option value="College Undergraduate">College Undergraduate</option>
+                    <option value="College / Undergraduate">College / Undergraduate</option>
+                    <option value="Graduate / Postgraduate">Graduate / Postgraduate</option>
+                    <option value="Language Learner (Language Learning Only)">Language Learner (Language Learning Only)</option>
                   </select>
                 </div>
                 <div class="form-group">

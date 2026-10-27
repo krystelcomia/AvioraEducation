@@ -494,7 +494,7 @@ function seedData() {
       gradYear: 2016,
       years: 9,
       subjects: ['French (Beginner to Fluent)', 'AP French Language', 'Conversational French', 'DELF/DALF Prep'],
-      gradeLevels: ['All Levels', 'High School', 'Adult Learners'],
+      gradeLevels: ['All Levels', 'High School', 'Adult Learners', 'Language Learning'],
       rate: 44,
       rating: 4.92,
       reviewsCount: 22,

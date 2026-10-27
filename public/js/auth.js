@@ -702,7 +702,7 @@ const Auth = {
     }
   },
 
-  handlePostAuthRedirect(user) {
+  async handlePostAuthRedirect(user) {
     if (!user) return;
 
     // 1. Check for pending subscription purchase intent
@@ -1079,10 +1079,6 @@ const Auth = {
       I18n.applyLanguage('en-US', false);
     }
 
-    // Hide/remove language selector for logged-out view
-    const langPicker = document.getElementById('nav-lang-picker-wrap');
-    if (langPicker) langPicker.style.display = 'none';
-
     this.updateNavUI(null);
     this.updateLinkedAccountBadges();
 
@@ -1107,11 +1103,8 @@ const Auth = {
     const guestActions = document.getElementById('nav-guest-actions');
     const userActions = document.getElementById('nav-user-actions');
     const mainNavLinks = document.getElementById('main-nav-links');
-    const langPicker = document.getElementById('nav-lang-picker-wrap');
 
     if (user) {
-      // Show language switching option for logged-in user
-      if (langPicker) langPicker.style.display = 'block';
       if (guestActions) guestActions.style.display = 'none';
       if (userActions) {
         userActions.style.display = 'flex';
@@ -1196,8 +1189,6 @@ const Auth = {
         }
       }
     } else {
-      // Disable / remove language-switching option for logged-out users
-      if (langPicker) langPicker.style.display = 'none';
       // Default theme is ALWAYS light mode when no user is logged in
       document.documentElement.removeAttribute('data-theme');
       if (guestActions) guestActions.style.display = 'flex';

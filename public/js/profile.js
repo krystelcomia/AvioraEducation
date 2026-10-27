@@ -44,8 +44,7 @@ const Profile = {
       document.documentElement.removeAttribute('data-theme');
       localStorage.removeItem('aviora_theme');
       document.documentElement.removeAttribute('data-font-size');
-      const langPicker = document.getElementById('nav-lang-picker-wrap');
-      if (langPicker) langPicker.style.display = 'none';
+
       return;
     }
 
@@ -162,8 +161,6 @@ const Profile = {
     const activeLang = lang || 'en-US';
     const langSelect = document.getElementById('profile-language-select');
     if (langSelect) langSelect.value = activeLang;
-    const headerLangSelect = document.getElementById('header-language-select');
-    if (headerLangSelect) headerLangSelect.value = activeLang;
 
     localStorage.setItem(`aviora_language_${u.id}`, activeLang);
     localStorage.removeItem('aviora_language');
@@ -368,13 +365,6 @@ const Profile = {
     const langSelect = document.getElementById('profile-language-select');
     if (langSelect) {
       langSelect.addEventListener('change', (e) => {
-        this.applyLanguage(e.target.value);
-      });
-    }
-
-    const headerLangSelect = document.getElementById('header-language-select');
-    if (headerLangSelect) {
-      headerLangSelect.addEventListener('change', (e) => {
         this.applyLanguage(e.target.value);
       });
     }

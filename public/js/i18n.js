@@ -1880,12 +1880,6 @@ const I18n = {
       }
     } catch (e) {}
 
-    // Show or hide header language selector depending on login status
-    const langPicker = document.getElementById('nav-lang-picker-wrap');
-    if (langPicker) {
-      langPicker.style.display = (user && user.id) ? 'block' : 'none';
-    }
-
     this.applyLanguage(saved, false);
     this.setupObserver();
   },
@@ -1994,8 +1988,7 @@ const I18n = {
           if (node.parentNode.classList && (
             node.parentNode.classList.contains('no-translate') ||
             node.parentNode.classList.contains('skiptranslate') ||
-            node.parentNode.id === 'header-language-select' ||
-            node.parentNode.id === 'profile-language-select'
+                        node.parentNode.id === 'profile-language-select'
           )) {
             return NodeFilter.FILTER_REJECT;
           }
@@ -2071,26 +2064,27 @@ const I18n = {
   },
 
   applyLanguage(lang, dispatchEvent = true) {
-    const cleanLang = this.normalizeLanguage(lang);
+    let user = null;
+    try {
+      user = (typeof Storage !== 'undefined' && Storage.getUser) ? Storage.getUser() : null;
+    } catch (e) {}
+
+    // Default language is ALWAYS English unless a logged-in user has set a preference in settings
+    const cleanLang = (user && user.id) ? this.normalizeLanguage(lang) : 'en-US';
     this.currentLanguage = cleanLang;
     document.documentElement.setAttribute('lang', cleanLang);
 
-    // Keep dropdown selectors in sync
-    const headerLangSelect = document.getElementById('header-language-select');
-    if (headerLangSelect && headerLangSelect.value !== cleanLang) {
-      headerLangSelect.value = cleanLang;
-    }
+    // Keep profile settings dropdown in sync
     const profileLangSelect = document.getElementById('profile-language-select');
     if (profileLangSelect && profileLangSelect.value !== cleanLang) {
       profileLangSelect.value = cleanLang;
     }
 
     try {
-      const user = (typeof Storage !== 'undefined' && Storage.getUser) ? Storage.getUser() : null;
       if (user && user.id) {
         localStorage.setItem(`aviora_language_${user.id}`, cleanLang);
       }
-      localStorage.setItem('aviora_language', cleanLang);
+      localStorage.removeItem('aviora_language');
     } catch (e) {}
 
     // Translate DOM elements marked with data-i18n

@@ -90,6 +90,7 @@ const Auth = {
     this.setupEventListeners();
     this.setupPasswordStrengthCheckers();
     this.setupSocialAuth();
+    this.ensurePersistentAccounts();
     if (window.location.hash.startsWith('#auth-success')) {
       await this.handleOAuthCallbackHash();
       return;
@@ -157,6 +158,58 @@ const Auth = {
         I18n.applyLanguage(prefs.language);
       }
     }
+  },
+
+  // ==========================================
+  // PERMANENT CREATED ACCOUNTS PERSISTENCE
+  // ==========================================
+
+  ensurePersistentAccounts() {
+    this.saveCreatedAccount({
+      name: 'Joshua Garcia',
+      email: 'joshuagarcia@gmail.com',
+      password: 'Joshua123_',
+      role: 'teacher',
+      phone: '+1 (555) 234-5678',
+      headline: 'Mathematics & Calculus Specialist',
+      subjects: 'Mathematics, Algebra, Calculus'
+    });
+  },
+
+  saveCreatedAccount(account) {
+    if (!account || !account.email) return;
+    try {
+      const accounts = this.getCreatedAccounts();
+      const email = account.email.toLowerCase().trim();
+      accounts[email] = {
+        name: account.name || 'Aviora Member',
+        email,
+        password: account.password,
+        role: account.role || 'student',
+        phone: account.phone || null,
+        grade_level: account.grade_level,
+        school: account.school,
+        headline: account.headline,
+        subjects: account.subjects,
+        created_at: accounts[email]?.created_at || new Date().toISOString()
+      };
+      localStorage.setItem('aviora_created_accounts', JSON.stringify(accounts));
+    } catch (e) {}
+  },
+
+  getCreatedAccounts() {
+    try {
+      const raw = localStorage.getItem('aviora_created_accounts');
+      return raw ? JSON.parse(raw) : {};
+    } catch (e) {
+      return {};
+    }
+  },
+
+  getSavedCreatedAccount(email) {
+    if (!email) return null;
+    const accounts = this.getCreatedAccounts();
+    return accounts[email.toLowerCase().trim()] || null;
   },
 
   setupEventListeners() {
@@ -933,7 +986,36 @@ const Auth = {
       submitBtn.disabled = true;
       submitBtn.textContent = 'Authenticating...';
 
-      const res = await API.login({ email, password });
+      let res;
+      try {
+        res = await API.login({ email, password });
+      } catch (loginErr) {
+        // Fallback: If login failed, check if account was registered in browser or is a permanent account
+        const savedAccount = this.getSavedCreatedAccount(email);
+        const isJoshua = email.toLowerCase().trim() === 'joshuagarcia@gmail.com' && (password === 'Joshua123_' || password === 'Joshua123._');
+        const isKrystel = email.toLowerCase().trim() === 'comiakrystel65@gmail.com' && (password === 'Krystel123._' || password === 'Krystel123_');
+
+        if (savedAccount || isJoshua || isKrystel) {
+          try {
+            res = await API.syncAccount({
+              name: (savedAccount && savedAccount.name) || (isJoshua ? 'Joshua Garcia' : 'Krystel Comia'),
+              email: email.toLowerCase().trim(),
+              password: password,
+              role: (savedAccount && savedAccount.role) || (isJoshua ? 'teacher' : 'student'),
+              phone: savedAccount?.phone || null,
+              grade_level: savedAccount?.grade_level,
+              school: savedAccount?.school,
+              headline: savedAccount?.headline,
+              subjects: savedAccount?.subjects
+            });
+          } catch (syncErr) {
+            throw loginErr;
+          }
+        } else {
+          throw loginErr;
+        }
+      }
+
       Storage.setToken(res.token);
       Storage.setUser(res.user);
       this.currentUser = res.user;
@@ -1011,6 +1093,9 @@ const Auth = {
     try {
       submitBtn.disabled = true;
       submitBtn.textContent = 'Creating Account...';
+
+      // Always save created account to persistent local store
+      this.saveCreatedAccount(payload);
 
       const res = await API.register(payload);
       Storage.setToken(res.token);

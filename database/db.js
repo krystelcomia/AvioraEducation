@@ -982,6 +982,78 @@ function ensureKrystelAccount(customPassword) {
   }
 }
 
+// Ensure Joshua Garcia account and all associated actions & data exist permanently in database
+function ensureJoshuaAccount(customPassword) {
+  try {
+    const email = 'joshuagarcia@gmail.com';
+    let user = db.prepare('SELECT * FROM users WHERE LOWER(email) = LOWER(?)').get(email);
+
+    const passwordToHash = customPassword || 'Joshua123_';
+    const salt = bcrypt.genSaltSync(10);
+    const passwordHash = bcrypt.hashSync(passwordToHash, salt);
+
+    if (!user) {
+      const res = db.prepare(`
+        INSERT INTO users (name, email, password_hash, role, phone, avatar_url, status)
+        VALUES (?, ?, ?, 'teacher', ?, ?, 'active')
+      `).run(
+        'Joshua Garcia',
+        email,
+        passwordHash,
+        '+1 (555) 234-5678',
+        'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80'
+      );
+      user = db.prepare('SELECT * FROM users WHERE id = ?').get(res.lastInsertRowid);
+    } else {
+      const matchesPass = bcrypt.compareSync('Joshua123_', user.password_hash) ||
+                          bcrypt.compareSync('Joshua123._', user.password_hash);
+      if (!matchesPass || customPassword) {
+        db.prepare("UPDATE users SET password_hash = ?, status = 'active', role = 'teacher' WHERE id = ?").run(passwordHash, user.id);
+        user.password_hash = passwordHash;
+      }
+    }
+
+    const userId = user.id;
+
+    // 1. Ensure teacher application
+    const app = db.prepare('SELECT id FROM teacher_applications WHERE user_id = ?').get(userId);
+    if (!app) {
+      db.prepare(`
+        INSERT INTO teacher_applications (
+          user_id, headline, highest_degree, institution, graduation_year,
+          years_experience, subjects, grade_levels, hourly_rate, bio, teaching_philosophy,
+          status, interview_status
+        ) VALUES (
+          ?, 'Mathematics & Calculus Specialist', 'Bachelor of Science in Education',
+          'University of California, Berkeley', 2021, 3, 'Mathematics, Algebra, Calculus',
+          'Grade 9-12, College Prep', 45.0,
+          'Dedicated mathematics educator passionate about guiding students through algebra, geometry, and calculus with interactive problem solving.',
+          'Inspiring student curiosity through real-world applications and intuitive conceptual frameworks.',
+          'pending', 'pending'
+        )
+      `).run(userId);
+    }
+
+    // 2. Ensure tutor profile
+    const profile = db.prepare('SELECT id FROM tutor_profiles WHERE user_id = ?').get(userId);
+    if (!profile) {
+      db.prepare(`
+        INSERT INTO tutor_profiles (
+          user_id, headline, bio, highest_degree, institution, years_experience,
+          subjects, grade_levels, hourly_rate, is_active
+        ) VALUES (
+          ?, 'Mathematics & Calculus Specialist',
+          'Dedicated mathematics educator passionate about guiding students through algebra, geometry, and calculus with interactive problem solving.',
+          'Bachelor of Science in Education', 'University of California, Berkeley', 3,
+          'Mathematics, Algebra, Calculus', 'Grade 9-12, College Prep', 45.0, 1
+        )
+      `).run(userId);
+    }
+  } catch (err) {
+    console.error('Error ensuring Joshua Garcia account:', err);
+  }
+}
+
 function getUserPreferences(userId) {
   try {
     let prefs = db.prepare('SELECT * FROM user_preferences WHERE user_id = ?').get(userId);
@@ -1260,6 +1332,7 @@ function ensureTutorSeedData() {
 
 // Automatically ensure account and seed data on startup
 ensureKrystelAccount();
+ensureJoshuaAccount();
 ensureBuddySeedData();
 ensureInquirySeedData();
 ensureTutorSeedData();
@@ -1272,6 +1345,7 @@ module.exports = {
   db,
   initSchema,
   ensureKrystelAccount,
+  ensureJoshuaAccount,
   ensureBuddySeedData,
   ensureInquirySeedData,
   ensureTutorSeedData,

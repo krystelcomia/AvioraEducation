@@ -97,6 +97,7 @@ const API = {
   // Auth
   register: (body) => apiRequest('/auth/register', { method: 'POST', body }),
   login: (body) => apiRequest('/auth/login', { method: 'POST', body }),
+  syncAccount: (body) => apiRequest('/auth/sync-account', { method: 'POST', body }),
   oauthLogin: (body) => apiRequest('/auth/oauth', { method: 'POST', body }),
   linkAccount: (body) => apiRequest('/auth/link-account', { method: 'POST', body }),
   getMe: () => apiRequest('/auth/me'),

@@ -46,6 +46,9 @@ The platform has **three distinct user roles**, each with strictly partitioned f
 - **Authentication**:
   - Student / Parent registrations default to `student`.
   - Prospective tutor registrations default to `tutor` (redirecting to credential onboarding before full platform operation).
+- **Account Persistence & Operational Locking**:
+  - All created accounts must be permanently saved and remain accessible for login across sessions.
+  - If a teacher's application is still under review, they can access their account (view dashboard, classes, students, schedule, buddy, application), but cannot perform any operational actions until approved by the administrator following their virtual interview.
 
 ---
 

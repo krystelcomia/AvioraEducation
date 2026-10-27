@@ -3582,6 +3582,11 @@ app.post('/api/teacher/requests/:id/status', authenticateToken, requireRole('tea
       return res.status(400).json({ error: 'Invalid status update.' });
     }
 
+    const appRecord = db.prepare('SELECT status FROM teacher_applications WHERE user_id = ?').get(teacherId);
+    if (!appRecord || appRecord.status !== 'approved') {
+      return res.status(403).json({ error: 'Your account is currently under review. Responding to tutoring requests will unlock once approved by the administrator following your virtual interview.' });
+    }
+
     const request = db.prepare('SELECT * FROM tutoring_requests WHERE id = ? AND tutor_id = ?').get(requestId, teacherId);
     if (!request) {
       return res.status(404).json({ error: 'Request not found.' });
@@ -3754,6 +3759,13 @@ app.post('/api/sessions/:id/room/open', authenticateToken, (req, res) => {
 
     if (userId !== request.tutor_id && userRole !== 'admin') {
       return res.status(403).json({ error: 'Only the assigned tutor can open the virtual room to start the class.' });
+    }
+
+    if (userRole !== 'admin') {
+      const appRecord = db.prepare('SELECT status FROM teacher_applications WHERE user_id = ?').get(userId);
+      if (!appRecord || appRecord.status !== 'approved') {
+        return res.status(403).json({ error: 'Your account is currently under review. Virtual classroom operations will unlock once approved by the administrator following your virtual interview.' });
+      }
     }
 
     if (request.status !== 'accepted') {

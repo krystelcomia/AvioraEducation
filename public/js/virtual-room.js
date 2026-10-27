@@ -67,6 +67,10 @@ const VirtualRoom = {
    * Tutor opens room directly
    */
   async openRoomAsTutor(sessionId) {
+    if (typeof Teacher !== 'undefined' && Teacher.isApproved && !Teacher.isApproved()) {
+      showToast('Account Under Review: Launching live virtual classroom sessions is locked until your tutor account is approved by an administrator.', 'warning');
+      return;
+    }
     try {
       const res = await API.openRoom(sessionId);
       showToast(res.message || 'Virtual room opened! Class is now live.', 'success');

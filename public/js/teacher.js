@@ -157,6 +157,10 @@ const Teacher = {
     }
   },
 
+  isApproved() {
+    return !!(this.application && this.application.status === 'approved');
+  },
+
   renderStatusBanner(targetContainerId) {
     const bannerContainer = document.getElementById(targetContainerId);
     if (!bannerContainer) return;
@@ -540,19 +544,19 @@ const Teacher = {
         </td>
         <td style="text-align: right;">
           <div style="display: flex; gap: 0.4rem; justify-content: flex-end; align-items: center;">
-            ${r.status === 'pending' ? `
+            ${!this.isApproved() ? `
+              <span class="badge" style="background: rgba(245, 158, 11, 0.15); color: #D97706; font-size: 0.75rem; padding: 0.35rem 0.65rem; border-radius: 4px;" title="Operations locked while application is under review">🔒 Locked (Under Review)</span>
+            ` : r.status === 'pending' ? `
               <button class="btn btn-primary btn-sm" onclick="Teacher.updateStatus(${r.id}, 'accepted')">Accept</button>
               <button class="btn btn-secondary btn-sm" onclick="Teacher.updateStatus(${r.id}, 'declined')">Decline</button>
-            ` : ''}
-            ${r.status === 'accepted' ? `
+            ` : r.status === 'accepted' ? `
               ${r.room_status === 'open' ? `
                 <button class="btn btn-primary btn-sm" onclick="VirtualRoom.joinRoom(${r.id}, 'tutor')" style="background: #10B981; border-color: #10B981;">${Icons.video(14)} Enter Room (Live)</button>
               ` : `
                 <button class="btn btn-primary btn-sm" onclick="VirtualRoom.openRoomAsTutor(${r.id})">${Icons.video(14)} Open Room</button>
               `}
               <button class="btn btn-outline-gold btn-sm" onclick="Teacher.updateStatus(${r.id}, 'completed')">Mark Done</button>
-            ` : ''}
-            ${r.status === 'completed' ? `
+            ` : r.status === 'completed' ? `
               <span style="font-size: 0.8rem; color: #10B981; font-weight: 600;">✓ Completed</span>
             ` : ''}
           </div>
@@ -562,6 +566,10 @@ const Teacher = {
   },
 
   async updateStatus(requestId, status) {
+    if (!this.isApproved()) {
+      showToast('Account Under Review: Responding to tutoring requests is locked until your application is approved by the Administrator following your virtual interview.', 'warning');
+      return;
+    }
     let note = '';
     if (status === 'declined') {
       note = prompt('Please specify a brief reason for declining (e.g. Schedule conflict):', 'Scheduling conflict on this date.');
@@ -689,7 +697,11 @@ const Teacher = {
 
           <!-- Action Launch Pad -->
           <div class="class-card-actions">
-            ${isLive ? `
+            ${!this.isApproved() ? `
+              <button type="button" class="btn btn-secondary btn-sm" style="flex: 1; opacity: 0.7; cursor: not-allowed;" disabled title="Classroom operations locked while application is under review">
+                🔒 Operations Locked (Under Review)
+              </button>
+            ` : isLive ? `
               <button type="button" class="btn btn-primary btn-sm btn-vroom-live-pulse" style="flex: 1; justify-content: center; background: #10B981; border-color: #10B981; font-weight: 700;" onclick="VirtualRoom.joinRoom(${c.id}, 'tutor')">
                 🚀 Enter Live Classroom
               </button>
@@ -702,7 +714,7 @@ const Teacher = {
               <button type="button" class="btn btn-secondary btn-sm" onclick="Teacher.updateStatus(${c.id}, 'declined')">Decline</button>
             ` : ''}
 
-            ${isAccepted ? `
+            ${this.isApproved() && isAccepted ? `
               <button type="button" class="btn btn-secondary btn-sm" title="Mark session as completed" onclick="Teacher.updateStatus(${c.id}, 'completed')">
                 Done
               </button>
@@ -721,6 +733,10 @@ const Teacher = {
   },
 
   async launchClassSession(sessionId) {
+    if (!this.isApproved()) {
+      showToast('Operational Lock: Live virtual class operations unlock once your account has been approved by the Administrator following your virtual interview.', 'warning');
+      return;
+    }
     try {
       await VirtualRoom.openRoomAsTutor(sessionId);
       await this.loadClasses();
@@ -767,6 +783,10 @@ const Teacher = {
   },
 
   async handleInstantClassSubmit() {
+    if (!this.isApproved()) {
+      showToast('Operational Lock: Live virtual class operations unlock once your account has been approved by the Administrator following your virtual interview.', 'warning');
+      return;
+    }
     const studentId = document.getElementById('instant-class-student-id').value;
     const subject = document.getElementById('instant-class-subject').value.trim();
     const notes = document.getElementById('instant-class-notes').value.trim();
@@ -881,12 +901,18 @@ const Teacher = {
 
           <!-- Actions -->
           <div class="student-card-actions">
-            <button type="button" class="btn btn-primary btn-sm" style="flex: 1; justify-content: center;" onclick="Teacher.openAssignTaskModal(${s.student_id})">
-              + Assign Task
-            </button>
-            <button type="button" class="btn btn-secondary btn-sm" onclick="Teacher.openInstantClassModal(${s.student_id})" title="Launch Instant Class">
-              🚀 Class
-            </button>
+            ${!this.isApproved() ? `
+              <button type="button" class="btn btn-secondary btn-sm" style="flex: 1; opacity: 0.7; cursor: not-allowed;" disabled title="Coursework operations locked while application is under review">
+                🔒 Operations Locked (Under Review)
+              </button>
+            ` : `
+              <button type="button" class="btn btn-primary btn-sm" style="flex: 1; justify-content: center;" onclick="Teacher.openAssignTaskModal(${s.student_id})">
+                + Assign Task
+              </button>
+              <button type="button" class="btn btn-secondary btn-sm" onclick="Teacher.openInstantClassModal(${s.student_id})" title="Launch Instant Class">
+                🚀 Class
+              </button>
+            `}
           </div>
         </div>
       `;
@@ -1008,7 +1034,11 @@ const Teacher = {
           </div>
 
           <div class="task-card-footer">
-            ${isSubmitted ? `
+            ${!this.isApproved() ? `
+              <span style="font-size: 0.8rem; color: #D97706; font-weight: 600;">
+                🔒 Coursework grading locked while application is under review.
+              </span>
+            ` : isSubmitted ? `
               <button type="button" class="btn btn-primary btn-sm" onclick="Teacher.openGradeTaskModal(${task.id})">
                 ⭐ Grade Submission & Give Feedback
               </button>
@@ -1072,6 +1102,10 @@ const Teacher = {
   },
 
   async handleAssignTaskSubmit() {
+    if (!this.isApproved()) {
+      showToast('Operational Lock: Assigning coursework tasks unlocks once your tutor account has been approved by the Administrator.', 'warning');
+      return;
+    }
     const studentId = document.getElementById('assign-task-student-id').value;
     const subject = document.getElementById('assign-task-subject').value.trim();
     const dueDate = document.getElementById('assign-task-due-date').value;
@@ -1155,6 +1189,10 @@ const Teacher = {
   },
 
   async handleGradeTaskSubmit() {
+    if (!this.isApproved()) {
+      showToast('Operational Lock: Grading operations unlock once your tutor account has been approved by the Administrator.', 'warning');
+      return;
+    }
     const taskId = document.getElementById('grade-task-id').value;
     const grade = document.getElementById('grade-task-grade-input').value.trim();
     const feedback = document.getElementById('grade-task-feedback-input').value.trim();
@@ -1300,7 +1338,9 @@ const Teacher = {
               <div>${Icons.clock(14)} ${apt.requested_time}</div>
             </div>
             <div>
-              ${apt.room_status === 'open' ? `
+              ${!this.isApproved() ? `
+                <span class="badge" style="background: rgba(245, 158, 11, 0.15); color: #D97706; font-size: 0.75rem; padding: 0.3rem 0.6rem; border-radius: 4px;" title="Operations locked while application is under review">🔒 Locked</span>
+              ` : apt.room_status === 'open' ? `
                 <button class="btn btn-primary btn-sm" onclick="VirtualRoom.joinRoom(${apt.id}, 'tutor')" style="background: #10B981; border-color: #10B981;">Enter (Live)</button>
               ` : `
                 <button class="btn btn-secondary btn-sm" onclick="VirtualRoom.openRoomAsTutor(${apt.id})">Open Room</button>

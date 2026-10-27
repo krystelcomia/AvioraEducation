@@ -100,6 +100,9 @@ const Auth = {
   async restoreSession() {
     const token = Storage.getToken();
     if (!token) {
+      // Default theme is ALWAYS light mode for non-authenticated guests
+      document.documentElement.removeAttribute('data-theme');
+      try { localStorage.removeItem('aviora_theme'); } catch(e){}
       this.updateNavUI(null);
       return;
     }
@@ -110,27 +113,47 @@ const Auth = {
       Storage.setUser(data.user);
       if (data.preferences) {
         this.syncUserPreferences(data.preferences);
+      } else {
+        const userTheme = localStorage.getItem('aviora_theme_' + data.user.id);
+        if (userTheme === 'dark') {
+          document.documentElement.setAttribute('data-theme', 'dark');
+        } else {
+          document.documentElement.removeAttribute('data-theme');
+        }
       }
       this.updateNavUI(data.user, data.unreadNotifications);
     } catch (err) {
       console.warn('Session restore failed:', err.message);
       Storage.clearSession();
       this.currentUser = null;
+      document.documentElement.removeAttribute('data-theme');
+      try { localStorage.removeItem('aviora_theme'); } catch(e){}
       this.updateNavUI(null);
     }
   },
 
   syncUserPreferences(prefs) {
-    if (!prefs) return;
+    if (!this.currentUser) {
+      document.documentElement.removeAttribute('data-theme');
+      return;
+    }
+    const uid = this.currentUser.id;
     if (typeof Profile !== 'undefined' && Profile.syncAllPreferences) {
       Profile.syncAllPreferences(prefs, false);
     } else {
-      if (prefs.theme) {
-        if (prefs.theme === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
-        else document.documentElement.removeAttribute('data-theme');
+      if (prefs && prefs.theme === 'dark') {
+        document.documentElement.setAttribute('data-theme', 'dark');
+        localStorage.setItem('aviora_theme_' + uid, 'dark');
+      } else {
+        document.documentElement.removeAttribute('data-theme');
+        localStorage.setItem('aviora_theme_' + uid, 'light');
       }
+      localStorage.removeItem('aviora_theme');
       document.documentElement.removeAttribute('data-font-size');
-      if (prefs.language && typeof I18n !== 'undefined') {
+
+      if (prefs && prefs.language && typeof I18n !== 'undefined') {
+        localStorage.setItem('aviora_language_' + uid, prefs.language);
+        localStorage.removeItem('aviora_language');
         I18n.applyLanguage(prefs.language);
       }
     }
@@ -1025,11 +1048,28 @@ const Auth = {
   performLogout() {
     Storage.clearSession();
     this.currentUser = null;
+
+    // Immediately revert to default "light mode"
+    document.documentElement.removeAttribute('data-theme');
+    localStorage.removeItem('aviora_theme');
+
+    // Immediately revert language to default English (en-US)
+    localStorage.removeItem('aviora_language');
+    if (typeof I18n !== 'undefined' && I18n.applyLanguage) {
+      I18n.applyLanguage('en-US', false);
+    }
+
+    // Hide/remove language selector for logged-out view
+    const langPicker = document.getElementById('nav-lang-picker-wrap');
+    if (langPicker) langPicker.style.display = 'none';
+
     this.updateNavUI(null);
     this.updateLinkedAccountBadges();
+
     if (typeof Profile !== 'undefined' && Profile.resetToDefaults) {
       Profile.resetToDefaults();
     }
+
     showToast('You have been securely logged out.', 'info');
     window.location.hash = '#home';
     Router.handleRoute();
@@ -1047,8 +1087,11 @@ const Auth = {
     const guestActions = document.getElementById('nav-guest-actions');
     const userActions = document.getElementById('nav-user-actions');
     const mainNavLinks = document.getElementById('main-nav-links');
+    const langPicker = document.getElementById('nav-lang-picker-wrap');
 
     if (user) {
+      // Show language switching option for logged-in user
+      if (langPicker) langPicker.style.display = 'block';
       if (guestActions) guestActions.style.display = 'none';
       if (userActions) {
         userActions.style.display = 'flex';
@@ -1133,6 +1176,10 @@ const Auth = {
         }
       }
     } else {
+      // Disable / remove language-switching option for logged-out users
+      if (langPicker) langPicker.style.display = 'none';
+      // Default theme is ALWAYS light mode when no user is logged in
+      document.documentElement.removeAttribute('data-theme');
       if (guestActions) guestActions.style.display = 'flex';
       if (userActions) {
         userActions.style.display = 'none';

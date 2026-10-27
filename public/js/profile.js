@@ -38,15 +38,26 @@ const Profile = {
   },
 
   initPreferences() {
-    const key = this.getUserKey();
-    const savedTheme = localStorage.getItem(`aviora_theme${key}`) || localStorage.getItem('aviora_theme') || 'light';
+    const u = (typeof Auth !== 'undefined' && Auth.currentUser) || (typeof Storage !== 'undefined' ? Storage.getUser() : null);
+    if (!u || !u.id) {
+      // Default theme is ALWAYS light mode for non-logged-in users
+      document.documentElement.removeAttribute('data-theme');
+      localStorage.removeItem('aviora_theme');
+      document.documentElement.removeAttribute('data-font-size');
+      const langPicker = document.getElementById('nav-lang-picker-wrap');
+      if (langPicker) langPicker.style.display = 'none';
+      return;
+    }
+
+    const key = `_${u.id}`;
+    const savedTheme = localStorage.getItem(`aviora_theme${key}`) || 'light';
     this.applyTheme(savedTheme, false, false);
     document.documentElement.removeAttribute('data-font-size');
 
-    const savedLang = localStorage.getItem(`aviora_language${key}`) || localStorage.getItem('aviora_language') || 'en-US';
+    const savedLang = localStorage.getItem(`aviora_language${key}`) || 'en-US';
     this.applyLanguage(savedLang, false, false);
 
-    const savedTz = localStorage.getItem(`aviora_timezone${key}`) || localStorage.getItem('aviora_timezone') || 'America/New_York';
+    const savedTz = localStorage.getItem(`aviora_timezone${key}`) || 'America/New_York';
     this.applyTimezone(savedTz, false, false);
   },
 
@@ -91,6 +102,14 @@ const Profile = {
   },
 
   applyTheme(theme, notify = true, persistToServer = true) {
+    const u = (typeof Auth !== 'undefined' && Auth.currentUser) || (typeof Storage !== 'undefined' ? Storage.getUser() : null);
+    if (!u || !u.id) {
+      // Not logged in: Default theme is strictly light mode
+      document.documentElement.removeAttribute('data-theme');
+      localStorage.removeItem('aviora_theme');
+      return;
+    }
+
     const isDark = (theme === 'dark');
     if (isDark) {
       document.documentElement.setAttribute('data-theme', 'dark');
@@ -98,22 +117,22 @@ const Profile = {
       document.documentElement.removeAttribute('data-theme');
     }
 
-    const key = this.getUserKey();
-    if (key) localStorage.setItem(`aviora_theme${key}`, isDark ? 'dark' : 'light');
-    localStorage.setItem('aviora_theme', isDark ? 'dark' : 'light');
+    // Apply ONLY to this specific user's own account
+    localStorage.setItem(`aviora_theme_${u.id}`, isDark ? 'dark' : 'light');
+    localStorage.removeItem('aviora_theme');
 
     const lightCard = document.getElementById('theme-card-light');
     const darkCard = document.getElementById('theme-card-dark');
     if (lightCard) lightCard.classList.toggle('active', !isDark);
     if (darkCard) darkCard.classList.toggle('active', isDark);
 
-    if (persistToServer && typeof Auth !== 'undefined' && Auth.currentUser && typeof API !== 'undefined') {
+    if (persistToServer && typeof API !== 'undefined') {
       this.setSaveStatus('saving');
       API.updateUserPreferences({ theme: isDark ? 'dark' : 'light' })
         .then(res => {
           if (res && res.preferences) {
             this.userPreferences = res.preferences;
-            Storage.setUserPreferences(Auth.currentUser.id, res.preferences);
+            Storage.setUserPreferences(u.id, res.preferences);
           }
           this.setSaveStatus('saved');
         })
@@ -124,7 +143,7 @@ const Profile = {
     }
 
     if (notify) {
-      const msg = typeof I18n !== 'undefined' ? I18n.t('toast.theme_saved') : `${isDark ? 'Dark' : 'Light'} theme activated across the website`;
+      const msg = typeof I18n !== 'undefined' ? I18n.t('toast.theme_saved') : `${isDark ? 'Dark' : 'Light'} theme saved to your account`;
       showToast(msg, 'info');
     }
   },
@@ -134,15 +153,20 @@ const Profile = {
   },
 
   applyLanguage(lang, notify = true, persistToServer = true) {
+    const u = (typeof Auth !== 'undefined' && Auth.currentUser) || (typeof Storage !== 'undefined' ? Storage.getUser() : null);
+    if (!u || !u.id) {
+      // Language switching option is disabled for users who are not logged in
+      return;
+    }
+
     const activeLang = lang || 'en-US';
     const langSelect = document.getElementById('profile-language-select');
     if (langSelect) langSelect.value = activeLang;
     const headerLangSelect = document.getElementById('header-language-select');
     if (headerLangSelect) headerLangSelect.value = activeLang;
 
-    const key = this.getUserKey();
-    if (key) localStorage.setItem(`aviora_language${key}`, activeLang);
-    localStorage.setItem('aviora_language', activeLang);
+    localStorage.setItem(`aviora_language_${u.id}`, activeLang);
+    localStorage.removeItem('aviora_language');
 
     if (typeof I18n !== 'undefined') {
       I18n.applyLanguage(activeLang);
@@ -150,13 +174,13 @@ const Profile = {
       document.documentElement.setAttribute('lang', activeLang);
     }
 
-    if (persistToServer && typeof Auth !== 'undefined' && Auth.currentUser && typeof API !== 'undefined') {
+    if (persistToServer && typeof API !== 'undefined') {
       this.setSaveStatus('saving');
       API.updateUserPreferences({ language: activeLang })
         .then(res => {
           if (res && res.preferences) {
             this.userPreferences = res.preferences;
-            Storage.setUserPreferences(Auth.currentUser.id, res.preferences);
+            Storage.setUserPreferences(u.id, res.preferences);
           }
           this.setSaveStatus('saved');
         })

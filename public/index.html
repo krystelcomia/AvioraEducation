@@ -10,18 +10,31 @@
   <script>
     (function() {
       try {
+        // Clear any legacy un-scoped theme/language keys to prevent leaking to other users or guests
+        try { localStorage.removeItem('aviora_theme'); } catch(e){}
+
         var activeUser = null;
         try { activeUser = JSON.parse(localStorage.getItem('aviora_user')); } catch(e){}
-        var userKey = activeUser && activeUser.id ? ('_' + activeUser.id) : '';
-        var t = localStorage.getItem('aviora_theme' + userKey) || (activeUser ? null : localStorage.getItem('aviora_theme'));
-        if (t === 'dark') {
-          document.documentElement.setAttribute('data-theme', 'dark');
-        } else if (t === 'light') {
+
+        if (activeUser && activeUser.id) {
+          // Dark mode applies ONLY to the specific user's own account
+          var t = localStorage.getItem('aviora_theme_' + activeUser.id);
+          if (t === 'dark') {
+            document.documentElement.setAttribute('data-theme', 'dark');
+          } else {
+            document.documentElement.removeAttribute('data-theme');
+          }
+          var l = localStorage.getItem('aviora_language_' + activeUser.id);
+          if (l) {
+            document.documentElement.setAttribute('lang', l);
+          } else {
+            document.documentElement.setAttribute('lang', 'en-US');
+          }
+        } else {
+          // Not logged in: Default theme is ALWAYS light mode, default language English
           document.documentElement.removeAttribute('data-theme');
-        }
-        var l = localStorage.getItem('aviora_language' + userKey) || localStorage.getItem('aviora_language');
-        if (l) {
-          document.documentElement.setAttribute('lang', l);
+          document.documentElement.setAttribute('lang', 'en-US');
+          try { localStorage.removeItem('aviora_language'); } catch(e){}
         }
       } catch(e) {}
     })();
@@ -77,7 +90,7 @@
       <!-- Nav Actions & User Bar -->
       <div class="nav-actions">
         <!-- Global Header Language Selector -->
-        <div class="nav-lang-picker-wrap" id="nav-lang-picker-wrap">
+        <div class="nav-lang-picker-wrap" id="nav-lang-picker-wrap" style="display: none;">
           <select id="header-language-select" class="header-language-select" aria-label="Select Website Language" title="Select Website Language">
             <option value="en-US">🌐 English</option>
             <option value="es-ES">🌐 Español</option>
@@ -5840,19 +5853,6 @@
   <script src="/js/buddy.js"></script>
   <script src="/js/virtual-room.js"></script>
   <script src="/js/main.js"></script>
-  <!-- Google Translate Client Engine for Autonomous Full-Site Translation -->
-  <div id="google_translate_element" style="display: none;"></div>
-  <script type="text/javascript">
-    function googleTranslateElementInit() {
-      if (window.google && window.google.translate) {
-        new window.google.translate.TranslateElement({
-          pageLanguage: 'en',
-          includedLanguages: 'en,es,fr,de,zh-CN,zh-TW,ja,tl,ko,it,pt,ru,ar,hi,vi,id,tr,nl,pl,sv,th',
-          autoDisplay: false
-        }, 'google_translate_element');
-      }
-    }
-  </script>
-  <script type="text/javascript" src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+  <!-- Google Translate removed as requested -->
 </body>
 </html>

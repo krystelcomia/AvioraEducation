@@ -155,6 +155,10 @@
 [data-theme="dark"] section {
   background-color: #000000 !important;
   color: #FFFFFF !important;
+  font-family: var(--font-body) !important;
+  -webkit-font-smoothing: antialiased !important;
+  -moz-osx-font-smoothing: grayscale !important;
+  text-rendering: optimizeLegibility !important;
 }
 
 /* Header & Navigation in Dark Mode */
@@ -163,31 +167,107 @@
   border-bottom: 1px solid rgba(216, 170, 60, 0.3) !important;
 }
 
-/* Every Box, Card, Widget & Section Container in Dark Mode */
-[data-theme="dark"] .portal-header,
-[data-theme="dark"] .dash-section-box,
-[data-theme="dark"] .stat-widget,
-[data-theme="dark"] .book-lesson-col,
-[data-theme="dark"] .profile-card-box,
-[data-theme="dark"] .settings-card-box,
-[data-theme="dark"] .tutor-profile-main,
-[data-theme="dark"] .tutor-booking-sidebar,
-[data-theme="dark"] .sub-plan-card,
+/* ========================================================
+   EVERY FIELD, CARD, WIDGET, BUTTON & CONTAINER IN DARK MODE
+   Ensure zero white boxes, crisp black canvas with gold borders
+   ======================================================== */
+[data-theme="dark"] .hero-pillar-card,
+[data-theme="dark"] .pillar-icon-box,
+[data-theme="dark"] .hero-trust-bar,
+[data-theme="dark"] .trust-pill,
+[data-theme="dark"] .hero-trust-metrics,
+[data-theme="dark"] .hero-scroll-btn,
+[data-theme="dark"] .floating-badge-card,
+[data-theme="dark"] .floating-icon-circle,
+[data-theme="dark"] .hero-image-card,
+[data-theme="dark"] .about-founder-card,
+[data-theme="dark"] .about-founder-avatar,
+[data-theme="dark"] .about-feature-box,
+[data-theme="dark"] .about-feature-icon,
+[data-theme="dark"] .about-goal-card,
+[data-theme="dark"] .about-diff-card,
+[data-theme="dark"] .about-tag,
+[data-theme="dark"] .contact-card,
+[data-theme="dark"] .contact-form-card,
+[data-theme="dark"] .category-card,
+[data-theme="dark"] .category-icon-box,
+[data-theme="dark"] .step-card,
+[data-theme="dark"] .benefit-column,
+[data-theme="dark"] .benefit-item,
+[data-theme="dark"] .check-icon,
+[data-theme="dark"] .testimonial-card,
+[data-theme="dark"] .teacher-cta-banner,
+[data-theme="dark"] .t-stat,
+[data-theme="dark"] .analytics-panel,
+[data-theme="dark"] .subject-rank-row,
+[data-theme="dark"] .content-resource-item,
+[data-theme="dark"] .student-work-card,
+[data-theme="dark"] .modal-artwork-preview,
+[data-theme="dark"] .modal-artwork-details,
 [data-theme="dark"] .tutor-card,
+[data-theme="dark"] .tutor-profile-card,
+[data-theme="dark"] .tutor-profile-hero-card,
+[data-theme="dark"] .tutor-review-card,
+[data-theme="dark"] .tutor-quick-message-card,
+[data-theme="dark"] .tutor-filter-container,
+[data-theme="dark"] .tutor-filter-bar,
 [data-theme="dark"] .tutor-picker-item,
-[data-theme="dark"] .payment-method-card,
-[data-theme="dark"] .booking-calendar-box,
-[data-theme="dark"] .payment-summary-box,
+[data-theme="dark"] .tutor-booking-sidebar,
+[data-theme="dark"] .tutor-profile-main,
+[data-theme="dark"] .pricing-card,
+[data-theme="dark"] .pricing-tier-card,
+[data-theme="dark"] .sub-plan-card,
+[data-theme="dark"] .sub-package-card,
+[data-theme="dark"] .sub-active-banner-card,
+[data-theme="dark"] .sub-analytics-card,
+[data-theme="dark"] .sub-policy-card,
+[data-theme="dark"] .sub-lesson-card,
 [data-theme="dark"] .booking-sub-card,
+[data-theme="dark"] .rate-tier-card,
 [data-theme="dark"] .buddy-hero-banner,
 [data-theme="dark"] .buddy-card,
 [data-theme="dark"] .buddy-feature-card,
+[data-theme="dark"] .buddy-pricing-pill,
+[data-theme="dark"] .buddy-arena-container,
 [data-theme="dark"] .arena-lobby-box,
 [data-theme="dark"] .arena-question-card,
+[data-theme="dark"] .whiteboard-wrapper,
+[data-theme="dark"] .portal-header,
+[data-theme="dark"] .portal-sidebar,
+[data-theme="dark"] .portal-nav-item,
+[data-theme="dark"] .dash-section-box,
+[data-theme="dark"] .stat-widget,
+[data-theme="dark"] .rhythm-day-card,
+[data-theme="dark"] .weekly-rhythm-strip,
+[data-theme="dark"] .academic-mastery-box,
+[data-theme="dark"] .mastery-card,
+[data-theme="dark"] .buddy-co-learn-banner,
+[data-theme="dark"] .schedule-card,
+[data-theme="dark"] .history-card,
+[data-theme="dark"] .request-item-card,
+[data-theme="dark"] .request-card,
+[data-theme="dark"] .session-card,
+[data-theme="dark"] .hero-stat-card,
+[data-theme="dark"] .book-lesson-col,
+[data-theme="dark"] .booking-calendar-box,
+[data-theme="dark"] .payment-method-card,
+[data-theme="dark"] .payment-summary-box,
+[data-theme="dark"] .payment-inputs-group,
 [data-theme="dark"] .admin-stat-card,
 [data-theme="dark"] .admin-table-container,
 [data-theme="dark"] .table-toolbar,
+[data-theme="dark"] .chart-card,
 [data-theme="dark"] .data-table-container,
+[data-theme="dark"] .profile-card-box,
+[data-theme="dark"] .settings-card-box,
+[data-theme="dark"] .theme-picker-card,
+[data-theme="dark"] .auth-box,
+[data-theme="dark"] .auth-card,
+[data-theme="dark"] .auth-container,
+[data-theme="dark"] .auth-modal-card,
+[data-theme="dark"] .auth-page-card,
+[data-theme="dark"] .demo-accounts-card,
+[data-theme="dark"] .password-strength-box,
 [data-theme="dark"] .modal-card,
 [data-theme="dark"] .modal-header,
 [data-theme="dark"] .modal-footer,
@@ -196,93 +276,112 @@
 [data-theme="dark"] .notif-dropdown-header,
 [data-theme="dark"] .notif-dropdown-footer,
 [data-theme="dark"] .notif-item,
-[data-theme="dark"] .theme-picker-card,
-[data-theme="dark"] .hero-stat-card,
-[data-theme="dark"] .session-card,
-[data-theme="dark"] .request-card,
-[data-theme="dark"] .feature-card,
-[data-theme="dark"] .feature-item,
-[data-theme="dark"] .how-step-card,
-[data-theme="dark"] .testimonial-card,
-[data-theme="dark"] .pricing-card,
-[data-theme="dark"] .pricing-tier-card,
+[data-theme="dark"] .tutor-messenger-card,
+[data-theme="dark"] .messenger-header,
+[data-theme="dark"] .messenger-footer,
 [data-theme="dark"] .faq-card,
 [data-theme="dark"] .faq-item,
-[data-theme="dark"] .auth-box,
-[data-theme="dark"] .auth-card,
-[data-theme="dark"] .auth-container,
-[data-theme="dark"] .auth-modal-card,
-[data-theme="dark"] .auth-page-card,
-[data-theme="dark"] .tutor-filter-bar,
-[data-theme="dark"] .booking-modal-card,
-[data-theme="dark"] .portal-sidebar,
-[data-theme="dark"] .portal-nav-item,
-[data-theme="dark"] .whiteboard-container,
-[data-theme="dark"] .chat-sidebar,
 [data-theme="dark"] .site-footer {
   background-color: #000000 !important;
   background-image: none !important;
-  border-color: rgba(216, 170, 60, 0.3) !important;
+  border-color: rgba(216, 170, 60, 0.35) !important;
   color: #FFFFFF !important;
 }
 
+/* Override any inline light backgrounds */
+[data-theme="dark"] [style*="background: #FFF"],
+[data-theme="dark"] [style*="background: #fff"],
+[data-theme="dark"] [style*="background:#FFF"],
+[data-theme="dark"] [style*="background:#fff"],
+[data-theme="dark"] [style*="background: #FAF7F2"],
+[data-theme="dark"] [style*="background:#FAF7F2"],
+[data-theme="dark"] [style*="background: #F5EFE6"],
+[data-theme="dark"] [style*="background:#F5EFE6"],
+[data-theme="dark"] [style*="background: white"],
+[data-theme="dark"] [style*="background-color: white"],
+[data-theme="dark"] [style*="background:linear-gradient(135deg, #FAF7F2"],
+[data-theme="dark"] [style*="background: linear-gradient(135deg, #FAF7F2"] {
+  background: #000000 !important;
+  background-image: none !important;
+  border-color: rgba(216, 170, 60, 0.35) !important;
+}
+
+/* Theme picker active selection card */
 [data-theme="dark"] .theme-picker-card.active {
   background-color: #050505 !important;
   border-color: var(--gold-500) !important;
-  box-shadow: 0 0 0 1px var(--gold-500), 0 4px 14px rgba(198, 138, 40, 0.3) !important;
+  box-shadow: 0 0 0 1px var(--gold-500), 0 4px 14px rgba(198, 138, 40, 0.35) !important;
 }
 
-/* Ensure ALL text in dark mode is WHITE or GOLD (No black or invisible dark text) */
+/* ========================================================
+   DARK MODE FONT & TYPOGRAPHY SYSTEM
+   Enhanced legibility, crisp optical contrast, and distinct scale
+   ======================================================== */
+
+/* Headings in Dark Mode: Crisp, bold, readable Outfit/Sans */
 [data-theme="dark"] h1,
 [data-theme="dark"] h2,
 [data-theme="dark"] h3,
 [data-theme="dark"] h4,
 [data-theme="dark"] h5,
 [data-theme="dark"] h6,
-[data-theme="dark"] p,
-[data-theme="dark"] span:not(.text-gold):not(.badge-gold):not([class*="gold"]):not(.nav-notif-badge),
-[data-theme="dark"] label,
-[data-theme="dark"] .form-label,
-[data-theme="dark"] .nav-link,
-[data-theme="dark"] .brand-title,
 [data-theme="dark"] .portal-title,
-[data-theme="dark"] .portal-subtitle,
-[data-theme="dark"] .profile-card-title,
-[data-theme="dark"] .profile-card-sub,
-[data-theme="dark"] .setting-switch-title,
-[data-theme="dark"] .setting-switch-desc,
-[data-theme="dark"] .theme-picker-title,
-[data-theme="dark"] .theme-picker-desc,
-[data-theme="dark"] .tutor-name,
-[data-theme="dark"] .tutor-headline,
+[data-theme="dark"] .hero-headline,
+[data-theme="dark"] .section-title,
 [data-theme="dark"] .card-title,
 [data-theme="dark"] .modal-title,
 [data-theme="dark"] .dash-section-title,
-[data-theme="dark"] .stat-val,
-[data-theme="dark"] td,
-[data-theme="dark"] th,
-[data-theme="dark"] li,
-[data-theme="dark"] strong,
-[data-theme="dark"] b,
-[data-theme="dark"] .notif-item-title,
-[data-theme="dark"] .notif-dropdown-heading,
-[data-theme="dark"] .text-secondary,
-[data-theme="dark"] .text-muted,
-[data-theme="dark"] .profile-meta,
-[data-theme="dark"] .tutor-meta,
-[data-theme="dark"] .notif-item-msg,
-[data-theme="dark"] .notif-item-time {
+[data-theme="dark"] .pillar-title,
+[data-theme="dark"] .category-name,
+[data-theme="dark"] .benefit-col-title,
+[data-theme="dark"] .tutor-name,
+[data-theme="dark"] .floating-card-title,
+[data-theme="dark"] .metric-number,
+[data-theme="dark"] .profile-card-title,
+[data-theme="dark"] .notif-dropdown-heading {
+  font-family: var(--font-heading) !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.02em !important;
   color: #FFFFFF !important;
 }
 
+/* Body & Paragraph Text in Dark Mode: High-contrast light tone */
+[data-theme="dark"] p,
+[data-theme="dark"] .hero-subtitle,
+[data-theme="dark"] .section-desc,
+[data-theme="dark"] .pillar-desc,
+[data-theme="dark"] .about-quote,
+[data-theme="dark"] .profile-card-sub,
+[data-theme="dark"] .setting-switch-desc,
+[data-theme="dark"] .text-secondary,
+[data-theme="dark"] .text-muted,
+[data-theme="dark"] .tutor-headline,
+[data-theme="dark"] .category-subjects,
+[data-theme="dark"] .floating-card-sub,
+[data-theme="dark"] .notif-item-msg,
+[data-theme="dark"] .notif-item-time,
+[data-theme="dark"] .profile-meta,
+[data-theme="dark"] .tutor-meta,
+[data-theme="dark"] li,
+[data-theme="dark"] strong,
+[data-theme="dark"] b {
+  font-family: var(--font-body) !important;
+  color: #E2E8F0 !important;
+  font-weight: 500 !important;
+  line-height: 1.65 !important;
+  letter-spacing: 0.015em !important;
+}
+
+/* Links in Dark Mode */
 [data-theme="dark"] a:not(.btn):not(.brand-title-gold):not([class*="gold"]) {
   color: #FFFFFF !important;
+  font-family: var(--font-body) !important;
 }
 [data-theme="dark"] a:not(.btn):hover {
   color: #E5A93C !important;
 }
 
-/* Gold text accents in dark mode */
+/* Gold Text Accents & Metrics */
 [data-theme="dark"] .brand-title-gold,
 [data-theme="dark"] .text-gold,
 [data-theme="dark"] .gold-text,
@@ -291,35 +390,146 @@
 [data-theme="dark"] .sub-price,
 [data-theme="dark"] .pricing-amount,
 [data-theme="dark"] .notif-active-pill,
-[data-theme="dark"] .setting-switch-title svg,
 [data-theme="dark"] .badge-gold,
-[data-theme="dark"] a:hover {
+[data-theme="dark"] .about-tag,
+[data-theme="dark"] .trust-bar-label,
+[data-theme="dark"] .setting-switch-title svg {
   color: #E5A93C !important;
 }
 
-/* Form Controls (Inputs, Selects, Textareas) in Dark Mode */
-[data-theme="dark"] input,
+/* ========================================================
+   ALL FORM FIELDS, INPUTS, SELECTS, LABELS IN DARK MODE
+   Supreme readability with black canvas, gold borders, white text
+   ======================================================== */
+[data-theme="dark"] input[type="text"],
+[data-theme="dark"] input[type="email"],
+[data-theme="dark"] input[type="password"],
+[data-theme="dark"] input[type="tel"],
+[data-theme="dark"] input[type="search"],
+[data-theme="dark"] input[type="number"],
+[data-theme="dark"] input[type="date"],
+[data-theme="dark"] input[type="time"],
 [data-theme="dark"] textarea,
 [data-theme="dark"] select,
 [data-theme="dark"] .form-control {
+  font-family: var(--font-body) !important;
+  font-size: 0.95rem !important;
+  font-weight: 500 !important;
+  letter-spacing: 0.015em !important;
   background-color: #000000 !important;
   color: #FFFFFF !important;
-  border: 1.5px solid rgba(216, 170, 60, 0.4) !important;
+  border: 1.5px solid rgba(216, 170, 60, 0.45) !important;
+  border-radius: var(--radius-sm) !important;
+  box-shadow: 0 0 0 1px rgba(216, 170, 60, 0.15) !important;
 }
-[data-theme="dark"] input::placeholder,
-[data-theme="dark"] textarea::placeholder {
-  color: #888888 !important;
-}
-[data-theme="dark"] select option {
-  background-color: #000000 !important;
+
+[data-theme="dark"] input:focus,
+[data-theme="dark"] textarea:focus,
+[data-theme="dark"] select:focus,
+[data-theme="dark"] .form-control:focus {
+  border-color: var(--gold-500) !important;
+  box-shadow: 0 0 0 3px rgba(216, 170, 60, 0.35) !important;
+  outline: none !important;
+  background-color: #050505 !important;
   color: #FFFFFF !important;
 }
 
-/* Badges & Pills in Dark Mode */
-[data-theme="dark"] .badge-gold {
-  background: #000000 !important;
-  border-color: rgba(216, 170, 60, 0.5) !important;
+[data-theme="dark"] input::placeholder,
+[data-theme="dark"] textarea::placeholder {
+  color: #9CA3AF !important;
+  font-family: var(--font-body) !important;
+  font-weight: 400 !important;
+}
+
+[data-theme="dark"] select option {
+  background-color: #000000 !important;
+  color: #FFFFFF !important;
+  font-family: var(--font-body) !important;
+  font-weight: 500 !important;
+}
+
+/* Form Labels in Dark Mode */
+[data-theme="dark"] label,
+[data-theme="dark"] .form-label,
+[data-theme="dark"] .trust-bar-label,
+[data-theme="dark"] .setting-switch-title {
+  font-family: var(--font-heading) !important;
+  color: #F8FAFC !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.015em !important;
+}
+
+/* ========================================================
+   ALL BUTTONS & INTERACTIVE CONTROLS IN DARK MODE
+   ======================================================== */
+
+/* Primary Action Buttons */
+[data-theme="dark"] .btn-primary {
+  background: linear-gradient(135deg, #E5A93C 0%, #C68A28 100%) !important;
+  color: #000000 !important;
+  font-family: var(--font-heading) !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.02em !important;
+  border: none !important;
+  box-shadow: 0 4px 18px rgba(229, 169, 60, 0.35) !important;
+}
+
+[data-theme="dark"] .btn-primary:hover {
+  background: linear-gradient(135deg, #F0B84A 0%, #D4AF37 100%) !important;
+  color: #000000 !important;
+}
+
+/* Secondary & Ghost Buttons (No White Backgrounds) */
+[data-theme="dark"] .btn-secondary,
+[data-theme="dark"] .btn-outline,
+[data-theme="dark"] #hero-become-tutor-btn,
+[data-theme="dark"] .hero-scroll-btn,
+[data-theme="dark"] .btn-demo-fill,
+[data-theme="dark"] .pill-btn,
+[data-theme="dark"] .work-filter-btn,
+[data-theme="dark"] .user-filter-btn,
+[data-theme="dark"] .btn-outline-gold {
+  background-color: #000000 !important;
+  background-image: none !important;
+  border: 1.5px solid var(--gold-500) !important;
+  color: #FFFFFF !important;
+  font-family: var(--font-body) !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.015em !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.6) !important;
+}
+
+[data-theme="dark"] .btn-secondary span,
+[data-theme="dark"] #hero-become-tutor-btn span,
+[data-theme="dark"] .hero-scroll-btn span {
+  color: #FFFFFF !important;
+}
+
+[data-theme="dark"] .btn-secondary:hover,
+[data-theme="dark"] .btn-outline:hover,
+[data-theme="dark"] #hero-become-tutor-btn:hover,
+[data-theme="dark"] .hero-scroll-btn:hover,
+[data-theme="dark"] .btn-demo-fill:hover {
+  background-color: #0d0d0d !important;
+  border-color: var(--gold-400) !important;
+  color: var(--gold-400) !important;
+}
+
+[data-theme="dark"] .btn-secondary:hover span,
+[data-theme="dark"] #hero-become-tutor-btn:hover span,
+[data-theme="dark"] .hero-scroll-btn:hover span {
+  color: var(--gold-400) !important;
+}
+
+/* Badges & Tags in Dark Mode */
+[data-theme="dark"] .badge-gold,
+[data-theme="dark"] .about-tag,
+[data-theme="dark"] .trust-pill {
+  background: #0d0d0d !important;
+  border: 1px solid rgba(216, 170, 60, 0.4) !important;
   color: #E5A93C !important;
+  font-family: var(--font-body) !important;
+  font-weight: 600 !important;
 }
 
 /* Switch Toggles in Dark Mode */
@@ -336,6 +546,7 @@
   background: #000000 !important;
   color: #FFFFFF !important;
   border-color: rgba(255, 255, 255, 0.15) !important;
+  font-family: var(--font-body) !important;
 }
 [data-theme="dark"] .calendar-nav-btn {
   background: #000000 !important;
@@ -353,6 +564,7 @@
 [data-theme="dark"] table {
   color: #FFFFFF !important;
   background-color: #000000 !important;
+  font-family: var(--font-body) !important;
 }
 [data-theme="dark"] .admin-table th,
 [data-theme="dark"] .table th,
@@ -360,6 +572,8 @@
   background: #000000 !important;
   color: #FFFFFF !important;
   border-bottom: 1px solid rgba(216, 170, 60, 0.35) !important;
+  font-family: var(--font-heading) !important;
+  font-weight: 700 !important;
 }
 [data-theme="dark"] .admin-table td,
 [data-theme="dark"] .table td,
@@ -382,6 +596,7 @@
     grid-template-columns: 1fr;
   }
 }
+
 
 
 

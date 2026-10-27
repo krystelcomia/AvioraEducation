@@ -168,7 +168,7 @@ const AvioraBuddy = {
     const listContainer = document.getElementById('buddy-my-sessions-list');
     if (listContainer) {
       listContainer.innerHTML = `
-        <div style="padding: 2.5rem; text-align: center; background: #FFFFFF; border-radius: 14px; border: 1.5px dashed rgba(198, 138, 40, 0.35);">
+        <div class="buddy-empty-state" style="padding: 2.5rem; text-align: center; border-radius: 14px; border: 1.5px dashed rgba(198, 138, 40, 0.35);">
           <div style="font-size: 2rem; margin-bottom: 0.5rem;">👥</div>
           <h4 style="font-family: var(--font-heading); font-size: 1.15rem; color: var(--charcoal-900); margin-bottom: 0.35rem;">Experience Aviora Buddy for $6</h4>
           <p style="color: var(--text-secondary); font-size: 0.88rem; max-width: 480px; margin: 0 auto 1.25rem;">
@@ -188,7 +188,7 @@ const AvioraBuddy = {
 
     if (!data.sessions || data.sessions.length === 0) {
       listContainer.innerHTML = `
-        <div style="padding: 2.5rem; text-align: center; background: #FFFFFF; border-radius: 14px; border: 1.5px dashed rgba(198, 138, 40, 0.35);">
+        <div class="buddy-empty-state" style="padding: 2.5rem; text-align: center; border-radius: 14px; border: 1.5px dashed rgba(198, 138, 40, 0.35);">
           <div style="font-size: 2rem; margin-bottom: 0.5rem;">⚡</div>
           <h4 style="font-family: var(--font-heading); font-size: 1.2rem; color: var(--charcoal-900); margin-bottom: 0.35rem;">No Active Buddy Sessions Yet</h4>
           <p style="color: var(--text-secondary); font-size: 0.88rem; max-width: 480px; margin: 0 auto 1.25rem;">
@@ -210,7 +210,7 @@ const AvioraBuddy = {
       const isSelected = this.activeSession && this.activeSession.id === s.id;
 
       return `
-        <div class="buddy-card ${isSelected ? 'active' : ''}" style="${isSelected ? 'border-color: var(--gold-500); background: linear-gradient(135deg, #FAF7F2 0%, #FFFFFF 100%);' : ''}">
+        <div class="buddy-card ${isSelected ? 'active' : ''}">
           <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem;">
             <span class="badge-gold" style="font-size: 0.7rem; font-weight: 800;">
               ${isTutorLed ? '🎓 Tutor-Led Class ($6/student)' : '⚡ Peer Buddy Session ($6)'}
@@ -231,7 +231,7 @@ const AvioraBuddy = {
             <div style="display: flex; align-items: center; gap: 0.5rem;">
               <div style="display: flex; align-items: center;">
                 <img src="${s.student1_avatar || '/assets/favicon.png'}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 2px solid var(--gold-400);" title="${s.student1_name || 'Student 1'}" />
-                <img src="${s.student2_avatar || '/assets/favicon.png'}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 2px solid #10B981; margin-left: -10px; background: #fff;" title="${s.student2_name || 'Awaiting Buddy'}" />
+                <img src="${s.student2_avatar || '/assets/favicon.png'}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 2px solid #10B981; margin-left: -10px;" title="${s.student2_name || 'Awaiting Buddy'}" />
               </div>
               <div style="font-size: 0.78rem;">
                 <div style="font-weight: 700; color: var(--charcoal-900);">${s.student1_name} &amp; ${s.student2_name || 'Open Slot'}</div>

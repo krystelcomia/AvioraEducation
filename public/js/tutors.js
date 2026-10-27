@@ -478,8 +478,8 @@ const Tutors = {
               <p style="font-size: 0.95rem; line-height: 1.75; color: var(--charcoal-900); margin-bottom: 1.25rem;">
                 ${tutor.bio || 'Expert educator committed to rigorous conceptual instruction and academic empowerment.'}
               </p>
-              <div style="background: rgba(198, 138, 40, 0.08); border-left: 3px solid var(--gold-600); padding: 0.85rem 1.15rem; border-radius: 0 var(--radius-sm) var(--radius-sm) 0;">
-                <p style="font-size: 0.85rem; color: var(--gold-900); font-weight: 600; margin: 0; display: flex; align-items: center; gap: 0.35rem;">
+              <div class="tutor-philosophy-callout" style="border-left: 3px solid var(--gold-600); padding: 0.85rem 1.15rem; border-radius: 0 var(--radius-sm) var(--radius-sm) 0;">
+                <p style="font-size: 0.85rem; font-weight: 600; margin: 0; display: flex; align-items: center; gap: 0.35rem;">
                   <span style="color: var(--gold-600); display: inline-flex;">${Icons.sparkle(13)}</span> First-Principles Instruction: Lessons prioritize deep analytical understanding over memorization shortcuts.
                 </p>
               </div>
@@ -567,7 +567,7 @@ const Tutors = {
             </div>
 
             <!-- Direct Messenger to Tutor Card -->
-            <div class="tutor-quick-message-card" style="background: linear-gradient(180deg, #FFFFFF, #FAF7F2); border: 1.5px solid rgba(198, 138, 40, 0.35); border-radius: var(--radius-lg); padding: 1.5rem; box-shadow: var(--shadow-sm);">
+            <div class="tutor-quick-message-card" style="border: 1.5px solid rgba(198, 138, 40, 0.35); border-radius: var(--radius-lg); padding: 1.5rem; box-shadow: var(--shadow-sm);">
               <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
                 <div style="display: flex; align-items: center; gap: 0.55rem;">
                   <span style="display: inline-flex; align-items: center; color: var(--gold-700);">${Icons.message(20)}</span>

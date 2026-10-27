@@ -325,10 +325,11 @@ document.addEventListener('DOMContentLoaded', async () => {
       navLinks.style.position = 'absolute';
       navLinks.style.top = 'var(--header-height)';
       navLinks.style.left = '0';
-      navLinks.style.background = 'rgba(250, 247, 242, 0.98)';
+      const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+      navLinks.style.background = isDark ? '#000000' : 'rgba(250, 247, 242, 0.98)';
       navLinks.style.padding = '1.5rem';
-      navLinks.style.borderBottom = '1px solid rgba(198, 138, 40, 0.2)';
-      navLinks.style.boxShadow = '0 16px 36px rgba(0, 0, 0, 0.08)';
+      navLinks.style.borderBottom = isDark ? '1px solid rgba(216, 170, 60, 0.35)' : '1px solid rgba(198, 138, 40, 0.2)';
+      navLinks.style.boxShadow = isDark ? '0 16px 36px rgba(0, 0, 0, 0.6)' : '0 16px 36px rgba(0, 0, 0, 0.08)';
     });
   }
 

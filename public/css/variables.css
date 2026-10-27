@@ -152,8 +152,19 @@
 [data-theme="dark"] main,
 [data-theme="dark"] #app-viewport,
 [data-theme="dark"] .app-page-view,
-[data-theme="dark"] section {
+[data-theme="dark"] section,
+[data-theme="dark"] .section,
+[data-theme="dark"] .hero-section,
+[data-theme="dark"] .analytics-section,
+[data-theme="dark"] .student-works-section,
+[data-theme="dark"] .featured-tutors-section,
+[data-theme="dark"] .buddy-hero-banner,
+[data-theme="dark"] .tutor-hero-section,
+[data-theme="dark"] .sub-hero-section,
+[data-theme="dark"] .about-hero-section {
+  background: #000000 !important;
   background-color: #000000 !important;
+  background-image: none !important;
   color: #FFFFFF !important;
   font-family: var(--font-body) !important;
   -webkit-font-smoothing: antialiased !important;
@@ -186,6 +197,8 @@
 [data-theme="dark"] .about-feature-icon,
 [data-theme="dark"] .about-goal-card,
 [data-theme="dark"] .about-diff-card,
+[data-theme="dark"] .diff-icon-box,
+[data-theme="dark"] .diff-contrast,
 [data-theme="dark"] .about-tag,
 [data-theme="dark"] .contact-card,
 [data-theme="dark"] .contact-form-card,
@@ -209,6 +222,11 @@
 [data-theme="dark"] .tutor-profile-hero-card,
 [data-theme="dark"] .tutor-review-card,
 [data-theme="dark"] .tutor-quick-message-card,
+[data-theme="dark"] .tutor-stat-item,
+[data-theme="dark"] .tutor-stat-icon,
+[data-theme="dark"] .schedule-row,
+[data-theme="dark"] .schedule-slot-badge,
+[data-theme="dark"] .tutor-philosophy-callout,
 [data-theme="dark"] .tutor-filter-container,
 [data-theme="dark"] .tutor-filter-bar,
 [data-theme="dark"] .tutor-picker-item,
@@ -227,6 +245,7 @@
 [data-theme="dark"] .buddy-hero-banner,
 [data-theme="dark"] .buddy-card,
 [data-theme="dark"] .buddy-feature-card,
+[data-theme="dark"] .buddy-perks-card,
 [data-theme="dark"] .buddy-pricing-pill,
 [data-theme="dark"] .buddy-arena-container,
 [data-theme="dark"] .arena-lobby-box,
@@ -281,7 +300,18 @@
 [data-theme="dark"] .messenger-footer,
 [data-theme="dark"] .faq-card,
 [data-theme="dark"] .faq-item,
-[data-theme="dark"] .site-footer {
+[data-theme="dark"] .site-footer,
+[data-theme="dark"] .footer-social-link,
+[data-theme="dark"] .nav-links,
+[data-theme="dark"] .buddy-empty-state,
+[data-theme="dark"] .modal-artwork-preview,
+[data-theme="dark"] .modal-artwork-details,
+[data-theme="dark"] .student-creator-tag,
+[data-theme="dark"] .spotlight-mission-control,
+[data-theme="dark"] .inquiry-card,
+[data-theme="dark"] .payment-summary-box,
+[data-theme="dark"] #sub-enroll-tutor-preview,
+[data-theme="dark"] #inq-modal-message {
   background-color: #000000 !important;
   background-image: none !important;
   border-color: rgba(216, 170, 60, 0.35) !important;
@@ -293,17 +323,46 @@
 [data-theme="dark"] [style*="background: #fff"],
 [data-theme="dark"] [style*="background:#FFF"],
 [data-theme="dark"] [style*="background:#fff"],
+[data-theme="dark"] [style*="background: #FFFFFF"],
+[data-theme="dark"] [style*="background:#FFFFFF"],
+[data-theme="dark"] [style*="background: #ffffff"],
+[data-theme="dark"] [style*="background:#ffffff"],
 [data-theme="dark"] [style*="background: #FAF7F2"],
 [data-theme="dark"] [style*="background:#FAF7F2"],
+[data-theme="dark"] [style*="background: #faf7f2"],
+[data-theme="dark"] [style*="background:#faf7f2"],
+[data-theme="dark"] [style*="background: #F6F2E9"],
+[data-theme="dark"] [style*="background:#F6F2E9"],
+[data-theme="dark"] [style*="background: #f6f2e9"],
+[data-theme="dark"] [style*="background:#f6f2e9"],
 [data-theme="dark"] [style*="background: #F5EFE6"],
 [data-theme="dark"] [style*="background:#F5EFE6"],
+[data-theme="dark"] [style*="background: #f5efe6"],
+[data-theme="dark"] [style*="background:#f5efe6"],
 [data-theme="dark"] [style*="background: white"],
 [data-theme="dark"] [style*="background-color: white"],
+[data-theme="dark"] [style*="background: rgba(255, 255, 255"],
+[data-theme="dark"] [style*="background:rgba(255, 255, 255"],
+[data-theme="dark"] [style*="background: rgba(255,255,255"],
+[data-theme="dark"] [style*="background:rgba(255,255,255"],
+[data-theme="dark"] [style*="background: rgba(250, 247, 242"],
+[data-theme="dark"] [style*="background:rgba(250, 247, 242"],
+[data-theme="dark"] [style*="background: rgba(251, 244, 226"],
+[data-theme="dark"] [style*="background:rgba(251, 244, 226"],
+[data-theme="dark"] [style*="background: rgba(246, 242, 233"],
+[data-theme="dark"] [style*="background:rgba(246, 242, 233"],
+[data-theme="dark"] [style*="background: linear-gradient(180deg, #FFFFFF"],
+[data-theme="dark"] [style*="background:linear-gradient(180deg, #FFFFFF"],
+[data-theme="dark"] [style*="background: linear-gradient(135deg, rgba(255, 255, 255"],
+[data-theme="dark"] [style*="background:linear-gradient(135deg, rgba(255, 255, 255"],
 [data-theme="dark"] [style*="background:linear-gradient(135deg, #FAF7F2"],
-[data-theme="dark"] [style*="background: linear-gradient(135deg, #FAF7F2"] {
+[data-theme="dark"] [style*="background: linear-gradient(135deg, #FAF7F2"],
+[data-theme="dark"] [style*="background: linear-gradient(135deg, rgba(251, 244, 226"],
+[data-theme="dark"] [style*="background:linear-gradient(135deg, rgba(251, 244, 226"] {
   background: #000000 !important;
   background-image: none !important;
   border-color: rgba(216, 170, 60, 0.35) !important;
+  color: #FFFFFF !important;
 }
 
 /* Theme picker active selection card */
@@ -595,6 +654,350 @@
   .theme-picker-cards {
     grid-template-columns: 1fr;
   }
+}
+
+/* ========================================================
+   DEDICATED COMPONENT DARK MODE POLISH (ALL USER-REPORTED VIEWS)
+   ======================================================== */
+
+/* 1. Real-Time Platform Analytics Section (Screenshot 1) */
+[data-theme="dark"] .analytics-section {
+  background: #000000 !important;
+  background-image: none !important;
+  border-top: 1px solid rgba(216, 170, 60, 0.3) !important;
+  border-bottom: 1px solid rgba(216, 170, 60, 0.15) !important;
+}
+[data-theme="dark"] .analytics-panel {
+  background: #000000 !important;
+  border: 1.5px solid rgba(216, 170, 60, 0.35) !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.7) !important;
+}
+[data-theme="dark"] .analytics-panel-header {
+  border-bottom: 1px solid rgba(216, 170, 60, 0.2) !important;
+}
+[data-theme="dark"] .analytics-panel-title {
+  color: #FFFFFF !important;
+}
+[data-theme="dark"] .analytics-panel-badge {
+  background: rgba(198, 138, 40, 0.18) !important;
+  color: var(--gold-400) !important;
+  border: 1px solid rgba(216, 170, 60, 0.3) !important;
+}
+[data-theme="dark"] .subject-rank-row {
+  background: #0d0d0d !important;
+  border: 1px solid rgba(216, 170, 60, 0.25) !important;
+}
+[data-theme="dark"] .subject-rank-row:hover {
+  background: #141414 !important;
+  border-color: var(--gold-500) !important;
+}
+[data-theme="dark"] .subject-rank-num {
+  color: var(--gold-500) !important;
+}
+[data-theme="dark"] .subject-title-text {
+  color: #FFFFFF !important;
+}
+[data-theme="dark"] .subject-cat-tag {
+  background: rgba(198, 138, 40, 0.15) !important;
+  color: var(--gold-400) !important;
+  border: 1px solid rgba(216, 170, 60, 0.25) !important;
+}
+[data-theme="dark"] .subject-meter-wrap {
+  background: rgba(255, 255, 255, 0.12) !important;
+}
+[data-theme="dark"] .subject-views-count {
+  color: #FFFFFF !important;
+}
+[data-theme="dark"] .content-resource-item {
+  background: #0d0d0d !important;
+  border: 1px solid rgba(216, 170, 60, 0.25) !important;
+  color: #FFFFFF !important;
+}
+[data-theme="dark"] .content-resource-item:hover {
+  background: #141414 !important;
+  border-color: var(--gold-500) !important;
+}
+[data-theme="dark"] .resource-title-text {
+  color: #FFFFFF !important;
+}
+
+/* 2. Footer Social Media Instagram Pill (Screenshot 2) */
+[data-theme="dark"] .footer-social-link {
+  background: #0d0d0d !important;
+  background-image: none !important;
+  border: 1.5px solid rgba(216, 170, 60, 0.45) !important;
+  color: #FFFFFF !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.6) !important;
+}
+[data-theme="dark"] .footer-social-link span {
+  color: #FFFFFF !important;
+}
+[data-theme="dark"] .footer-social-link:hover {
+  background: #1a1a1a !important;
+  border-color: var(--gold-400) !important;
+  color: var(--gold-400) !important;
+}
+[data-theme="dark"] .footer-social-link:hover span {
+  color: var(--gold-400) !important;
+}
+[data-theme="dark"] .newsletter-input {
+  background: #000000 !important;
+  border: 1.5px solid rgba(216, 170, 60, 0.45) !important;
+  color: #FFFFFF !important;
+}
+
+/* 3. About Page What Sets Us Apart Cards (Screenshot 3) */
+[data-theme="dark"] .about-diff-card {
+  background: #000000 !important;
+  border: 1.5px solid rgba(216, 170, 60, 0.35) !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6) !important;
+}
+[data-theme="dark"] .diff-icon-box {
+  background: #0d0d0d !important;
+  background-image: none !important;
+  border: 1px solid rgba(216, 170, 60, 0.35) !important;
+  color: var(--gold-400) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6) !important;
+}
+[data-theme="dark"] .diff-icon-box svg {
+  stroke: var(--gold-400) !important;
+}
+[data-theme="dark"] .diff-badge {
+  background: #0d0d0d !important;
+  border: 1px solid rgba(216, 170, 60, 0.35) !important;
+  color: var(--gold-400) !important;
+}
+[data-theme="dark"] .diff-title {
+  color: #FFFFFF !important;
+}
+[data-theme="dark"] .diff-desc {
+  color: #E2E8F0 !important;
+}
+[data-theme="dark"] .diff-contrast {
+  background: #0d0d0d !important;
+  border: 1px solid rgba(216, 170, 60, 0.25) !important;
+  border-left: 3px solid var(--gold-500) !important;
+  color: #FFFFFF !important;
+}
+[data-theme="dark"] .diff-contrast-label {
+  color: var(--gold-400) !important;
+}
+
+/* 4. Tutor Details Modal & Availability Schedule (Screenshot 4) */
+[data-theme="dark"] .tutor-stat-item {
+  background: #000000 !important;
+  border: 1.5px solid rgba(216, 170, 60, 0.35) !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.6) !important;
+}
+[data-theme="dark"] .tutor-stat-icon {
+  background: #0d0d0d !important;
+  border: 1px solid rgba(216, 170, 60, 0.4) !important;
+  color: var(--gold-400) !important;
+}
+[data-theme="dark"] .tutor-stat-icon svg {
+  stroke: var(--gold-400) !important;
+}
+[data-theme="dark"] .tutor-stat-num {
+  color: #FFFFFF !important;
+}
+[data-theme="dark"] .tutor-stat-label {
+  color: rgba(255, 255, 255, 0.75) !important;
+}
+[data-theme="dark"] .tutor-profile-card {
+  background: #000000 !important;
+  border: 1.5px solid rgba(216, 170, 60, 0.35) !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6) !important;
+}
+[data-theme="dark"] .tutor-profile-card-title {
+  color: #FFFFFF !important;
+  border-bottom-color: rgba(216, 170, 60, 0.25) !important;
+}
+[data-theme="dark"] .tutor-schedule-table {
+  background: transparent !important;
+}
+[data-theme="dark"] .schedule-row {
+  background: #0d0d0d !important;
+  border: 1px solid rgba(216, 170, 60, 0.25) !important;
+}
+[data-theme="dark"] .schedule-row:hover {
+  background: #141414 !important;
+  border-color: var(--gold-500) !important;
+}
+[data-theme="dark"] .schedule-day-td {
+  color: var(--gold-400) !important;
+  border-left: 3px solid var(--gold-500) !important;
+}
+[data-theme="dark"] .schedule-slot-badge {
+  background: #000000 !important;
+  border: 1.5px solid rgba(216, 170, 60, 0.45) !important;
+  color: #FFFFFF !important;
+}
+[data-theme="dark"] .schedule-slot-badge:hover {
+  background: var(--gold-500) !important;
+  color: #000000 !important;
+}
+[data-theme="dark"] .tutor-philosophy-callout,
+[data-theme="dark"] .tutor-profile-card div[style*="border-left"] {
+  background: #0d0d0d !important;
+  border: 1px solid rgba(216, 170, 60, 0.25) !important;
+  border-left: 3px solid var(--gold-500) !important;
+  color: #FFFFFF !important;
+}
+[data-theme="dark"] .tutor-philosophy-callout p,
+[data-theme="dark"] .tutor-profile-card div[style*="border-left"] p {
+  color: var(--gold-400) !important;
+}
+[data-theme="dark"] .tutor-quick-message-card {
+  background: #000000 !important;
+  background-image: none !important;
+  border: 1.5px solid rgba(216, 170, 60, 0.35) !important;
+  color: #FFFFFF !important;
+}
+
+/* 5. Aviora Buddy Perks & Cards (Screenshot 5) */
+[data-theme="dark"] .buddy-perks-card {
+  background: #000000 !important;
+  background-image: none !important;
+  border: 1.5px solid rgba(216, 170, 60, 0.35) !important;
+  color: #FFFFFF !important;
+}
+[data-theme="dark"] .buddy-perks-card div,
+[data-theme="dark"] .buddy-perks-card span,
+[data-theme="dark"] .buddy-perks-card strong {
+  color: #FFFFFF !important;
+}
+[data-theme="dark"] .buddy-perks-card span[style*="border-radius: 50%"],
+[data-theme="dark"] .buddy-perks-card span[style*="border-radius:50%"] {
+  background: #0d0d0d !important;
+  color: var(--gold-400) !important;
+  border: 1px solid rgba(216, 170, 60, 0.35) !important;
+}
+[data-theme="dark"] .buddy-pricing-pill {
+  background: #000000 !important;
+  border: 1.5px solid var(--gold-500) !important;
+  color: var(--gold-400) !important;
+}
+[data-theme="dark"] .buddy-card {
+  background: #000000 !important;
+  border: 1.5px solid rgba(216, 170, 60, 0.35) !important;
+  color: #FFFFFF !important;
+}
+[data-theme="dark"] .buddy-card-header-icon {
+  background: #0d0d0d !important;
+  border: 1px solid rgba(216, 170, 60, 0.35) !important;
+  color: var(--gold-400) !important;
+}
+
+/* 6. About Page Rates Tier Cards & Student Works */
+[data-theme="dark"] .rate-tier-card {
+  background: #000000 !important;
+  border: 1.5px solid rgba(216, 170, 60, 0.35) !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6) !important;
+}
+[data-theme="dark"] .rate-tier-price {
+  color: #FFFFFF !important;
+}
+[data-theme="dark"] .rate-tier-badge {
+  color: var(--gold-400) !important;
+}
+[data-theme="dark"] .rate-tier-desc {
+  color: #E2E8F0 !important;
+}
+[data-theme="dark"] .student-works-section {
+  background: #000000 !important;
+  background-image: none !important;
+  border-bottom: 1px solid rgba(216, 170, 60, 0.2) !important;
+}
+[data-theme="dark"] .work-filter-btn {
+  background: #000000 !important;
+  border: 1.5px solid rgba(216, 170, 60, 0.4) !important;
+  color: #FFFFFF !important;
+}
+[data-theme="dark"] .work-filter-btn:hover {
+  background: #0d0d0d !important;
+  border-color: var(--gold-500) !important;
+  color: var(--gold-400) !important;
+}
+[data-theme="dark"] .work-filter-btn.active {
+  background: var(--gold-500) !important;
+  color: #000000 !important;
+  border-color: var(--gold-500) !important;
+}
+[data-theme="dark"] .student-work-card {
+  background: #000000 !important;
+  border: 1.5px solid rgba(216, 170, 60, 0.35) !important;
+}
+[data-theme="dark"] .student-work-card .work-title {
+  color: #FFFFFF !important;
+}
+[data-theme="dark"] .student-work-card .work-desc {
+  color: #CBD5E1 !important;
+}
+
+/* 7. Student Works Lightbox Modal & Creator Tag */
+[data-theme="dark"] .modal-artwork-preview {
+  background: #0d0d0d !important;
+}
+[data-theme="dark"] .modal-artwork-details {
+  background: #000000 !important;
+  color: #FFFFFF !important;
+}
+[data-theme="dark"] .student-creator-tag {
+  background: #0d0d0d !important;
+  border: 1px solid rgba(216, 170, 60, 0.35) !important;
+}
+[data-theme="dark"] .student-creator-avatar {
+  background: #141414 !important;
+  color: var(--gold-400) !important;
+  border: 1px solid rgba(216, 170, 60, 0.35) !important;
+}
+[data-theme="dark"] #sw-modal-student-name {
+  color: var(--gold-400) !important;
+}
+[data-theme="dark"] #sw-modal-student-grade {
+  color: #94A3B8 !important;
+}
+[data-theme="dark"] #sw-modal-title {
+  color: #FFFFFF !important;
+}
+[data-theme="dark"] #sw-modal-summary {
+  color: #E2E8F0 !important;
+}
+[data-theme="dark"] .modal-artwork-details div[style*="border-left"] {
+  background: #0d0d0d !important;
+  border-color: rgba(216, 170, 60, 0.3) !important;
+  border-left: 4px solid var(--gold-500) !important;
+  color: #FFFFFF !important;
+}
+
+/* 8. Buddy Empty State & Additional Cards */
+[data-theme="dark"] .buddy-empty-state {
+  background: #000000 !important;
+  border: 1.5px dashed rgba(216, 170, 60, 0.35) !important;
+  color: #FFFFFF !important;
+}
+[data-theme="dark"] .buddy-empty-state h4 {
+  color: #FFFFFF !important;
+}
+[data-theme="dark"] .buddy-empty-state p {
+  color: #CBD5E1 !important;
+}
+
+/* 9. Subscription & Payment Summary */
+[data-theme="dark"] .payment-summary-box {
+  background: #0d0d0d !important;
+  border: 1.5px solid rgba(216, 170, 60, 0.35) !important;
+  color: #FFFFFF !important;
+}
+[data-theme="dark"] #sub-enroll-tutor-preview {
+  background: #000000 !important;
+  border: 1.5px solid rgba(216, 170, 60, 0.35) !important;
+  color: #FFFFFF !important;
+}
+[data-theme="dark"] #sub-active-lesson-subject-select {
+  background: #000000 !important;
+  border: 1.5px solid rgba(216, 170, 60, 0.45) !important;
+  color: #FFFFFF !important;
 }
 
 /* =========================================

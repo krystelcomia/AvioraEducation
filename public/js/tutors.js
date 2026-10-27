@@ -152,6 +152,16 @@ const Tutors = {
       await this.renderTutorsSubBanner();
     } catch (err) {
       console.error('Failed to load tutors:', err);
+      const container = document.getElementById('tutors-directory-grid');
+      const countBadge = document.getElementById('tutor-count-badge');
+      if (countBadge) countBadge.style.display = 'none';
+      if (container) {
+        container.innerHTML = `
+          <div class="empty-state" style="grid-column: 1 / -1;">
+            <p class="empty-desc">Unable to load tutors at this time. Please try refreshing the page.</p>
+          </div>
+        `;
+      }
     }
   },
 
@@ -196,7 +206,12 @@ const Tutors = {
     if (!container) return;
 
     if (countBadge) {
-      countBadge.textContent = `${tutors.length} Verified Tutors Available`;
+      if (tutors && tutors.length > 0) {
+        countBadge.textContent = `${tutors.length} Verified Tutors Available`;
+        countBadge.style.display = 'inline-block';
+      } else {
+        countBadge.style.display = 'none';
+      }
     }
 
     if (tutors.length === 0) {

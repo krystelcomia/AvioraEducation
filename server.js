@@ -82,6 +82,40 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/uploads', express.static(uploadsDir));
 
+// Safe parsers for JSON arrays and objects stored in database fields
+function safeParseArray(val) {
+  if (!val) return [];
+  if (Array.isArray(val)) return val;
+  if (typeof val === 'string') {
+    const trimmed = val.trim();
+    if (!trimmed) return [];
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (Array.isArray(parsed)) return parsed;
+      if (parsed !== null && parsed !== undefined) return [String(parsed)];
+    } catch (e) {
+      return trimmed.split(',').map(s => s.trim().replace(/^["'\[]+|["'\]]+$/g, '')).filter(Boolean);
+    }
+  }
+  return [];
+}
+
+function safeParseObject(val) {
+  if (!val) return {};
+  if (typeof val === 'object' && val !== null && !Array.isArray(val)) return val;
+  if (typeof val === 'string') {
+    const trimmed = val.trim();
+    if (!trimmed) return {};
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) return parsed;
+    } catch (e) {
+      return {};
+    }
+  }
+  return {};
+}
+
 // ==========================================
 // NOTIFICATION PREFERENCE FILTERS & DELIVERY
 // ==========================================
@@ -1967,9 +2001,9 @@ app.get('/api/tutors', (req, res) => {
 
     const formattedTutors = rows.map(r => ({
       ...r,
-      subjects: JSON.parse(r.subjects || '[]'),
-      grade_levels: JSON.parse(r.grade_levels || '[]'),
-      availability_schedule: JSON.parse(r.availability_schedule || '{}')
+      subjects: safeParseArray(r.subjects),
+      grade_levels: safeParseArray(r.grade_levels),
+      availability_schedule: safeParseObject(r.availability_schedule)
     }));
 
     res.json({ tutors: formattedTutors });
@@ -2025,9 +2059,9 @@ app.get('/api/tutors/:id', (req, res) => {
       ORDER BY r.created_at DESC
     `).all(tutor.user_id);
 
-    tutor.subjects = JSON.parse(tutor.subjects || '[]');
-    tutor.grade_levels = JSON.parse(tutor.grade_levels || '[]');
-    tutor.availability_schedule = JSON.parse(tutor.availability_schedule || '{}');
+    tutor.subjects = safeParseArray(tutor.subjects);
+    tutor.grade_levels = safeParseArray(tutor.grade_levels);
+    tutor.availability_schedule = safeParseObject(tutor.availability_schedule);
     tutor.reviews = reviews;
 
     // Calculate total distinct students mentored
@@ -2954,9 +2988,9 @@ app.get('/api/teacher/application-status', authenticateToken, requireRole('teach
     const tutorProfile = db.prepare('SELECT * FROM tutor_profiles WHERE user_id = ?').get(userId);
 
     if (application) {
-      application.subjects = JSON.parse(application.subjects || '[]');
-      application.grade_levels = JSON.parse(application.grade_levels || '[]');
-      application.availability_schedule = JSON.parse(application.availability_schedule || '{}');
+      application.subjects = safeParseArray(application.subjects);
+      application.grade_levels = safeParseArray(application.grade_levels);
+      application.availability_schedule = safeParseObject(application.availability_schedule);
     }
 
     res.json({ application, tutorProfile });
@@ -4653,9 +4687,9 @@ app.get('/api/admin/teacher-applications', authenticateToken, requireRole('admin
 
     const formatted = apps.map(a => ({
       ...a,
-      subjects: JSON.parse(a.subjects || '[]'),
-      grade_levels: JSON.parse(a.grade_levels || '[]'),
-      availability_schedule: JSON.parse(a.availability_schedule || '{}')
+      subjects: safeParseArray(a.subjects),
+      grade_levels: safeParseArray(a.grade_levels),
+      availability_schedule: safeParseObject(a.availability_schedule)
     }));
 
     res.json({ applications: formatted });
@@ -4823,8 +4857,8 @@ app.get('/api/admin/tutors', authenticateToken, requireRole('admin'), (req, res)
 
     const formatted = tutors.map(t => ({
       ...t,
-      subjects: JSON.parse(t.subjects || '[]'),
-      grade_levels: JSON.parse(t.grade_levels || '[]')
+      subjects: safeParseArray(t.subjects),
+      grade_levels: safeParseArray(t.grade_levels)
     }));
 
     res.json({ tutors: formatted });

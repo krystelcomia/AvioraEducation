@@ -1025,13 +1025,13 @@ function ensureJoshuaAccount(customPassword) {
           status, interview_status
         ) VALUES (
           ?, 'Mathematics & Calculus Specialist', 'Bachelor of Science in Education',
-          'University of California, Berkeley', 2021, 3, 'Mathematics, Algebra, Calculus',
-          'Grade 9-12, College Prep', 45.0,
+          'University of California, Berkeley', 2021, 3, ?,
+          ?, 45.0,
           'Dedicated mathematics educator passionate about guiding students through algebra, geometry, and calculus with interactive problem solving.',
           'Inspiring student curiosity through real-world applications and intuitive conceptual frameworks.',
           'pending', 'pending'
         )
-      `).run(userId);
+      `).run(userId, JSON.stringify(['Mathematics', 'Algebra', 'Calculus']), JSON.stringify(['Grade 9-12', 'College Prep']));
     }
 
     // 2. Ensure tutor profile
@@ -1040,14 +1040,21 @@ function ensureJoshuaAccount(customPassword) {
       db.prepare(`
         INSERT INTO tutor_profiles (
           user_id, headline, bio, highest_degree, institution, years_experience,
-          subjects, grade_levels, hourly_rate, is_active
+          subjects, grade_levels, hourly_rate, availability_schedule, is_active
         ) VALUES (
           ?, 'Mathematics & Calculus Specialist',
           'Dedicated mathematics educator passionate about guiding students through algebra, geometry, and calculus with interactive problem solving.',
           'Bachelor of Science in Education', 'University of California, Berkeley', 3,
-          'Mathematics, Algebra, Calculus', 'Grade 9-12, College Prep', 45.0, 1
+          ?, ?, 45.0, '{}', 0
         )
-      `).run(userId);
+      `).run(userId, JSON.stringify(['Mathematics', 'Algebra', 'Calculus']), JSON.stringify(['Grade 9-12', 'College Prep']));
+    } else {
+      // Ensure existing profile has valid JSON arrays and correct pending status
+      db.prepare(`
+        UPDATE tutor_profiles 
+        SET subjects = ?, grade_levels = ?, availability_schedule = COALESCE(availability_schedule, '{}'), is_active = 0
+        WHERE user_id = ? AND (subjects NOT LIKE '[%' OR is_active = 1)
+      `).run(JSON.stringify(['Mathematics', 'Algebra', 'Calculus']), JSON.stringify(['Grade 9-12', 'College Prep']), userId);
     }
   } catch (err) {
     console.error('Error ensuring Joshua Garcia account:', err);

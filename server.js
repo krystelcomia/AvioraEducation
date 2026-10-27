@@ -3653,30 +3653,84 @@ app.post('/api/teacher/schedule/toggle-slot', authenticateToken, requireRole('te
     if (!appRecord || appRecord.status !== 'approved') {
       return res.status(403).json({ error: 'Your account is currently under review. Schedule slot management will unlock once approved by the administrator.' });
     }
-    const { day_of_week, time_slot, reason } = req.body;
+    const { day_of_week, time_slot, reason, date } = req.body;
 
-    if (!day_of_week || !time_slot) {
-      return res.status(400).json({ error: 'Day of week and time slot are required.' });
+    if (!time_slot) {
+      return res.status(400).json({ error: 'Time slot is required.' });
     }
 
-    const existing = db.prepare(`
-      SELECT id FROM tutor_occupied_slots 
-      WHERE tutor_id = ? AND day_of_week = ? AND time_slot = ?
-    `).get(teacherId, day_of_week, time_slot);
+    const dayName = day_of_week || (date ? new Date(date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long' }) : 'Monday');
+
+    let existing;
+    if (date) {
+      existing = db.prepare(`
+        SELECT id FROM tutor_occupied_slots 
+        WHERE tutor_id = ? AND time_slot = ? AND (date = ? OR (date IS NULL AND day_of_week = ?))
+      `).get(teacherId, time_slot, date, dayName);
+    } else {
+      existing = db.prepare(`
+        SELECT id FROM tutor_occupied_slots 
+        WHERE tutor_id = ? AND day_of_week = ? AND time_slot = ? AND date IS NULL
+      `).get(teacherId, dayName, time_slot);
+    }
 
     if (existing) {
       db.prepare('DELETE FROM tutor_occupied_slots WHERE id = ?').run(existing.id);
-      res.json({ message: `${day_of_week} ${time_slot} is now marked as Available for student bookings.`, isOccupied: false });
+      res.json({ message: `${time_slot} is now marked as Available for student bookings.`, isOccupied: false });
     } else {
       db.prepare(`
-        INSERT INTO tutor_occupied_slots (tutor_id, day_of_week, time_slot, reason)
-        VALUES (?, ?, ?, ?)
-      `).run(teacherId, day_of_week, time_slot, reason || 'Occupied / Unavailable');
-      res.json({ message: `${day_of_week} ${time_slot} is now marked as Occupied (Unavailable).`, isOccupied: true });
+        INSERT INTO tutor_occupied_slots (tutor_id, day_of_week, time_slot, date, reason)
+        VALUES (?, ?, ?, ?, ?)
+      `).run(teacherId, dayName, time_slot, date || null, reason || 'Occupied / Unavailable');
+      res.json({ message: `${time_slot} is now marked as Occupied (Unavailable).`, isOccupied: true });
     }
   } catch (error) {
     console.error('Toggle occupied slot error:', error);
     res.status(500).json({ error: 'Failed to toggle slot: ' + error.message });
+  }
+});
+
+// Bulk Set Day Availability (Block Entire Day or Free Entire Day)
+app.post('/api/teacher/schedule/set-day-availability', authenticateToken, requireRole('teacher'), (req, res) => {
+  try {
+    const teacherId = req.user.id;
+    const appRecord = db.prepare('SELECT status FROM teacher_applications WHERE user_id = ?').get(teacherId);
+    if (!appRecord || appRecord.status !== 'approved') {
+      return res.status(403).json({ error: 'Your account is currently under review. Schedule slot management will unlock once approved by the administrator.' });
+    }
+    const { date, day_of_week, action } = req.body;
+    const dayName = day_of_week || (date ? new Date(date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long' }) : 'Monday');
+
+    const timeSlots = [
+      '09:00 AM', '10:00 AM', '11:00 AM', '12:00 PM',
+      '01:00 PM', '02:00 PM', '03:00 PM', '04:00 PM',
+      '05:00 PM', '06:00 PM', '07:00 PM'
+    ];
+
+    if (action === 'free_all') {
+      if (date) {
+        db.prepare('DELETE FROM tutor_occupied_slots WHERE tutor_id = ? AND (date = ? OR (date IS NULL AND day_of_week = ?))').run(teacherId, date, dayName);
+      } else {
+        db.prepare('DELETE FROM tutor_occupied_slots WHERE tutor_id = ? AND day_of_week = ?').run(teacherId, dayName);
+      }
+      return res.json({ message: `All slots for ${date || dayName} are now marked as Available.` });
+    } else if (action === 'block_all') {
+      if (date) {
+        db.prepare('DELETE FROM tutor_occupied_slots WHERE tutor_id = ? AND date = ?').run(teacherId, date);
+      } else {
+        db.prepare('DELETE FROM tutor_occupied_slots WHERE tutor_id = ? AND day_of_week = ? AND date IS NULL').run(teacherId, dayName);
+      }
+      const insert = db.prepare('INSERT INTO tutor_occupied_slots (tutor_id, day_of_week, time_slot, date, reason) VALUES (?, ?, ?, ?, ?)');
+      for (const slot of timeSlots) {
+        insert.run(teacherId, dayName, slot, date || null, 'Day Blocked / Unavailable');
+      }
+      return res.json({ message: `All slots for ${date || dayName} are now marked as Unavailable.` });
+    } else {
+      return res.status(400).json({ error: 'Invalid action. Supported actions are "free_all" or "block_all".' });
+    }
+  } catch (error) {
+    console.error('Set day availability error:', error);
+    res.status(500).json({ error: 'Failed to update day availability: ' + error.message });
   }
 });
 

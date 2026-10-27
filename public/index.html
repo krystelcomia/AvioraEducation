@@ -3279,7 +3279,7 @@
                   Schedule & Availability Management
                 </h2>
                 <p style="color: var(--text-secondary); font-size: 0.925rem; max-width: 800px; margin-top: 0.35rem; line-height: 1.55;">
-                  A calendar displaying your appointments and weekly timetable. Click any time slot to mark it as <strong>"Occupied"</strong> to indicate unavailability and block student bookings, or click an occupied slot to make it available again.
+                  Interactive monthly schedule calendar. Click on any date to set or adjust your available schedule hours, and your upcoming classes will automatically appear directly on the calendar.
                 </p>
               </div>
             </div>
@@ -3288,7 +3288,7 @@
             <div class="schedule-legend-bar">
               <div class="schedule-legend-item">
                 <span class="legend-color-box slot-booked"></span>
-                <span><strong>Booked Appointment:</strong> Confirmed student session</span>
+                <span><strong>Upcoming Class:</strong> Confirmed student session (auto-displayed on date)</span>
               </div>
               <div class="schedule-legend-item">
                 <span class="legend-color-box slot-occupied"></span>
@@ -3300,15 +3300,44 @@
               </div>
             </div>
 
-            <!-- Weekly Calendar Timetable Grid -->
-            <div class="schedule-timetable-container">
-              <div class="schedule-timetable-header">
-                <h3 style="color: var(--text-primary); font-size: 1.15rem; margin: 0;">Weekly Interactive Timetable</h3>
-                <span style="font-size: 0.85rem; color: var(--gold-400); font-weight: 600;">⚡ Click any slot to toggle Occupied / Available</span>
+            <!-- Interactive Schedule Calendar Card -->
+            <div class="teacher-calendar-card">
+              <div class="teacher-calendar-header">
+                <div class="teacher-cal-nav-group">
+                  <button type="button" class="btn btn-secondary btn-sm teacher-cal-nav-btn" id="teacher-cal-prev-btn" title="Previous Month">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                  </button>
+                  <h3 id="teacher-cal-month-title" class="teacher-cal-title">October 2026</h3>
+                  <button type="button" class="btn btn-secondary btn-sm teacher-cal-nav-btn" id="teacher-cal-next-btn" title="Next Month">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                  </button>
+                  <button type="button" class="btn btn-outline-gold btn-sm" id="teacher-cal-today-btn" style="padding: 0.3rem 0.75rem; font-size: 0.8rem;">Today</button>
+                </div>
+                <div class="teacher-cal-hint">
+                  <span style="font-size: 0.85rem; color: var(--gold-400); font-weight: 600;">⚡ Click any date to set schedule & view classes</span>
+                </div>
               </div>
-              <div id="teacher-timetable-calendar" class="schedule-timetable-grid">
-                <!-- Populated dynamically via teacher.js -->
+
+              <!-- Weekdays Bar -->
+              <div class="teacher-cal-weekdays">
+                <div>Sun</div>
+                <div>Mon</div>
+                <div>Tue</div>
+                <div>Wed</div>
+                <div>Thu</div>
+                <div>Fri</div>
+                <div>Sat</div>
               </div>
+
+              <!-- Calendar Month Grid -->
+              <div id="teacher-calendar-grid" class="teacher-cal-days-grid">
+                <!-- Dynamically populated via teacher.js -->
+              </div>
+            </div>
+
+            <!-- Selected Date Schedule & Day Availability Manager -->
+            <div id="teacher-date-schedule-panel" class="teacher-date-schedule-card" style="margin-top: 1.75rem;">
+              <!-- Dynamically populated via teacher.js -->
             </div>
 
             <!-- Upcoming Booked Appointments List -->

@@ -150,6 +150,7 @@ const API = {
   gradeStudentTask: (id, body) => apiRequest(`/teacher/tasks/${id}/grade`, { method: 'POST', body }),
   getTeacherSchedule: () => apiRequest('/teacher/schedule'),
   toggleOccupiedSlot: (body) => apiRequest('/teacher/schedule/toggle-slot', { method: 'POST', body }),
+  setDayAvailability: (body) => apiRequest('/teacher/schedule/set-day-availability', { method: 'POST', body }),
   getTeacherBuddySessions: () => apiRequest('/teacher/buddy-sessions'),
 
   // Admin

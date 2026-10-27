@@ -754,158 +754,328 @@
   background: #10B981;
 }
 
-.schedule-timetable-container {
+/* ==============================================================
+   TEACHER MONTHLY SCHEDULE CALENDAR & DATE SCHEDULE MANAGER
+   ============================================================== */
+.teacher-calendar-card {
   background: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-xl);
   overflow: hidden;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04);
+  transition: all var(--transition-normal);
 }
 
-.schedule-timetable-header {
+.teacher-calendar-header {
   padding: 1.25rem 1.75rem;
   border-bottom: 1px solid var(--border-color);
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
 }
 
-.schedule-timetable-grid {
-  display: grid;
-  grid-template-columns: 90px repeat(7, 1fr);
-  overflow-x: auto;
-}
-
-.timetable-time-col, .timetable-day-col {
+.teacher-cal-nav-group {
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
 }
 
-.timetable-cell-header {
-  padding: 0.85rem 0.5rem;
-  text-align: center;
-  font-size: 0.85rem;
+.teacher-cal-nav-btn {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.teacher-cal-title {
+  margin: 0;
+  font-size: 1.25rem;
   font-weight: 700;
   color: var(--text-primary);
+  min-width: 170px;
+  text-align: center;
+}
+
+.teacher-cal-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
   background: rgba(0, 0, 0, 0.02);
   border-bottom: 1px solid var(--border-color);
-  border-right: 1px solid var(--border-color);
+  text-align: center;
 }
 
-.timetable-cell-time {
-  height: 68px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.75rem;
-  font-weight: 600;
+.teacher-cal-weekdays > div {
+  padding: 0.75rem 0.5rem;
+  font-size: 0.8rem;
+  font-weight: 700;
   color: var(--text-secondary);
-  border-bottom: 1px solid var(--border-color);
-  border-right: 1px solid var(--border-color);
-  background: rgba(0, 0, 0, 0.01);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
-.timetable-slot {
-  height: 68px;
-  padding: 0.35rem;
-  border-bottom: 1px solid var(--border-color);
-  border-right: 1px solid var(--border-color);
+.teacher-cal-days-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 1px;
+  background: var(--border-color);
+}
+
+.teacher-cal-day-cell {
+  background: var(--bg-card);
+  min-height: 110px;
+  padding: 0.65rem;
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  text-align: center;
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: background var(--transition-fast), box-shadow var(--transition-fast);
   position: relative;
 }
 
-.timetable-slot.slot-booked {
-  background: rgba(59, 130, 246, 0.12);
-  border-left: 3px solid #3B82F6;
-  cursor: default;
+.teacher-cal-day-cell:hover {
+  background: rgba(198, 138, 40, 0.04);
 }
 
-.timetable-slot.slot-booked .slot-badge {
-  background: #3B82F6;
-  color: #FFFFFF;
-  font-size: 0.65rem;
-  padding: 0.1rem 0.4rem;
-  border-radius: var(--radius-full);
-  font-weight: 700;
+.teacher-cal-day-cell.is-other-month {
+  background: rgba(0, 0, 0, 0.015);
+  opacity: 0.45;
 }
 
-.timetable-slot.slot-booked .slot-student-name {
-  font-size: 0.75rem;
+.teacher-cal-day-cell.is-today {
+  background: rgba(198, 138, 40, 0.03);
+}
+
+.teacher-cal-day-cell.is-selected {
+  background: rgba(198, 138, 40, 0.09) !important;
+  box-shadow: inset 0 0 0 2px var(--gold-500);
+}
+
+.teacher-cal-day-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.4rem;
+}
+
+.teacher-cal-day-num {
+  font-size: 0.85rem;
   font-weight: 700;
   color: var(--text-primary);
-  margin-top: 0.2rem;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: 95%;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
 }
 
-.timetable-slot.slot-booked .slot-subject {
+.teacher-cal-day-cell.is-today .teacher-cal-day-num {
+  background: var(--gradient-gold);
+  color: #14151B;
+  box-shadow: 0 2px 6px rgba(198, 138, 40, 0.35);
+}
+
+.cal-classes-badge {
   font-size: 0.65rem;
-  color: var(--text-secondary);
+  font-weight: 700;
+  padding: 0.1rem 0.4rem;
+  border-radius: var(--radius-full);
+  background: #3B82F6;
+  color: #FFFFFF;
+}
+
+.teacher-cal-events-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* Event Chip inside Calendar Cell */
+.cal-event-chip {
+  padding: 0.25rem 0.45rem;
+  border-radius: 4px;
+  font-size: 0.72rem;
+  line-height: 1.25;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  transition: transform var(--transition-fast);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  max-width: 95%;
 }
 
-.timetable-slot.slot-occupied {
+.cal-event-chip:hover {
+  transform: translateY(-1px);
+}
+
+.cal-event-chip.chip-class {
+  background: rgba(59, 130, 246, 0.12);
+  border-left: 3px solid #3B82F6;
+  color: #1D4ED8;
+}
+
+.cal-event-chip.chip-class .chip-time {
+  font-weight: 700;
+  font-size: 0.68rem;
+  color: #2563EB;
+}
+
+.cal-event-chip.chip-class .chip-student {
+  font-weight: 600;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cal-event-chip.chip-occupied {
   background: rgba(239, 68, 68, 0.1);
   border-left: 3px solid #EF4444;
-}
-
-.timetable-slot.slot-occupied:hover {
-  background: rgba(239, 68, 68, 0.18);
-}
-
-.timetable-slot.slot-occupied .slot-badge {
-  color: #EF4444;
-  font-size: 0.7rem;
-  font-weight: 700;
-}
-
-.timetable-slot.slot-occupied .slot-status-text {
-  font-size: 0.65rem;
-  color: var(--text-secondary);
-}
-
-.timetable-slot.slot-occupied:hover .slot-hover-action {
-  display: block;
-}
-
-.timetable-slot.slot-available {
-  background: transparent;
-}
-
-.timetable-slot.slot-available:hover {
-  background: rgba(16, 185, 129, 0.1);
-}
-
-.timetable-slot.slot-available .slot-status-text.open {
-  font-size: 0.725rem;
-  color: #10B981;
+  color: #DC2626;
+  font-size: 0.68rem;
   font-weight: 600;
 }
 
-.timetable-slot .slot-hover-action {
-  display: none;
-  font-size: 0.675rem;
+.cal-more-events {
+  font-size: 0.68rem;
   font-weight: 700;
   color: var(--gold-500);
+  margin-top: 0.15rem;
 }
 
-.timetable-slot.slot-available:hover .slot-status-text {
-  display: none;
+/* Date Schedule Manager Panel */
+.teacher-date-schedule-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-xl);
+  padding: 1.75rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
 }
 
-.timetable-slot.slot-available:hover .slot-hover-action {
-  display: block;
+.date-schedule-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid var(--border-color);
+  margin-bottom: 1.5rem;
+}
+
+.date-schedule-title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.date-schedule-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.date-schedule-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+}
+
+@media (max-width: 900px) {
+  .date-schedule-columns {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+}
+
+.date-schedule-col-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.date-slot-pills-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 0.65rem;
+}
+
+.date-slot-pill {
+  padding: 0.6rem 0.5rem;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  text-align: center;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  background: var(--bg-card);
+}
+
+.date-slot-pill .slot-pill-time {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.date-slot-pill .slot-pill-status {
+  font-size: 0.68rem;
+  font-weight: 600;
+}
+
+.date-slot-pill.is-available {
+  border-color: rgba(16, 185, 129, 0.4);
+  background: rgba(16, 185, 129, 0.05);
+}
+
+.date-slot-pill.is-available:hover {
+  background: rgba(16, 185, 129, 0.15);
+  border-color: #10B981;
+}
+
+.date-slot-pill.is-available .slot-pill-status {
+  color: #10B981;
+}
+
+.date-slot-pill.is-occupied {
+  border-color: rgba(239, 68, 68, 0.4);
+  background: rgba(239, 68, 68, 0.06);
+}
+
+.date-slot-pill.is-occupied:hover {
+  background: rgba(239, 68, 68, 0.16);
+  border-color: #EF4444;
+}
+
+.date-slot-pill.is-occupied .slot-pill-status {
+  color: #EF4444;
+}
+
+.date-slot-pill.is-booked {
+  border-color: rgba(59, 130, 246, 0.4);
+  background: rgba(59, 130, 246, 0.08);
+  cursor: default;
+}
+
+.date-slot-pill.is-booked .slot-pill-status {
+  color: #3B82F6;
 }
 
 /* Upcoming Appointments Grid */
@@ -1055,6 +1225,8 @@
 [data-theme="dark"] .teacher-class-card,
 [data-theme="dark"] .teacher-student-card,
 [data-theme="dark"] .teacher-task-card,
+[data-theme="dark"] .teacher-calendar-card,
+[data-theme="dark"] .teacher-date-schedule-card,
 [data-theme="dark"] .schedule-timetable-container,
 [data-theme="dark"] .teacher-buddy-card,
 [data-theme="dark"] .teacher-nav-pill,
@@ -1122,6 +1294,40 @@
 [data-theme="dark"] .modal-card {
   background: #0D0E12 !important;
   border-color: rgba(198, 138, 40, 0.35) !important;
+}
+
+[data-theme="dark"] .teacher-cal-weekdays {
+  background: rgba(255, 255, 255, 0.03) !important;
+}
+
+[data-theme="dark"] .teacher-cal-day-cell {
+  background: #0D0E12 !important;
+}
+
+[data-theme="dark"] .teacher-cal-day-cell:hover {
+  background: rgba(198, 138, 40, 0.1) !important;
+}
+
+[data-theme="dark"] .teacher-cal-day-cell.is-other-month {
+  background: #08090C !important;
+}
+
+[data-theme="dark"] .teacher-cal-day-cell.is-selected {
+  background: rgba(198, 138, 40, 0.16) !important;
+}
+
+[data-theme="dark"] .cal-event-chip.chip-class {
+  background: rgba(59, 130, 246, 0.22) !important;
+  color: #93C5FD !important;
+}
+
+[data-theme="dark"] .cal-event-chip.chip-class .chip-student {
+  color: #FFFFFF !important;
+}
+
+[data-theme="dark"] .date-slot-pill {
+  background: rgba(255, 255, 255, 0.03) !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
 }
 
 @media (max-width: 900px) {

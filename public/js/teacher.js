@@ -17,6 +17,13 @@ const Teacher = {
   students: [],
   tasks: [],
   scheduleData: { appointments: [], occupiedSlots: [] },
+  calYear: new Date().getFullYear(),
+  calMonth: new Date().getMonth(),
+  selectedDate: (() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  })(),
+  calListenersAttached: false,
   buddySessions: [],
   dashboardData: null,
   currentTab: 'dashboard',
@@ -369,6 +376,7 @@ const Teacher = {
   async loadSchedulePage() {
     await this.ensureTeacherStatus();
     this.renderStatusBanner('teacher-banner-schedule');
+    this.setupCalendarListeners();
     await this.loadSchedule();
     if (typeof Router !== 'undefined' && Router.updateActiveNav) Router.updateActiveNav();
   },
@@ -1364,128 +1372,378 @@ const Teacher = {
   async loadSchedule() {
     try {
       const data = await API.getTeacherSchedule();
-      this.scheduleData = data;
+      this.scheduleData = data || { appointments: [], occupiedSlots: [] };
       this.renderSchedule();
     } catch (err) {
       console.error('Failed to load teacher schedule:', err);
     }
   },
 
+  setupCalendarListeners() {
+    if (this.calListenersAttached) return;
+    const prevBtn = document.getElementById('teacher-cal-prev-btn');
+    const nextBtn = document.getElementById('teacher-cal-next-btn');
+    const todayBtn = document.getElementById('teacher-cal-today-btn');
+
+    if (prevBtn) {
+      prevBtn.addEventListener('click', () => {
+        this.calMonth--;
+        if (this.calMonth < 0) {
+          this.calMonth = 11;
+          this.calYear--;
+        }
+        this.renderCalendar();
+        this.renderDateSchedulePanel();
+      });
+    }
+
+    if (nextBtn) {
+      nextBtn.addEventListener('click', () => {
+        this.calMonth++;
+        if (this.calMonth > 11) {
+          this.calMonth = 0;
+          this.calYear++;
+        }
+        this.renderCalendar();
+        this.renderDateSchedulePanel();
+      });
+    }
+
+    if (todayBtn) {
+      todayBtn.addEventListener('click', () => {
+        const now = new Date();
+        this.calYear = now.getFullYear();
+        this.calMonth = now.getMonth();
+        this.selectedDate = `${this.calYear}-${String(this.calMonth + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+        this.renderCalendar();
+        this.renderDateSchedulePanel();
+      });
+    }
+
+    this.calListenersAttached = true;
+  },
+
   renderSchedule() {
-    const calendarGrid = document.getElementById('teacher-timetable-calendar');
-    const upcomingList = document.getElementById('teacher-upcoming-appointments-list');
-    const countBadge = document.getElementById('teacher-upcoming-count-badge');
+    this.renderCalendar();
+    this.renderDateSchedulePanel();
+    this.renderUpcomingAppointmentsList();
+  },
+
+  renderCalendar() {
+    const calendarGrid = document.getElementById('teacher-calendar-grid');
+    const monthTitle = document.getElementById('teacher-cal-month-title');
     if (!calendarGrid) return;
 
-    const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    const monthDate = new Date(this.calYear, this.calMonth, 1);
+    if (monthTitle) {
+      monthTitle.textContent = monthDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    }
+
+    const firstDayIndex = monthDate.getDay(); // 0 is Sunday
+    const daysInMonth = new Date(this.calYear, this.calMonth + 1, 0).getDate();
+    const daysInPrevMonth = new Date(this.calYear, this.calMonth, 0).getDate();
+
+    const now = new Date();
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+    const appointments = this.scheduleData?.appointments || [];
+    const occupiedSlots = this.scheduleData?.occupiedSlots || [];
+
+    // Map appointments by YYYY-MM-DD
+    const aptsByDate = {};
+    appointments.forEach(apt => {
+      if (!apt.requested_date) return;
+      const dStr = apt.requested_date.split('T')[0];
+      if (!aptsByDate[dStr]) aptsByDate[dStr] = [];
+      aptsByDate[dStr].push(apt);
+    });
+
+    let cellsHtml = '';
+
+    // Leading days from previous month
+    for (let i = firstDayIndex - 1; i >= 0; i--) {
+      const dayNum = daysInPrevMonth - i;
+      let prevM = this.calMonth;
+      let prevY = this.calYear;
+      if (prevM === 0) {
+        prevM = 12;
+        prevY--;
+      }
+      const dateStr = `${prevY}-${String(prevM).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
+      cellsHtml += `
+        <div class="teacher-cal-day-cell is-other-month" onclick="Teacher.selectCalendarDate('${dateStr}')">
+          <div class="teacher-cal-day-header">
+            <span class="teacher-cal-day-num">${dayNum}</span>
+          </div>
+        </div>
+      `;
+    }
+
+    // Days in current month
+    for (let day = 1; day <= daysInMonth; day++) {
+      const dateStr = `${this.calYear}-${String(this.calMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      const cellDate = new Date(this.calYear, this.calMonth, day);
+      const dayOfWeekName = dayNames[cellDate.getDay()];
+
+      const isToday = dateStr === todayStr;
+      const isSelected = dateStr === this.selectedDate;
+
+      const dayApts = aptsByDate[dateStr] || [];
+      const dayOccupied = occupiedSlots.filter(o => o.date === dateStr || (!o.date && o.day_of_week === dayOfWeekName));
+
+      cellsHtml += `
+        <div class="teacher-cal-day-cell ${isToday ? 'is-today' : ''} ${isSelected ? 'is-selected' : ''}" 
+             onclick="Teacher.selectCalendarDate('${dateStr}')">
+          <div class="teacher-cal-day-header">
+            <span class="teacher-cal-day-num">${day}</span>
+            ${dayApts.length > 0 ? `<span class="cal-classes-badge">${dayApts.length} class${dayApts.length === 1 ? '' : 'es'}</span>` : ''}
+          </div>
+          <div class="teacher-cal-events-list">
+            ${dayApts.slice(0, 2).map(apt => `
+              <div class="cal-event-chip chip-class" title="${apt.student_name}: ${apt.subject} (${apt.requested_time})">
+                <span class="chip-time">${apt.requested_time}</span>
+                <span class="chip-student">${apt.student_name} · ${apt.subject}</span>
+              </div>
+            `).join('')}
+            ${dayApts.length > 2 ? `<div class="cal-more-events">+${dayApts.length - 2} more classes</div>` : ''}
+            ${dayOccupied.length > 0 && dayApts.length <= 1 ? `
+              <div class="cal-event-chip chip-occupied" title="${dayOccupied.length} slot(s) blocked unavailable">
+                🔒 ${dayOccupied.length} slot${dayOccupied.length === 1 ? '' : 's'} unavailable
+              </div>
+            ` : ''}
+          </div>
+        </div>
+      `;
+    }
+
+    // Trailing days for next month to complete the row
+    const totalRendered = firstDayIndex + daysInMonth;
+    const remaining = (7 - (totalRendered % 7)) % 7;
+    for (let day = 1; day <= remaining; day++) {
+      let nextM = this.calMonth + 2;
+      let nextY = this.calYear;
+      if (nextM > 12) {
+        nextM = 1;
+        nextY++;
+      }
+      const dateStr = `${nextY}-${String(nextM).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      cellsHtml += `
+        <div class="teacher-cal-day-cell is-other-month" onclick="Teacher.selectCalendarDate('${dateStr}')">
+          <div class="teacher-cal-day-header">
+            <span class="teacher-cal-day-num">${day}</span>
+          </div>
+        </div>
+      `;
+    }
+
+    calendarGrid.innerHTML = cellsHtml;
+  },
+
+  selectCalendarDate(dateStr) {
+    this.selectedDate = dateStr;
+    const dateObj = new Date(dateStr + 'T00:00:00');
+    if (dateObj.getMonth() !== this.calMonth || dateObj.getFullYear() !== this.calYear) {
+      this.calYear = dateObj.getFullYear();
+      this.calMonth = dateObj.getMonth();
+    }
+    this.renderCalendar();
+    this.renderDateSchedulePanel();
+
+    const panel = document.getElementById('teacher-date-schedule-panel');
+    if (panel) {
+      panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  },
+
+  renderDateSchedulePanel() {
+    const panel = document.getElementById('teacher-date-schedule-panel');
+    if (!panel) return;
+
+    if (!this.selectedDate) {
+      const now = new Date();
+      this.selectedDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    }
+
+    const dateObj = new Date(this.selectedDate + 'T00:00:00');
+    const formattedDate = dateObj.toLocaleDateString('en-US', {
+      weekday: 'long',
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric'
+    });
+    const dayOfWeekName = dateObj.toLocaleDateString('en-US', { weekday: 'long' });
+
+    const appointments = this.scheduleData?.appointments || [];
+    const occupiedSlots = this.scheduleData?.occupiedSlots || [];
+
+    const dayApts = appointments.filter(a => (a.requested_date || '').startsWith(this.selectedDate));
+    const dayOccupied = occupiedSlots.filter(o => o.date === this.selectedDate || (!o.date && o.day_of_week === dayOfWeekName));
+
     const timeSlots = [
       '09:00 AM', '10:00 AM', '11:00 AM', '12:00 PM',
       '01:00 PM', '02:00 PM', '03:00 PM', '04:00 PM',
       '05:00 PM', '06:00 PM', '07:00 PM'
     ];
 
-    const appointments = this.scheduleData.appointments || [];
-    const occupiedSlots = this.scheduleData.occupiedSlots || [];
+    panel.innerHTML = `
+      <div class="date-schedule-header">
+        <div>
+          <h3 class="date-schedule-title">
+            ${Icons.calendar(20)} Schedule for ${formattedDate}
+          </h3>
+          <p style="margin: 0.25rem 0 0; font-size: 0.85rem; color: var(--text-secondary);">
+            Click any slot below to toggle Availability, or inspect student sessions booked on this date.
+          </p>
+        </div>
+        <div class="date-schedule-actions">
+          <button type="button" class="btn btn-outline-gold btn-sm" onclick="Teacher.bulkSetDayAvailability('free_all')">
+            🟢 Set All Slots Available
+          </button>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="Teacher.bulkSetDayAvailability('block_all')">
+            🔒 Block Entire Day
+          </button>
+        </div>
+      </div>
+
+      <div class="date-schedule-columns">
+        <!-- Left Column: Upcoming Classes on this Date -->
+        <div>
+          <div class="date-schedule-col-title">
+            <span>Upcoming Classes (${dayApts.length})</span>
+            <span style="font-size: 0.75rem; color: var(--text-secondary); font-weight: 500;">Auto-synced from student bookings</span>
+          </div>
+
+          ${dayApts.length === 0 ? `
+            <div style="padding: 2rem 1.5rem; text-align: center; color: var(--text-secondary); background: rgba(0,0,0,0.02); border-radius: var(--radius-lg); border: 1px dashed var(--border-color);">
+              <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">📅</div>
+              <strong style="color: var(--text-primary); font-size: 0.95rem;">No Classes Booked on this Date</strong>
+              <p style="margin: 0.25rem 0 0; font-size: 0.825rem;">Open slots on this day are ready for students to reserve.</p>
+            </div>
+          ` : `
+            <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+              ${dayApts.map(apt => `
+                <div class="appointment-card" style="margin-bottom: 0;">
+                  <div style="display: flex; gap: 0.75rem; align-items: center;">
+                    <img src="${apt.student_avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=80&q=80'}" class="appointment-avatar" />
+                    <div>
+                      <strong style="color: var(--text-primary); font-size: 0.95rem;">${apt.student_name}</strong>
+                      <div style="font-size: 0.8rem; color: var(--text-secondary);">${apt.subject}</div>
+                    </div>
+                  </div>
+                  <div class="appointment-meta">
+                    <div>${Icons.clock(14)} ${apt.requested_time}</div>
+                    <div>${apt.hourly_rate ? `$${apt.hourly_rate}/hr` : 'Booked'}</div>
+                  </div>
+                  <div>
+                    ${!this.isApproved() ? `
+                      <span class="badge" style="background: rgba(245, 158, 11, 0.15); color: #D97706; font-size: 0.75rem; padding: 0.3rem 0.6rem; border-radius: 4px;" title="Operations locked while application is under review">🔒 Locked</span>
+                    ` : apt.room_status === 'open' ? `
+                      <button class="btn btn-primary btn-sm" onclick="VirtualRoom.joinRoom(${apt.id}, 'tutor')" style="background: #10B981; border-color: #10B981;">Enter (Live)</button>
+                    ` : `
+                      <button class="btn btn-secondary btn-sm" onclick="VirtualRoom.openRoomAsTutor(${apt.id})">Open Room</button>
+                    `}
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          `}
+        </div>
+
+        <!-- Right Column: Time Slot Availability -->
+        <div>
+          <div class="date-schedule-col-title">
+            <span>Time Slot Availability</span>
+            <span style="font-size: 0.75rem; color: var(--gold-400); font-weight: 600;">⚡ Click to toggle</span>
+          </div>
+
+          <div class="date-slot-pills-grid">
+            ${timeSlots.map(slot => {
+              const booked = dayApts.find(a => a.requested_time && a.requested_time.includes(slot.replace(' ', '')));
+              const isOccupied = dayOccupied.some(o => o.time_slot === slot);
+
+              if (booked) {
+                return `
+                  <div class="date-slot-pill is-booked" title="Booked by student: ${booked.student_name}">
+                    <span class="slot-pill-time">${slot}</span>
+                    <span class="slot-pill-status">Booked: ${booked.student_name.split(' ')[0]}</span>
+                  </div>
+                `;
+              }
+
+              if (isOccupied) {
+                return `
+                  <div class="date-slot-pill is-occupied" 
+                       onclick="Teacher.toggleOccupiedSlot('${dayOfWeekName}', '${slot}', 'Unavailable', '${this.selectedDate}')"
+                       title="Marked Unavailable. Click to make Open & Available.">
+                    <span class="slot-pill-time">${slot}</span>
+                    <span class="slot-pill-status">🔒 Blocked</span>
+                  </div>
+                `;
+              }
+
+              return `
+                <div class="date-slot-pill is-available" 
+                     onclick="Teacher.toggleOccupiedSlot('${dayOfWeekName}', '${slot}', 'Unavailable', '${this.selectedDate}')"
+                     title="Available for bookings. Click to mark Unavailable.">
+                  <span class="slot-pill-time">${slot}</span>
+                  <span class="slot-pill-status">🟢 Available</span>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </div>
+      </div>
+    `;
+  },
+
+  renderUpcomingAppointmentsList() {
+    const upcomingList = document.getElementById('teacher-upcoming-appointments-list');
+    const countBadge = document.getElementById('teacher-upcoming-count-badge');
+    const appointments = this.scheduleData?.appointments || [];
 
     if (countBadge) {
       countBadge.textContent = `${appointments.length} Appointment${appointments.length === 1 ? '' : 's'}`;
     }
 
-    // Render Weekly Timetable Grid
-    let gridHtml = `
-      <div class="timetable-time-col">
-        <div class="timetable-cell-header">Time</div>
-        ${timeSlots.map(t => `<div class="timetable-cell-time">${t}</div>`).join('')}
-      </div>
-    `;
+    if (!upcomingList) return;
 
-    days.forEach(day => {
-      gridHtml += `
-        <div class="timetable-day-col">
-          <div class="timetable-cell-header">${day}</div>
-          ${timeSlots.map(slot => {
-            // Check if slot has a booked appointment
-            const booked = appointments.find(a => {
-              if (!a.requested_date) return false;
-              const dateObj = new Date(a.requested_date);
-              const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'long' });
-              return dayName === day && a.requested_time && a.requested_time.includes(slot.replace(' ', ''));
-            });
-
-            // Check if slot is marked occupied
-            const occupied = occupiedSlots.find(o => o.day_of_week === day && o.time_slot === slot);
-
-            if (booked) {
-              return `
-                <div class="timetable-slot slot-booked" title="Booked: ${booked.student_name} (${booked.subject})">
-                  <div class="slot-badge booked">Booked</div>
-                  <div class="slot-student-name">${booked.student_name}</div>
-                  <div class="slot-subject">${booked.subject}</div>
-                </div>
-              `;
-            }
-
-            if (occupied) {
-              return `
-                <div class="timetable-slot slot-occupied" onclick="Teacher.toggleOccupiedSlot('${day}', '${slot}', 'Occupied')" title="Marked Occupied. Click to remove and make available.">
-                  <div class="slot-badge occupied">🔒 Occupied</div>
-                  <div class="slot-status-text">Unavailable</div>
-                  <span class="slot-hover-action">Click to Free</span>
-                </div>
-              `;
-            }
-
-            return `
-              <div class="timetable-slot slot-available" onclick="Teacher.toggleOccupiedSlot('${day}', '${slot}', 'Tutor Unavailable')" title="Available for bookings. Click to mark as Occupied.">
-                <div class="slot-status-text open">Open</div>
-                <span class="slot-hover-action">+ Mark Occupied</span>
-              </div>
-            `;
-          }).join('')}
+    if (appointments.length === 0) {
+      upcomingList.innerHTML = `
+        <div style="text-align: center; padding: 2.5rem; color: var(--text-secondary);">
+          No upcoming appointments scheduled yet.
         </div>
       `;
-    });
-
-    calendarGrid.innerHTML = gridHtml;
-
-    // Render Upcoming Appointments List
-    if (upcomingList) {
-      if (appointments.length === 0) {
-        upcomingList.innerHTML = `
-          <div style="text-align: center; padding: 2.5rem; color: var(--text-secondary);">
-            No upcoming appointments scheduled yet.
-          </div>
-        `;
-      } else {
-        upcomingList.innerHTML = appointments.slice(0, 6).map(apt => `
-          <div class="appointment-card">
-            <div style="display: flex; gap: 0.75rem; align-items: center;">
-              <img src="${apt.student_avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=80&q=80'}" class="appointment-avatar" />
-              <div>
-                <strong style="color: var(--text-primary); font-size: 0.95rem;">${apt.student_name}</strong>
-                <div style="font-size: 0.8rem; color: var(--text-secondary);">${apt.subject}</div>
-              </div>
-            </div>
-            <div class="appointment-meta">
-              <div>${Icons.calendar(14)} ${apt.requested_date}</div>
-              <div>${Icons.clock(14)} ${apt.requested_time}</div>
-            </div>
-            <div>
-              ${!this.isApproved() ? `
-                <span class="badge" style="background: rgba(245, 158, 11, 0.15); color: #D97706; font-size: 0.75rem; padding: 0.3rem 0.6rem; border-radius: 4px;" title="Operations locked while application is under review">🔒 Locked</span>
-              ` : apt.room_status === 'open' ? `
-                <button class="btn btn-primary btn-sm" onclick="VirtualRoom.joinRoom(${apt.id}, 'tutor')" style="background: #10B981; border-color: #10B981;">Enter (Live)</button>
-              ` : `
-                <button class="btn btn-secondary btn-sm" onclick="VirtualRoom.openRoomAsTutor(${apt.id})">Open Room</button>
-              `}
-            </div>
-          </div>
-        `).join('');
-      }
+      return;
     }
+
+    upcomingList.innerHTML = appointments.slice(0, 8).map(apt => `
+      <div class="appointment-card" onclick="Teacher.selectCalendarDate('${apt.requested_date}')" style="cursor: pointer;" title="Click to view on calendar">
+        <div style="display: flex; gap: 0.75rem; align-items: center;">
+          <img src="${apt.student_avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=80&q=80'}" class="appointment-avatar" />
+          <div>
+            <strong style="color: var(--text-primary); font-size: 0.95rem;">${apt.student_name}</strong>
+            <div style="font-size: 0.8rem; color: var(--text-secondary);">${apt.subject}</div>
+          </div>
+        </div>
+        <div class="appointment-meta">
+          <div>${Icons.calendar(14)} ${apt.requested_date}</div>
+          <div>${Icons.clock(14)} ${apt.requested_time}</div>
+        </div>
+        <div onclick="event.stopPropagation();">
+          ${!this.isApproved() ? `
+            <span class="badge" style="background: rgba(245, 158, 11, 0.15); color: #D97706; font-size: 0.75rem; padding: 0.3rem 0.6rem; border-radius: 4px;" title="Operations locked while application is under review">🔒 Locked</span>
+          ` : apt.room_status === 'open' ? `
+            <button class="btn btn-primary btn-sm" onclick="VirtualRoom.joinRoom(${apt.id}, 'tutor')" style="background: #10B981; border-color: #10B981;">Enter (Live)</button>
+          ` : `
+            <button class="btn btn-secondary btn-sm" onclick="VirtualRoom.openRoomAsTutor(${apt.id})">Open Room</button>
+          `}
+        </div>
+      </div>
+    `).join('');
   },
 
-  async toggleOccupiedSlot(dayOfWeek, timeSlot, reason = 'Occupied') {
+  async toggleOccupiedSlot(dayOfWeek, timeSlot, reason = 'Occupied', date = null) {
     if (this.application?.status !== 'approved') {
       showToast('Operational Lock: Schedule availability and student bookings unlock once your account has been approved by the Administrator following your virtual interview.', 'warning');
       return;
@@ -1494,13 +1752,34 @@ const Teacher = {
       const res = await API.toggleOccupiedSlot({
         day_of_week: dayOfWeek,
         time_slot: timeSlot,
-        reason: reason || 'Unavailable'
+        reason: reason || 'Unavailable',
+        date: date || this.selectedDate
       });
 
-      showToast(res.message, res.status === 'occupied' ? 'info' : 'success');
+      showToast(res.message, res.isOccupied ? 'info' : 'success');
       await this.loadSchedule();
     } catch (err) {
       showToast(err.message || 'Failed to update schedule slot.', 'error');
+    }
+  },
+
+  async bulkSetDayAvailability(action) {
+    if (this.application?.status !== 'approved') {
+      showToast('Operational Lock: Schedule availability unlocks once your account has been approved by the Administrator following your virtual interview.', 'warning');
+      return;
+    }
+    try {
+      const dateObj = new Date((this.selectedDate || '') + 'T00:00:00');
+      const dayOfWeekName = dateObj.toLocaleDateString('en-US', { weekday: 'long' });
+      const res = await API.setDayAvailability({
+        date: this.selectedDate,
+        day_of_week: dayOfWeekName,
+        action
+      });
+      showToast(res.message, 'success');
+      await this.loadSchedule();
+    } catch (err) {
+      showToast(err.message || 'Failed to update schedule: ' + err.message, 'error');
     }
   },
 

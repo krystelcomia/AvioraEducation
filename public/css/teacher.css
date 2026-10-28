@@ -348,6 +348,29 @@
   margin-bottom: 1.75rem;
 }
 
+/* Classes Search & Filter Bar */
+.teacher-classes-controls {
+  display: flex;
+  gap: 0.85rem;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 1.5rem;
+}
+
+.teacher-classes-search-box {
+  flex: 1 1 320px;
+}
+
+.teacher-classes-filter-select-wrap {
+  flex: 0 0 240px;
+}
+
+@media (max-width: 640px) {
+  .teacher-classes-filter-select-wrap {
+    flex: 1 1 100%;
+  }
+}
+
 .teacher-filter-bar {
   display: flex;
   gap: 0.5rem;

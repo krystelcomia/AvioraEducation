@@ -29,6 +29,7 @@ const Teacher = {
   currentTab: 'dashboard',
   viewingDashboard: false,
   classFilter: 'all',
+  classSearchQuery: '',
   taskFilter: 'all',
   initialApplicationFormHtml: null,
   showEditApplicationForm: false,
@@ -972,11 +973,20 @@ const Teacher = {
   },
 
   filterClasses(filter, btn) {
-    this.classFilter = filter;
-    if (btn) {
-      document.querySelectorAll('#teacher-tab-classes .teacher-filter-btn').forEach(b => b.classList.remove('active'));
+    this.classFilter = filter || 'all';
+    const selectEl = document.getElementById('teacher-classes-status-filter');
+    if (selectEl && selectEl.value !== this.classFilter) {
+      selectEl.value = this.classFilter;
+    }
+    if (btn && btn.classList) {
+      document.querySelectorAll('#view-teacher-classes .teacher-filter-btn, #teacher-tab-classes .teacher-filter-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
     }
+    this.renderClasses();
+  },
+
+  searchClasses(query) {
+    this.classSearchQuery = (query || '').trim();
     this.renderClasses();
   },
 
@@ -995,15 +1005,31 @@ const Teacher = {
       filtered = filtered.filter(c => c.status === 'completed');
     }
 
+    const q = (this.classSearchQuery || '').toLowerCase();
+    if (q) {
+      filtered = filtered.filter(c =>
+        String(c.student_name || '').toLowerCase().includes(q) ||
+        String(c.subject || '').toLowerCase().includes(q) ||
+        String(c.requested_date || '').toLowerCase().includes(q) ||
+        String(c.requested_time || '').toLowerCase().includes(q) ||
+        String(c.notes || '').toLowerCase().includes(q) ||
+        String(c.student_grade || '').toLowerCase().includes(q) ||
+        String(c.student_school || '').toLowerCase().includes(q) ||
+        String(c.status || '').toLowerCase().includes(q)
+      );
+    }
+
     if (filtered.length === 0) {
       container.innerHTML = `
         <div style="grid-column: 1 / -1; text-align: center; padding: 4rem 2rem; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-xl);">
           <div style="font-size: 2.5rem; margin-bottom: 0.75rem;">🎓</div>
           <h3 style="color: var(--text-primary); font-size: 1.25rem;">No Classes Found</h3>
           <p style="color: var(--text-secondary); font-size: 0.9rem; max-width: 480px; margin: 0.5rem auto 1.5rem;">
-            ${this.classFilter === 'open' 
-              ? 'No live virtual classrooms currently open. You can launch a virtual session for any accepted student booking.' 
-              : 'You do not have any classes in this category yet.'}
+            ${q
+              ? 'No classes match your current search or filter criteria.'
+              : this.classFilter === 'open' 
+                ? 'No live virtual classrooms currently open. You can launch a virtual session for any accepted student booking.' 
+                : 'You do not have any classes in this category yet.'}
           </p>
           <button type="button" class="btn btn-primary btn-sm" onclick="Teacher.openInstantClassModal()">
             🚀 Launch Instant Class with Student

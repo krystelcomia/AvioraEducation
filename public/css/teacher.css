@@ -811,6 +811,43 @@
   border-left: 3px solid var(--gold-400);
 }
 
+.class-action-indicator-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  padding: 0.45rem 0.7rem;
+  margin-top: 0.2rem;
+  border-radius: var(--radius-md);
+  font-size: 0.78rem;
+  background: rgba(198, 138, 40, 0.08);
+  border: 1px solid rgba(198, 138, 40, 0.25);
+  color: var(--text-primary);
+}
+
+.class-action-indicator-badge strong {
+  color: var(--gold-700);
+  font-weight: 800;
+}
+
+.class-action-indicator-badge.status-completed {
+  background: rgba(16, 185, 129, 0.08);
+  border-color: rgba(16, 185, 129, 0.25);
+}
+
+.class-action-indicator-badge.status-completed strong {
+  color: #059669;
+}
+
+.class-action-indicator-badge.status-declined {
+  background: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.25);
+}
+
+.class-action-indicator-badge.status-declined strong {
+  color: #DC2626;
+}
+
 .class-calendar-sync-badge {
   display: flex;
   align-items: center;

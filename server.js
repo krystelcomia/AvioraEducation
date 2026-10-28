@@ -4071,12 +4071,12 @@ app.get('/api/teacher/buddy-sessions', authenticateToken, requireRole('teacher')
   }
 });
 
-// Teacher responds to or updates request (Accept, Decline, Mark Completed, Pending, or Adjust Schedule)
+// Teacher responds to or updates request (Accept, Start Virtual Class, Reschedule, Decline, Mark as Done)
 app.post('/api/teacher/requests/:id/status', authenticateToken, requireRole('teacher'), (req, res) => {
   try {
     const requestId = req.params.id;
     const teacherId = req.user.id;
-    const { status, note, requested_date, requested_time } = req.body;
+    const { action, status, note, requested_date, requested_time } = req.body;
 
     const appRecord = db.prepare('SELECT status FROM teacher_applications WHERE user_id = ?').get(teacherId);
     if (!appRecord || appRecord.status !== 'approved') {
@@ -4088,37 +4088,73 @@ app.post('/api/teacher/requests/:id/status', authenticateToken, requireRole('tea
       return res.status(404).json({ error: 'Request not found.' });
     }
 
-    const finalStatus = status ? String(status).toLowerCase().trim() : request.status;
+    // Once a lesson is marked as "done" (completed), no further actions are available
+    if (request.status === 'completed') {
+      return res.status(400).json({ error: 'This lesson is already marked as done and complete. No further actions are available.' });
+    }
+
+    const rawAction = action ? String(action).toLowerCase().trim() : '';
+    let finalStatus = status ? String(status).toLowerCase().trim() : request.status;
+    if (rawAction === 'accept' || rawAction === 'start_class' || rawAction === 'reschedule') {
+      finalStatus = 'accepted';
+    } else if (rawAction === 'decline' || rawAction === 'declined') {
+      finalStatus = 'declined';
+    } else if (rawAction === 'done' || rawAction === 'completed') {
+      finalStatus = 'completed';
+    }
+
     if (!['accepted', 'declined', 'completed', 'pending'].includes(finalStatus)) {
       return res.status(400).json({ error: 'Invalid status update.' });
     }
 
     const finalDate = requested_date && String(requested_date).trim() ? String(requested_date).trim() : request.requested_date;
     const finalTime = requested_time && String(requested_time).trim() ? String(requested_time).trim() : request.requested_time;
-    const finalNote = note !== undefined ? (note || null) : request.tutor_response_note;
+    const scheduleChanged = (finalDate !== request.requested_date || finalTime !== request.requested_time) || rawAction === 'reschedule';
 
-    db.prepare(`
-      UPDATE tutoring_requests 
-      SET status = ?,
-          requested_date = ?,
-          requested_time = ?,
-          tutor_response_note = ?,
-          room_status = CASE WHEN ? IN ('declined', 'completed', 'pending') THEN 'closed' ELSE room_status END,
-          updated_at = CURRENT_TIMESTAMP
-      WHERE id = ?
-    `).run(finalStatus, finalDate, finalTime, finalNote, finalStatus, requestId);
+    let defaultActionNote = request.tutor_response_note;
+    if (rawAction === 'start_class') {
+      defaultActionNote = `Action: Start Virtual Class (${finalDate} at ${finalTime})`;
+    } else if (scheduleChanged && finalStatus === 'accepted') {
+      defaultActionNote = `Action: Rescheduled to ${finalDate} at ${finalTime}`;
+    } else if (finalStatus === 'accepted') {
+      defaultActionNote = `Action: Accepted — Scheduled for ${finalDate} at ${finalTime}`;
+    } else if (finalStatus === 'declined') {
+      defaultActionNote = 'Scheduling conflict on this date.';
+    } else if (finalStatus === 'completed') {
+      defaultActionNote = 'Action: Marked as Done — Lesson Complete';
+    }
+
+    const finalNote = (note !== undefined && String(note).trim() !== '') ? String(note).trim() : defaultActionNote;
+
+    if (rawAction === 'start_class') {
+      db.prepare(`
+        UPDATE tutoring_requests 
+        SET status = 'accepted',
+            requested_date = ?,
+            requested_time = ?,
+            tutor_response_note = ?,
+            room_status = 'open',
+            room_started_at = COALESCE(room_started_at, CURRENT_TIMESTAMP),
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+      `).run(finalDate, finalTime, finalNote, requestId);
+    } else {
+      db.prepare(`
+        UPDATE tutoring_requests 
+        SET status = ?,
+            requested_date = ?,
+            requested_time = ?,
+            tutor_response_note = ?,
+            room_status = CASE WHEN ? IN ('declined', 'completed', 'pending') THEN 'closed' ELSE room_status END,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+      `).run(finalStatus, finalDate, finalTime, finalNote, finalStatus, requestId);
+    }
 
     if (finalStatus === 'completed' && request.status !== 'completed') {
       db.prepare(`
         UPDATE tutor_profiles 
         SET total_sessions = total_sessions + 1, updated_at = CURRENT_TIMESTAMP 
-        WHERE user_id = ?
-      `).run(teacherId);
-    } else if (request.status === 'completed' && finalStatus !== 'completed') {
-      db.prepare(`
-        UPDATE tutor_profiles 
-        SET total_sessions = CASE WHEN total_sessions > 0 THEN total_sessions - 1 ELSE 0 END,
-            updated_at = CURRENT_TIMESTAMP 
         WHERE user_id = ?
       `).run(teacherId);
     }
@@ -4141,31 +4177,40 @@ app.post('/api/teacher/requests/:id/status', authenticateToken, requireRole('tea
       }
     }
 
-    // Notify student
-    const scheduleChanged = finalDate !== request.requested_date || finalTime !== request.requested_time;
-    const statusTitles = {
-      accepted: scheduleChanged ? 'Class Accepted & Schedule Updated!' : 'Tutoring Request Accepted!',
-      declined: 'Tutoring Request Declined',
-      completed: 'Tutoring Session Completed',
-      pending: 'Tutoring Request Updated'
-    };
+    // Notify student based on the exact update action taken
+    let notifTitle = 'Tutoring Request Updated';
+    let notifMessage = `${req.user.name} updated your ${request.subject} lesson (${finalDate} at ${finalTime}).`;
+    let notifLink = '/#student-lessons';
 
-    const statusMessages = {
-      accepted: `Great news! ${req.user.name} accepted your ${request.subject} session and added it to the calendar for ${finalDate} at ${finalTime}.`,
-      declined: `${req.user.name} was unable to accept your request for ${request.subject}. Note: ${finalNote || 'Scheduling conflict.'}`,
-      completed: `Your session on ${request.subject} (${finalDate} at ${finalTime}) has been marked completed. You can now leave a review for your tutor!`,
-      pending: `${req.user.name} updated your ${request.subject} request (${finalDate} at ${finalTime}).`
-    };
-
-    if (statusTitles[finalStatus]) {
-      sendNotification(
-        request.student_id,
-        statusTitles[finalStatus],
-        statusMessages[finalStatus],
-        'status',
-        '/#student-lessons'
-      );
+    if (rawAction === 'start_class') {
+      notifTitle = 'Virtual Class Started — Join Now!';
+      notifMessage = `${req.user.name} has started your virtual class for ${request.subject}! Click to enter the live virtual classroom now.`;
+      notifLink = `/#virtual-room?session=${requestId}`;
+    } else if (finalStatus === 'accepted' && scheduleChanged) {
+      notifTitle = 'Virtual Class Rescheduled & Confirmed!';
+      notifMessage = `${req.user.name} rescheduled and confirmed your ${request.subject} lesson for ${finalDate} at ${finalTime}. Simply wait for the schedule of your virtual class.`;
+      notifLink = '/#student-lessons';
+    } else if (finalStatus === 'accepted') {
+      notifTitle = 'Tutoring Request Accepted — Scheduled on Calendar!';
+      notifMessage = `Great news! ${req.user.name} accepted your ${request.subject} request for ${finalDate} at ${finalTime}. Simply wait for the schedule of your virtual class—your tutor will launch the room at class time.`;
+      notifLink = '/#student-lessons';
+    } else if (finalStatus === 'declined') {
+      notifTitle = 'Tutoring Request Declined';
+      notifMessage = `${req.user.name} was unable to accept your request for ${request.subject}. Note: ${finalNote || 'Scheduling conflict.'}`;
+      notifLink = '/#student-lessons';
+    } else if (finalStatus === 'completed') {
+      notifTitle = 'Tutoring Session Completed';
+      notifMessage = `Your ${request.subject} lesson on ${finalDate} at ${finalTime} has been marked as done and complete. You can now leave a review for your tutor!`;
+      notifLink = '/#student-history';
     }
+
+    sendNotification(
+      request.student_id,
+      notifTitle,
+      notifMessage,
+      'status',
+      notifLink
+    );
 
     const updatedRequest = db.prepare(`
       SELECT 
@@ -4181,14 +4226,19 @@ app.post('/api/teacher/requests/:id/status', authenticateToken, requireRole('tea
       WHERE tr.id = ?
     `).get(requestId);
 
-    const responseMsg = finalStatus === 'accepted'
-      ? `Session accepted and added to calendar for ${finalDate} at ${finalTime}!`
-      : scheduleChanged
-        ? `Class schedule and status (${finalStatus.toUpperCase()}) saved!`
-        : `Class status updated to ${finalStatus.toUpperCase()} and saved.`;
+    const responseMsg = rawAction === 'start_class'
+      ? `Virtual class started for ${updatedRequest.student_name}! Student has been notified.`
+      : (finalStatus === 'accepted' && scheduleChanged)
+        ? `Lesson rescheduled to ${finalDate} at ${finalTime}, added to calendar, and student notified!`
+        : finalStatus === 'accepted'
+          ? `Request accepted! Schedule (${finalDate} at ${finalTime}) added to calendar and student notified to wait for their virtual class.`
+          : finalStatus === 'completed'
+            ? `Lesson marked as done and complete. No further actions are available.`
+            : `Request marked as ${finalStatus.toUpperCase()} and saved.`;
 
     res.json({
       success: true,
+      actionTaken: rawAction || finalStatus,
       message: responseMsg,
       calendarSynced: finalStatus === 'accepted',
       request: updatedRequest

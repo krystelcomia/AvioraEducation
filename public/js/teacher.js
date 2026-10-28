@@ -949,13 +949,29 @@ const Teacher = {
       return;
     }
 
+    const existingClass = (this.classes || []).find(c => Number(c.id) === Number(requestId));
+    if (existingClass && existingClass.status === 'completed') {
+      showToast('This lesson is already marked as done and complete. No further actions are available.', 'warning');
+      return;
+    }
+
+    const actionType = customPayload?.action || (status === 'accepted' ? 'accept' : status);
+    const effectiveStatus = (actionType === 'accept' || actionType === 'start_class' || actionType === 'reschedule')
+      ? 'accepted'
+      : (actionType === 'decline' || actionType === 'declined')
+        ? 'declined'
+        : (actionType === 'done' || actionType === 'completed')
+          ? 'completed'
+          : status;
+
     let note = customPayload?.note !== undefined ? customPayload.note : '';
-    if (status === 'declined' && !note) {
+    if (effectiveStatus === 'declined' && !note) {
       note = 'Scheduling conflict on this date.';
     }
 
     const payload = {
-      status,
+      action: actionType,
+      status: effectiveStatus,
       note,
       ...(customPayload?.requested_date ? { requested_date: customPayload.requested_date } : {}),
       ...(customPayload?.requested_time ? { requested_time: customPayload.requested_time } : {})
@@ -964,7 +980,15 @@ const Teacher = {
     const origText = btnEl ? btnEl.innerHTML : '';
     if (btnEl) {
       btnEl.disabled = true;
-      btnEl.innerHTML = status === 'accepted' ? 'Accepting...' : status === 'completed' ? 'Saving...' : 'Updating...';
+      btnEl.innerHTML = actionType === 'start_class'
+        ? 'Starting Class...'
+        : actionType === 'reschedule'
+          ? 'Rescheduling...'
+          : effectiveStatus === 'accepted'
+            ? 'Accepting...'
+            : effectiveStatus === 'completed'
+              ? 'Marking Done...'
+              : 'Updating...';
     }
 
     try {
@@ -979,7 +1003,7 @@ const Teacher = {
       if (Array.isArray(this.classes)) {
         this.classes = this.classes.map(c => {
           if (Number(c.id) === Number(requestId)) {
-            return updated ? { ...c, ...updated } : { ...c, ...payload, status };
+            return updated ? { ...c, ...updated } : { ...c, ...payload, status: effectiveStatus };
           }
           return c;
         });
@@ -988,7 +1012,7 @@ const Teacher = {
       if (Array.isArray(this.requests)) {
         this.requests = this.requests.map(r => {
           if (Number(r.id) === Number(requestId)) {
-            return updated ? { ...r, ...updated } : { ...r, ...payload, status };
+            return updated ? { ...r, ...updated } : { ...r, ...payload, status: effectiveStatus };
           }
           return r;
         });
@@ -1003,18 +1027,18 @@ const Teacher = {
         const existingApts = Array.isArray(this.scheduleData.appointments) ? [...this.scheduleData.appointments] : [];
         const aptIdx = existingApts.findIndex(a => Number(a.id) === Number(requestId));
 
-        if (status === 'accepted' || status === 'completed') {
+        if (effectiveStatus === 'accepted' || effectiveStatus === 'completed') {
           if (aptIdx !== -1) {
-            existingApts[aptIdx] = { ...existingApts[aptIdx], ...targetRec, status };
+            existingApts[aptIdx] = { ...existingApts[aptIdx], ...targetRec, status: effectiveStatus };
           } else {
-            existingApts.push({ ...targetRec, status });
+            existingApts.push({ ...targetRec, status: effectiveStatus });
           }
           existingApts.sort((a, b) => {
             const dCmp = String(a.requested_date || '').localeCompare(String(b.requested_date || ''));
             return dCmp !== 0 ? dCmp : String(a.requested_time || '').localeCompare(String(b.requested_time || ''));
           });
 
-          if (status === 'accepted' && targetRec.requested_date) {
+          if (effectiveStatus === 'accepted' && targetRec.requested_date) {
             const cleanDate = String(targetRec.requested_date).split('T')[0];
             this.selectedDate = cleanDate;
             const dObj = new Date(cleanDate + 'T00:00:00');
@@ -1036,7 +1060,13 @@ const Teacher = {
       this.renderSchedule();
       this.renderDashboard();
 
-      showToast(res.message || `Class updated to ${status.toUpperCase()}.`, 'success');
+      showToast(res.message || `Class updated (${actionType.toUpperCase()}).`, 'success');
+
+      if (actionType === 'start_class') {
+        if (typeof VirtualRoom !== 'undefined' && VirtualRoom.joinRoom) {
+          await VirtualRoom.joinRoom(requestId, 'tutor');
+        }
+      }
 
       // Sync all teacher datasets with SQLite in background
       await Promise.all([
@@ -1058,9 +1088,35 @@ const Teacher = {
       showToast('Account Under Review: Updating class schedules and statuses is locked until your application is approved by the Administrator.', 'warning');
       return;
     }
+    const existingClass = (this.classes || []).find(c => Number(c.id) === Number(requestId));
+    if (existingClass && existingClass.status === 'completed') {
+      showToast('This lesson is already marked as done and complete. No further actions are available.', 'info');
+      return;
+    }
     const numId = Number(requestId);
     this.editingClassId = this.editingClassId === numId ? null : numId;
     this.renderClasses();
+  },
+
+  onClassUpdateActionChange(requestId, actionVal) {
+    const schedFields = document.getElementById(`class-update-schedule-fields-${requestId}`);
+    const noteFieldWrap = document.getElementById(`class-update-note-wrap-${requestId}`);
+    const noteInput = document.getElementById(`class-update-note-${requestId}`);
+    if (schedFields) {
+      schedFields.style.display = (actionVal === 'decline' || actionVal === 'completed') ? 'none' : 'grid';
+    }
+    if (noteFieldWrap) {
+      noteFieldWrap.style.display = (actionVal === 'decline' || actionVal === 'reschedule' || actionVal === 'accept') ? 'flex' : 'none';
+    }
+    if (noteInput) {
+      if (actionVal === 'decline') {
+        noteInput.placeholder = 'Reason for declining (e.g., Scheduling conflict)...';
+      } else if (actionVal === 'reschedule') {
+        noteInput.placeholder = 'Note for student regarding the rescheduled time...';
+      } else {
+        noteInput.placeholder = 'Optional note for student...';
+      }
+    }
   },
 
   async saveClassUpdate(requestId, btnEl) {
@@ -1068,25 +1124,34 @@ const Teacher = {
       showToast('Account Under Review: Updating class schedules and statuses is locked until your application is approved by the Administrator.', 'warning');
       return;
     }
-    const statusEl = document.getElementById(`class-update-status-${requestId}`);
+    const actionEl = document.getElementById(`class-update-action-${requestId}`);
     const dateEl = document.getElementById(`class-update-date-${requestId}`);
     const timeEl = document.getElementById(`class-update-time-${requestId}`);
     const noteEl = document.getElementById(`class-update-note-${requestId}`);
 
-    const status = statusEl ? statusEl.value : 'accepted';
+    const action = actionEl ? actionEl.value : 'accept';
     const requested_date = dateEl ? dateEl.value.trim() : '';
     const requested_time = timeEl ? timeEl.value.trim() : '';
     const note = noteEl ? noteEl.value.trim() : undefined;
 
-    if (!requested_date || !requested_time) {
+    if ((action === 'accept' || action === 'reschedule' || action === 'start_class') && (!requested_date || !requested_time)) {
       showToast('Please provide both a valid Date and Time for the class schedule.', 'warning');
       return;
     }
 
-    await this.updateStatus(requestId, status, btnEl, {
+    const statusMap = {
+      accept: 'accepted',
+      start_class: 'accepted',
+      reschedule: 'accepted',
+      decline: 'declined',
+      completed: 'completed'
+    };
+
+    await this.updateStatus(requestId, statusMap[action] || 'accepted', btnEl, {
+      action,
       requested_date,
       requested_time,
-      ...(note !== undefined ? { note } : {})
+      ...(note !== undefined && note !== '' ? { note } : {})
     });
   },
 
@@ -1439,8 +1504,23 @@ const Teacher = {
       const isPending = c.status === 'pending';
       const isCompleted = c.status === 'completed';
       const isDeclined = c.status === 'declined';
-      const isEditing = this.editingClassId === Number(c.id);
+      const isEditing = !isCompleted && this.editingClassId === Number(c.id);
       const cleanDateVal = String(c.requested_date || '').split('T')[0];
+
+      let actionTakenText = 'Pending — Select an action (Accept, Start Virtual Class, Reschedule, or Decline)';
+      if (isCompleted) {
+        actionTakenText = 'Done — Lesson Complete (No further actions available)';
+      } else if (isLive) {
+        actionTakenText = 'Start Virtual Class — Live Classroom Active';
+      } else if (isAccepted) {
+        if (c.tutor_response_note && c.tutor_response_note.toLowerCase().includes('rescheduled')) {
+          actionTakenText = `Rescheduled — Confirmed for ${c.requested_date} • ${c.requested_time} (Student Notified)`;
+        } else {
+          actionTakenText = `Accepted — Schedule Added to Calendar • Student Notified (Waiting for Virtual Class Schedule)`;
+        }
+      } else if (isDeclined) {
+        actionTakenText = `Declined — ${c.tutor_response_note || 'Scheduling conflict'}`;
+      }
 
       return `
         <div class="teacher-class-card ${isLive ? 'is-live-room' : ''}" id="teacher-class-card-${c.id}">
@@ -1456,7 +1536,7 @@ const Teacher = {
               ` : ''}
             </div>
             <div class="class-card-header-right">
-              <span class="status-pill ${c.status}">${c.status.toUpperCase()}</span>
+              <span class="status-pill ${c.status}">${isCompleted ? 'DONE' : c.status.toUpperCase()}</span>
             </div>
           </div>
 
@@ -1483,6 +1563,9 @@ const Teacher = {
               <span class="detail-icon">${Icons.award(14)}</span>
               <span><strong>Fee:</strong> $${Number(c.total_amount || 0).toFixed(2)} (${c.payment_method === 'subscription' ? 'Subscription Credit' : 'Card Payment'})</span>
             </div>
+            <div class="class-action-indicator-badge status-${c.status}">
+              <strong>Update:</strong> <span>${actionTakenText}</span>
+            </div>
             ${(isAccepted || isCompleted) ? `
               <div class="class-calendar-sync-badge" onclick="Teacher.viewClassOnCalendar('${cleanDateVal}')" title="Open Schedule Calendar on ${cleanDateVal}">
                 <span>📅 Added to Calendar (${c.requested_date} • ${c.requested_time})</span>
@@ -1500,23 +1583,24 @@ const Teacher = {
             ` : ''}
           </div>
 
-          <!-- Inline Schedule & Status Update Drawer -->
-          ${this.isApproved() && isEditing ? `
+          <!-- Inline Action & Schedule Update Drawer (Only available when NOT marked as Done) -->
+          ${this.isApproved() && !isCompleted && isEditing ? `
             <div class="class-update-drawer">
               <div class="class-update-drawer-header">
-                <strong>Update Class Status & Set Schedule</strong>
-                <span>Changes save & sync to Calendar</span>
+                <strong>Select Update Action</strong>
+                <span>Saves action, syncs Calendar & notifies student</span>
               </div>
-              <div class="class-update-fields-grid">
-                <div class="class-update-field">
-                  <label for="class-update-status-${c.id}">Status</label>
-                  <select id="class-update-status-${c.id}" class="form-control">
-                    <option value="accepted" ${isAccepted ? 'selected' : ''}>Accepted (Add to Calendar)</option>
-                    <option value="pending" ${isPending ? 'selected' : ''}>Pending Request</option>
-                    <option value="completed" ${isCompleted ? 'selected' : ''}>Completed Session</option>
-                    <option value="declined" ${isDeclined ? 'selected' : ''}>Declined</option>
-                  </select>
-                </div>
+              <div class="class-update-field">
+                <label for="class-update-action-${c.id}">Action to Take</label>
+                <select id="class-update-action-${c.id}" class="form-control" onchange="Teacher.onClassUpdateActionChange(${c.id}, this.value)">
+                  <option value="accept" ${(isPending || isDeclined) ? 'selected' : ''}>Accept — Confirm Schedule on Calendar & Notify Student</option>
+                  <option value="start_class" ${isAccepted ? 'selected' : ''}>Start Virtual Class — Open Live Classroom Session</option>
+                  <option value="reschedule">Reschedule — Adjust Set Date & Time on Calendar</option>
+                  <option value="decline">Decline — Decline Lesson Request</option>
+                  <option value="completed">Done — Mark Lesson as Complete (Final)</option>
+                </select>
+              </div>
+              <div class="class-update-fields-grid" id="class-update-schedule-fields-${c.id}">
                 <div class="class-update-field">
                   <label for="class-update-date-${c.id}">Set Date</label>
                   <input type="date" id="class-update-date-${c.id}" class="form-control" value="${cleanDateVal}" />
@@ -1525,6 +1609,10 @@ const Teacher = {
                   <label for="class-update-time-${c.id}">Set Time</label>
                   <input type="text" id="class-update-time-${c.id}" class="form-control" value="${this.escapeSubjectAttr(c.requested_time || '10:00')}" placeholder="e.g. 10:00 or 14:00" />
                 </div>
+              </div>
+              <div class="class-update-field" id="class-update-note-wrap-${c.id}">
+                <label for="class-update-note-${c.id}">Note for Student (Optional)</label>
+                <input type="text" id="class-update-note-${c.id}" class="form-control" placeholder="Optional note or reason for student..." value="" />
               </div>
               <div class="class-update-drawer-actions">
                 <button type="button" class="btn btn-primary btn-sm" onclick="Teacher.saveClassUpdate(${c.id}, this)">
@@ -1543,44 +1631,45 @@ const Teacher = {
               <button type="button" class="btn btn-secondary btn-sm" style="flex: 1; opacity: 0.7; cursor: not-allowed;" disabled title="Classroom operations locked while application is under review">
                 🔒 Operations Locked (Under Review)
               </button>
+            ` : isCompleted ? `
+              <div class="class-status-summary-pill is-completed-summary" style="flex: 1;" title="Lesson is complete. No further actions are available.">
+                ✓ Class Session Completed (Done — No further actions available)
+              </div>
             ` : isLive ? `
               <button type="button" class="btn btn-primary btn-sm btn-vroom-live-pulse" style="flex: 1; justify-content: center; background: #10B981; border-color: #10B981; font-weight: 700;" onclick="VirtualRoom.joinRoom(${c.id}, 'tutor')">
                 🚀 Enter Live Classroom
               </button>
+              <button type="button" class="btn btn-secondary btn-sm" title="Mark lesson as done (complete)" onclick="Teacher.updateStatus(${c.id}, 'completed', this, { action: 'completed' })">
+                Done
+              </button>
+              <button type="button" class="btn btn-outline-gold btn-sm class-card-update-toggle-btn ${isEditing ? 'active' : ''}" title="Choose update action (Accept, Start Virtual Class, Reschedule, Decline, Done)" onclick="Teacher.toggleClassUpdatePanel(${c.id})">
+                ${isEditing ? 'Close' : 'Update'}
+              </button>
             ` : isAccepted ? `
-              <button type="button" class="btn btn-primary btn-sm" style="flex: 1; justify-content: center; font-weight: 700;" onclick="Teacher.launchClassSession(${c.id})">
-                🎥 Launch Virtual Class Session
+              <button type="button" class="btn btn-primary btn-sm" style="flex: 1; justify-content: center; font-weight: 700;" onclick="Teacher.updateStatus(${c.id}, 'accepted', this, { action: 'start_class' })">
+                🎥 Start Virtual Class
+              </button>
+              <button type="button" class="btn btn-secondary btn-sm" title="Mark lesson as done (complete)" onclick="Teacher.updateStatus(${c.id}, 'completed', this, { action: 'completed' })">
+                Done
+              </button>
+              <button type="button" class="btn btn-outline-gold btn-sm class-card-update-toggle-btn ${isEditing ? 'active' : ''}" title="Choose update action (Start Virtual Class, Reschedule, Decline, Done)" onclick="Teacher.toggleClassUpdatePanel(${c.id})">
+                ${isEditing ? 'Close' : 'Update'}
               </button>
             ` : isPending ? `
-              <button type="button" class="btn btn-primary btn-sm" style="flex: 1; font-weight: 700;" onclick="Teacher.updateStatus(${c.id}, 'accepted', this)">
+              <button type="button" class="btn btn-primary btn-sm" style="flex: 1; font-weight: 700;" onclick="Teacher.updateStatus(${c.id}, 'accepted', this, { action: 'accept' })">
                 Accept
               </button>
-              <button type="button" class="btn btn-secondary btn-sm" onclick="Teacher.updateStatus(${c.id}, 'declined', this)">
+              <button type="button" class="btn btn-secondary btn-sm" onclick="Teacher.updateStatus(${c.id}, 'declined', this, { action: 'decline' })">
                 Decline
+              </button>
+              <button type="button" class="btn btn-outline-gold btn-sm class-card-update-toggle-btn ${isEditing ? 'active' : ''}" title="Choose update action (Accept, Start Virtual Class, Reschedule, Decline)" onclick="Teacher.toggleClassUpdatePanel(${c.id})">
+                ${isEditing ? 'Close' : 'Update'}
               </button>
             ` : isDeclined ? `
               <div class="class-status-summary-pill is-declined-summary">
                 ✕ Request Declined
               </div>
-              <button type="button" class="btn btn-primary btn-sm" onclick="Teacher.updateStatus(${c.id}, 'accepted', this)">
-                Accept
-              </button>
-            ` : ''}
-
-            ${this.isApproved() && isAccepted ? `
-              <button type="button" class="btn btn-secondary btn-sm" title="Mark session as completed" onclick="Teacher.updateStatus(${c.id}, 'completed', this)">
-                Done
-              </button>
-            ` : ''}
-
-            ${isCompleted ? `
-              <div class="class-status-summary-pill is-completed-summary">
-                ✓ Class Session Completed
-              </div>
-            ` : ''}
-
-            ${this.isApproved() ? `
-              <button type="button" class="btn btn-outline-gold btn-sm class-card-update-toggle-btn ${isEditing ? 'active' : ''}" title="Adjust status or schedule date & time" onclick="Teacher.toggleClassUpdatePanel(${c.id})">
+              <button type="button" class="btn btn-outline-gold btn-sm class-card-update-toggle-btn ${isEditing ? 'active' : ''}" title="Choose update action (Accept or Reschedule)" onclick="Teacher.toggleClassUpdatePanel(${c.id})">
                 ${isEditing ? 'Close' : 'Update'}
               </button>
             ` : ''}

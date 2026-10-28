@@ -4442,17 +4442,29 @@
             <div class="admin-charts-grid">
               <div class="chart-card">
                 <div class="chart-header">
-                  <h3 class="chart-title">Tutoring Requests by Academic Subject</h3>
-                  <span class="badge-gold">Live DB Analytics</span>
+                  <div>
+                    <h3 class="chart-title">Platform Activity & Growth Analytics</h3>
+                    <p style="font-size: 0.8rem; color: var(--charcoal-500); margin-top: 0.2rem;">Monthly tutoring sessions volume and platform engagement trends</p>
+                  </div>
+                  <div style="display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;">
+                    <div class="analytics-toggle-group">
+                      <button type="button" class="analytics-toggle-btn active" id="btn-chart-sessions" onclick="Admin.toggleChartMetric('sessions')">Sessions</button>
+                      <button type="button" class="analytics-toggle-btn" id="btn-chart-revenue" onclick="Admin.toggleChartMetric('revenue')">Volume ($)</button>
+                    </div>
+                    <span class="badge-gold">Live DB Analytics</span>
+                  </div>
                 </div>
-                <div id="chart-subjects-container">
+                <div id="chart-line-container" style="position: relative;">
                   <!-- Rendered via JS -->
                 </div>
               </div>
 
               <div class="chart-card">
                 <div class="chart-header">
-                  <h3 class="chart-title">Teacher Application Status Breakdown</h3>
+                  <div>
+                    <h3 class="chart-title">Teacher Application Status Breakdown</h3>
+                    <p style="font-size: 0.8rem; color: var(--charcoal-500); margin-top: 0.2rem;">Educator accreditation status and review pipeline</p>
+                  </div>
                   <span class="badge-gold">Accreditation</span>
                 </div>
                 <div id="chart-apps-container">

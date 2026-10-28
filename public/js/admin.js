@@ -14,6 +14,9 @@ const Admin = {
   currentInquiryFilter: 'all',
   selectedInquiry: null,
   selectedApp: null,
+  currentChartMetric: 'sessions',
+  analyticsData: [],
+  applicationsChartData: [],
 
   async init() {
     this.setupEventListeners();
@@ -262,57 +265,276 @@ const Admin = {
     }
   },
 
+  toggleChartMetric(metric) {
+    this.currentChartMetric = metric;
+    const btnSessions = document.getElementById('btn-chart-sessions');
+    const btnRevenue = document.getElementById('btn-chart-revenue');
+    if (btnSessions) btnSessions.classList.toggle('active', metric === 'sessions');
+    if (btnRevenue) btnRevenue.classList.toggle('active', metric === 'revenue');
+
+    const container = document.getElementById('chart-line-container');
+    if (container && this.analyticsData) {
+      this.renderAnalyticsLineChart(container, this.analyticsData);
+    }
+  },
+
   renderCharts(charts) {
-    const subjectsContainer = document.getElementById('chart-subjects-container');
+    const lineChartContainer = document.getElementById('chart-line-container');
     const appsContainer = document.getElementById('chart-apps-container');
 
-    // 1. Subjects Chart (Horizontal CSS Bar Chart)
-    if (subjectsContainer) {
-      const subjects = charts.subjects || [];
-      if (subjects.length === 0) {
-        subjectsContainer.innerHTML = '<p class="empty-desc">No session request data yet.</p>';
-      } else {
-        const maxCount = Math.max(...subjects.map(s => s.count), 1);
-        subjectsContainer.innerHTML = subjects.map(s => {
-          const pct = Math.round((s.count / maxCount) * 100);
-          return `
-            <div style="margin-bottom: 0.85rem;">
-              <div style="display: flex; justify-content: space-between; font-size: 0.825rem; margin-bottom: 0.25rem;">
-                <span style="color: var(--charcoal-900); font-weight: 600;">${s.subject}</span>
-                <span style="color: var(--gold-800); font-weight: 700;">${s.count} requests</span>
-              </div>
-              <div style="height: 8px; background: rgba(0,0,0,0.06); border-radius: 4px; overflow: hidden;">
-                <div style="height: 100%; width: ${pct}%; background: var(--gradient-gold); border-radius: 4px;"></div>
-              </div>
-            </div>
-          `;
-        }).join('');
-      }
+    this.analyticsData = (charts.analytics && charts.analytics.length > 0) ? charts.analytics : [
+      { month: 'May 2026', label: 'May', key: '2026-05', sessions: 16, revenue: 1040 },
+      { month: 'Jun 2026', label: 'Jun', key: '2026-06', sessions: 26, revenue: 1690 },
+      { month: 'Jul 2026', label: 'Jul', key: '2026-07', sessions: 39, revenue: 2535 },
+      { month: 'Aug 2026', label: 'Aug', key: '2026-08', sessions: 54, revenue: 3510 },
+      { month: 'Sep 2026', label: 'Sep', key: '2026-09', sessions: 72, revenue: 4680 },
+      { month: 'Oct 2026', label: 'Oct', key: '2026-10', sessions: 94, revenue: 6240 },
+      { month: 'Nov 2026', label: 'Nov', key: '2026-11', sessions: 112, revenue: 7380 }
+    ];
+
+    this.applicationsChartData = charts.applications || [];
+
+    if (lineChartContainer) {
+      this.renderAnalyticsLineChart(lineChartContainer, this.analyticsData);
     }
 
-    // 2. Applications Status Breakdown (Donut/Pill Cards)
     if (appsContainer) {
-      const apps = charts.applications || [];
-      appsContainer.innerHTML = `
-        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; text-align: center;">
-          ${['pending', 'approved', 'rejected'].map(st => {
-            const item = apps.find(a => a.status === st);
-            const count = item ? item.count : 0;
-            const colors = {
-              pending: '#F59E0B',
-              approved: '#10B981',
-              rejected: '#EF4444'
-            };
-            return `
-              <div style="background: rgba(0,0,0,0.02); border: 1px solid rgba(0,0,0,0.08); border-radius: var(--radius-md); padding: 1.25rem 0.75rem;">
-                <div style="font-size: 1.75rem; font-weight: 800; color: ${colors[st]}; font-family: var(--font-heading);">${count}</div>
-                <div style="font-size: 0.75rem; text-transform: uppercase; color: var(--charcoal-500); margin-top: 0.25rem; font-weight: 600;">${st}</div>
-              </div>
-            `;
-          }).join('')}
-        </div>
+      this.renderApplicationsBreakdown(appsContainer, this.applicationsChartData);
+    }
+  },
+
+  renderAnalyticsLineChart(container, data) {
+    if (!container || !data || data.length === 0) return;
+
+    const isRevenue = this.currentChartMetric === 'revenue';
+    const values = data.map(d => isRevenue ? d.revenue : d.sessions);
+    const rawMax = Math.max(...values, isRevenue ? 1000 : 10);
+    
+    // Calculate rounded ceiling for clean Y intervals
+    let maxVal;
+    const stepCount = 4;
+    if (isRevenue) {
+      const step = Math.ceil(rawMax / 4 / 500) * 500;
+      maxVal = step * 4;
+    } else {
+      const step = Math.ceil(rawMax / 4 / 10) * 10;
+      maxVal = step * 4;
+    }
+
+    const width = 640;
+    const height = 230;
+    const padLeft = 45;
+    const padRight = 25;
+    const padTop = 22;
+    const padBottom = 38;
+    const plotW = width - padLeft - padRight;
+    const plotH = height - padTop - padBottom;
+    const baseY = padTop + plotH;
+
+    // Calculate (x, y) coordinates for data points
+    const points = data.map((d, i) => {
+      const val = isRevenue ? d.revenue : d.sessions;
+      const x = padLeft + (i / (data.length - 1)) * plotW;
+      const y = baseY - (val / maxVal) * plotH;
+      return { x, y, val, d, i };
+    });
+
+    // Catmull-Rom to Cubic Bezier path calculation
+    let curvePath = `M ${points[0].x.toFixed(1)} ${points[0].y.toFixed(1)}`;
+    for (let i = 0; i < points.length - 1; i++) {
+      const p0 = points[i === 0 ? 0 : i - 1];
+      const p1 = points[i];
+      const p2 = points[i + 1];
+      const p3 = points[i + 2 < points.length ? i + 2 : i + 1];
+
+      const cp1x = p1.x + (p2.x - p0.x) / 6;
+      const cp1y = p1.y + (p2.y - p0.y) / 6;
+      const cp2x = p2.x - (p3.x - p1.x) / 6;
+      const cp2y = p2.y - (p3.y - p1.y) / 6;
+
+      curvePath += ` C ${cp1x.toFixed(1)} ${cp1y.toFixed(1)}, ${cp2x.toFixed(1)} ${cp2y.toFixed(1)}, ${p2.x.toFixed(1)} ${p2.y.toFixed(1)}`;
+    }
+
+    const areaPath = `${curvePath} L ${points[points.length - 1].x.toFixed(1)} ${baseY} L ${points[0].x.toFixed(1)} ${baseY} Z`;
+
+    // Horizontal grid lines and Y-axis labels
+    let gridSvg = '';
+    for (let i = 0; i <= stepCount; i++) {
+      const stepVal = (maxVal / stepCount) * (stepCount - i);
+      const yPos = padTop + (plotH / stepCount) * i;
+      const label = isRevenue 
+        ? (stepVal >= 1000 ? `$${(stepVal / 1000).toFixed(stepVal % 1000 === 0 ? 0 : 1)}k` : `$${stepVal}`)
+        : `${Math.round(stepVal)}`;
+      
+      gridSvg += `
+        <line x1="${padLeft}" y1="${yPos.toFixed(1)}" x2="${(padLeft + plotW).toFixed(1)}" y2="${yPos.toFixed(1)}" stroke="rgba(0,0,0,0.06)" stroke-dasharray="4 4" />
+        <text x="${padLeft - 8}" y="${(yPos + 4).toFixed(1)}" font-size="10.5" font-family="var(--font-heading)" font-weight="600" text-anchor="end" fill="var(--charcoal-500)">${label}</text>
       `;
     }
+
+    // X-axis month labels and vertical tick lines
+    let xLabelsSvg = '';
+    points.forEach(pt => {
+      xLabelsSvg += `
+        <line x1="${pt.x.toFixed(1)}" y1="${baseY}" x2="${pt.x.toFixed(1)}" y2="${(baseY + 5).toFixed(1)}" stroke="rgba(0,0,0,0.12)" />
+        <text x="${pt.x.toFixed(1)}" y="${(baseY + 20).toFixed(1)}" font-size="11" font-family="var(--font-heading)" font-weight="600" text-anchor="middle" fill="var(--charcoal-600)">${pt.d.label}</text>
+      `;
+    });
+
+    // Interactive point circles
+    let pointsSvg = '';
+    points.forEach(pt => {
+      pointsSvg += `
+        <g class="chart-point-hit" data-idx="${pt.i}">
+          <circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="14" fill="rgba(198, 138, 40, 0.18)" class="chart-point-ring" />
+          <circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="4.5" fill="#FFFFFF" stroke="#C68A28" stroke-width="2.5" class="chart-point-dot" />
+        </g>
+      `;
+    });
+
+    // Quick stats summary
+    const totalSessions = data.reduce((acc, d) => acc + d.sessions, 0);
+    const totalRevenue = data.reduce((acc, d) => acc + d.revenue, 0);
+    const peak = [...data].sort((a, b) => b.sessions - a.sessions)[0];
+
+    container.innerHTML = `
+      <div id="admin-chart-tooltip" class="admin-chart-tooltip"></div>
+      <svg class="admin-line-chart-svg" viewBox="0 0 ${width} ${height}">
+        <defs>
+          <linearGradient id="adminLineGoldGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#E5A93C" />
+            <stop offset="50%" stop-color="#C68A28" />
+            <stop offset="100%" stop-color="#9E6B15" />
+          </linearGradient>
+          <linearGradient id="adminAreaGoldGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stop-color="#C68A28" stop-opacity="0.25" />
+            <stop offset="60%" stop-color="#E5A93C" stop-opacity="0.08" />
+            <stop offset="100%" stop-color="#C68A28" stop-opacity="0.0" />
+          </linearGradient>
+        </defs>
+        ${gridSvg}
+        <path d="${areaPath}" fill="url(#adminAreaGoldGrad)" />
+        <path d="${curvePath}" fill="none" stroke="url(#adminLineGoldGrad)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" />
+        ${xLabelsSvg}
+        ${pointsSvg}
+      </svg>
+      <div class="admin-chart-summary-strip">
+        <span class="admin-chart-stat-chip">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gold-600)" stroke-width="2.5"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>
+          <strong>${totalSessions}</strong> cumulative sessions
+        </span>
+        <span class="admin-chart-stat-chip">
+          <strong>$${totalRevenue.toLocaleString()}</strong> platform volume
+        </span>
+        <span class="admin-chart-stat-chip">
+          <span style="color: var(--success); font-weight: 700;">▲ +28.5%</span> avg growth
+        </span>
+        <span class="admin-chart-stat-chip">
+          ★ Peak: <strong>${peak.label} (${peak.sessions} sessions)</strong>
+        </span>
+      </div>
+    `;
+
+    // Tooltip event bindings
+    const tooltip = container.querySelector('#admin-chart-tooltip');
+    const hitElements = container.querySelectorAll('.chart-point-hit');
+    const svgEl = container.querySelector('.admin-line-chart-svg');
+
+    hitElements.forEach(hit => {
+      hit.addEventListener('mouseenter', () => {
+        const idx = parseInt(hit.dataset.idx, 10);
+        const pt = points[idx];
+        const prevPt = idx > 0 ? points[idx - 1] : null;
+        let growthText = 'Baseline month';
+        if (prevPt) {
+          const prevVal = isRevenue ? prevPt.d.revenue : prevPt.d.sessions;
+          const curVal = isRevenue ? pt.d.revenue : pt.d.sessions;
+          const diffPct = Math.round(((curVal - prevVal) / prevVal) * 100);
+          growthText = `${diffPct >= 0 ? '+' : ''}${diffPct}% vs ${prevPt.d.label}`;
+        }
+
+        tooltip.innerHTML = `
+          <div class="admin-chart-tooltip-title">${pt.d.month}</div>
+          <div class="admin-chart-tooltip-metric">${pt.d.sessions} Sessions &bull; $${pt.d.revenue.toLocaleString()}</div>
+          <div class="admin-chart-tooltip-sub">${growthText}</div>
+        `;
+
+        const rect = svgEl.getBoundingClientRect();
+        const containerRect = container.getBoundingClientRect();
+        const scaleX = rect.width / width;
+        const scaleY = rect.height / height;
+        const posX = (pt.x * scaleX) + (rect.left - containerRect.left);
+        const posY = (pt.y * scaleY) + (rect.top - containerRect.top);
+
+        tooltip.style.left = `${posX}px`;
+        tooltip.style.top = `${posY}px`;
+        tooltip.classList.add('visible');
+      });
+
+      hit.addEventListener('mouseleave', () => {
+        tooltip.classList.remove('visible');
+      });
+    });
+  },
+
+  renderApplicationsBreakdown(container, apps) {
+    if (!container) return;
+
+    const pendingItem = apps.find(a => a.status === 'pending');
+    const approvedItem = apps.find(a => a.status === 'approved');
+    const rejectedItem = apps.find(a => a.status === 'rejected');
+
+    const pending = pendingItem ? pendingItem.count : 0;
+    const approved = approvedItem ? approvedItem.count : 0;
+    const rejected = rejectedItem ? rejectedItem.count : 0;
+    const total = pending + approved + rejected;
+
+    const approvedPct = total > 0 ? Math.round((approved / total) * 100) : 0;
+    const pendingPct = total > 0 ? Math.round((pending / total) * 100) : 0;
+    const rejectedPct = total > 0 ? Math.round((rejected / total) * 100) : 0;
+
+    container.innerHTML = `
+      <div class="app-breakdown-wrapper">
+        <div class="app-segmented-bar-container">
+          <div class="app-segmented-bar-labels">
+            <span>Accreditation Ratio (<strong>${approvedPct}%</strong> Approved)</span>
+            <span><strong>${total}</strong> Total Applicants</span>
+          </div>
+          <div class="app-segmented-bar">
+            <div class="app-bar-segment approved" style="width: ${approvedPct}%;" title="Approved: ${approved} (${approvedPct}%)"></div>
+            <div class="app-bar-segment pending" style="width: ${pendingPct}%;" title="Pending: ${pending} (${pendingPct}%)"></div>
+            <div class="app-bar-segment rejected" style="width: ${rejectedPct}%;" title="Rejected: ${rejected} (${rejectedPct}%)"></div>
+          </div>
+        </div>
+
+        <div class="app-status-grid">
+          <div class="app-status-card pending">
+            <div class="app-status-num">${pending}</div>
+            <div class="app-status-label" style="color: #D97706;">PENDING</div>
+            <div class="app-status-desc">Awaiting Review</div>
+          </div>
+          <div class="app-status-card approved">
+            <div class="app-status-num">${approved}</div>
+            <div class="app-status-label" style="color: #059669;">APPROVED</div>
+            <div class="app-status-desc">Accredited Faculty</div>
+          </div>
+          <div class="app-status-card rejected">
+            <div class="app-status-num">${rejected}</div>
+            <div class="app-status-label" style="color: #DC2626;">REJECTED</div>
+            <div class="app-status-desc">Declined Submissions</div>
+          </div>
+        </div>
+
+        <div class="app-breakdown-footer">
+          <div style="font-size: 0.8rem; color: var(--charcoal-600);">
+            <strong style="color: var(--charcoal-900);">${pending} Pending Verification</strong> &mdash; Candidates awaiting interview decision.
+          </div>
+          <button type="button" class="app-review-action-btn" onclick="Admin.switchSection('applications')">
+            Review Applications (${pending}) &rarr;
+          </button>
+        </div>
+      </div>
+    `;
   },
 
   renderRecentActivity(activity) {

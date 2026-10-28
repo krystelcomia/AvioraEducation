@@ -356,3 +356,331 @@ input:checked + .slider:before {
   border-color: var(--gold-500);
   box-shadow: 0 0 0 3px rgba(198, 138, 40, 0.15);
 }
+
+/* Analytics Metric Toggle Group */
+.analytics-toggle-group {
+  display: inline-flex;
+  background: rgba(0, 0, 0, 0.05);
+  padding: 3px;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.analytics-toggle-btn {
+  padding: 0.35rem 0.75rem;
+  border-radius: calc(var(--radius-md) - 2px);
+  border: none;
+  background: transparent;
+  font-size: 0.775rem;
+  font-weight: 600;
+  color: var(--charcoal-600);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.analytics-toggle-btn:hover {
+  color: var(--charcoal-900);
+}
+
+.analytics-toggle-btn.active {
+  background: #FFFFFF;
+  color: var(--gold-800);
+  font-weight: 700;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+/* SVG Line Chart Elements */
+.admin-line-chart-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  overflow: visible;
+}
+
+.chart-point-hit {
+  cursor: pointer;
+}
+
+.chart-point-ring {
+  opacity: 0;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  transform-origin: center;
+}
+
+.chart-point-hit:hover .chart-point-ring {
+  opacity: 1;
+}
+
+.chart-point-dot {
+  transition: transform 0.2s ease;
+  transform-origin: center;
+}
+
+.chart-point-hit:hover .chart-point-dot {
+  transform: scale(1.3);
+}
+
+/* Chart Tooltip */
+.admin-chart-tooltip {
+  position: absolute;
+  pointer-events: none;
+  background: rgba(28, 32, 41, 0.95);
+  color: #FFFFFF;
+  padding: 0.65rem 0.85rem;
+  border-radius: var(--radius-md);
+  font-size: 0.75rem;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  border: 1px solid rgba(198, 138, 40, 0.4);
+  transform: translate(-50%, -100%);
+  margin-top: -12px;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  white-space: nowrap;
+  z-index: 10;
+}
+
+.admin-chart-tooltip.visible {
+  opacity: 1;
+}
+
+.admin-chart-tooltip-title {
+  font-weight: 700;
+  color: var(--gold-300);
+  font-size: 0.78rem;
+  margin-bottom: 0.2rem;
+}
+
+.admin-chart-tooltip-metric {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #FFFFFF;
+}
+
+.admin-chart-tooltip-sub {
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.7);
+  margin-top: 0.15rem;
+}
+
+/* Chart Stat Strip */
+.admin-chart-summary-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 1rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+  flex-wrap: wrap;
+}
+
+.admin-chart-stat-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.775rem;
+  color: var(--charcoal-600);
+  font-weight: 500;
+}
+
+.admin-chart-stat-chip strong {
+  color: var(--charcoal-900);
+  font-weight: 700;
+}
+
+/* Teacher Application Status Breakdown Styles */
+.app-breakdown-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.app-segmented-bar-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.app-segmented-bar-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--charcoal-700);
+}
+
+.app-segmented-bar {
+  display: flex;
+  height: 10px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.06);
+}
+
+.app-bar-segment {
+  height: 100%;
+  transition: width 0.4s ease;
+}
+
+.app-bar-segment.approved {
+  background: #10B981;
+}
+
+.app-bar-segment.pending {
+  background: #F59E0B;
+}
+
+.app-bar-segment.rejected {
+  background: #EF4444;
+}
+
+.app-status-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.85rem;
+}
+
+.app-status-card {
+  border-radius: var(--radius-md);
+  padding: 1.15rem 0.75rem;
+  text-align: center;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: rgba(0, 0, 0, 0.02);
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.app-status-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.app-status-card.pending {
+  background: rgba(245, 158, 11, 0.06);
+  border-color: rgba(245, 158, 11, 0.25);
+}
+
+.app-status-card.approved {
+  background: rgba(16, 185, 129, 0.06);
+  border-color: rgba(16, 185, 129, 0.25);
+}
+
+.app-status-card.rejected {
+  background: rgba(239, 68, 68, 0.06);
+  border-color: rgba(239, 68, 68, 0.25);
+}
+
+.app-status-num {
+  font-size: 1.85rem;
+  font-weight: 800;
+  font-family: var(--font-heading);
+  line-height: 1.1;
+}
+
+.app-status-card.pending .app-status-num {
+  color: #D97706;
+}
+
+.app-status-card.approved .app-status-num {
+  color: #059669;
+}
+
+.app-status-card.rejected .app-status-num {
+  color: #DC2626;
+}
+
+.app-status-label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 700;
+  margin-top: 0.25rem;
+}
+
+.app-status-desc {
+  font-size: 0.7rem;
+  color: var(--charcoal-500);
+  margin-top: 0.2rem;
+}
+
+.app-breakdown-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+  flex-wrap: wrap;
+}
+
+.app-review-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 1.15rem;
+  background: var(--gradient-gold);
+  color: #FFFFFF;
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: 0.825rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  box-shadow: 0 2px 8px rgba(198, 138, 40, 0.25);
+}
+
+.app-review-action-btn:hover {
+  background: var(--gradient-gold-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(198, 138, 40, 0.35);
+}
+
+/* Dark mode overrides for chart and status breakdown */
+[data-theme="dark"] .analytics-toggle-group {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="dark"] .analytics-toggle-btn {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+[data-theme="dark"] .analytics-toggle-btn.active {
+  background: rgba(255, 255, 255, 0.15);
+  color: var(--gold-400);
+}
+
+[data-theme="dark"] .admin-chart-stat-chip {
+  color: rgba(255, 255, 255, 0.65);
+}
+
+[data-theme="dark"] .admin-chart-stat-chip strong {
+  color: #FFFFFF;
+}
+
+[data-theme="dark"] .app-status-card {
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="dark"] .app-status-card.pending {
+  background: rgba(245, 158, 11, 0.12);
+  border-color: rgba(245, 158, 11, 0.3);
+}
+
+[data-theme="dark"] .app-status-card.approved {
+  background: rgba(16, 185, 129, 0.12);
+  border-color: rgba(16, 185, 129, 0.3);
+}
+
+[data-theme="dark"] .app-status-card.rejected {
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+[data-theme="dark"] .app-segmented-bar-labels {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+[data-theme="dark"] .app-status-desc {
+  color: rgba(255, 255, 255, 0.55);
+}

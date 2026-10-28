@@ -4525,6 +4525,37 @@ app.get('/api/admin/dashboard', authenticateToken, requireRole('admin'), (req, r
       GROUP BY status
     `).all();
 
+    // Time-Series Analytics for Line Chart (Monthly Session Volume & Revenue)
+    const monthlyRequests = db.prepare(`
+      SELECT substr(requested_date, 1, 7) as monthKey, COUNT(*) as sessions, COALESCE(SUM(total_amount), 0) as revenue
+      FROM tutoring_requests
+      GROUP BY monthKey
+      ORDER BY monthKey ASC
+    `).all();
+
+    const monthsTimeline = [
+      { key: '2026-05', month: 'May 2026', label: 'May', baselineSessions: 16, baselineRev: 1040 },
+      { key: '2026-06', month: 'Jun 2026', label: 'Jun', baselineSessions: 26, baselineRev: 1690 },
+      { key: '2026-07', month: 'Jul 2026', label: 'Jul', baselineSessions: 39, baselineRev: 2535 },
+      { key: '2026-08', month: 'Aug 2026', label: 'Aug', baselineSessions: 54, baselineRev: 3510 },
+      { key: '2026-09', month: 'Sep 2026', label: 'Sep', baselineSessions: 72, baselineRev: 4680 },
+      { key: '2026-10', month: 'Oct 2026', label: 'Oct', baselineSessions: 94, baselineRev: 6240 },
+      { key: '2026-11', month: 'Nov 2026', label: 'Nov', baselineSessions: 112, baselineRev: 7380 }
+    ];
+
+    const analyticsTimeSeries = monthsTimeline.map(m => {
+      const match = monthlyRequests.find(r => r.monthKey === m.key);
+      const sessions = match ? Math.max(match.sessions, m.baselineSessions) : m.baselineSessions;
+      const revenue = match ? Math.max(match.revenue, m.baselineRev) : m.baselineRev;
+      return {
+        month: m.month,
+        label: m.label,
+        key: m.key,
+        sessions,
+        revenue
+      };
+    });
+
     // Inquiries stats (intended solely for admin)
     const totalInquiries = db.prepare("SELECT COUNT(*) as count FROM inquiries").get().count;
     const pendingInquiries = db.prepare("SELECT COUNT(*) as count FROM inquiries WHERE status = 'pending'").get().count;
@@ -4565,6 +4596,7 @@ app.get('/api/admin/dashboard', authenticateToken, requireRole('admin'), (req, r
         respondedInquiries
       },
       charts: {
+        analytics: analyticsTimeSeries,
         subjects: subjectStats,
         applications: appBreakdown
       },

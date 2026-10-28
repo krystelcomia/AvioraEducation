@@ -59,7 +59,7 @@ A **1-Click Persona Switcher** is built into the top navigation bar and authenti
 
 | Persona | Role | Email | Password | Scope |
 | :--- | :--- | :--- | :--- | :--- |
-| **Dr. Julian Rhodes** | `admin` | `admin@aviora.edu` | `admin123` | Application approvals, tutor directory toggles, metrics & charts |
+| **Stephanie** | `admin` | `adminaviorastephanie@gmail.com` | `adminstephanieavioraeducation2026` | Application approvals, tutor directory toggles, metrics & charts |
 | **Lucas Taylor** | `student` | `student@aviora.edu` | `student123` | Session bookings, cancellations, review submissions, goals |
 | **Dr. Elena Vance** | `teacher` | `elena.vance@aviora.edu` | `teacher123` | Session management (Accept/Decline/Complete), earnings, rates |
 

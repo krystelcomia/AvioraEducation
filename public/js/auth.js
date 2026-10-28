@@ -334,7 +334,7 @@ const Auth = {
       this.fillLoginForm('elena.vance@aviora.edu', 'teacher123', 'modal');
     });
     document.getElementById('demo-admin-fill')?.addEventListener('click', () => {
-      this.fillLoginForm('admin@aviora.edu', 'admin123', 'modal');
+      this.fillLoginForm('adminaviorastephanie@gmail.com', 'adminstephanieavioraeducation2026', 'modal');
     });
 
     // Page Demo Account Fill Buttons
@@ -345,7 +345,7 @@ const Auth = {
       this.fillLoginForm('elena.vance@aviora.edu', 'teacher123', 'page');
     });
     document.getElementById('page-demo-admin')?.addEventListener('click', () => {
-      this.fillLoginForm('admin@aviora.edu', 'admin123', 'page');
+      this.fillLoginForm('adminaviorastephanie@gmail.com', 'adminstephanieavioraeducation2026', 'page');
     });
 
     // Top Demo Role Switcher Buttons
@@ -358,7 +358,7 @@ const Auth = {
         } else if (role === 'teacher' || role === 'tutor') {
           await this.fastDemoLogin('elena.vance@aviora.edu', 'teacher123', '#teacher-dashboard');
         } else if (role === 'admin') {
-          await this.fastDemoLogin('admin@aviora.edu', 'admin123', '#admin-portal');
+          await this.fastDemoLogin('adminaviorastephanie@gmail.com', 'adminstephanieavioraeducation2026', '#admin-portal');
         }
       });
     });

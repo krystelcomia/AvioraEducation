@@ -5,7 +5,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const multer = require('multer');
 const fs = require('fs');
-const { db, ensureKrystelAccount, ensureJoshuaAccount, getUserPreferences } = require('./database/db');
+const { db, ensureAdminAccount, ensureKrystelAccount, ensureJoshuaAccount, getUserPreferences } = require('./database/db');
 const { inspectDocument } = require('./utils/documentDetector');
 
 try {
@@ -5331,7 +5331,7 @@ if (require.main === module) {
     console.log(`🌟 Aviora Education Server is Live & Running!`);
     console.log(`📡 URL: http://localhost:${PORT}`);
     console.log(`🎓 Role Credentials Demo:`);
-    console.log(`   - Administrator: admin@aviora.edu / admin123`);
+    console.log(`   - Administrator: adminaviorastephanie@gmail.com / adminstephanieavioraeducation2026`);
     console.log(`   - Student Demo:  student@aviora.edu / student123`);
     console.log(`   - Teacher Demo:  elena.vance@aviora.edu / teacher123`);
     console.log(`===============================================`);

@@ -321,14 +321,14 @@ function initSchema() {
 }
 
 function seedData() {
-  const adminCheck = db.prepare('SELECT id FROM users WHERE email = ?').get('admin@aviora.edu');
+  const adminCheck = db.prepare("SELECT id FROM users WHERE email = 'adminaviorastephanie@gmail.com' OR role = 'admin'").get();
   if (adminCheck) {
     return; // Already seeded
   }
 
   console.log('Seeding initial Aviora Education database...');
   const salt = bcrypt.genSaltSync(10);
-  const adminPasswordHash = bcrypt.hashSync('admin123', salt);
+  const adminPasswordHash = bcrypt.hashSync('adminstephanieavioraeducation2026', salt);
   const teacherPasswordHash = bcrypt.hashSync('teacher123', salt);
   const studentPasswordHash = bcrypt.hashSync('student123', salt);
 
@@ -379,12 +379,12 @@ function seedData() {
 
   // 1. Admin
   const adminRes = insertUser.run(
-    'Dr. Julian Rhodes',
-    'admin@aviora.edu',
+    'Stephanie',
+    'adminaviorastephanie@gmail.com',
     adminPasswordHash,
     'admin',
     '+1 (555) 839-2041',
-    'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80'
+    'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=300&q=80'
   );
   const adminId = adminRes.lastInsertRowid;
 
@@ -838,6 +838,87 @@ try {
   }
 } catch (e) {
   console.warn('Subscription seed note:', e.message);
+}
+
+// Ensure strictly one admin account exists across the entire system (adminaviorastephanie@gmail.com)
+function ensureAdminAccount(customPassword) {
+  try {
+    const email = 'adminaviorastephanie@gmail.com';
+    const passwordToHash = customPassword || 'adminstephanieavioraeducation2026';
+    const salt = bcrypt.genSaltSync(10);
+    const passwordHash = bcrypt.hashSync(passwordToHash, salt);
+
+    let stephanie = db.prepare('SELECT * FROM users WHERE LOWER(email) = LOWER(?)').get(email);
+
+    if (!stephanie) {
+      // Check if legacy admin exists (e.g. admin@aviora.edu or any admin) to preserve row and relations
+      const legacyAdmin = db.prepare("SELECT * FROM users WHERE email = 'admin@aviora.edu' OR role = 'admin' ORDER BY id ASC LIMIT 1").get();
+      if (legacyAdmin) {
+        db.prepare(`
+          UPDATE users
+          SET name = 'Stephanie',
+              email = ?,
+              password_hash = ?,
+              role = 'admin',
+              phone = COALESCE(phone, '+1 (555) 839-2041'),
+              avatar_url = 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=300&q=80',
+              status = 'active'
+          WHERE id = ?
+        `).run(email, passwordHash, legacyAdmin.id);
+        stephanie = db.prepare('SELECT * FROM users WHERE id = ?').get(legacyAdmin.id);
+      } else {
+        const res = db.prepare(`
+          INSERT INTO users (name, email, password_hash, role, phone, avatar_url, status)
+          VALUES ('Stephanie', ?, ?, 'admin', '+1 (555) 839-2041', 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=300&q=80', 'active')
+        `).run(email, passwordHash);
+        stephanie = db.prepare('SELECT * FROM users WHERE id = ?').get(res.lastInsertRowid);
+      }
+    } else {
+      const matchesPass = bcrypt.compareSync('adminstephanieavioraeducation2026', stephanie.password_hash);
+      if (!matchesPass || customPassword || stephanie.role !== 'admin' || stephanie.status !== 'active' || stephanie.name !== 'Stephanie') {
+        db.prepare("UPDATE users SET password_hash = ?, role = 'admin', status = 'active', name = 'Stephanie' WHERE id = ?").run(passwordHash, stephanie.id);
+        stephanie = db.prepare('SELECT * FROM users WHERE id = ?').get(stephanie.id);
+      }
+    }
+
+    const adminId = stephanie.id;
+
+    // Enforce strictly ONLY ONE admin account across the entire system
+    const otherAdmins = db.prepare('SELECT id, email FROM users WHERE role = ? AND id != ?').all('admin', adminId);
+    for (const old of otherAdmins) {
+      try { db.prepare('UPDATE teacher_applications SET reviewed_by = ? WHERE reviewed_by = ?').run(adminId, old.id); } catch (e) {}
+      try { db.prepare('UPDATE notifications SET user_id = ? WHERE user_id = ?').run(adminId, old.id); } catch (e) {}
+      try { db.prepare('UPDATE messages SET sender_id = ? WHERE sender_id = ?').run(adminId, old.id); } catch (e) {}
+      try { db.prepare('UPDATE messages SET receiver_id = ? WHERE receiver_id = ?').run(adminId, old.id); } catch (e) {}
+      try { db.prepare('DELETE FROM user_preferences WHERE user_id = ?').run(old.id); } catch (e) {}
+      try { db.prepare('DELETE FROM users WHERE id = ?').run(old.id); } catch (e) {}
+    }
+
+    // Also remove any remaining legacy admin@aviora.edu accounts if ID is different
+    const legacyStray = db.prepare("SELECT id FROM users WHERE email = 'admin@aviora.edu' AND id != ?").all(adminId);
+    for (const stray of legacyStray) {
+      try { db.prepare('DELETE FROM user_preferences WHERE user_id = ?').run(stray.id); } catch (e) {}
+      try { db.prepare('DELETE FROM users WHERE id = ?').run(stray.id); } catch (e) {}
+    }
+
+    // Ensure user preferences exist
+    getUserPreferences(adminId);
+
+    // Ensure welcome notification for admin
+    const notif = db.prepare('SELECT id FROM notifications WHERE user_id = ?').get(adminId);
+    if (!notif) {
+      try {
+        db.prepare(`
+          INSERT INTO notifications (user_id, title, message, type, is_read, link)
+          VALUES (?, 'Welcome Administrator', 'Your administrator portal is ready. Review tutor applications, oversee academic programs, and manage platform configurations.', 'system', 0, '#admin-portal')
+        `).run(adminId);
+      } catch (e) {}
+    }
+
+    return stephanie;
+  } catch (err) {
+    console.error('Error ensuring admin account:', err);
+  }
 }
 
 // Ensure Krystel Comia account and all associated actions & data exist in database
@@ -1354,6 +1435,7 @@ function ensureTutorSeedData() {
 }
 
 // Automatically ensure account and seed data on startup
+ensureAdminAccount();
 ensureKrystelAccount();
 ensureJoshuaAccount();
 ensureBuddySeedData();
@@ -1367,6 +1449,7 @@ try {
 module.exports = {
   db,
   initSchema,
+  ensureAdminAccount,
   ensureKrystelAccount,
   ensureJoshuaAccount,
   ensureBuddySeedData,

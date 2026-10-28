@@ -61,42 +61,52 @@ const Profile = {
   },
 
   setSaveStatus(status, text) {
-    const pill = document.getElementById('settings-status-pill');
-    const textEl = document.getElementById('settings-status-text');
-    const dotEl = document.getElementById('settings-status-dot');
-    if (!pill || !textEl) return;
+    const pills = [document.getElementById('settings-status-pill'), document.getElementById('teacher-settings-status-pill')].filter(Boolean);
+    const textEls = [document.getElementById('settings-status-text'), document.getElementById('teacher-settings-status-text')].filter(Boolean);
+    const dotEls = [document.getElementById('settings-status-dot'), document.getElementById('teacher-settings-status-dot')].filter(Boolean);
+    if (!pills.length) return;
 
     if (this.saveStatusTimeout) clearTimeout(this.saveStatusTimeout);
 
-    if (status === 'saving') {
+    pills.forEach(pill => {
       pill.style.display = 'inline-flex';
-      pill.style.background = 'rgba(198, 138, 40, 0.18)';
-      pill.style.borderColor = 'rgba(198, 138, 40, 0.4)';
-      pill.style.color = 'var(--gold-700)';
-      if (dotEl) dotEl.style.background = 'var(--gold-500)';
-      textEl.textContent = text || (typeof I18n !== 'undefined' ? I18n.t('common.saving', 'Saving...') : 'Saving...');
-    } else if (status === 'saved') {
-      pill.style.display = 'inline-flex';
-      pill.style.background = 'rgba(16, 185, 129, 0.12)';
-      pill.style.borderColor = 'rgba(16, 185, 129, 0.3)';
-      pill.style.color = '#059669';
-      if (dotEl) dotEl.style.background = '#10B981';
-      textEl.textContent = text || (typeof I18n !== 'undefined' ? I18n.t('common.saved', 'Saved to Account') : 'Saved to Account');
+      if (status === 'saving') {
+        pill.style.background = 'rgba(198, 138, 40, 0.18)';
+        pill.style.borderColor = 'rgba(198, 138, 40, 0.4)';
+        pill.style.color = 'var(--gold-700)';
+      } else if (status === 'saved') {
+        pill.style.background = 'rgba(16, 185, 129, 0.12)';
+        pill.style.borderColor = 'rgba(16, 185, 129, 0.3)';
+        pill.style.color = '#059669';
+      } else if (status === 'error') {
+        pill.style.background = 'rgba(239, 68, 68, 0.12)';
+        pill.style.borderColor = 'rgba(239, 68, 68, 0.3)';
+        pill.style.color = '#DC2626';
+      }
+    });
 
+    dotEls.forEach(dot => {
+      if (status === 'saving') dot.style.background = 'var(--gold-500)';
+      else if (status === 'saved') dot.style.background = '#10B981';
+      else if (status === 'error') dot.style.background = '#EF4444';
+    });
+
+    textEls.forEach(textEl => {
+      if (status === 'saving') textEl.textContent = text || (typeof I18n !== 'undefined' ? I18n.t('common.saving', 'Saving...') : 'Saving...');
+      else if (status === 'saved') textEl.textContent = text || (typeof I18n !== 'undefined' ? I18n.t('common.saved', 'Saved to Account') : 'Saved to Account');
+      else if (status === 'error') textEl.textContent = text || 'Sync Failed';
+    });
+
+    if (status === 'saved') {
       this.saveStatusTimeout = setTimeout(() => {
-        pill.style.background = 'rgba(198, 138, 40, 0.12)';
-        pill.style.borderColor = 'rgba(198, 138, 40, 0.25)';
-        pill.style.color = 'var(--gold-600)';
-        if (dotEl) dotEl.style.background = 'var(--gold-500)';
-        textEl.textContent = 'Saved to Account';
+        pills.forEach(pill => {
+          pill.style.background = 'rgba(198, 138, 40, 0.12)';
+          pill.style.borderColor = 'rgba(198, 138, 40, 0.25)';
+          pill.style.color = 'var(--gold-600)';
+        });
+        dotEls.forEach(dot => { dot.style.background = 'var(--gold-500)'; });
+        textEls.forEach(textEl => { textEl.textContent = 'Saved to Account'; });
       }, 4000);
-    } else if (status === 'error') {
-      pill.style.display = 'inline-flex';
-      pill.style.background = 'rgba(239, 68, 68, 0.12)';
-      pill.style.borderColor = 'rgba(239, 68, 68, 0.3)';
-      pill.style.color = '#DC2626';
-      if (dotEl) dotEl.style.background = '#EF4444';
-      textEl.textContent = text || 'Sync Failed';
     }
   },
 
@@ -124,6 +134,11 @@ const Profile = {
     const darkCard = document.getElementById('theme-card-dark');
     if (lightCard) lightCard.classList.toggle('active', !isDark);
     if (darkCard) darkCard.classList.toggle('active', isDark);
+
+    const tLightCard = document.getElementById('teacher-theme-card-light');
+    const tDarkCard = document.getElementById('teacher-theme-card-dark');
+    if (tLightCard) tLightCard.classList.toggle('active', !isDark);
+    if (tDarkCard) tDarkCard.classList.toggle('active', isDark);
 
     if (persistToServer && typeof API !== 'undefined') {
       this.setSaveStatus('saving');
@@ -161,6 +176,8 @@ const Profile = {
     const activeLang = lang || 'en-US';
     const langSelect = document.getElementById('profile-language-select');
     if (langSelect) langSelect.value = activeLang;
+    const tLangSelect = document.getElementById('teacher-language-select');
+    if (tLangSelect) tLangSelect.value = activeLang;
 
     localStorage.setItem(`aviora_language_${u.id}`, activeLang);
     localStorage.removeItem('aviora_language');
@@ -197,6 +214,8 @@ const Profile = {
     const activeTz = tz || 'America/New_York';
     const tzSelect = document.getElementById('profile-timezone-select');
     if (tzSelect) tzSelect.value = activeTz;
+    const tTzSelect = document.getElementById('teacher-timezone-select');
+    if (tTzSelect) tTzSelect.value = activeTz;
 
     const key = this.getUserKey();
     if (key) localStorage.setItem(`aviora_timezone${key}`, activeTz);
@@ -228,6 +247,8 @@ const Profile = {
     const elementId = prefKey.replace('_', '-');
     const toggle = document.getElementById(elementId);
     if (toggle) toggle.checked = Boolean(isChecked);
+    const tToggle = document.getElementById('teacher-' + elementId);
+    if (tToggle) tToggle.checked = Boolean(isChecked);
 
     const key = this.getUserKey();
     if (key) localStorage.setItem(`aviora_${elementId}${key}`, isChecked);
@@ -404,10 +425,64 @@ const Profile = {
       profileForm.addEventListener('submit', (e) => this.handleProfileSubmit(e));
     }
 
-    // Password Form
+    // Password Form (Student)
     const passForm = document.getElementById('profile-password-form');
     if (passForm) {
-      passForm.addEventListener('submit', (e) => this.handlePasswordSubmit(e));
+      passForm.addEventListener('submit', (e) => this.handlePasswordSubmit(e, false));
+    }
+
+    // --- Teacher Profile Settings Listeners ---
+    const tAvatarWrap = document.getElementById('teacher-profile-hero-avatar-wrap');
+    const tFileInput = document.getElementById('teacher-profile-file-input');
+    if (tAvatarWrap && tFileInput) {
+      tAvatarWrap.addEventListener('click', () => {
+        tFileInput.click();
+      });
+
+      tFileInput.addEventListener('change', (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (file) {
+          this.handleAvatarUpload(file);
+        }
+      });
+    }
+
+    const tLightCard = document.getElementById('teacher-theme-card-light');
+    if (tLightCard) {
+      tLightCard.addEventListener('click', () => this.applyTheme('light'));
+    }
+    const tDarkCard = document.getElementById('teacher-theme-card-dark');
+    if (tDarkCard) {
+      tDarkCard.addEventListener('click', () => this.applyTheme('dark'));
+    }
+
+    const tLangSelect = document.getElementById('teacher-language-select');
+    if (tLangSelect) {
+      tLangSelect.addEventListener('change', (e) => {
+        this.applyLanguage(e.target.value);
+      });
+    }
+
+    const tTzSelect = document.getElementById('teacher-timezone-select');
+    if (tTzSelect) {
+      tTzSelect.addEventListener('change', (e) => {
+        this.applyTimezone(e.target.value);
+      });
+    }
+
+    ['teacher-notif-lessons', 'teacher-notif-calendar', 'teacher-notif-messages', 'teacher-notif-reports'].forEach(id => {
+      const toggle = document.getElementById(id);
+      if (toggle) {
+        const prefKey = id.replace('teacher-', '').replace('-', '_');
+        toggle.addEventListener('change', (e) => {
+          this.applyNotification(prefKey, e.target.checked);
+        });
+      }
+    });
+
+    const tPassForm = document.getElementById('teacher-password-form');
+    if (tPassForm) {
+      tPassForm.addEventListener('submit', (e) => this.handlePasswordSubmit(e, true));
     }
   },
 
@@ -463,10 +538,14 @@ const Profile = {
     const heroAvatar = document.getElementById('profile-hero-avatar');
     const studentAvatar = document.getElementById('student-display-avatar');
     const subAvatar = document.getElementById('student-sub-avatar');
+    const tHeroAvatar = document.getElementById('teacher-profile-hero-avatar');
+    const tDashAvatar = document.getElementById('teacher-hero-avatar');
     if (heroAvatar) heroAvatar.src = url;
     if (studentAvatar) studentAvatar.src = url;
     if (subAvatar) subAvatar.src = url;
-    document.querySelectorAll('.user-avatar, .nav-user-avatar').forEach(img => {
+    if (tHeroAvatar) tHeroAvatar.src = url;
+    if (tDashAvatar) tDashAvatar.src = url;
+    document.querySelectorAll('.user-avatar, .nav-user-avatar, .teacher-hero-avatar').forEach(img => {
       img.src = url;
     });
   },
@@ -590,12 +669,17 @@ const Profile = {
     }
   },
 
-  async handlePasswordSubmit(e) {
+  async handlePasswordSubmit(e, isTeacher = false) {
     e.preventDefault();
-    const currentPassword = document.getElementById('profile-curr-password')?.value;
-    const newPassword = document.getElementById('profile-new-password')?.value;
-    const confirmPassword = document.getElementById('profile-confirm-password')?.value;
-    const submitBtn = document.getElementById('btn-save-password');
+    const currId = isTeacher ? 'teacher-curr-password' : 'profile-curr-password';
+    const newId = isTeacher ? 'teacher-new-password' : 'profile-new-password';
+    const confId = isTeacher ? 'teacher-confirm-password' : 'profile-confirm-password';
+    const btnId = isTeacher ? 'btn-save-teacher-password' : 'btn-save-password';
+
+    const currentPassword = document.getElementById(currId)?.value;
+    const newPassword = document.getElementById(newId)?.value;
+    const confirmPassword = document.getElementById(confId)?.value;
+    const submitBtn = document.getElementById(btnId);
 
     if (!currentPassword || !newPassword) {
       showToast('Please enter both your current and new password.', 'error');
@@ -622,9 +706,12 @@ const Profile = {
       showToast(res.message || 'Password updated successfully!', 'success');
 
       // Clear password fields
-      document.getElementById('profile-curr-password').value = '';
-      document.getElementById('profile-new-password').value = '';
-      document.getElementById('profile-confirm-password').value = '';
+      const currEl = document.getElementById(currId);
+      const newEl = document.getElementById(newId);
+      const confEl = document.getElementById(confId);
+      if (currEl) currEl.value = '';
+      if (newEl) newEl.value = '';
+      if (confEl) confEl.value = '';
     } catch (err) {
       showToast(err.message || 'Failed to update password.', 'error');
     } finally {

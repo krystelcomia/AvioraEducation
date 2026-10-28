@@ -27,7 +27,7 @@ The platform has **three distinct user roles**, each with strictly partitioned f
 - **Scope**:
   - Application onboarding and credentials submission (`#teacher-application`): resume and diploma upload.
   - Account status locking: operations remain locked while credentials are under admin review and virtual interview scheduling.
-  - Tutor exploration and management pages: `#teacher-classes`, `#teacher-students`, `#teacher-schedule`, `#teacher-buddy`, `#teacher-dashboard`.
+  - Tutor exploration and management pages: `#teacher-classes`, `#teacher-students`, `#teacher-schedule`, `#teacher-buddy`, `#teacher-dashboard`, `#teacher-profile`.
   - Session request handling (Accept, Decline, Complete) and hourly rate management.
 - **Rule**: Changes targeting tutors must not modify student booking behavior or admin approval logic unless explicitly instructed.
 

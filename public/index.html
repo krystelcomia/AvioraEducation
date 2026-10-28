@@ -3399,10 +3399,10 @@
         <!-- Tutor Profile Header & Command Deck -->
         <div class="teacher-portal-hero">
             <div class="teacher-hero-left">
-              <div class="teacher-hero-avatar-wrap">
+              <a href="#teacher-profile" class="teacher-hero-avatar-wrap" title="Click to view profile &amp; settings" style="text-decoration: none; cursor: pointer; display: inline-block;">
                 <img id="teacher-hero-avatar" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80" alt="Educator Avatar" class="teacher-hero-avatar" />
                 <span class="teacher-verified-badge" title="Verified Academic Educator">✓</span>
-              </div>
+              </a>
               <div class="teacher-hero-meta">
                 <div style="display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;">
                   <span class="badge-gold">Verified Educator</span>
@@ -3415,6 +3415,9 @@
               </div>
             </div>
             <div class="teacher-hero-actions">
+              <a href="#teacher-profile" class="btn btn-outline-gold btn-sm" style="display: inline-flex; align-items: center; gap: 0.4rem;">
+                Tutor Profile
+              </a>
               <button type="button" class="btn btn-primary btn-sm" id="btn-quick-launch-instant-class" onclick="Teacher.openInstantClassModal()">
                 🚀 Launch Instant 1-on-1 Class
               </button>
@@ -3585,40 +3588,292 @@
             </div>
         </div>
 
-        <!-- Profile & Rate Settings -->
-        <div style="margin-top: 2.5rem;">
-          <div class="data-table-container" style="padding: 2.5rem;">
-              <div class="table-toolbar" style="margin-bottom: 1.5rem;">
-                <div>
-                  <h3 style="font-size: 1.3rem; color: var(--text-primary); margin-bottom: 0.25rem;">Tutor Profile & Rate Settings</h3>
-                  <p style="font-size: 0.875rem; color: var(--text-secondary); margin: 0;">Adjust your public directory headline, hourly tutoring rate, and teaching methodology biography.</p>
-                </div>
-                <span class="badge-gold">Live in Public Directory</span>
-              </div>
-
-              <form id="teacher-profile-settings-form">
-                <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.25rem;">
-                  <div class="form-group">
-                    <label class="form-label">Professional Headline</label>
-                    <input type="text" id="t-profile-headline" class="form-control" placeholder="e.g. Ph.D. in Applied Mathematics | Stanford University" required />
-                  </div>
-                  <div class="form-group">
-                    <label class="form-label">Hourly Rate ($ USD / hr)</label>
-                    <input type="number" id="t-profile-rate" class="form-control" min="20" max="250" step="1" required />
-                  </div>
-                </div>
-
-                <div class="form-group">
-                  <label class="form-label">Public Biography & Teaching Methodology</label>
-                  <textarea id="t-profile-bio" class="form-control" rows="5" required></textarea>
-                </div>
-
-                <button type="submit" class="btn btn-primary btn-sm">Save Public Profile</button>
-              </form>
-            </div>
-        </div>
       </div>
     </div><!-- END VIEW 4E: TEACHER DASHBOARD -->
+
+    <!-- =======================================
+         VIEW: DEDICATED TUTOR PROFILE & SETTINGS PAGE
+         ======================================= -->
+    <div id="view-teacher-profile" class="app-page-view" style="display: none; padding-top: calc(var(--header-height) + 1.25rem); padding-bottom: 2rem;">
+      <div class="container" style="padding-top: 0; padding-bottom: 0;">
+
+        <!-- Breadcrumb & Hero Header -->
+        <div style="margin-bottom: 1.25rem;">
+          <a href="#teacher-dashboard" style="font-size: 0.85rem; color: var(--gold-800); font-weight: 700; text-decoration: none; display: inline-flex; align-items: center; gap: 0.35rem; margin-bottom: 0.5rem;">
+            <span>←</span> Back to Dashboard
+          </a>
+          <div class="portal-header" style="margin-bottom: 1rem; border-bottom: none; padding: 1.75rem 2.25rem;">
+            <div class="portal-user-meta" style="gap: 1.5rem;">
+              <div class="profile-avatar-wrap" id="teacher-profile-hero-avatar-wrap" title="Click to upload profile picture" style="position: relative; cursor: pointer; display: inline-block;">
+                <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80" alt="Tutor Profile Avatar" class="portal-avatar-lg" id="teacher-profile-hero-avatar" style="width: 76px; height: 76px; border: 3px solid var(--gold-500); box-shadow: 0 4px 14px rgba(198, 138, 40, 0.25); border-radius: 50%; object-fit: cover; display: block;" />
+                <div class="avatar-hover-overlay" style="position: absolute; inset: 0; background: rgba(0, 0, 0, 0.45); border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.2s ease; color: #FFFFFF; pointer-events: none;">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+                  <span style="font-size: 0.65rem; font-weight: 700; margin-top: 2px;">Change</span>
+                </div>
+                <div class="avatar-camera-pill" style="position: absolute; bottom: -2px; right: -2px; width: 26px; height: 26px; border-radius: 50%; background: var(--gold-500); color: #FFFFFF; display: flex; align-items: center; justify-content: center; border: 2px solid #FFFFFF; box-shadow: 0 2px 6px rgba(0,0,0,0.25); transition: transform 0.2s ease;">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+                </div>
+                <input type="file" id="teacher-profile-file-input" accept="image/*" style="display: none;" />
+              </div>
+              <div>
+                <div style="display: flex; align-items: center; gap: 0.65rem; flex-wrap: wrap;">
+                  <h1 class="portal-title" id="teacher-profile-hero-name" style="margin: 0; font-size: 2rem;">Dr. Elena Vance</h1>
+                  <span id="teacher-profile-status-badge" class="badge-gold" style="font-size: 0.8rem;">Verified Educator</span>
+                  <span id="teacher-profile-rate-badge" class="badge-accent" style="font-size: 0.8rem;">$45 / hr</span>
+                  <span id="teacher-profile-subject-badge" class="badge-gold" style="font-size: 0.8rem;">Stanford Ph.D. • Applied Mathematics</span>
+                </div>
+                <p class="portal-subtitle" style="margin-top: 0.35rem; margin-bottom: 0;">
+                  <span id="teacher-profile-hero-email" style="font-weight: 600; color: var(--charcoal-900);">elena.vance@aviora.edu</span> • Verified Educator Account
+                </p>
+              </div>
+            </div>
+            <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
+              <a href="#tutors" class="btn btn-outline-gold btn-sm">Public Directory</a>
+              <button type="button" class="btn btn-primary btn-sm" onclick="Teacher.openInstantClassModal()">🚀 Launch Instant Class</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2-Column Responsive Grid: Profile on Left, Settings on Right -->
+        <div class="profile-page-grid">
+          
+          <!-- LEFT COLUMN: Tutor Profile & Information -->
+          <div class="profile-card-box">
+            <div class="profile-card-header">
+              <h3 class="profile-card-title"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: -2px; margin-right: 6px;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>Tutor Profile &amp; Information</h3>
+              <p class="profile-card-sub">Manage your academic credentials, hourly rate, and teaching methodology biography visible in the public directory.</p>
+            </div>
+
+            <!-- Profile Form -->
+            <form id="teacher-profile-settings-form" style="display: flex; flex-direction: column; flex: 1;">
+              
+              <!-- Personal Information Fields -->
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                <div class="form-group" style="margin-bottom: 0;">
+                  <label class="form-label" style="font-weight: 700; font-size: 0.82rem;">Full Name</label>
+                  <input type="text" id="teacher-profile-name" class="form-control" required />
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                  <label class="form-label" style="font-weight: 700; font-size: 0.82rem;">Email Address</label>
+                  <input type="email" id="teacher-profile-email" class="form-control" readonly disabled style="opacity: 0.7; cursor: not-allowed;" title="Primary login email cannot be modified" />
+                </div>
+              </div>
+
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                <div class="form-group" style="margin-bottom: 0;">
+                  <label class="form-label" style="font-weight: 700; font-size: 0.82rem;">Phone Contact</label>
+                  <input type="tel" id="teacher-profile-phone" class="form-control" placeholder="+1 (555) 000-0000" />
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                  <label class="form-label" style="font-weight: 700; font-size: 0.82rem;">Hourly Rate ($ USD / hr)</label>
+                  <input type="number" id="t-profile-rate" class="form-control" min="20" max="250" step="1" required />
+                </div>
+              </div>
+
+              <div class="form-group" style="margin-bottom: 1rem;">
+                <label class="form-label" style="font-weight: 700; font-size: 0.82rem;">Professional Headline</label>
+                <input type="text" id="t-profile-headline" class="form-control" placeholder="e.g. Ph.D. in Applied Mathematics | Stanford University" required />
+              </div>
+
+              <div class="form-group" style="margin-bottom: 1rem;">
+                <label class="form-label" style="font-weight: 700; font-size: 0.82rem;">Academic Credentials &amp; Institution</label>
+                <input type="text" id="teacher-profile-institution" class="form-control" readonly disabled style="opacity: 0.75;" />
+              </div>
+
+              <div class="form-group" style="margin-bottom: 1rem;">
+                <label class="form-label" style="font-weight: 700; font-size: 0.82rem;">Primary Teaching Subjects</label>
+                <input type="text" id="teacher-profile-subjects" class="form-control" readonly disabled style="opacity: 0.75;" />
+              </div>
+
+              <div class="form-group" style="margin-bottom: 1.5rem;">
+                <label class="form-label" style="font-weight: 700; font-size: 0.82rem;">Public Biography &amp; Teaching Methodology</label>
+                <textarea id="t-profile-bio" class="form-control" rows="4" required></textarea>
+              </div>
+
+              <button type="submit" id="btn-save-teacher-profile" class="btn btn-primary btn-lg" style="margin-top: auto; width: 100%; justify-content: center; font-weight: 700;">
+                Save Profile Changes
+              </button>
+            </form>
+          </div>
+
+          <!-- RIGHT COLUMN: Settings & Customization -->
+          <div class="profile-card-box">
+            <div class="profile-card-header" style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 0.75rem;">
+              <div>
+                <h3 class="profile-card-title"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: -2px; margin-right: 6px;"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg><span data-i18n="settings.title">Settings &amp; Preferences</span></h3>
+                <p class="profile-card-sub" data-i18n="settings.subtitle">Configure display themes, internationalization, session notifications, and account security.</p>
+              </div>
+              <span id="teacher-settings-status-pill" style="font-size: 0.72rem; font-weight: 700; color: var(--gold-600); background: rgba(198, 138, 40, 0.12); border: 1px solid rgba(198, 138, 40, 0.25); border-radius: 999px; padding: 4px 10px; display: inline-flex; align-items: center; gap: 5px; white-space: nowrap;">
+                <span id="teacher-settings-status-dot" style="width: 7px; height: 7px; border-radius: 50%; background: var(--gold-500); display: inline-block;"></span>
+                <span id="teacher-settings-status-text">Saved to Account</span>
+              </span>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 1.5rem; flex: 1;">
+              
+              <!-- 1. Theme / Dark Mode -->
+              <div>
+                <label class="form-label" style="font-weight: 700; font-size: 0.85rem; margin-bottom: 0.5rem; display: block;" data-i18n="settings.appearance_theme">
+                  Appearance Theme
+                </label>
+                <div class="theme-picker-cards">
+                  <div class="theme-picker-card active" id="teacher-theme-card-light">
+                    <div class="theme-picker-card-left">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--gold-600);"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+                      <div>
+                        <div class="theme-picker-title" data-i18n="settings.light_mode">Light Mode</div>
+                        <div class="theme-picker-desc" data-i18n="settings.light_mode_desc">Warm cream &amp; gold</div>
+                      </div>
+                    </div>
+                    <span style="font-size: 0.9rem; color: var(--gold-600); font-weight: 800;">✓</span>
+                  </div>
+
+                  <div class="theme-picker-card" id="teacher-theme-card-dark">
+                    <div class="theme-picker-card-left">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--gold-500);"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+                      <div>
+                        <div class="theme-picker-title" data-i18n="settings.dark_mode">Dark Mode</div>
+                        <div class="theme-picker-desc" data-i18n="settings.dark_mode_desc">Obsidian &amp; luxury gold</div>
+                      </div>
+                    </div>
+                    <span style="font-size: 0.9rem; color: var(--gold-600); font-weight: 800;">✓</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 2. Language Selection & Timezone -->
+              <div style="border-top: 1px solid rgba(0,0,0,0.06); padding-top: 1.25rem;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                  <div class="form-group" style="margin-bottom: 0;">
+                    <label class="form-label" style="font-weight: 700; font-size: 0.82rem;">Language</label>
+                    <select id="teacher-language-select" class="form-control">
+                      <option value="en-US">English (US)</option>
+                      <option value="es-ES">Español (Spanish)</option>
+                      <option value="fr-FR">Français (French)</option>
+                      <option value="de-DE">Deutsch (German)</option>
+                      <option value="zh-CN">中文 (简体 / Simplified Chinese)</option>
+                      <option value="zh-TW">中文 (繁體 / Traditional Chinese)</option>
+                      <option value="ja-JP">日本語 (Japanese)</option>
+                      <option value="fil-PH">Filipino (Tagalog)</option>
+                      <option value="ko-KR">한국어 (Korean)</option>
+                      <option value="it-IT">Italiano (Italian)</option>
+                      <option value="pt-BR">Português (Portuguese)</option>
+                      <option value="ru-RU">Русский (Russian)</option>
+                      <option value="ar-SA">العربية (Arabic)</option>
+                      <option value="hi-IN">हिन्दी (Hindi)</option>
+                      <option value="vi-VN">Tiếng Việt (Vietnamese)</option>
+                      <option value="id-ID">Bahasa Indonesia (Indonesian)</option>
+                      <option value="tr-TR">Türkçe (Turkish)</option>
+                      <option value="nl-NL">Nederlands (Dutch)</option>
+                      <option value="pl-PL">Polski (Polish)</option>
+                      <option value="sv-SE">Svenska (Swedish)</option>
+                      <option value="th-TH">ไทย (Thai)</option>
+                    </select>
+                  </div>
+                  <div class="form-group" style="margin-bottom: 0;">
+                    <label class="form-label" style="font-weight: 700; font-size: 0.82rem;">Preferred Timezone</label>
+                    <select id="teacher-timezone-select" class="form-control">
+                      <option value="America/New_York">America/New_York (EST)</option>
+                      <option value="America/Chicago">America/Chicago (CST)</option>
+                      <option value="America/Denver">America/Denver (MST)</option>
+                      <option value="America/Los_Angeles">America/Los_Angeles (PST)</option>
+                      <option value="Europe/London">Europe/London (GMT/BST)</option>
+                      <option value="Europe/Paris">Europe/Paris (CET)</option>
+                      <option value="Asia/Manila">Asia/Manila (PHT)</option>
+                      <option value="Asia/Tokyo">Asia/Tokyo (JST)</option>
+                      <option value="UTC">UTC (Coordinated Time)</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 3. Notification Toggles -->
+              <div style="border-top: 1px solid rgba(0,0,0,0.06); padding-top: 1.25rem;">
+                <label class="form-label" style="font-weight: 700; font-size: 0.85rem; margin-bottom: 0.35rem; display: block;">
+                  Notification Preferences
+                </label>
+                
+                <div class="setting-switch-row">
+                  <div class="setting-switch-info">
+                    <div class="setting-switch-title" style="display: flex; align-items: center; gap: 0.35rem;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--gold-600);"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg> Lesson Booking Requests</div>
+                    <div class="setting-switch-desc">Receive immediate alerts when students request a new tutoring session</div>
+                  </div>
+                  <label class="switch-control">
+                    <input type="checkbox" id="teacher-notif-lessons" checked />
+                    <span class="switch-slider"></span>
+                  </label>
+                </div>
+
+                <div class="setting-switch-row">
+                  <div class="setting-switch-info">
+                    <div class="setting-switch-title" style="display: flex; align-items: center; gap: 0.35rem;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--gold-600);"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg> Schedule &amp; Calendar Updates</div>
+                    <div class="setting-switch-desc">Alerts for upcoming class start times and session timetable changes</div>
+                  </div>
+                  <label class="switch-control">
+                    <input type="checkbox" id="teacher-notif-calendar" checked />
+                    <span class="switch-slider"></span>
+                  </label>
+                </div>
+
+                <div class="setting-switch-row">
+                  <div class="setting-switch-info">
+                    <div class="setting-switch-title" style="display: flex; align-items: center; gap: 0.35rem;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--gold-600);"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg> Student Direct Messages</div>
+                    <div class="setting-switch-desc">Notifications when students submit homework tasks or send inquiries</div>
+                  </div>
+                  <label class="switch-control">
+                    <input type="checkbox" id="teacher-notif-messages" checked />
+                    <span class="switch-slider"></span>
+                  </label>
+                </div>
+
+                <div class="setting-switch-row">
+                  <div class="setting-switch-info">
+                    <div class="setting-switch-title" style="display: flex; align-items: center; gap: 0.35rem;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--gold-600);"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg> Weekly Earnings &amp; Summary Digest</div>
+                    <div class="setting-switch-desc">Receive weekly financial payout statements and teaching activity summaries</div>
+                  </div>
+                  <label class="switch-control">
+                    <input type="checkbox" id="teacher-notif-reports" />
+                    <span class="switch-slider"></span>
+                  </label>
+                </div>
+              </div>
+
+              <!-- 4. Account Security & Password -->
+              <div style="border-top: 1px solid rgba(0,0,0,0.06); padding-top: 1.25rem; margin-top: auto;">
+                <label class="form-label" style="font-weight: 700; font-size: 0.85rem; margin-bottom: 0.35rem; display: flex; align-items: center; gap: 0.35rem;">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--gold-700);"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg> Account Security &amp; Password
+                </label>
+                
+                <form id="teacher-password-form">
+                  <div style="display: grid; grid-template-columns: 1fr; gap: 0.75rem; margin-bottom: 0.85rem;">
+                    <div class="form-group" style="margin-bottom: 0;">
+                      <label class="form-label" style="font-size: 0.78rem;">Current Password</label>
+                      <input type="password" id="teacher-curr-password" class="form-control" placeholder="••••••••" required />
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+                      <div class="form-group" style="margin-bottom: 0;">
+                        <label class="form-label" style="font-size: 0.78rem;">New Password</label>
+                        <input type="password" id="teacher-new-password" class="form-control" placeholder="Min 6 characters" required />
+                      </div>
+                      <div class="form-group" style="margin-bottom: 0;">
+                        <label class="form-label" style="font-size: 0.78rem;">Confirm Password</label>
+                        <input type="password" id="teacher-confirm-password" class="form-control" placeholder="Repeat new password" required />
+                      </div>
+                    </div>
+                  </div>
+                  <button type="submit" id="btn-save-teacher-password" class="btn btn-outline-gold btn-sm" style="width: 100%; justify-content: center; font-weight: 700;">
+                    Update Password
+                  </button>
+                </form>
+              </div>
+
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+    </div><!-- END VIEW: DEDICATED TUTOR PROFILE PAGE -->
 
     <!-- =======================================
          VIEW 4F: TEACHER - CREDENTIAL APPLICATION

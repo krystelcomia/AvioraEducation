@@ -421,16 +421,6 @@ const Teacher = {
       heroAvatar.src = user?.avatar || this.tutorProfile.avatar;
     }
 
-    // Populate profile settings fields
-    if (this.tutorProfile) {
-      const h = document.getElementById('t-profile-headline');
-      const r = document.getElementById('t-profile-rate');
-      const b = document.getElementById('t-profile-bio');
-      if (h) h.value = this.tutorProfile.headline || '';
-      if (r) r.value = this.tutorProfile.hourly_rate || 50;
-      if (b) b.value = this.tutorProfile.bio || '';
-    }
-
     await this.loadTeacherDashboard();
     if (typeof Router !== 'undefined' && Router.updateActiveNav) Router.updateActiveNav();
   },
@@ -704,6 +694,8 @@ const Teacher = {
       await this.loadBuddyPage();
     } else if (currentHash === '#teacher-application') {
       await this.loadApplicationPage();
+    } else if (currentHash === '#teacher-profile') {
+      await this.loadProfilePage();
     } else {
       await this.loadDashboardPage();
     }
@@ -715,13 +707,8 @@ const Teacher = {
     else if (tabId === 'students') window.location.hash = '#teacher-students';
     else if (tabId === 'schedule') window.location.hash = '#teacher-schedule';
     else if (tabId === 'buddy') window.location.hash = '#teacher-buddy';
-    else if (tabId === 'profile') {
-      window.location.hash = '#teacher-dashboard';
-      setTimeout(() => {
-        const el = document.getElementById('teacher-profile-settings-form');
-        if (el) el.scrollIntoView({ behavior: 'smooth' });
-      }, 100);
-    } else {
+    else if (tabId === 'profile') window.location.hash = '#teacher-profile';
+    else {
       window.location.hash = '#teacher-dashboard';
     }
   },
@@ -2419,32 +2406,134 @@ const Teacher = {
     }
   },
 
+  // 7. Dedicated Profile & Settings Page
+  async loadProfilePage() {
+    await this.ensureTeacherStatus();
+    const user = Auth.currentUser;
+    if (!user) {
+      showToast('Please sign in to view your profile and settings.', 'info');
+      window.location.hash = '#login';
+      return;
+    }
+
+    try {
+      const data = await API.getMe();
+      const u = data.user || user;
+      const tp = data.tutorProfile || this.tutorProfile || {};
+      const app = data.teacherApplication || this.application || {};
+      const prefs = data.preferences || u.preferences || {};
+
+      // Render Hero Details
+      const heroAvatar = document.getElementById('teacher-profile-hero-avatar');
+      const heroName = document.getElementById('teacher-profile-hero-name');
+      const heroEmail = document.getElementById('teacher-profile-hero-email');
+      const statusBadge = document.getElementById('teacher-profile-status-badge');
+      const rateBadge = document.getElementById('teacher-profile-rate-badge');
+      const subjectBadge = document.getElementById('teacher-profile-subject-badge');
+
+      if (heroName) heroName.textContent = u.name || 'Dr. Elena Vance';
+      if (heroEmail) heroEmail.textContent = u.email || '';
+      if (heroAvatar) {
+        heroAvatar.src = u.avatar_url || tp.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80';
+      }
+
+      const isApproved = (app.status === 'approved');
+      if (statusBadge) {
+        statusBadge.textContent = isApproved ? '✓ Verified Educator' : (app.status === 'pending' ? '⏳ Application Under Review' : 'Accredited Educator');
+        statusBadge.className = isApproved ? 'badge-gold' : 'badge-accent';
+      }
+
+      const rateVal = tp.hourly_rate || app.hourly_rate || 45;
+      if (rateBadge) {
+        rateBadge.textContent = `$${rateVal} / hr`;
+      }
+
+      const degreeText = app.highest_degree || tp.highest_degree || 'Stanford Ph.D.';
+      const instText = app.institution || tp.institution || 'Applied Mathematics';
+      if (subjectBadge) {
+        subjectBadge.textContent = `${degreeText} • ${instText}`;
+      }
+
+      // Populate Profile Form fields
+      const nameInp = document.getElementById('teacher-profile-name');
+      const emailInp = document.getElementById('teacher-profile-email');
+      const phoneInp = document.getElementById('teacher-profile-phone');
+      const rateInp = document.getElementById('t-profile-rate');
+      const headlineInp = document.getElementById('t-profile-headline');
+      const instInp = document.getElementById('teacher-profile-institution');
+      const subjInp = document.getElementById('teacher-profile-subjects');
+      const bioInp = document.getElementById('t-profile-bio');
+
+      if (nameInp) nameInp.value = u.name || '';
+      if (emailInp) emailInp.value = u.email || '';
+      if (phoneInp) phoneInp.value = u.phone || '';
+      if (rateInp) rateInp.value = rateVal;
+      if (headlineInp) headlineInp.value = tp.headline || app.headline || '';
+      if (instInp) instInp.value = `${app.highest_degree || tp.highest_degree || ''}${app.institution ? ' • ' + app.institution : ''}`;
+      
+      const subjectsList = Array.isArray(tp.subjects || app.subjects) 
+        ? (tp.subjects || app.subjects).join(', ') 
+        : (tp.subjects || app.subjects || '');
+      if (subjInp) subjInp.value = subjectsList;
+
+      if (bioInp) bioInp.value = tp.bio || app.bio || '';
+
+      // Sync settings / preferences in Profile module
+      if (typeof Profile !== 'undefined' && Profile.syncAllPreferences) {
+        Profile.syncAllPreferences(prefs);
+      }
+    } catch (err) {
+      console.error('Failed to load tutor profile page:', err);
+      showToast('Could not load profile details.', 'error');
+    }
+
+    if (typeof Router !== 'undefined' && Router.updateActiveNav) Router.updateActiveNav();
+  },
+
   async handleProfileSettingsSubmit(e) {
     e.preventDefault();
     if (!this.isApproved()) {
       showToast('Operational Lock: Updating public profile rates unlocks once your account has been approved by the Administrator following your virtual interview.', 'warning');
       return;
     }
-    const headline = document.getElementById('t-profile-headline').value.trim();
-    const hourly_rate = parseFloat(document.getElementById('t-profile-rate').value);
-    const bio = document.getElementById('t-profile-bio').value.trim();
+    const name = document.getElementById('teacher-profile-name')?.value.trim();
+    const phone = document.getElementById('teacher-profile-phone')?.value.trim();
+    const headline = document.getElementById('t-profile-headline')?.value.trim();
+    const hourly_rate = parseFloat(document.getElementById('t-profile-rate')?.value || 45);
+    const bio = document.getElementById('t-profile-bio')?.value.trim();
     const submitBtn = e.target.querySelector('button[type="submit"]');
 
     try {
-      submitBtn.disabled = true;
-      submitBtn.textContent = 'Updating...';
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Updating...';
+      }
 
-      await API.updateProfile({
+      const res = await API.updateProfile({
+        name,
+        phone,
         tutorData: { headline, hourly_rate, bio }
       });
 
+      if (res && res.user && typeof Auth !== 'undefined') {
+        Auth.currentUser = res.user;
+        if (typeof Storage !== 'undefined') Storage.setUser(res.user);
+      }
+
       showToast('Tutor public profile updated successfully!', 'success');
-      await this.loadTeacherDashboard();
+      await this.ensureTeacherStatus();
+      if (window.location.hash === '#teacher-profile') {
+        await this.loadProfilePage();
+      } else {
+        await this.loadTeacherDashboard();
+      }
     } catch (err) {
       showToast(err.message, 'error');
     } finally {
-      submitBtn.disabled = false;
-      submitBtn.textContent = 'Save Public Profile';
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Save Profile Changes';
+      }
     }
   }
 };

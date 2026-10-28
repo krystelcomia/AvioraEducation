@@ -901,8 +901,20 @@ function ensureAdminAccount(customPassword) {
       try { db.prepare('DELETE FROM users WHERE id = ?').run(stray.id); } catch (e) {}
     }
 
-    // Ensure user preferences exist
-    getUserPreferences(adminId);
+    // Ensure default appearance theme (light mode) and default language (en-US) for admin account
+    const existingPrefs = db.prepare('SELECT * FROM user_preferences WHERE user_id = ?').get(adminId);
+    if (!existingPrefs) {
+      db.prepare(`
+        INSERT INTO user_preferences (user_id, theme, language, font_size, timezone, notif_lessons, notif_calendar, notif_messages, notif_reports)
+        VALUES (?, 'light', 'en-US', 'normal', 'America/New_York', 1, 1, 1, 0)
+      `).run(adminId);
+    } else {
+      db.prepare(`
+        UPDATE user_preferences
+        SET theme = 'light', language = 'en-US', font_size = 'normal'
+        WHERE user_id = ?
+      `).run(adminId);
+    }
 
     // Ensure welcome notification for admin
     const notif = db.prepare('SELECT id FROM notifications WHERE user_id = ?').get(adminId);

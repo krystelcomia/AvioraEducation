@@ -113,7 +113,7 @@ function showConfirm(title, message, onConfirm, options = {}) {
 
 // Router
 const Router = {
-  routes: ['#home', '#about', '#tutors', '#aviora-buddy', '#buddy', '#aviora-buddy-studio', '#how-it-works', '#book-now', '#book-lesson', '#subscriptions', '#subscription', '#student-subscriptions', '#login', '#signup', '#student-portal', '#dashboard', '#student-lessons', '#student-tutors', '#student-history', '#student-schedule', '#student-profile', '#teacher-portal', '#teacher-classes', '#teacher-class', '#teacher-students', '#teacher-schedule', '#teacher-buddy', '#teacher-dashboard', '#teacher-profile', '#teacher-application', '#admin-portal'],
+  routes: ['#home', '#about', '#tutors', '#aviora-buddy', '#buddy', '#aviora-buddy-studio', '#how-it-works', '#book-now', '#book-lesson', '#subscriptions', '#subscription', '#student-subscriptions', '#login', '#signup', '#student-portal', '#dashboard', '#student-lessons', '#student-tutors', '#student-history', '#student-schedule', '#student-profile', '#teacher-portal', '#teacher-classes', '#teacher-class', '#teacher-students', '#teacher-schedule', '#teacher-buddy', '#teacher-dashboard', '#teacher-profile', '#teacher-application', '#admin-portal', '#admin-profile'],
 
   init() {
     window.addEventListener('hashchange', () => this.handleRoute());
@@ -132,6 +132,9 @@ const Router = {
         isActive = true;
       }
       if (!isActive && (href === '#teacher-profile' || (href === '#profile' && Auth.currentUser && (Auth.currentUser.role === 'teacher' || Auth.currentUser.role === 'tutor')) || (link.id === 'nav-user-profile-btn' && Auth.currentUser && (Auth.currentUser.role === 'teacher' || Auth.currentUser.role === 'tutor'))) && (hash === '#teacher-profile' || (hash === '#profile' && Auth.currentUser && (Auth.currentUser.role === 'teacher' || Auth.currentUser.role === 'tutor')))) {
+        isActive = true;
+      }
+      if (!isActive && (href === '#admin-profile' || (href === '#profile' && Auth.currentUser && Auth.currentUser.role === 'admin') || (link.id === 'nav-user-profile-btn' && Auth.currentUser && Auth.currentUser.role === 'admin')) && (hash === '#admin-profile' || (hash === '#profile' && Auth.currentUser && Auth.currentUser.role === 'admin'))) {
         isActive = true;
       }
       if (!isActive && (href === '#teacher-portal' || href === '#teacher-dashboard' || link.id === 'nav-link-teacher-dashboard') && (hash === '#teacher-portal' || hash === '#teacher-dashboard')) {
@@ -327,8 +330,12 @@ const Router = {
         return;
       }
       if (user.role !== 'student') {
-        showToast('You are currently signed in as ' + user.role + '. Redirecting to educator profile...', 'info');
-        window.location.hash = '#teacher-profile';
+        if (user.role === 'admin') {
+          window.location.hash = '#admin-profile';
+        } else {
+          showToast('You are currently signed in as ' + user.role + '. Redirecting to educator profile...', 'info');
+          window.location.hash = '#teacher-profile';
+        }
         return;
       }
       const view = document.getElementById('view-student-profile');
@@ -345,7 +352,11 @@ const Router = {
         return;
       }
       if (user.role !== 'teacher' && user.role !== 'tutor') {
-        showToast('You are currently signed in as ' + user.role + '. Please switch to an educator account.', 'warning');
+        if (user.role === 'admin') {
+          window.location.hash = '#admin-profile';
+        } else {
+          showToast('You are currently signed in as ' + user.role + '. Please switch to an educator account.', 'warning');
+        }
         return;
       }
       const view = document.getElementById('view-teacher-profile');
@@ -353,6 +364,24 @@ const Router = {
       window.scrollTo(0, 0);
       if (typeof Teacher !== 'undefined' && Teacher.loadProfilePage) {
         await Teacher.loadProfilePage();
+      }
+    } else if (hash === '#admin-profile' || (hash === '#profile' && Auth.currentUser && Auth.currentUser.role === 'admin')) {
+      const user = Auth.currentUser;
+      if (!user) {
+        showToast('Please sign in to access administrator profile and settings.', 'info');
+        window.location.hash = '#login';
+        return;
+      }
+      if (user.role !== 'admin') {
+        showToast('Administrator clearance required.', 'warning');
+        window.location.hash = (user.role === 'student') ? '#student-portal' : '#teacher-dashboard';
+        return;
+      }
+      const view = document.getElementById('view-admin-profile');
+      if (view) view.style.display = 'block';
+      window.scrollTo(0, 0);
+      if (typeof Admin !== 'undefined' && Admin.loadProfilePage) {
+        await Admin.loadProfilePage();
       }
     } else if (hash === '#student-portal' || hash === '#student-lessons' || hash === '#student-tutors' || hash === '#student-history' || hash === '#student-schedule') {
       const view = document.getElementById('view-student-portal');

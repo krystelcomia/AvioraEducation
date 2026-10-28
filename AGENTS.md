@@ -33,7 +33,7 @@ The platform has **three distinct user roles**, each with strictly partitioned f
 
 ### 👑 Admin (`admin`)
 - **Scope**:
-  - Administrator portal: `#admin-portal`.
+  - Administrator portal and dedicated profile: `#admin-portal`, `#admin-profile`.
   - Review, approval, or rejection of tutor credential applications (with feedback notes).
   - Platform metric tracking, student account management, and tutor visibility toggles.
 - **Rule**: Changes targeting admin tools must not affect frontend student or tutor workflows directly.

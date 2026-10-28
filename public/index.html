@@ -3876,6 +3876,281 @@
     </div><!-- END VIEW: DEDICATED TUTOR PROFILE PAGE -->
 
     <!-- =======================================
+         VIEW: DEDICATED ADMIN PROFILE & SETTINGS
+         ======================================= -->
+    <div id="view-admin-profile" class="app-page-view" style="display: none; padding-top: calc(var(--header-height) + 1.25rem); padding-bottom: 2rem;">
+      <div class="container" style="padding-top: 0; padding-bottom: 0;">
+
+        <!-- Breadcrumb & Hero Header -->
+        <div style="margin-bottom: 1.25rem;">
+          <a href="#admin-portal" style="font-size: 0.85rem; color: var(--gold-800); font-weight: 700; text-decoration: none; display: inline-flex; align-items: center; gap: 0.35rem; margin-bottom: 0.5rem;">
+            <span>←</span> Back to Admin Console
+          </a>
+          <div class="portal-header" style="margin-bottom: 1rem; border-bottom: none; padding: 1.75rem 2.25rem;">
+            <div class="portal-user-meta" style="gap: 1.5rem;">
+              <div class="profile-avatar-wrap" id="admin-profile-hero-avatar-wrap" title="Click to upload profile picture" style="position: relative; cursor: pointer; display: inline-block;">
+                <img src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=300&q=80" alt="Admin Profile Avatar" class="portal-avatar-lg" id="admin-profile-hero-avatar" style="width: 76px; height: 76px; border: 3px solid var(--gold-500); box-shadow: 0 4px 14px rgba(198, 138, 40, 0.25); border-radius: 50%; object-fit: cover; display: block;" />
+                <div class="avatar-hover-overlay" style="position: absolute; inset: 0; background: rgba(0, 0, 0, 0.45); border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.2s ease; color: #FFFFFF; pointer-events: none;">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+                  <span style="font-size: 0.65rem; font-weight: 700; margin-top: 2px;">Change</span>
+                </div>
+                <div class="avatar-camera-pill" style="position: absolute; bottom: -2px; right: -2px; width: 26px; height: 26px; border-radius: 50%; background: var(--gold-500); color: #FFFFFF; display: flex; align-items: center; justify-content: center; border: 2px solid #FFFFFF; box-shadow: 0 2px 6px rgba(0,0,0,0.25); transition: transform 0.2s ease;">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+                </div>
+                <input type="file" id="admin-profile-file-input" accept="image/*" style="display: none;" />
+              </div>
+              <div>
+                <div style="display: flex; align-items: center; gap: 0.65rem; flex-wrap: wrap;">
+                  <h1 class="portal-title" id="admin-profile-hero-name" style="margin: 0; font-size: 2rem;">Stephanie</h1>
+                  <span id="admin-profile-role-badge" class="badge-gold" style="font-size: 0.8rem;">System Administrator</span>
+                  <span id="admin-profile-dept-badge" class="badge-accent" style="font-size: 0.8rem;">Academic Director</span>
+                  <span class="badge-secondary" style="font-size: 0.8rem;">Root Governance Clearance</span>
+                </div>
+                <p class="portal-subtitle" style="margin-top: 0.35rem; margin-bottom: 0;">
+                  <span id="admin-profile-hero-email" style="font-weight: 600; color: var(--charcoal-900);">adminaviorastephanie@gmail.com</span> • Verified Primary Administrator
+                </p>
+              </div>
+            </div>
+            <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
+              <a href="#admin-portal" class="btn btn-outline-gold btn-sm"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -2px; margin-right: 4px;"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg> Admin Console</a>
+              <button type="button" class="btn btn-primary btn-sm" onclick="window.location.hash='#admin-portal'; setTimeout(() => { if (typeof Admin !== 'undefined') Admin.switchSection('inquiries'); }, 150);">📬 Direct Inquiries</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2-Column Responsive Grid: Profile on Left, Settings on Right -->
+        <div class="profile-page-grid">
+          
+          <!-- LEFT COLUMN: Administrator Profile & Governance -->
+          <div class="profile-card-box">
+            <div class="profile-card-header">
+              <h3 class="profile-card-title">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: -2px; margin-right: 6px;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                Administrator Profile &amp; Governance
+              </h3>
+              <p class="profile-card-sub">Manage institutional administrator credentials, executive contact information, and platform governance leadership.</p>
+            </div>
+
+            <!-- Profile Form -->
+            <form id="admin-profile-settings-form" style="display: flex; flex-direction: column; flex: 1;">
+              
+              <!-- Personal Information Fields -->
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                <div class="form-group" style="margin-bottom: 0;">
+                  <label class="form-label" style="font-weight: 700; font-size: 0.82rem;">Full Name</label>
+                  <input type="text" id="admin-profile-name" class="form-control" value="Stephanie" required />
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                  <label class="form-label" style="font-weight: 700; font-size: 0.82rem;">Email Address</label>
+                  <input type="email" id="admin-profile-email" class="form-control" value="adminaviorastephanie@gmail.com" readonly disabled style="opacity: 0.7; cursor: not-allowed;" title="Primary administrator login email cannot be modified" />
+                </div>
+              </div>
+
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                <div class="form-group" style="margin-bottom: 0;">
+                  <label class="form-label" style="font-weight: 700; font-size: 0.82rem;">Contact Phone</label>
+                  <input type="tel" id="admin-profile-phone" class="form-control" placeholder="+1 (555) 839-2041" value="+1 (555) 839-2041" />
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                  <label class="form-label" style="font-weight: 700; font-size: 0.82rem;">Executive Role / Title</label>
+                  <input type="text" id="admin-profile-title" class="form-control" value="Academic Director &amp; Platform Administrator" />
+                </div>
+              </div>
+
+              <div class="form-group" style="margin-bottom: 1rem;">
+                <label class="form-label" style="font-weight: 700; font-size: 0.82rem;">Institutional Oversight &amp; Department</label>
+                <input type="text" id="admin-profile-dept" class="form-control" value="Executive Academic Directorate &amp; Educator Admissions" />
+              </div>
+
+              <div class="form-group" style="margin-bottom: 1.5rem;">
+                <label class="form-label" style="font-weight: 700; font-size: 0.82rem;">Governance Mission &amp; Academic Philosophy</label>
+                <textarea id="admin-profile-bio" class="form-control" rows="4">Overseeing educator credential evaluations, curriculum standards, and academic mentorship excellence across Aviora Education.</textarea>
+              </div>
+
+              <button type="submit" id="btn-save-admin-profile" class="btn btn-primary btn-lg" style="margin-top: auto; width: 100%; justify-content: center; font-weight: 700;">
+                Save Profile Changes
+              </button>
+            </form>
+          </div>
+
+          <!-- RIGHT COLUMN: Settings & System Customization -->
+          <div class="profile-card-box">
+            <div class="profile-card-header" style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: gap; gap: 0.75rem;">
+              <div>
+                <h3 class="profile-card-title">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: -2px; margin-right: 6px;"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                  Settings &amp; Preferences
+                </h3>
+                <p class="profile-card-sub">Configure appearance theme, platform language, administrative alerts, and administrator security.</p>
+              </div>
+              <span id="admin-settings-status-pill" style="font-size: 0.72rem; font-weight: 700; color: var(--gold-600); background: rgba(198, 138, 40, 0.12); border: 1px solid rgba(198, 138, 40, 0.25); border-radius: 999px; padding: 4px 10px; display: inline-flex; align-items: center; gap: 5px; white-space: nowrap;">
+                <span id="admin-settings-status-dot" style="width: 7px; height: 7px; border-radius: 50%; background: var(--gold-500); display: inline-block;"></span>
+                <span id="admin-settings-status-text">Saved to Account</span>
+              </span>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 1.5rem; flex: 1;">
+              
+              <!-- 1. Theme / Dark Mode -->
+              <div>
+                <label class="form-label" style="font-weight: 700; font-size: 0.85rem; margin-bottom: 0.5rem; display: block;">
+                  Appearance Theme
+                </label>
+                <div class="theme-picker-cards">
+                  <div class="theme-picker-card active" id="admin-theme-card-light">
+                    <div class="theme-picker-card-left">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--gold-600);"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+                      <div>
+                        <div class="theme-picker-title">Light Mode</div>
+                        <div class="theme-picker-desc">Warm cream &amp; gold (Default)</div>
+                      </div>
+                    </div>
+                    <span style="font-size: 0.9rem; color: var(--gold-600); font-weight: 800;">✓</span>
+                  </div>
+
+                  <div class="theme-picker-card" id="admin-theme-card-dark">
+                    <div class="theme-picker-card-left">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--gold-500);"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+                      <div>
+                        <div class="theme-picker-title">Dark Mode</div>
+                        <div class="theme-picker-desc">Obsidian &amp; luxury gold</div>
+                      </div>
+                    </div>
+                    <span style="font-size: 0.9rem; color: var(--gold-600); font-weight: 800;">✓</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 2. Language Selection & Timezone -->
+              <div style="border-top: 1px solid rgba(0,0,0,0.06); padding-top: 1.25rem;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                  <div class="form-group" style="margin-bottom: 0;">
+                    <label class="form-label" style="font-weight: 700; font-size: 0.82rem;">Language</label>
+                    <select id="admin-language-select" class="form-control">
+                      <option value="en-US">English (US) - Default</option>
+                      <option value="es-ES">Español (Spanish)</option>
+                      <option value="fr-FR">Français (French)</option>
+                      <option value="de-DE">Deutsch (German)</option>
+                      <option value="zh-CN">中文 (Simplified Chinese)</option>
+                      <option value="zh-TW">中文 (Traditional Chinese)</option>
+                      <option value="ja-JP">日本語 (Japanese)</option>
+                      <option value="fil-PH">Filipino (Tagalog)</option>
+                      <option value="ko-KR">한국어 (Korean)</option>
+                      <option value="it-IT">Italiano (Italian)</option>
+                      <option value="pt-BR">Português (Portuguese)</option>
+                      <option value="ru-RU">Русский (Russian)</option>
+                      <option value="ar-SA">العربية (Arabic)</option>
+                      <option value="hi-IN">हिन्दी (Hindi)</option>
+                      <option value="vi-VN">Tiếng Việt (Vietnamese)</option>
+                      <option value="id-ID">Bahasa Indonesia (Indonesian)</option>
+                    </select>
+                  </div>
+                  <div class="form-group" style="margin-bottom: 0;">
+                    <label class="form-label" style="font-weight: 700; font-size: 0.82rem;">Preferred Timezone</label>
+                    <select id="admin-timezone-select" class="form-control">
+                      <option value="America/New_York">America/New_York (EST)</option>
+                      <option value="America/Chicago">America/Chicago (CST)</option>
+                      <option value="America/Denver">America/Denver (MST)</option>
+                      <option value="America/Los_Angeles">America/Los_Angeles (PST)</option>
+                      <option value="Europe/London">Europe/London (GMT/BST)</option>
+                      <option value="Europe/Paris">Europe/Paris (CET)</option>
+                      <option value="Asia/Manila">Asia/Manila (PHT)</option>
+                      <option value="Asia/Tokyo">Asia/Tokyo (JST)</option>
+                      <option value="UTC">UTC (Coordinated Time)</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 3. Notification Preferences (Administrative Alerts) -->
+              <div style="border-top: 1px solid rgba(0,0,0,0.06); padding-top: 1.25rem;">
+                <label class="form-label" style="font-weight: 700; font-size: 0.85rem; margin-bottom: 0.75rem; display: block;">
+                  Administrative Alerts &amp; Notifications
+                </label>
+
+                <div class="setting-switch-row">
+                  <div class="setting-switch-info">
+                    <div class="setting-switch-title" style="display: flex; align-items: center; gap: 0.35rem;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--gold-600);"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg> Tutor Applications</div>
+                    <div class="setting-switch-desc">Instant alerts when new teachers submit resume &amp; credential applications</div>
+                  </div>
+                  <label class="switch-control">
+                    <input type="checkbox" id="admin-notif-lessons" checked />
+                    <span class="switch-slider"></span>
+                  </label>
+                </div>
+
+                <div class="setting-switch-row">
+                  <div class="setting-switch-info">
+                    <div class="setting-switch-title" style="display: flex; align-items: center; gap: 0.35rem;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--gold-600);"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg> Student &amp; Guest Inquiries</div>
+                    <div class="setting-switch-desc">Notifications for new inquiries submitted through the Send Inquiry portal</div>
+                  </div>
+                  <label class="switch-control">
+                    <input type="checkbox" id="admin-notif-messages" checked />
+                    <span class="switch-slider"></span>
+                  </label>
+                </div>
+
+                <div class="setting-switch-row">
+                  <div class="setting-switch-info">
+                    <div class="setting-switch-title" style="display: flex; align-items: center; gap: 0.35rem;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--gold-600);"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg> Platform Audit &amp; Schedule Events</div>
+                    <div class="setting-switch-desc">Alerts for completed session logs and tutoring audit events</div>
+                  </div>
+                  <label class="switch-control">
+                    <input type="checkbox" id="admin-notif-calendar" checked />
+                    <span class="switch-slider"></span>
+                  </label>
+                </div>
+
+                <div class="setting-switch-row">
+                  <div class="setting-switch-info">
+                    <div class="setting-switch-title" style="display: flex; align-items: center; gap: 0.35rem;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--gold-600);"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg> Weekly Executive Performance Digest</div>
+                    <div class="setting-switch-desc">Receive weekly platform health summaries, active users, and gross volume metrics</div>
+                  </div>
+                  <label class="switch-control">
+                    <input type="checkbox" id="admin-notif-reports" checked />
+                    <span class="switch-slider"></span>
+                  </label>
+                </div>
+              </div>
+
+              <!-- 4. Account Security & Password -->
+              <div style="border-top: 1px solid rgba(0,0,0,0.06); padding-top: 1.25rem; margin-top: auto;">
+                <label class="form-label" style="font-weight: 700; font-size: 0.85rem; margin-bottom: 0.35rem; display: flex; align-items: center; gap: 0.35rem;">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--gold-700);"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg> Root Account Security &amp; Password
+                </label>
+                
+                <form id="admin-password-form">
+                  <div style="display: grid; grid-template-columns: 1fr; gap: 0.75rem; margin-bottom: 0.85rem;">
+                    <div class="form-group" style="margin-bottom: 0;">
+                      <label class="form-label" style="font-size: 0.78rem;">Current Password</label>
+                      <input type="password" id="admin-curr-password" class="form-control" placeholder="••••••••" required />
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+                      <div class="form-group" style="margin-bottom: 0;">
+                        <label class="form-label" style="font-size: 0.78rem;">New Password</label>
+                        <input type="password" id="admin-new-password" class="form-control" placeholder="Min 8 characters" required />
+                      </div>
+                      <div class="form-group" style="margin-bottom: 0;">
+                        <label class="form-label" style="font-size: 0.78rem;">Confirm Password</label>
+                        <input type="password" id="admin-confirm-password" class="form-control" placeholder="Repeat new password" required />
+                      </div>
+                    </div>
+                  </div>
+                  <button type="submit" id="btn-save-admin-password" class="btn btn-outline-gold btn-sm" style="width: 100%; justify-content: center; font-weight: 700;">
+                    Update Administrator Password
+                  </button>
+                </form>
+              </div>
+
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+    </div><!-- END VIEW: DEDICATED ADMIN PROFILE & SETTINGS PAGE -->
+
+    <!-- =======================================
          VIEW 4F: TEACHER - CREDENTIAL APPLICATION
          ======================================= -->
     <div id="view-teacher-application" class="app-page-view" style="display: none;">

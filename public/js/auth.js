@@ -1195,7 +1195,7 @@ const Auth = {
       if (guestActions) guestActions.style.display = 'none';
       if (userActions) {
         userActions.style.display = 'flex';
-        const profileHash = (user.role === 'teacher' || user.role === 'tutor') ? '#teacher-profile' : '#student-profile';
+        const profileHash = (user.role === 'teacher' || user.role === 'tutor') ? '#teacher-profile' : (user.role === 'admin' ? '#admin-profile' : '#student-profile');
         userActions.innerHTML = `
           <!-- Notification Bell & Dropdown -->
           <div class="nav-notif-container" id="nav-notif-container">

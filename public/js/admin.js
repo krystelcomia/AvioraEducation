@@ -94,6 +94,12 @@ const Admin = {
       inqForm.addEventListener('submit', (e) => this.handleInquiryResponseSubmit(e));
     }
 
+    // Admin profile settings form submission
+    const adminProfileForm = document.getElementById('admin-profile-settings-form');
+    if (adminProfileForm) {
+      adminProfileForm.addEventListener('submit', (e) => this.handleProfileSettingsSubmit(e));
+    }
+
     // Close Review Modal
     const reviewCloseBtn = document.getElementById('admin-review-modal-close');
     if (reviewCloseBtn) {
@@ -1236,6 +1242,95 @@ const Admin = {
       if (submitBtn) {
         submitBtn.disabled = false;
         submitBtn.innerHTML = origHtml;
+      }
+    }
+  },
+
+  async loadProfilePage() {
+    try {
+      const data = await API.getMe();
+      const u = data.user || (typeof Auth !== 'undefined' ? Auth.currentUser : null) || {};
+      const prefs = data.preferences || (u ? u.preferences : null) || {};
+
+      const heroName = document.getElementById('admin-profile-hero-name');
+      const heroEmail = document.getElementById('admin-profile-hero-email');
+      const heroAvatar = document.getElementById('admin-profile-hero-avatar');
+
+      if (heroName) heroName.textContent = u.name || 'Stephanie';
+      if (heroEmail) heroEmail.textContent = u.email || 'adminaviorastephanie@gmail.com';
+
+      if (u.avatar_url) {
+        if (heroAvatar) heroAvatar.src = u.avatar_url;
+        if (typeof Profile !== 'undefined' && Profile.updateAllAvatars) {
+          Profile.updateAllAvatars(u.avatar_url);
+        }
+      }
+
+      // Populate form fields
+      const nameInp = document.getElementById('admin-profile-name');
+      const emailInp = document.getElementById('admin-profile-email');
+      const phoneInp = document.getElementById('admin-profile-phone');
+      const titleInp = document.getElementById('admin-profile-title');
+      const deptInp = document.getElementById('admin-profile-dept');
+      const bioInp = document.getElementById('admin-profile-bio');
+
+      if (nameInp) nameInp.value = u.name || 'Stephanie';
+      if (emailInp) emailInp.value = u.email || 'adminaviorastephanie@gmail.com';
+      if (phoneInp) phoneInp.value = u.phone || '+1 (555) 839-2041';
+
+      const savedTitle = localStorage.getItem('aviora_admin_title') || 'Academic Director & Platform Administrator';
+      const savedDept = localStorage.getItem('aviora_admin_dept') || 'Executive Academic Directorate & Educator Admissions';
+      const savedBio = localStorage.getItem('aviora_admin_bio') || 'Overseeing educator credential evaluations, curriculum standards, and academic mentorship excellence across Aviora Education.';
+
+      if (titleInp) titleInp.value = savedTitle;
+      if (deptInp) deptInp.value = savedDept;
+      if (bioInp) bioInp.value = savedBio;
+
+      // Sync settings & preferences in Profile module
+      if (typeof Profile !== 'undefined' && Profile.syncAllPreferences) {
+        Profile.syncAllPreferences(prefs);
+      }
+    } catch (err) {
+      console.error('Failed to load administrator profile page:', err);
+      showToast('Could not load administrator profile details.', 'error');
+    }
+
+    if (typeof Router !== 'undefined' && Router.updateActiveNav) Router.updateActiveNav();
+  },
+
+  async handleProfileSettingsSubmit(e) {
+    e.preventDefault();
+    const name = document.getElementById('admin-profile-name')?.value.trim() || 'Stephanie';
+    const phone = document.getElementById('admin-profile-phone')?.value.trim();
+    const title = document.getElementById('admin-profile-title')?.value.trim();
+    const dept = document.getElementById('admin-profile-dept')?.value.trim();
+    const bio = document.getElementById('admin-profile-bio')?.value.trim();
+    const submitBtn = document.getElementById('btn-save-admin-profile');
+
+    try {
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Saving Changes...';
+      }
+
+      if (title) localStorage.setItem('aviora_admin_title', title);
+      if (dept) localStorage.setItem('aviora_admin_dept', dept);
+      if (bio) localStorage.setItem('aviora_admin_bio', bio);
+
+      const res = await API.updateProfile({ name, phone });
+      if (res && res.user && typeof Auth !== 'undefined') {
+        Auth.currentUser = res.user;
+        if (typeof Storage !== 'undefined') Storage.setUser(res.user);
+      }
+
+      showToast('Administrator profile updated successfully!', 'success');
+      await this.loadProfilePage();
+    } catch (err) {
+      showToast(err.message || 'Failed to update administrator profile.', 'error');
+    } finally {
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Save Profile Changes';
       }
     }
   }

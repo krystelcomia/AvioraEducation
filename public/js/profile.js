@@ -61,9 +61,9 @@ const Profile = {
   },
 
   setSaveStatus(status, text) {
-    const pills = [document.getElementById('settings-status-pill'), document.getElementById('teacher-settings-status-pill')].filter(Boolean);
-    const textEls = [document.getElementById('settings-status-text'), document.getElementById('teacher-settings-status-text')].filter(Boolean);
-    const dotEls = [document.getElementById('settings-status-dot'), document.getElementById('teacher-settings-status-dot')].filter(Boolean);
+    const pills = [document.getElementById('settings-status-pill'), document.getElementById('teacher-settings-status-pill'), document.getElementById('admin-settings-status-pill')].filter(Boolean);
+    const textEls = [document.getElementById('settings-status-text'), document.getElementById('teacher-settings-status-text'), document.getElementById('admin-settings-status-text')].filter(Boolean);
+    const dotEls = [document.getElementById('settings-status-dot'), document.getElementById('teacher-settings-status-dot'), document.getElementById('admin-settings-status-dot')].filter(Boolean);
     if (!pills.length) return;
 
     if (this.saveStatusTimeout) clearTimeout(this.saveStatusTimeout);
@@ -140,6 +140,11 @@ const Profile = {
     if (tLightCard) tLightCard.classList.toggle('active', !isDark);
     if (tDarkCard) tDarkCard.classList.toggle('active', isDark);
 
+    const aLightCard = document.getElementById('admin-theme-card-light');
+    const aDarkCard = document.getElementById('admin-theme-card-dark');
+    if (aLightCard) aLightCard.classList.toggle('active', !isDark);
+    if (aDarkCard) aDarkCard.classList.toggle('active', isDark);
+
     if (persistToServer && typeof API !== 'undefined') {
       this.setSaveStatus('saving');
       API.updateUserPreferences({ theme: isDark ? 'dark' : 'light' })
@@ -178,6 +183,8 @@ const Profile = {
     if (langSelect) langSelect.value = activeLang;
     const tLangSelect = document.getElementById('teacher-language-select');
     if (tLangSelect) tLangSelect.value = activeLang;
+    const aLangSelect = document.getElementById('admin-language-select');
+    if (aLangSelect) aLangSelect.value = activeLang;
 
     localStorage.setItem(`aviora_language_${u.id}`, activeLang);
     localStorage.removeItem('aviora_language');
@@ -216,6 +223,8 @@ const Profile = {
     if (tzSelect) tzSelect.value = activeTz;
     const tTzSelect = document.getElementById('teacher-timezone-select');
     if (tTzSelect) tTzSelect.value = activeTz;
+    const aTzSelect = document.getElementById('admin-timezone-select');
+    if (aTzSelect) aTzSelect.value = activeTz;
 
     const key = this.getUserKey();
     if (key) localStorage.setItem(`aviora_timezone${key}`, activeTz);
@@ -249,6 +258,8 @@ const Profile = {
     if (toggle) toggle.checked = Boolean(isChecked);
     const tToggle = document.getElementById('teacher-' + elementId);
     if (tToggle) tToggle.checked = Boolean(isChecked);
+    const aToggle = document.getElementById('admin-' + elementId);
+    if (aToggle) aToggle.checked = Boolean(isChecked);
 
     const key = this.getUserKey();
     if (key) localStorage.setItem(`aviora_${elementId}${key}`, isChecked);
@@ -482,7 +493,61 @@ const Profile = {
 
     const tPassForm = document.getElementById('teacher-password-form');
     if (tPassForm) {
-      tPassForm.addEventListener('submit', (e) => this.handlePasswordSubmit(e, true));
+      tPassForm.addEventListener('submit', (e) => this.handlePasswordSubmit(e, 'teacher'));
+    }
+
+    // --- Admin Profile Settings Listeners ---
+    const aAvatarWrap = document.getElementById('admin-profile-hero-avatar-wrap');
+    const aFileInput = document.getElementById('admin-profile-file-input');
+    if (aAvatarWrap && aFileInput) {
+      aAvatarWrap.addEventListener('click', () => {
+        aFileInput.click();
+      });
+
+      aFileInput.addEventListener('change', (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (file) {
+          this.handleAvatarUpload(file);
+        }
+      });
+    }
+
+    const aLightCard = document.getElementById('admin-theme-card-light');
+    if (aLightCard) {
+      aLightCard.addEventListener('click', () => this.applyTheme('light'));
+    }
+    const aDarkCard = document.getElementById('admin-theme-card-dark');
+    if (aDarkCard) {
+      aDarkCard.addEventListener('click', () => this.applyTheme('dark'));
+    }
+
+    const aLangSelect = document.getElementById('admin-language-select');
+    if (aLangSelect) {
+      aLangSelect.addEventListener('change', (e) => {
+        this.applyLanguage(e.target.value);
+      });
+    }
+
+    const aTzSelect = document.getElementById('admin-timezone-select');
+    if (aTzSelect) {
+      aTzSelect.addEventListener('change', (e) => {
+        this.applyTimezone(e.target.value);
+      });
+    }
+
+    ['admin-notif-lessons', 'admin-notif-calendar', 'admin-notif-messages', 'admin-notif-reports'].forEach(id => {
+      const toggle = document.getElementById(id);
+      if (toggle) {
+        const prefKey = id.replace('admin-', '').replace('-', '_');
+        toggle.addEventListener('change', (e) => {
+          this.applyNotification(prefKey, e.target.checked);
+        });
+      }
+    });
+
+    const aPassForm = document.getElementById('admin-password-form');
+    if (aPassForm) {
+      aPassForm.addEventListener('submit', (e) => this.handlePasswordSubmit(e, 'admin'));
     }
   },
 
@@ -540,11 +605,13 @@ const Profile = {
     const subAvatar = document.getElementById('student-sub-avatar');
     const tHeroAvatar = document.getElementById('teacher-profile-hero-avatar');
     const tDashAvatar = document.getElementById('teacher-hero-avatar');
+    const aHeroAvatar = document.getElementById('admin-profile-hero-avatar');
     if (heroAvatar) heroAvatar.src = url;
     if (studentAvatar) studentAvatar.src = url;
     if (subAvatar) subAvatar.src = url;
     if (tHeroAvatar) tHeroAvatar.src = url;
     if (tDashAvatar) tDashAvatar.src = url;
+    if (aHeroAvatar) aHeroAvatar.src = url;
     document.querySelectorAll('.user-avatar, .nav-user-avatar, .teacher-hero-avatar').forEach(img => {
       img.src = url;
     });
@@ -669,12 +736,14 @@ const Profile = {
     }
   },
 
-  async handlePasswordSubmit(e, isTeacher = false) {
+  async handlePasswordSubmit(e, role = 'student') {
     e.preventDefault();
-    const currId = isTeacher ? 'teacher-curr-password' : 'profile-curr-password';
-    const newId = isTeacher ? 'teacher-new-password' : 'profile-new-password';
-    const confId = isTeacher ? 'teacher-confirm-password' : 'profile-confirm-password';
-    const btnId = isTeacher ? 'btn-save-teacher-password' : 'btn-save-password';
+    const isTeacher = (role === 'teacher' || role === true);
+    const isAdmin = (role === 'admin');
+    const currId = isAdmin ? 'admin-curr-password' : (isTeacher ? 'teacher-curr-password' : 'profile-curr-password');
+    const newId = isAdmin ? 'admin-new-password' : (isTeacher ? 'teacher-new-password' : 'profile-new-password');
+    const confId = isAdmin ? 'admin-confirm-password' : (isTeacher ? 'teacher-confirm-password' : 'profile-confirm-password');
+    const btnId = isAdmin ? 'btn-save-admin-password' : (isTeacher ? 'btn-save-teacher-password' : 'btn-save-password');
 
     const currentPassword = document.getElementById(currId)?.value;
     const newPassword = document.getElementById(newId)?.value;

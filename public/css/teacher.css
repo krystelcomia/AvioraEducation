@@ -1216,6 +1216,109 @@
   background: #10B981;
 }
 
+/* Default Weekly Availability Card */
+.teacher-default-availability-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-xl);
+  padding: 1.35rem 1.6rem;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+  max-width: 980px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.default-avail-header {
+  margin-bottom: 0.9rem;
+}
+
+.default-avail-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 0 0.25rem 0;
+}
+
+.default-avail-subtitle {
+  font-size: 0.825rem;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.default-avail-days-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 0.65rem;
+}
+
+.default-avail-day-card {
+  background: rgba(0, 0, 0, 0.02);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 0.7rem 0.6rem;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  transition: all var(--transition-fast);
+}
+
+.default-avail-day-card.open {
+  border-color: rgba(16, 185, 129, 0.3);
+  background: rgba(16, 185, 129, 0.04);
+}
+
+.default-avail-day-card.off {
+  opacity: 0.75;
+}
+
+.default-avail-day-name {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.default-avail-day-status {
+  display: flex;
+  justify-content: center;
+}
+
+.default-avail-badge {
+  font-size: 0.64rem;
+  font-weight: 700;
+  padding: 0.1rem 0.4rem;
+  border-radius: var(--radius-full);
+}
+
+.default-avail-badge.open {
+  background: rgba(16, 185, 129, 0.15);
+  color: #059669;
+}
+
+.default-avail-badge.off {
+  background: rgba(0, 0, 0, 0.06);
+  color: var(--text-secondary);
+}
+
+.default-avail-day-hours {
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.date-schedule-empty-prompt {
+  text-align: center;
+  padding: 2.25rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
 /* ==============================================================
    TEACHER MONTHLY SCHEDULE CALENDAR & DATE SCHEDULE MANAGER
    ============================================================== */
@@ -2024,6 +2127,8 @@
    ============================================================== */
 [data-theme="dark"] .teacher-portal-hero,
 [data-theme="dark"] .financial-widget,
+[data-theme="dark"] .teacher-default-availability-card,
+[data-theme="dark"] .default-avail-day-card,
 [data-theme="dark"] .teacher-class-card,
 [data-theme="dark"] .teacher-student-card,
 [data-theme="dark"] .teacher-task-card,

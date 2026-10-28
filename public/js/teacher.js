@@ -23,10 +23,7 @@ const Teacher = {
   isEditingDateNote: false,
   calYear: new Date().getFullYear(),
   calMonth: new Date().getMonth(),
-  selectedDate: (() => {
-    const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-  })(),
+  selectedDate: null,
   calListenersAttached: false,
   buddySessions: [],
   dashboardData: null,
@@ -2339,9 +2336,72 @@ const Teacher = {
   },
 
   renderSchedule() {
+    this.renderDefaultAvailabilitySection();
     this.renderCalendar();
     this.renderDateSchedulePanel();
     this.renderUpcomingAppointmentsList();
+  },
+
+  renderDefaultAvailabilitySection() {
+    const container = document.getElementById('teacher-default-availability-card');
+    if (!container) return;
+
+    const availSched = this.scheduleData?.availabilitySchedule || this.tutorProfile?.availability_schedule || {};
+    const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
+    const daysHtml = days.map(day => {
+      const blocks = Array.isArray(availSched[day]) ? availSched[day] : [];
+      const mode = availSched.day_modes?.[day];
+      const isAllDay = mode === 'all_day' || (blocks.length === 1 && blocks[0] === '08:00 - 20:00');
+      const hasHours = blocks.length > 0;
+
+      let hoursDisplay = 'Unavailable / Off';
+      let statusClass = 'off';
+
+      if (isAllDay) {
+        hoursDisplay = 'All Day (8:00 AM – 8:00 PM)';
+        statusClass = 'open';
+      } else if (hasHours) {
+        hoursDisplay = blocks.join(', ');
+        statusClass = 'open';
+      }
+
+      return `
+        <div class="default-avail-day-card ${statusClass}">
+          <div class="default-avail-day-name">${day}</div>
+          <div class="default-avail-day-status">
+            ${statusClass === 'open' 
+              ? `<span class="default-avail-badge open">🟢 Open</span>` 
+              : `<span class="default-avail-badge off">⚪ Off</span>`}
+          </div>
+          <div class="default-avail-day-hours">${hoursDisplay}</div>
+        </div>
+      `;
+    }).join('');
+
+    container.innerHTML = `
+      <div class="default-avail-header">
+        <div>
+          <h3 class="default-avail-title">
+            ${Icons.clock(18)} Default Weekly Availability
+          </h3>
+          <p class="default-avail-subtitle">
+            Your recurring standard weekly hours. Options to edit hours or mark unavailability appear when you select a specific date on the calendar below.
+          </p>
+        </div>
+      </div>
+      <div class="default-avail-days-grid">
+        ${daysHtml}
+      </div>
+    `;
+  },
+
+  clearSelectedCalendarDate() {
+    this.selectedDate = null;
+    this.isEditingDateNote = false;
+    this.showHoursEditor = false;
+    this.renderCalendar();
+    this.renderDateSchedulePanel();
   },
 
   parseTimeHour(timeStr) {
@@ -2413,9 +2473,6 @@ const Teacher = {
 
     const now = new Date();
     const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-    if (!this.selectedDate) {
-      this.selectedDate = todayStr;
-    }
 
     const monthDate = new Date(this.calYear, this.calMonth, 1);
     if (monthTitle) {
@@ -2430,29 +2487,23 @@ const Teacher = {
     const appointments = this.scheduleData?.appointments || [];
     const occupiedSlots = this.scheduleData?.occupiedSlots || [];
 
-    // Update top-right calendar header bar with selected date & "Not Available / Date Occupied" button
+    // Update calendar header info bar (no duplicate action buttons)
     const calHintBox = document.querySelector('#view-teacher-schedule .teacher-cal-hint');
-    if (calHintBox && this.selectedDate) {
-      const selDateObj = new Date(this.selectedDate + 'T00:00:00');
-      const selDayName = dayNames[selDateObj.getDay()];
-      const selShortDate = selDateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-      const selIsOccupied = this.isDateMarkedUnavailable(this.selectedDate, selDayName);
-
-      calHintBox.innerHTML = `
-        <div class="teacher-cal-selected-bar">
-          <span class="teacher-cal-selected-label">Selected: <strong>${selShortDate}</strong></span>
-          ${selIsOccupied ? `
-            <span class="cal-occupied-state-pill">🚫 Not Available / Date Occupied</span>
-            <button type="button" class="btn btn-outline-gold btn-sm" onclick="Teacher.bulkSetDayAvailability('date_available')" style="padding: 0.32rem 0.75rem; font-size: 0.78rem; font-weight: 700;">
-              🟢 Mark Date Available
-            </button>
-          ` : `
-            <button type="button" class="btn btn-sm btn-mark-date-unavailable" onclick="Teacher.bulkSetDayAvailability('date_occupied')" title="Mark ${selShortDate} as Not Available / Date Occupied (reflected for students)">
-              🚫 Not Available / Date Occupied
-            </button>
-          `}
-        </div>
-      `;
+    if (calHintBox) {
+      if (this.selectedDate) {
+        const selDateObj = new Date(this.selectedDate + 'T00:00:00');
+        const selShortDate = selDateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        calHintBox.innerHTML = `
+          <div class="teacher-cal-selected-bar">
+            <span class="teacher-cal-selected-label">Selected: <strong>${selShortDate}</strong></span>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="Teacher.clearSelectedCalendarDate()" style="padding: 0.2rem 0.55rem; font-size: 0.72rem;" title="Deselect date">✕ Deselect</button>
+          </div>
+        `;
+      } else {
+        calHintBox.innerHTML = `
+          <span style="font-size: 0.85rem; color: var(--gold-400); font-weight: 600;">⚡ Click any date to view notes &amp; edit availability</span>
+        `;
+      }
     }
 
     // Map appointments by YYYY-MM-DD
@@ -2568,8 +2619,18 @@ const Teacher = {
     if (!panel) return;
 
     if (!this.selectedDate) {
-      const now = new Date();
-      this.selectedDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+      panel.innerHTML = `
+        <div class="date-schedule-empty-prompt">
+          <div style="font-size: 1.8rem; margin-bottom: 0.5rem;">📅</div>
+          <h4 style="font-size: 1.05rem; font-weight: 700; color: var(--text-primary); margin: 0 0 0.35rem;">
+            Select a Date to View Notes &amp; Customize Availability
+          </h4>
+          <p style="font-size: 0.85rem; color: var(--text-secondary); margin: 0; max-width: 520px;">
+            Click any date on the calendar above to view notes, mark availability, or customize hours for that date while preserving your default weekly schedule.
+          </p>
+        </div>
+      `;
+      return;
     }
 
     const dateObj = new Date(this.selectedDate + 'T00:00:00');
@@ -2622,63 +2683,66 @@ const Teacher = {
     }
 
     const activeHoursDisplayText = isDateOccupied
-      ? 'Not Available / Date Occupied (Blocked for Student Bookings)'
+      ? 'Blocked for Student Bookings'
       : (savedMode === 'all_day'
-          ? 'Available All Day (08:00 AM – 08:00 PM)'
-          : (rawBlocks.length > 0 ? `Specific Time Slots (${rawBlocks.join(', ')})` : 'No active hours configured'));
+          ? 'All Day (8:00 AM – 8:00 PM)'
+          : (rawBlocks.length > 0 ? `Specific Hours (${rawBlocks.join(', ')})` : 'No hours configured'));
 
     const savedDateNote = (this.dateNotes && this.dateNotes[this.selectedDate]) || '';
 
     panel.innerHTML = `
       <div class="date-schedule-header">
         <div>
-          <div style="display: flex; align-items: center; gap: 0.65rem; flex-wrap: wrap;">
-            <h3 class="date-schedule-title">
-              ${Icons.calendar(20)} Schedule for ${formattedDate}
+          <div style="display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;">
+            <h3 class="date-schedule-title" style="margin: 0; font-size: 1.15rem;">
+              ${Icons.calendar(18)} ${formattedDate}
             </h3>
             ${isDateOccupied ? `
-              <span class="status-pill declined" style="font-size: 0.72rem; padding: 0.2rem 0.65rem;">🚫 Not Available / Date Occupied</span>
+              <span class="status-pill declined" style="font-size: 0.72rem; padding: 0.15rem 0.6rem;">🚫 Occupied</span>
             ` : `
-              <span class="status-pill accepted" style="font-size: 0.72rem; padding: 0.2rem 0.65rem;">🟢 Date Open for Student Bookings</span>
+              <span class="status-pill accepted" style="font-size: 0.72rem; padding: 0.15rem 0.6rem;">🟢 Open</span>
             `}
           </div>
-          <p style="margin: 0.25rem 0 0; font-size: 0.85rem; color: var(--text-secondary);">
-            Click any date on the calendar above to view notes &amp; schedule details for that date.
+          <p style="margin: 0.2rem 0 0; font-size: 0.825rem; color: var(--text-secondary);">
+            Options for this selected date (maintains default settings on other dates).
           </p>
         </div>
         <div class="date-schedule-actions">
           ${isDateOccupied ? `
             <button type="button" class="btn btn-primary btn-sm" onclick="Teacher.bulkSetDayAvailability('date_available')" style="background: #10B981; border-color: #10B981;">
-              🟢 Mark Date Available
+              🟢 Mark Available
             </button>
           ` : `
             <button type="button" class="btn btn-sm btn-mark-date-unavailable" onclick="Teacher.bulkSetDayAvailability('date_occupied')">
-              🚫 Not Available / Date Occupied
+              🚫 Mark Occupied
             </button>
             <button type="button" class="btn btn-outline-gold btn-sm" onclick="Teacher.bulkSetDayAvailability('date_available')">
-              🟢 Set All Slots Available
+              🟢 Set All Open
             </button>
           `}
+          <button type="button" class="btn btn-secondary btn-sm" onclick="Teacher.clearSelectedCalendarDate()" title="Close editor and return to default view">
+            ✕ Close
+          </button>
         </div>
       </div>
 
-      <!-- Selected Date Notes Section (View & Edit Date Note) -->
+      <!-- Selected Date Notes Section -->
       <div class="date-notes-section">
         <div class="date-notes-title-row">
           <h4 class="date-notes-title">
-            <span>📝 Notes &amp; Session Focus for ${formattedDate}</span>
+            <span>📝 Session Notes &amp; Focus</span>
           </h4>
           <div style="display: flex; gap: 0.4rem; align-items: center;">
             ${savedDateNote && !this.isEditingDateNote ? `
               <button type="button" class="btn btn-outline-gold btn-sm" onclick="Teacher.toggleEditDateNote()" style="padding: 0.25rem 0.65rem; font-size: 0.76rem;">
-                ✏️ Edit Note
+                ✏️ Edit
               </button>
               <button type="button" class="btn btn-secondary btn-sm" onclick="Teacher.deleteDateNote('${this.selectedDate}')" style="padding: 0.25rem 0.65rem; font-size: 0.76rem; color: #EF4444;">
                 ✕ Clear
               </button>
             ` : !this.isEditingDateNote ? `
               <button type="button" class="btn btn-outline-gold btn-sm" onclick="Teacher.toggleEditDateNote()" style="padding: 0.25rem 0.65rem; font-size: 0.76rem;">
-                + Add Date Note
+                + Add Note
               </button>
             ` : ''}
           </div>
@@ -2688,11 +2752,11 @@ const Teacher = {
           ${isDateOccupied ? `
             <div class="date-note-box occupied-note-box">
               <div class="date-note-header">
-                <span class="date-note-badge" style="color: #DC2626;">🚫 Date Availability Status</span>
+                <span class="date-note-badge" style="color: #DC2626;">🚫 Date Status Note</span>
                 <span class="status-pill declined" style="font-size: 0.68rem; padding: 0.1rem 0.45rem;">Occupied</span>
               </div>
               <div class="date-note-body" style="font-style: normal; color: #B91C1C;">
-                This date is marked as <strong>Not Available / Date Occupied</strong>. Student bookings are disabled on this date.
+                This date is marked as <strong>Not Available / Occupied</strong>. Student bookings are disabled on this date.
               </div>
             </div>
           ` : ''}
@@ -2700,14 +2764,14 @@ const Teacher = {
           <!-- Personal Educator Note / Reminders -->
           <div class="date-note-box personal-note-box">
             <div class="date-note-header">
-              <span class="date-note-badge" style="color: #2563EB;">📌 Personal Educator Note / Reminders</span>
+              <span class="date-note-badge" style="color: #2563EB;">📌 Educator Reminder</span>
             </div>
             ${this.isEditingDateNote ? `
               <div style="margin-top: 0.5rem;">
-                <textarea id="teacher-date-note-input" class="form-control" rows="2" style="font-size: 0.85rem;" placeholder="Write a note, student prep reminders, or task checklist for ${formattedDate}...">${savedDateNote || ''}</textarea>
+                <textarea id="teacher-date-note-input" class="form-control" rows="2" style="font-size: 0.85rem;" placeholder="Write a note or reminder for ${formattedDate}...">${savedDateNote || ''}</textarea>
                 <div style="display: flex; justify-content: flex-end; gap: 0.45rem; margin-top: 0.45rem;">
                   <button type="button" class="btn btn-secondary btn-sm" onclick="Teacher.toggleEditDateNote()">Cancel</button>
-                  <button type="button" class="btn btn-primary btn-sm" onclick="Teacher.saveDateNote('${this.selectedDate}')">Save Note</button>
+                  <button type="button" class="btn btn-primary btn-sm" onclick="Teacher.saveDateNote('${this.selectedDate}')">Save</button>
                 </div>
               </div>
             ` : savedDateNote ? `
@@ -2716,7 +2780,7 @@ const Teacher = {
               </div>
             ` : `
               <div class="date-note-empty">
-                No personal note added for this date. Click <strong>+ Add Date Note</strong> above to write reminders or lesson prep.
+                No personal note added. Click <strong>+ Add Note</strong> above to write reminders or prep tasks.
               </div>
             `}
           </div>
@@ -2725,7 +2789,7 @@ const Teacher = {
           ${dayApts.length > 0 ? dayApts.filter(a => a.notes).map(apt => `
             <div class="date-note-box student-focus-box">
               <div class="date-note-header">
-                <span class="date-note-badge">🎓 Student Session Focus &amp; Note</span>
+                <span class="date-note-badge">🎓 Student Focus</span>
                 <span class="date-note-author">${apt.student_name} (${apt.subject} • ${apt.requested_time})</span>
               </div>
               <div class="date-note-body">
@@ -2733,7 +2797,7 @@ const Teacher = {
               </div>
               ${apt.tutor_response_note ? `
                 <div class="date-note-response">
-                  <strong>Your Note / Response:</strong> ${this.escapeHtml(apt.tutor_response_note)}
+                  <strong>Your Response:</strong> ${this.escapeHtml(apt.tutor_response_note)}
                 </div>
               ` : ''}
             </div>
@@ -2746,18 +2810,18 @@ const Teacher = {
         <div>
           <div class="date-schedule-col-title">
             <span>Upcoming Classes (${dayApts.length})</span>
-            <span style="font-size: 0.75rem; color: var(--text-secondary); font-weight: 500;">Auto-synced from student bookings</span>
+            <span style="font-size: 0.75rem; color: var(--text-secondary); font-weight: 500;">Auto-synced</span>
           </div>
 
           ${dayApts.length === 0 ? `
             <div style="padding: 2rem 1.5rem; text-align: center; color: var(--text-secondary); background: rgba(0,0,0,0.02); border-radius: var(--radius-lg); border: 1px dashed var(--border-color);">
               <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">${isDateOccupied ? '🚫' : '📅'}</div>
               <strong style="color: var(--text-primary); font-size: 0.95rem;">
-                ${isDateOccupied ? 'Date Marked as Not Available / Date Occupied' : 'No Classes Booked on this Date'}
+                ${isDateOccupied ? 'Date Marked as Occupied' : 'No Classes on this Date'}
               </strong>
               <p style="margin: 0.25rem 0 0; font-size: 0.825rem;">
                 ${isDateOccupied
-                  ? 'Students see that this date is unavailable when they set up their schedule.'
+                  ? 'Students see that this date is unavailable when booking.'
                   : 'Open slots on this day are ready for students to reserve.'}
               </p>
             </div>
@@ -2781,9 +2845,9 @@ const Teacher = {
                       ${!this.isApproved() ? `
                         <span class="badge" style="background: rgba(245, 158, 11, 0.15); color: #D97706; font-size: 0.75rem; padding: 0.3rem 0.6rem; border-radius: 4px;" title="Operations locked while application is under review">🔒 Locked</span>
                       ` : apt.status === 'completed' ? `
-                        <span style="font-size: 0.78rem; color: #10B981; font-weight: 700;">✓ Completed</span>
+                        <span style="font-size: 0.78rem; color: #10B981; font-weight: 700;">✓ Done</span>
                       ` : apt.room_status === 'open' ? `
-                        <button class="btn btn-primary btn-sm" onclick="VirtualRoom.joinRoom(${apt.id}, 'tutor')" style="background: #10B981; border-color: #10B981;">Enter (Live)</button>
+                        <button class="btn btn-primary btn-sm" onclick="VirtualRoom.joinRoom(${apt.id}, 'tutor')" style="background: #10B981; border-color: #10B981;">Enter</button>
                       ` : `
                         <button class="btn btn-secondary btn-sm" onclick="VirtualRoom.openRoomAsTutor(${apt.id})">Open Room</button>
                         <button class="btn btn-outline-gold btn-sm" onclick="Teacher.updateStatus(${apt.id}, 'completed', this)">Done</button>
@@ -2793,7 +2857,7 @@ const Teacher = {
                   ${apt.notes ? `
                     <div class="date-note-box student-focus-box" style="margin-top: 0.65rem; padding: 0.6rem 0.8rem; font-size: 0.82rem;">
                       <div class="date-note-header" style="margin-bottom: 0.2rem;">
-                        <span class="date-note-badge">📝 Student Focus / Note:</span>
+                        <span class="date-note-badge">📝 Student Focus:</span>
                       </div>
                       <div class="date-note-body" style="font-size: 0.82rem;">"${this.escapeHtml(apt.notes)}"</div>
                       ${apt.tutor_response_note ? `
@@ -2811,73 +2875,70 @@ const Teacher = {
         <div>
           <div class="date-schedule-col-title">
             <span>Time Slot Availability</span>
-            <span style="font-size: 0.75rem; color: var(--gold-400); font-weight: 600;">⚡ Reflected live for students</span>
+            <span style="font-size: 0.75rem; color: var(--gold-400); font-weight: 600;">⚡ Live</span>
           </div>
 
           <!-- Specify & Edit Available Hours Card -->
           <div class="time-slot-availability-editor">
             <div class="tsa-current-bar">
               <div>
-                <div class="tsa-current-label">Current Availability Hours (${dayOfWeekName})</div>
+                <div class="tsa-current-label">Current Hours (${dayOfWeekName})</div>
                 <div class="tsa-current-value ${isDateOccupied ? 'is-occupied' : ''}">${activeHoursDisplayText}</div>
               </div>
               <button type="button" class="btn btn-outline-gold btn-sm" onclick="Teacher.toggleHoursEditor()" style="padding: 0.3rem 0.7rem; font-size: 0.76rem; font-weight: 700;">
-                ${this.showHoursEditor ? '✕ Close Editor' : '✏️ Edit Available Hours'}
+                ${this.showHoursEditor ? '✕ Close' : '✏️ Edit Hours'}
               </button>
             </div>
 
             <div class="tsa-mode-pills-row">
               <button type="button" class="tsa-mode-pill ${!isDateOccupied && activeMode === 'all_day' ? 'active' : ''}" onclick="Teacher.selectAvailabilityMode('all_day')">
-                🌞 Available All Day (08:00 AM – 08:00 PM)
+                🌞 All Day (8 AM – 8 PM)
               </button>
               <button type="button" class="tsa-mode-pill ${!isDateOccupied && activeMode === 'specific' ? 'active' : ''}" onclick="Teacher.selectAvailabilityMode('specific')">
-                🎯 Only During Specific Time Slots
+                🎯 Specific Hours
               </button>
             </div>
 
             <div id="teacher-hours-editor-body" class="tsa-editor-body" style="display: ${this.showHoursEditor || activeMode === 'specific' ? 'block' : 'none'};">
               ${activeMode === 'all_day' ? `
                 <div style="font-size: 0.82rem; color: var(--text-secondary); margin-bottom: 0.75rem;">
-                  You are set to <strong>Available All Day (08:00 AM – 08:00 PM)</strong>. Students can book any open 50-minute session throughout the day.
+                  Set to <strong>Available All Day (8:00 AM – 8:00 PM)</strong>. Students can book open 50-minute sessions throughout the day.
                 </div>
               ` : `
                 <div class="tsa-time-range-grid">
                   <div>
-                    <label class="tsa-field-label">Available From (Start Hour)</label>
+                    <label class="tsa-field-label">From (Start Hour)</label>
                     <select id="tsa-start-hour" class="form-control tsa-select">
                       ${startHourOptions.join('')}
                     </select>
                   </div>
                   <div>
-                    <label class="tsa-field-label">Available Until (End Hour)</label>
+                    <label class="tsa-field-label">Until (End Hour)</label>
                     <select id="tsa-end-hour" class="form-control tsa-select">
                       ${endHourOptions.join('')}
                     </select>
                   </div>
                 </div>
-                <div style="font-size: 0.76rem; color: var(--text-secondary); margin-top: 0.45rem; margin-bottom: 0.75rem;">
-                  💡 Tip: Set your start &amp; end hours above and click <strong>Save Available Hours</strong>, or click individual time slot pills below to toggle specific hours.
-                </div>
               `}
 
               <div class="tsa-save-row">
                 <div style="flex: 1; min-width: 170px;">
-                  <label class="tsa-field-label">Apply Schedule Changes To</label>
+                  <label class="tsa-field-label">Apply To</label>
                   <select id="tsa-apply-scope" class="form-control tsa-select">
-                    <option value="weekday" selected>Every ${dayOfWeekName} (including ${this.selectedDate})</option>
-                    <option value="date">Selected Date Only (${this.selectedDate})</option>
-                    <option value="all_days">All Days of the Week (Mon–Sun)</option>
+                    <option value="date" selected>This Date Only (${this.selectedDate})</option>
+                    <option value="weekday">Every ${dayOfWeekName}</option>
+                    <option value="all_days">All Days (Mon–Sun)</option>
                   </select>
                 </div>
-                <button type="button" class="btn btn-primary btn-sm" onclick="Teacher.saveTimeSlotAvailabilityHours('${activeMode}')" style="height: 36px; padding: 0 1rem; font-weight: 700; white-space: nowrap;">
-                  💾 Save Available Hours
+                <button type="button" class="btn btn-primary btn-sm" onclick="Teacher.saveTimeSlotAvailabilityHours('${activeMode}')" style="height: 36px; padding: 0 0.85rem; font-weight: 700; white-space: nowrap;">
+                  💾 Save Hours
                 </button>
               </div>
             </div>
           </div>
 
           <div style="display: flex; justify-content: space-between; align-items: center; margin: 0.85rem 0 0.55rem; font-size: 0.78rem; color: var(--text-secondary);">
-            <span><strong>Hourly Time Slots</strong> (Click any slot to toggle Available / Occupied)</span>
+            <span><strong>Hourly Slots</strong> (Click to toggle Available / Occupied)</span>
           </div>
 
           <div class="date-slot-pills-grid">
@@ -2902,9 +2963,9 @@ const Teacher = {
         return `
                   <div class="date-slot-pill is-occupied" 
                        onclick="Teacher.toggleOccupiedSlot('${dayOfWeekName}', '${slot}', 'Unavailable', '${this.selectedDate}')"
-                       title="${isDateOccupied ? 'Date marked Not Available / Occupied. Click to make this slot available.' : 'Unavailable / Occupied. Click to make Open & Available.'}">
+                       title="${isDateOccupied ? 'Date marked Occupied. Click to make this slot available.' : 'Occupied. Click to make Available.'}">
                     <span class="slot-pill-time">${slot}</span>
-                    <span class="slot-pill-status">${isDateOccupied ? '🚫 Date Occupied' : '🔒 Unavailable'}</span>
+                    <span class="slot-pill-status">${isDateOccupied ? '🚫 Occupied' : '🔒 Unavailable'}</span>
                   </div>
                 `;
       }
@@ -2912,7 +2973,7 @@ const Teacher = {
       return `
                 <div class="date-slot-pill is-available" 
                      onclick="Teacher.toggleOccupiedSlot('${dayOfWeekName}', '${slot}', 'Unavailable', '${this.selectedDate}')"
-                     title="Available for student bookings. Click to mark Unavailable.">
+                     title="Available. Click to mark Unavailable.">
                   <span class="slot-pill-time">${slot}</span>
                   <span class="slot-pill-status">🟢 Available</span>
                 </div>

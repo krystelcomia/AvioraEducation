@@ -85,6 +85,7 @@ a { text-decoration: none; color: inherit; transition: color var(--transition-fa
 .text-gold {
   background: var(--gradient-gold-text);
   -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
   display: inline-block;
 }
@@ -310,6 +311,7 @@ a { text-decoration: none; color: inherit; transition: color var(--transition-fa
   color: var(--gold-600);
   background: linear-gradient(135deg, #B87E14 0%, #E5A93C 50%, #C68A28 100%);
   -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
@@ -1472,6 +1474,7 @@ a { text-decoration: none; color: inherit; transition: color var(--transition-fa
   font-weight: 800;
   background: var(--gradient-gold-text);
   -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
   margin-bottom: 1rem;
   display: block;

@@ -560,7 +560,7 @@ const StudentSub = {
       const allOptions = subjects.includes(lesson.subject) ? subjects : [lesson.subject, ...subjects];
       subjectSelectEl.innerHTML = `
         ${allOptions.map(s => `<option value="${s}" ${s === lesson.subject ? 'selected' : ''}>${s}</option>`).join('')}
-        <option value="__custom__">✏️ Custom Topic...</option>
+        <option value="__custom__">Custom Topic...</option>
       `;
       subjectSelectEl.value = lesson.subject;
     }
@@ -601,7 +601,7 @@ const StudentSub = {
               </div>
               <select class="lesson-card-subject-select" onchange="StudentSub.setLessonSubject(${idx}, this.value)" title="Choose topic for ${lessonLabel}">
                 ${allOptions.map(s => `<option value="${s}" ${s === l.subject ? 'selected' : ''}>${s}</option>`).join('')}
-                <option value="__custom__">✏️ Custom Topic...</option>
+                <option value="__custom__">Custom Topic...</option>
               </select>
             </div>
 
@@ -613,7 +613,7 @@ const StudentSub = {
           <div class="lesson-card-datetime ${isScheduled ? 'is-scheduled' : ''}">
             ${isScheduled 
               ? `<div style="display: flex; align-items: center; gap: 0.25rem;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"></rect><line x1="16" x2="16" y1="2" x2="6"></line><line x1="8" x2="8" y1="2" y2="6"></line><line x1="3" x2="21" y1="10" y2="10"></line></svg> ${l.scheduled_date}</div><div style="font-size: 0.7rem; color: #047857; margin-top: 0.1rem; font-weight: 700;">${l.scheduled_time} (Click to change)</div>`
-              : '👉 Click to schedule'}
+              : 'Click to schedule'}
           </div>
         </div>
       `;
@@ -795,11 +795,11 @@ const StudentSub = {
 
     const isDateOccupied = typeof Tutors !== 'undefined' && Tutors.isTutorDateOccupied(this.selectedTutor, dateStr, dayName);
     if (isDateOccupied) {
-      if (label) label.innerHTML = `<span style="color: #DC2626; font-weight: 700;">🚫 ${dateFormatted} — Not Available / Date Occupied</span>`;
+      if (label) label.innerHTML = `<span style="color: #DC2626; font-weight: 700; display: inline-flex; align-items: center; gap: 0.35rem;">${Icons.ban(13)} ${dateFormatted} — Not Available / Date Occupied</span>`;
       if (slotsContainer) {
         slotsContainer.innerHTML = `
           <div class="student-date-occupied-notice" style="grid-column: 1 / -1; background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: var(--radius-md); padding: 0.9rem 1rem; color: #B91C1C; font-size: 0.84rem; display: flex; align-items: center; gap: 0.6rem;">
-            <span style="font-size: 1.15rem;">🚫</span>
+            <span style="display: flex; align-items: center; color: #DC2626;">${Icons.ban(18)}</span>
             <div>
               <strong>Not Available / Date Occupied:</strong> ${this.selectedTutor?.name || 'This tutor'} has marked <strong>${dateFormatted}</strong> as unavailable. Please select another available date on the calendar.
             </div>
@@ -869,7 +869,7 @@ const StudentSub = {
         btn.disabled = true;
         btn.classList.add('disabled', 'slot-occupied');
         btn.title = `${occState.reason || 'Unavailable'} — Tutor is unavailable at this time`;
-        btn.innerHTML = `<span>${displayLabel}</span><span style="display:block;font-size:0.65rem;color:#EF4444;font-weight:700;">🚫 ${occState.reason || 'Unavailable'}</span>`;
+        btn.innerHTML = `<span>${displayLabel}</span><span style="display:inline-flex;align-items:center;gap:0.2rem;font-size:0.65rem;color:#EF4444;font-weight:700;">${Icons.ban(10)} ${occState.reason || 'Unavailable'}</span>`;
       } else if (isUnder3Hours) {
         btn.disabled = true;
         btn.classList.add('disabled');
@@ -952,7 +952,7 @@ const StudentSub = {
               <div style="font-size: 0.76rem; color: var(--text-secondary); margin-top: 0.1rem;">
                 Faculty: <strong>${l.tutor_name}</strong> • 
                 ${isSet 
-                  ? `<span style="color: #059669; font-weight: 600;">📅 ${l.scheduled_date} at ${l.scheduled_time}</span>` 
+                  ? `<span style="color: #059669; font-weight: 600; display: inline-flex; align-items: center; gap: 0.25rem;">${Icons.calendar(12)} ${l.scheduled_date} at ${l.scheduled_time}</span>` 
                   : `<span style="color: #D97706; font-weight: 600;">Not scheduled yet</span>`}
               </div>
             </div>

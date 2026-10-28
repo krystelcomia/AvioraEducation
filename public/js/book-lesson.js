@@ -395,11 +395,11 @@ const BookLesson = {
 
     const isDateOccupied = typeof Tutors !== 'undefined' && Tutors.isTutorDateOccupied(this.selectedTutor, dateStr, dayName);
     if (isDateOccupied) {
-      if (label) label.innerHTML = `<span style="color: #DC2626; font-weight: 700;">🚫 ${dateFormatted} — Not Available / Date Occupied</span>`;
+      if (label) label.innerHTML = `<span style="color: #DC2626; font-weight: 700; display: inline-flex; align-items: center; gap: 0.35rem;">${Icons.ban(13)} ${dateFormatted} — Not Available / Date Occupied</span>`;
       if (slotsContainer) {
         slotsContainer.innerHTML = `
           <div class="student-date-occupied-notice" style="grid-column: 1 / -1; background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: var(--radius-md); padding: 0.9rem 1rem; color: #B91C1C; font-size: 0.84rem; display: flex; align-items: center; gap: 0.6rem;">
-            <span style="font-size: 1.15rem;">🚫</span>
+            <span style="display: flex; align-items: center; color: #DC2626;">${Icons.ban(18)}</span>
             <div>
               <strong>Not Available / Date Occupied:</strong> ${this.selectedTutor?.name || 'This tutor'} has marked <strong>${dateFormatted}</strong> as unavailable. Please select another available date on the calendar.
             </div>
@@ -466,7 +466,7 @@ const BookLesson = {
       if (occState.occupied) {
         btn.disabled = true;
         btn.classList.add('slot-occupied');
-        btn.innerHTML = `<span>${displayLabel}</span><span class="slot-sub" style="color: var(--danger); font-size: 0.65rem;">🚫 ${occState.reason || 'Unavailable'}</span>`;
+        btn.innerHTML = `<span>${displayLabel}</span><span class="slot-sub" style="color: var(--danger); font-size: 0.65rem; display: inline-flex; align-items: center; gap: 0.2rem;">${Icons.ban(10)} ${occState.reason || 'Unavailable'}</span>`;
       } else if (isUnder3Hours) {
         btn.disabled = true;
         btn.innerHTML = `<span>${displayLabel}</span><span class="slot-sub" style="color: var(--danger); font-size: 0.65rem;">&lt; 3h notice</span>`;

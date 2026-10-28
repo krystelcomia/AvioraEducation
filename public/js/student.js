@@ -368,8 +368,8 @@ const Student = {
             ` : ''}
 
             ${nextSession.room_status !== 'open' ? `
-              <div style="margin-top: 0.45rem; padding: 0.45rem 0.7rem; background: rgba(16, 185, 129, 0.09); border: 1px solid rgba(16, 185, 129, 0.28); border-radius: 8px; font-size: 0.8rem; color: #059669; font-weight: 600;">
-                🔔 Request Accepted — Simply wait for the schedule of your virtual class (${nextSession.requested_date} at ${nextSession.requested_time}).
+              <div style="margin-top: 0.45rem; padding: 0.45rem 0.7rem; background: rgba(16, 185, 129, 0.09); border: 1px solid rgba(16, 185, 129, 0.28); border-radius: 8px; font-size: 0.8rem; color: #059669; font-weight: 600; display: inline-flex; align-items: center; gap: 0.35rem;">
+                ${Icons.bell(13)} Request Accepted — Simply wait for the schedule of your virtual class (${nextSession.requested_date} at ${nextSession.requested_time}).
               </div>
             ` : ''}
           </div>
@@ -380,8 +380,8 @@ const Student = {
                 ${Icons.video(14)} Enter Virtual Room (Live Now)
               </button>
             ` : `
-              <button class="btn btn-secondary btn-sm" style="cursor: default;" onclick="showToast('Your lesson is confirmed for ${nextSession.requested_date} at ${nextSession.requested_time}. Simply wait for the schedule of your virtual class—your tutor will launch the room at class time.', 'info')">
-                🕒 Waiting for Virtual Class Schedule
+              <button class="btn btn-secondary btn-sm" style="cursor: default; display: inline-flex; align-items: center; gap: 0.35rem;" onclick="showToast('Your lesson is confirmed for ${nextSession.requested_date} at ${nextSession.requested_time}. Simply wait for the schedule of your virtual class—your tutor will launch the room at class time.', 'info')">
+                ${Icons.clock(14)} Waiting for Virtual Class Schedule
               </button>
             `}
             <button class="btn btn-outline-gold btn-sm" onclick="Tutors.openMessageModal(${nextSession.tutor_id})">

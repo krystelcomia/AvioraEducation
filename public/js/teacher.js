@@ -274,7 +274,7 @@ const Teacher = {
               Congratulations, <strong>${applicantName}</strong>! Your application has been marked as <strong>Approved</strong> by the administrator. All features are now accessible: you can begin operations, accept student bookings, and conduct classes.
             </p>
             <div style="margin-top: 0.65rem; background: rgba(16, 185, 129, 0.08); border-left: 3px solid #10B981; padding: 0.5rem 0.75rem; font-size: 0.82rem; color: var(--text-primary);">
-              <strong>✅ Live Operations Active:</strong> Your tutor profile is live in the Aviora directory and open for student lesson bookings and coursework management.
+              <strong style="display: inline-flex; align-items: center; gap: 0.35rem;">${Icons.checkCircle(15, 'color: #10B981;')} Live Operations Active:</strong> Your tutor profile is live in the Aviora directory and open for student lesson bookings and coursework management.
             </div>
           </div>
         </div>
@@ -338,8 +338,8 @@ const Teacher = {
       : `The submitted application is currently under review under the name of the applicant (<strong>${applicantName}</strong>). You will be notified once a schedule for your virtual interview is set.`;
 
     const operationalNotice = isInterview
-      ? `<strong>🔒 Operational Notice:</strong> You still cannot begin operations during the interview phase. Once the administrator marks your application as "Approved" following your interview, all features become accessible to begin operations, accept student bookings, and conduct classes.`
-      : `<strong>🔒 Operational Notice:</strong> While your application is under review or pending approval, you cannot yet begin operations, though you can still view the website's content through your account.`;
+      ? `<strong style="display: inline-flex; align-items: center; gap: 0.35rem;">${Icons.lock(14, 'color: #D97706;')} Operational Notice:</strong> You still cannot begin operations during the interview phase. Once the administrator marks your application as "Approved" following your interview, all features become accessible to begin operations, accept student bookings, and conduct classes.`
+      : `<strong style="display: inline-flex; align-items: center; gap: 0.35rem;">${Icons.lock(14, 'color: #D97706;')} Operational Notice:</strong> While your application is under review or pending approval, you cannot yet begin operations, though you can still view the website's content through your account.`;
 
     bannerContainer.innerHTML = `
       <div class="app-status-banner pending-dashboard" style="margin-bottom: 1.5rem; background: ${accentBg}; border: 1px solid ${accentBorder}; border-radius: var(--radius-md); padding: 1.25rem; display: flex; gap: 1rem; align-items: flex-start;">
@@ -584,7 +584,7 @@ const Teacher = {
         <!-- Operational Status Box -->
         ${isApproved ? `
           <div style="margin-top: 1.25rem; background: rgba(16, 185, 129, 0.12); border-left: 3px solid #10B981; padding: 0.85rem 1.1rem; border-radius: 0 var(--radius-sm) var(--radius-sm) 0; font-size: 0.86rem; color: var(--text-primary); line-height: 1.55;">
-            <strong>✅ Live Operations Active:</strong> Your tutor account has received final approval from the Administrator following your virtual interview. All operational functions are accessible: you can now conduct live virtual classes, accept student booking requests, assign coursework, and update your public teaching rates and availability schedule.
+            <strong style="display: inline-flex; align-items: center; gap: 0.35rem;">${Icons.checkCircle(16, 'color: #10B981;')} Live Operations Active:</strong> Your tutor account has received final approval from the Administrator following your virtual interview. All operational functions are accessible: you can now conduct live virtual classes, accept student booking requests, assign coursework, and update your public teaching rates and availability schedule.
           </div>
           <div style="margin-top: 1rem; display: flex; gap: 0.75rem; flex-wrap: wrap;">
             <a href="#teacher-classes" class="btn btn-primary btn-sm">View Classes &amp; Launch Sessions →</a>
@@ -593,7 +593,7 @@ const Teacher = {
           </div>
         ` : `
           <div style="margin-top: 1.25rem; background: rgba(0,0,0,0.05); border-left: 3px solid ${accent}; padding: 0.75rem 1rem; border-radius: 0 var(--radius-sm) var(--radius-sm) 0; font-size: 0.84rem; color: var(--text-primary); line-height: 1.55;">
-            <strong>🔒 Operational Lock Notice:</strong> While your application is under review, you can freely view and explore everything within your account (Dashboard, Classes, Students, Schedule, and Aviora Buddy). Operational actions (conducting live sessions, assigning tasks, and accepting student bookings) remain locked until your application is approved following your virtual interview.
+            <strong style="display: inline-flex; align-items: center; gap: 0.35rem;">${Icons.lock(15, 'color: ' + accent + ';')} Operational Lock Notice:</strong> While your application is under review, you can freely view and explore everything within your account (Dashboard, Classes, Students, Schedule, and Aviora Buddy). Operational actions (conducting live sessions, assigning tasks, and accepting student bookings) remain locked until your application is approved following your virtual interview.
           </div>
         `}
       </div>
@@ -645,25 +645,25 @@ const Teacher = {
 
           <div style="grid-column: 1 / -1; display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1rem; margin-top: 0.5rem; padding-top: 1rem; border-top: 1px solid var(--border-light);">
             <div style="background: rgba(16, 185, 129, 0.05); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: var(--radius-md); padding: 0.85rem 1rem; display: flex; align-items: center; gap: 0.75rem;">
-              <span style="font-size: 1.35rem;">📄</span>
+              <span style="display: flex; align-items: center; color: #10B981;">${Icons.fileText(24)}</span>
               <div style="flex: 1; min-width: 0;">
                 <div style="font-size: 0.78rem; font-weight: 700; color: #10B981; text-transform: uppercase;">1. Applicant Resume / CV</div>
                 <div style="font-size: 0.85rem; font-weight: 600; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
                   ${app.resume_filename || 'Joshua_Garcia_Resume.pdf'}
                 </div>
               </div>
-              <span style="color: #10B981; font-weight: 700; font-size: 0.78rem;">✓ Submitted</span>
+              <span style="color: #10B981; font-weight: 700; font-size: 0.78rem; display: inline-flex; align-items: center; gap: 0.25rem;">${Icons.check(13)} Submitted</span>
             </div>
 
             <div style="background: rgba(16, 185, 129, 0.05); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: var(--radius-md); padding: 0.85rem 1rem; display: flex; align-items: center; gap: 0.75rem;">
-              <span style="font-size: 1.35rem;">📜</span>
+              <span style="display: flex; align-items: center; color: #10B981;">${Icons.award(24)}</span>
               <div style="flex: 1; min-width: 0;">
                 <div style="font-size: 0.78rem; font-weight: 700; color: #10B981; text-transform: uppercase;">2. Degree Diploma</div>
                 <div style="font-size: 0.85rem; font-weight: 600; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
                   ${app.diploma_filename || 'UC_Berkeley_Diploma.pdf'}
                 </div>
               </div>
-              <span style="color: #10B981; font-weight: 700; font-size: 0.78rem;">✓ Submitted</span>
+              <span style="color: #10B981; font-weight: 700; font-size: 0.78rem; display: inline-flex; align-items: center; gap: 0.25rem;">${Icons.check(13)} Submitted</span>
             </div>
           </div>
         </div>
@@ -774,7 +774,7 @@ const Teacher = {
       if (activeSessionsEl) activeSessionsEl.textContent = stats.active_sessions || 0;
 
       const ratingEl = document.getElementById('teacher-stat-rating');
-      if (ratingEl) ratingEl.textContent = `${stats.rating?.toFixed(1) || '5.0'} ★ (${stats.reviews_count || 0})`;
+      if (ratingEl) ratingEl.innerHTML = `${Icons.star(14, 'margin-right: 2px;', '#F59E0B')} ${stats.rating?.toFixed(1) || '5.0'} (${stats.reviews_count || 0})`;
 
       // Render Tables
       this.renderMonthlyFinancials(data.monthlyFinancials || []);
@@ -927,7 +927,7 @@ const Teacher = {
         <td style="text-align: right;">
           <div style="display: flex; gap: 0.4rem; justify-content: flex-end; align-items: center;">
             ${!this.isApproved() ? `
-              <span class="badge" style="background: rgba(245, 158, 11, 0.15); color: #D97706; font-size: 0.75rem; padding: 0.35rem 0.65rem; border-radius: 4px;" title="Operations locked while application is under review">🔒 Locked (Under Review)</span>
+              <span class="badge" style="background: rgba(245, 158, 11, 0.15); color: #D97706; font-size: 0.75rem; padding: 0.35rem 0.65rem; border-radius: 4px; display: inline-flex; align-items: center; gap: 0.25rem;" title="Operations locked while application is under review">${Icons.lock(12)} Locked (Under Review)</span>
             ` : r.status === 'pending' ? `
               <button class="btn btn-primary btn-sm" onclick="Teacher.updateStatus(${r.id}, 'accepted', this)">Accept</button>
               <button class="btn btn-secondary btn-sm" onclick="Teacher.updateStatus(${r.id}, 'declined', this)">Decline</button>
@@ -939,7 +939,7 @@ const Teacher = {
               `}
               <button class="btn btn-outline-gold btn-sm" onclick="Teacher.updateStatus(${r.id}, 'completed', this)">Mark Done</button>
             ` : r.status === 'completed' ? `
-              <span style="font-size: 0.8rem; color: #10B981; font-weight: 600;">✓ Completed</span>
+              <span style="font-size: 0.8rem; color: #10B981; font-weight: 600; display: inline-flex; align-items: center; gap: 0.25rem;">${Icons.check(13)} Completed</span>
             ` : ''}
           </div>
         </td>
@@ -1261,7 +1261,7 @@ const Teacher = {
         <div class="teacher-subject-rate-card" data-subject="${safeSubj}">
           <div class="teacher-subject-card-top">
             <div class="teacher-subject-name-wrap">
-              <span class="teacher-subject-icon">📚</span>
+              <span class="teacher-subject-icon">${Icons.book(18)}</span>
               <div>
                 <div class="teacher-subject-name">${safeSubj}</div>
                 <div class="teacher-subject-meta">50-min 1-on-1 Session • Individual Rate</div>
@@ -1305,8 +1305,9 @@ const Teacher = {
                 data-subject="${safeSubj}"
                 onclick="Teacher.removeSubjectFromBtn(this)"
                 ${!approved ? 'disabled title="Locked while application is under review"' : 'title="Remove subject"'}
+                aria-label="Remove subject"
               >
-                ✕
+                ${Icons.x(14)}
               </button>
             ` : ''}
           </div>
@@ -1491,7 +1492,7 @@ const Teacher = {
     if (filtered.length === 0) {
       container.innerHTML = `
         <div style="grid-column: 1 / -1; text-align: center; padding: 4rem 2rem; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-xl);">
-          <div style="font-size: 2.5rem; margin-bottom: 0.75rem;">🎓</div>
+          <div style="margin-bottom: 0.75rem; color: var(--gold-600);">${Icons.graduationCap(44)}</div>
           <h3 style="color: var(--text-primary); font-size: 1.25rem;">No Classes Found</h3>
           <p style="color: var(--text-secondary); font-size: 0.9rem; max-width: 480px; margin: 0.5rem auto 1.5rem;">
             ${q
@@ -1500,8 +1501,8 @@ const Teacher = {
             ? 'No live virtual classrooms currently open. You can launch a virtual session for any accepted student booking.'
             : 'You do not have any classes in this category yet.'}
           </p>
-          <button type="button" class="btn btn-primary btn-sm" onclick="Teacher.openInstantClassModal()">
-            🚀 Launch Instant Class with Student
+          <button type="button" class="btn btn-primary btn-sm" onclick="Teacher.openInstantClassModal()" style="display: inline-flex; align-items: center; gap: 0.35rem;">
+            ${Icons.video(14)} Launch Instant Class with Student
           </button>
         </div>
       `;
@@ -1578,12 +1579,12 @@ const Teacher = {
             </div>
             ${(isAccepted || isCompleted) ? `
               <div class="class-calendar-sync-badge" onclick="Teacher.viewClassOnCalendar('${cleanDateVal}')" title="Open Schedule Calendar on ${cleanDateVal}">
-                <span>📅 Added to Calendar (${c.requested_date} • ${c.requested_time})</span>
+                <span style="display: inline-flex; align-items: center; gap: 0.35rem;">${Icons.calendar(14)} Added to Calendar (${c.requested_date} • ${c.requested_time})</span>
                 <span class="class-calendar-sync-link">View Calendar →</span>
               </div>
             ` : isPending ? `
               <div class="class-calendar-pending-hint">
-                <span>🗓️ Set schedule (${c.requested_date} • ${c.requested_time}) will be added to Calendar once accepted</span>
+                <span style="display: inline-flex; align-items: center; gap: 0.35rem;">${Icons.calendar(14)} Set schedule (${c.requested_date} • ${c.requested_time}) will be added to Calendar once accepted</span>
               </div>
             ` : ''}
             ${c.notes ? `
@@ -1638,16 +1639,16 @@ const Teacher = {
           <!-- Action Launch Pad -->
           <div class="class-card-actions">
             ${!this.isApproved() ? `
-              <button type="button" class="btn btn-secondary btn-sm" style="flex: 1; opacity: 0.7; cursor: not-allowed;" disabled title="Classroom operations locked while application is under review">
-                🔒 Operations Locked (Under Review)
+              <button type="button" class="btn btn-secondary btn-sm" style="flex: 1; opacity: 0.7; cursor: not-allowed; display: inline-flex; align-items: center; justify-content: center; gap: 0.35rem;" disabled title="Classroom operations locked while application is under review">
+                ${Icons.lock(13)} Operations Locked (Under Review)
               </button>
             ` : isCompleted ? `
-              <div class="class-status-summary-pill is-completed-summary" style="flex: 1;" title="Lesson is complete. No further actions are available.">
-                ✓ Class Session Completed (Done — No further actions available)
+              <div class="class-status-summary-pill is-completed-summary" style="flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 0.35rem;" title="Lesson is complete. No further actions are available.">
+                ${Icons.check(13)} Class Session Completed (Done — No further actions available)
               </div>
             ` : isLive ? `
-              <button type="button" class="btn btn-primary btn-sm btn-vroom-live-pulse" style="flex: 1; justify-content: center; background: #10B981; border-color: #10B981; font-weight: 700;" onclick="VirtualRoom.joinRoom(${c.id}, 'tutor')">
-                🚀 Enter Live Classroom
+              <button type="button" class="btn btn-primary btn-sm btn-vroom-live-pulse" style="flex: 1; justify-content: center; background: #10B981; border-color: #10B981; font-weight: 700; display: inline-flex; align-items: center; gap: 0.35rem;" onclick="VirtualRoom.joinRoom(${c.id}, 'tutor')">
+                ${Icons.video(14)} Enter Live Classroom
               </button>
               <button type="button" class="btn btn-secondary btn-sm" title="Mark lesson as done (complete)" onclick="Teacher.updateStatus(${c.id}, 'completed', this, { action: 'completed' })">
                 Done
@@ -1656,8 +1657,8 @@ const Teacher = {
                 ${isEditing ? 'Close' : 'Update'}
               </button>
             ` : isAccepted ? `
-              <button type="button" class="btn btn-primary btn-sm" style="flex: 1; justify-content: center; font-weight: 700;" onclick="Teacher.updateStatus(${c.id}, 'accepted', this, { action: 'start_class' })">
-                🎥 Start Virtual Class
+              <button type="button" class="btn btn-primary btn-sm" style="flex: 1; justify-content: center; font-weight: 700; display: inline-flex; align-items: center; gap: 0.35rem;" onclick="Teacher.updateStatus(${c.id}, 'accepted', this, { action: 'start_class' })">
+                ${Icons.video(14)} Start Virtual Class
               </button>
               <button type="button" class="btn btn-secondary btn-sm" title="Mark lesson as done (complete)" onclick="Teacher.updateStatus(${c.id}, 'completed', this, { action: 'completed' })">
                 Done
@@ -1676,8 +1677,8 @@ const Teacher = {
                 ${isEditing ? 'Close' : 'Update'}
               </button>
             ` : isDeclined ? `
-              <div class="class-status-summary-pill is-declined-summary">
-                ✕ Request Declined
+              <div class="class-status-summary-pill is-declined-summary" style="display: inline-flex; align-items: center; gap: 0.3rem;">
+                ${Icons.x(13)} Request Declined
               </div>
               <button type="button" class="btn btn-outline-gold btn-sm class-card-update-toggle-btn ${isEditing ? 'active' : ''}" title="Choose update action (Accept or Reschedule)" onclick="Teacher.toggleClassUpdatePanel(${c.id})">
                 ${isEditing ? 'Close' : 'Update'}
@@ -1782,7 +1783,7 @@ const Teacher = {
     } finally {
       if (submitBtn) {
         submitBtn.disabled = false;
-        submitBtn.textContent = '🚀 Open Room & Start Class Now';
+        submitBtn.innerHTML = `${Icons.video(14)} Open Room &amp; Start Class Now`;
       }
     }
   },
@@ -1810,7 +1811,7 @@ const Teacher = {
     if (this.students.length === 0) {
       container.innerHTML = `
         <div style="grid-column: 1 / -1; text-align: center; padding: 3rem; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-xl);">
-          <div style="font-size: 2.2rem; margin-bottom: 0.5rem;">👥</div>
+          <div style="margin-bottom: 0.5rem; color: var(--gold-600);">${Icons.users(36)}</div>
           <h4 style="color: var(--text-primary); font-size: 1.15rem;">No Students Enrolled Yet</h4>
           <p style="color: var(--text-secondary); font-size: 0.85rem; max-width: 450px; margin: 0.5rem auto 0;">
             As students book lessons with you or enroll in your subjects, their profiles and coursework progress will appear here.
@@ -1860,15 +1861,15 @@ const Teacher = {
           <!-- Actions -->
           <div class="student-card-actions">
             ${!this.isApproved() ? `
-              <button type="button" class="btn btn-secondary btn-sm" style="flex: 1; opacity: 0.7; cursor: not-allowed;" disabled title="Coursework operations locked while application is under review">
-                🔒 Operations Locked (Under Review)
+              <button type="button" class="btn btn-secondary btn-sm" style="flex: 1; opacity: 0.7; cursor: not-allowed; display: inline-flex; align-items: center; justify-content: center; gap: 0.35rem;" disabled title="Coursework operations locked while application is under review">
+                ${Icons.lock(13)} Operations Locked (Under Review)
               </button>
             ` : `
-              <button type="button" class="btn btn-primary btn-sm" style="flex: 1; justify-content: center;" onclick="Teacher.openAssignTaskModal(${s.student_id})">
-                + Assign Task
+              <button type="button" class="btn btn-primary btn-sm" style="flex: 1; justify-content: center; display: inline-flex; align-items: center; gap: 0.35rem;" onclick="Teacher.openAssignTaskModal(${s.student_id})">
+                ${Icons.plus(13)} Assign Task
               </button>
-              <button type="button" class="btn btn-secondary btn-sm" onclick="Teacher.openInstantClassModal(${s.student_id})" title="Launch Instant Class">
-                🚀 Class
+              <button type="button" class="btn btn-secondary btn-sm" onclick="Teacher.openInstantClassModal(${s.student_id})" title="Launch Instant Class" style="display: inline-flex; align-items: center; gap: 0.3rem;">
+                ${Icons.video(13)} Class
               </button>
             `}
           </div>
@@ -1940,15 +1941,15 @@ const Teacher = {
     if (filtered.length === 0) {
       container.innerHTML = `
         <div style="text-align: center; padding: 3rem; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-xl);">
-          <div style="font-size: 2.2rem; margin-bottom: 0.5rem;">📝</div>
+          <div style="margin-bottom: 0.5rem; color: var(--gold-600);">${Icons.fileText(36)}</div>
           <h4 style="color: var(--text-primary); font-size: 1.15rem;">No Coursework Tasks Found</h4>
           <p style="color: var(--text-secondary); font-size: 0.85rem; max-width: 450px; margin: 0.5rem auto 1.25rem;">
             ${this.taskFilter === 'submitted'
           ? 'Great job! You have graded all submitted student assignments.'
           : 'You have not assigned tasks in this view yet.'}
           </p>
-          <button type="button" class="btn btn-primary btn-sm" onclick="Teacher.openAssignTaskModal()">
-            + Assign Task to Student
+          <button type="button" class="btn btn-primary btn-sm" onclick="Teacher.openAssignTaskModal()" style="display: inline-flex; align-items: center; gap: 0.35rem;">
+            ${Icons.plus(13)} Assign Task to Student
           </button>
         </div>
       `;
@@ -1993,13 +1994,13 @@ const Teacher = {
             ${(task.activity_link || task.attachment_url) ? `
               <div style="display: flex; gap: 0.6rem; flex-wrap: wrap; margin-bottom: 1rem;">
                 ${task.attachment_url ? `
-                  <a href="${task.attachment_url}" target="_blank" rel="noopener noreferrer" class="btn btn-outline-gold btn-sm" style="font-size: 0.78rem; padding: 0.3rem 0.7rem; text-decoration: none;">
-                    📎 ${task.attachment_name || 'Download Activity File'}
+                  <a href="${task.attachment_url}" target="_blank" rel="noopener noreferrer" class="btn btn-outline-gold btn-sm" style="font-size: 0.78rem; padding: 0.3rem 0.7rem; text-decoration: none; display: inline-flex; align-items: center; gap: 0.35rem;">
+                    ${Icons.paperclip(13)} ${task.attachment_name || 'Download Activity File'}
                   </a>
                 ` : ''}
                 ${task.activity_link ? `
-                  <a href="${task.activity_link}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-sm" style="font-size: 0.78rem; padding: 0.3rem 0.7rem; text-decoration: none;">
-                    🔗 Open Activity Link ↗
+                  <a href="${task.activity_link}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-sm" style="font-size: 0.78rem; padding: 0.3rem 0.7rem; text-decoration: none; display: inline-flex; align-items: center; gap: 0.35rem;">
+                    ${Icons.externalLink(13)} Open Activity Link
                   </a>
                 ` : ''}
               </div>
@@ -2036,16 +2037,16 @@ const Teacher = {
 
           <div class="task-card-footer">
             ${!this.isApproved() ? `
-              <span style="font-size: 0.8rem; color: #D97706; font-weight: 600;">
-                🔒 Coursework grading locked while application is under review.
+              <span style="font-size: 0.8rem; color: #D97706; font-weight: 600; display: inline-flex; align-items: center; gap: 0.3rem;">
+                ${Icons.lock(13)} Coursework grading locked while application is under review.
               </span>
             ` : isSubmitted ? `
-              <button type="button" class="btn btn-primary btn-sm" onclick="Teacher.openGradeTaskModal(${task.id})">
-                ⭐ Grade Submission & Give Feedback
+              <button type="button" class="btn btn-primary btn-sm" onclick="Teacher.openGradeTaskModal(${task.id})" style="display: inline-flex; align-items: center; gap: 0.35rem;">
+                ${Icons.award(14)} Grade Submission &amp; Give Feedback
               </button>
             ` : isGraded ? `
-              <button type="button" class="btn btn-secondary btn-sm" onclick="Teacher.openGradeTaskModal(${task.id})">
-                ✏️ Edit Grade / Feedback
+              <button type="button" class="btn btn-secondary btn-sm" onclick="Teacher.openGradeTaskModal(${task.id})" style="display: inline-flex; align-items: center; gap: 0.35rem;">
+                ${Icons.edit(14)} Edit Grade / Feedback
               </button>
             ` : `
               <span style="font-size: 0.8rem; color: var(--text-secondary);">
@@ -2122,7 +2123,7 @@ const Teacher = {
     if (inputEl && inputEl.files && inputEl.files.length > 0) {
       const f = inputEl.files[0];
       fileBadge.style.display = 'block';
-      fileBadge.textContent = `✓ Attached file: ${f.name}`;
+      fileBadge.textContent = `Attached file: ${f.name}`;
     } else {
       fileBadge.style.display = 'none';
       fileBadge.textContent = '';
@@ -2371,8 +2372,8 @@ const Teacher = {
           <div class="default-avail-day-name">${day}</div>
           <div class="default-avail-day-status">
             ${statusClass === 'open' 
-              ? `<span class="default-avail-badge open">🟢 Open</span>` 
-              : `<span class="default-avail-badge off">⚪ Off</span>`}
+              ? `<span class="default-avail-badge open">${Icons.checkCircle(12, 'color: #059669;')} Open</span>` 
+              : `<span class="default-avail-badge off">${Icons.ban(12, 'color: var(--text-secondary);')} Off</span>`}
           </div>
           <div class="default-avail-day-hours">${hoursDisplay}</div>
         </div>
@@ -2496,12 +2497,12 @@ const Teacher = {
         calHintBox.innerHTML = `
           <div class="teacher-cal-selected-bar">
             <span class="teacher-cal-selected-label">Selected: <strong>${selShortDate}</strong></span>
-            <button type="button" class="btn btn-secondary btn-sm" onclick="Teacher.clearSelectedCalendarDate()" style="padding: 0.2rem 0.55rem; font-size: 0.72rem;" title="Deselect date">✕ Deselect</button>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="Teacher.clearSelectedCalendarDate()" style="padding: 0.2rem 0.55rem; font-size: 0.72rem; display: inline-flex; align-items: center; gap: 0.25rem;" title="Deselect date">${Icons.x(12)} Deselect</button>
           </div>
         `;
       } else {
         calHintBox.innerHTML = `
-          <span style="font-size: 0.85rem; color: var(--gold-400); font-weight: 600;">⚡ Click any date to view notes &amp; edit availability</span>
+          <span style="font-size: 0.85rem; color: var(--gold-400); font-weight: 600; display: inline-flex; align-items: center; gap: 0.35rem;">${Icons.calendar(13, 'color: var(--gold-500);')} Click any date to view notes &amp; edit availability</span>
         `;
       }
     }
@@ -2557,17 +2558,17 @@ const Teacher = {
              title="${dayOfWeekName}, ${dateStr}${isDateOccupied ? ' • Marked Occupied' : ''}${dayApts.length > 0 ? ` • ${dayApts.length} class(es)` : ''}${hasPersonalNote ? ` • Note: ${personalNote}` : ''} — Click to view notes & schedule">
           <div class="teacher-cal-day-header">
             <span class="teacher-cal-day-num">${day}</span>
-            ${hasPersonalNote || hasStudentNotes ? `<span class="cal-note-indicator-dot" title="Has Notes (Click to view)">📝</span>` : ''}
+            ${hasPersonalNote || hasStudentNotes ? `<span class="cal-note-indicator-dot" title="Has Notes (Click to view)">${Icons.note(12, 'color: var(--gold-600);')}</span>` : ''}
           </div>
           <div class="teacher-cal-compact-indicators">
             ${isDateOccupied ? `
-              <span class="cal-mini-badge badge-occupied">🚫 Occupied</span>
+              <span class="cal-mini-badge badge-occupied">${Icons.ban(11, 'color: #EF4444;')} Occupied</span>
             ` : dayApts.length > 0 ? `
               <span class="cal-mini-badge badge-class">
                 ● ${dayApts.length === 1 ? (dayApts[0].requested_time || '1 class') : `${dayApts.length} classes`}
               </span>
             ` : (hasPersonalNote ? `
-              <span class="cal-mini-badge badge-note">📝 Note</span>
+              <span class="cal-mini-badge badge-note">${Icons.note(11, 'color: var(--gold-600);')} Note</span>
             ` : '')}
           </div>
         </div>
@@ -2621,7 +2622,7 @@ const Teacher = {
     if (!this.selectedDate) {
       panel.innerHTML = `
         <div class="date-schedule-empty-prompt">
-          <div style="font-size: 1.8rem; margin-bottom: 0.5rem;">📅</div>
+          <div style="margin-bottom: 0.6rem; color: var(--gold-600);">${Icons.calendar(32)}</div>
           <h4 style="font-size: 1.05rem; font-weight: 700; color: var(--text-primary); margin: 0 0 0.35rem;">
             Select a Date to View Notes &amp; Customize Availability
           </h4>
@@ -2698,9 +2699,9 @@ const Teacher = {
               ${Icons.calendar(18)} ${formattedDate}
             </h3>
             ${isDateOccupied ? `
-              <span class="status-pill declined" style="font-size: 0.72rem; padding: 0.15rem 0.6rem;">🚫 Occupied</span>
+              <span class="status-pill declined" style="font-size: 0.72rem; padding: 0.15rem 0.6rem; display: inline-flex; align-items: center; gap: 0.25rem;">${Icons.ban(12, 'color: #EF4444;')} Occupied</span>
             ` : `
-              <span class="status-pill accepted" style="font-size: 0.72rem; padding: 0.15rem 0.6rem;">🟢 Open</span>
+              <span class="status-pill accepted" style="font-size: 0.72rem; padding: 0.15rem 0.6rem; display: inline-flex; align-items: center; gap: 0.25rem;">${Icons.checkCircle(12, 'color: #10B981;')} Open</span>
             `}
           </div>
           <p style="margin: 0.2rem 0 0; font-size: 0.825rem; color: var(--text-secondary);">
@@ -2709,19 +2710,19 @@ const Teacher = {
         </div>
         <div class="date-schedule-actions">
           ${isDateOccupied ? `
-            <button type="button" class="btn btn-primary btn-sm" onclick="Teacher.bulkSetDayAvailability('date_available')" style="background: #10B981; border-color: #10B981;">
-              🟢 Mark Available
+            <button type="button" class="btn btn-primary btn-sm" onclick="Teacher.bulkSetDayAvailability('date_available')" style="background: #10B981; border-color: #10B981; display: inline-flex; align-items: center; gap: 0.35rem;">
+              ${Icons.checkCircle(13)} Mark Available
             </button>
           ` : `
-            <button type="button" class="btn btn-sm btn-mark-date-unavailable" onclick="Teacher.bulkSetDayAvailability('date_occupied')">
-              🚫 Mark Occupied
+            <button type="button" class="btn btn-sm btn-mark-date-unavailable" onclick="Teacher.bulkSetDayAvailability('date_occupied')" style="display: inline-flex; align-items: center; gap: 0.35rem;">
+              ${Icons.ban(13)} Mark Occupied
             </button>
-            <button type="button" class="btn btn-outline-gold btn-sm" onclick="Teacher.bulkSetDayAvailability('date_available')">
-              🟢 Set All Open
+            <button type="button" class="btn btn-outline-gold btn-sm" onclick="Teacher.bulkSetDayAvailability('date_available')" style="display: inline-flex; align-items: center; gap: 0.35rem;">
+              ${Icons.check(13)} Set All Open
             </button>
           `}
-          <button type="button" class="btn btn-secondary btn-sm" onclick="Teacher.clearSelectedCalendarDate()" title="Close editor and return to default view">
-            ✕ Close
+          <button type="button" class="btn btn-secondary btn-sm" onclick="Teacher.clearSelectedCalendarDate()" title="Close editor and return to default view" style="display: inline-flex; align-items: center; gap: 0.3rem;">
+            ${Icons.x(13)} Close
           </button>
         </div>
       </div>
@@ -2730,19 +2731,19 @@ const Teacher = {
       <div class="date-notes-section">
         <div class="date-notes-title-row">
           <h4 class="date-notes-title">
-            <span>📝 Session Notes &amp; Focus</span>
+            <span style="display: inline-flex; align-items: center; gap: 0.4rem;">${Icons.note(16, 'color: var(--gold-600);')} Session Notes &amp; Focus</span>
           </h4>
           <div style="display: flex; gap: 0.4rem; align-items: center;">
             ${savedDateNote && !this.isEditingDateNote ? `
-              <button type="button" class="btn btn-outline-gold btn-sm" onclick="Teacher.toggleEditDateNote()" style="padding: 0.25rem 0.65rem; font-size: 0.76rem;">
-                ✏️ Edit
+              <button type="button" class="btn btn-outline-gold btn-sm" onclick="Teacher.toggleEditDateNote()" style="padding: 0.25rem 0.65rem; font-size: 0.76rem; display: inline-flex; align-items: center; gap: 0.25rem;">
+                ${Icons.edit(12)} Edit
               </button>
-              <button type="button" class="btn btn-secondary btn-sm" onclick="Teacher.deleteDateNote('${this.selectedDate}')" style="padding: 0.25rem 0.65rem; font-size: 0.76rem; color: #EF4444;">
-                ✕ Clear
+              <button type="button" class="btn btn-secondary btn-sm" onclick="Teacher.deleteDateNote('${this.selectedDate}')" style="padding: 0.25rem 0.65rem; font-size: 0.76rem; color: #EF4444; display: inline-flex; align-items: center; gap: 0.25rem;">
+                ${Icons.trash(12)} Clear
               </button>
             ` : !this.isEditingDateNote ? `
-              <button type="button" class="btn btn-outline-gold btn-sm" onclick="Teacher.toggleEditDateNote()" style="padding: 0.25rem 0.65rem; font-size: 0.76rem;">
-                + Add Note
+              <button type="button" class="btn btn-outline-gold btn-sm" onclick="Teacher.toggleEditDateNote()" style="padding: 0.25rem 0.65rem; font-size: 0.76rem; display: inline-flex; align-items: center; gap: 0.25rem;">
+                ${Icons.plus(12)} Add Note
               </button>
             ` : ''}
           </div>
@@ -2752,7 +2753,7 @@ const Teacher = {
           ${isDateOccupied ? `
             <div class="date-note-box occupied-note-box">
               <div class="date-note-header">
-                <span class="date-note-badge" style="color: #DC2626;">🚫 Date Status Note</span>
+                <span class="date-note-badge" style="color: #DC2626; display: inline-flex; align-items: center; gap: 0.25rem;">${Icons.ban(12)} Date Status Note</span>
                 <span class="status-pill declined" style="font-size: 0.68rem; padding: 0.1rem 0.45rem;">Occupied</span>
               </div>
               <div class="date-note-body" style="font-style: normal; color: #B91C1C;">
@@ -2764,7 +2765,7 @@ const Teacher = {
           <!-- Personal Educator Note / Reminders -->
           <div class="date-note-box personal-note-box">
             <div class="date-note-header">
-              <span class="date-note-badge" style="color: #2563EB;">📌 Educator Reminder</span>
+              <span class="date-note-badge" style="color: #2563EB; display: inline-flex; align-items: center; gap: 0.25rem;">${Icons.note(12)} Educator Reminder</span>
             </div>
             ${this.isEditingDateNote ? `
               <div style="margin-top: 0.5rem;">
@@ -2789,7 +2790,7 @@ const Teacher = {
           ${dayApts.length > 0 ? dayApts.filter(a => a.notes).map(apt => `
             <div class="date-note-box student-focus-box">
               <div class="date-note-header">
-                <span class="date-note-badge">🎓 Student Focus</span>
+                <span class="date-note-badge" style="display: inline-flex; align-items: center; gap: 0.25rem;">${Icons.graduationCap(13)} Student Focus</span>
                 <span class="date-note-author">${apt.student_name} (${apt.subject} • ${apt.requested_time})</span>
               </div>
               <div class="date-note-body">
@@ -2815,7 +2816,7 @@ const Teacher = {
 
           ${dayApts.length === 0 ? `
             <div style="padding: 2rem 1.5rem; text-align: center; color: var(--text-secondary); background: rgba(0,0,0,0.02); border-radius: var(--radius-lg); border: 1px dashed var(--border-color);">
-              <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">${isDateOccupied ? '🚫' : '📅'}</div>
+              <div style="margin-bottom: 0.5rem; color: var(--text-secondary);">${isDateOccupied ? Icons.ban(26, 'color: #EF4444;') : Icons.calendar(26, 'color: var(--text-secondary);')}</div>
               <strong style="color: var(--text-primary); font-size: 0.95rem;">
                 ${isDateOccupied ? 'Date Marked as Occupied' : 'No Classes on this Date'}
               </strong>
@@ -2843,9 +2844,9 @@ const Teacher = {
                     </div>
                     <div style="display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap;">
                       ${!this.isApproved() ? `
-                        <span class="badge" style="background: rgba(245, 158, 11, 0.15); color: #D97706; font-size: 0.75rem; padding: 0.3rem 0.6rem; border-radius: 4px;" title="Operations locked while application is under review">🔒 Locked</span>
+                        <span class="badge" style="background: rgba(245, 158, 11, 0.15); color: #D97706; font-size: 0.75rem; padding: 0.3rem 0.6rem; border-radius: 4px; display: inline-flex; align-items: center; gap: 0.25rem;" title="Operations locked while application is under review">${Icons.lock(12)} Locked</span>
                       ` : apt.status === 'completed' ? `
-                        <span style="font-size: 0.78rem; color: #10B981; font-weight: 700;">✓ Done</span>
+                        <span style="font-size: 0.78rem; color: #10B981; font-weight: 700; display: inline-flex; align-items: center; gap: 0.25rem;">${Icons.check(13)} Done</span>
                       ` : apt.room_status === 'open' ? `
                         <button class="btn btn-primary btn-sm" onclick="VirtualRoom.joinRoom(${apt.id}, 'tutor')" style="background: #10B981; border-color: #10B981;">Enter</button>
                       ` : `
@@ -2857,7 +2858,7 @@ const Teacher = {
                   ${apt.notes ? `
                     <div class="date-note-box student-focus-box" style="margin-top: 0.65rem; padding: 0.6rem 0.8rem; font-size: 0.82rem;">
                       <div class="date-note-header" style="margin-bottom: 0.2rem;">
-                        <span class="date-note-badge">📝 Student Focus:</span>
+                        <span class="date-note-badge" style="display: inline-flex; align-items: center; gap: 0.25rem;">${Icons.note(12)} Student Focus:</span>
                       </div>
                       <div class="date-note-body" style="font-size: 0.82rem;">"${this.escapeHtml(apt.notes)}"</div>
                       ${apt.tutor_response_note ? `
@@ -2875,7 +2876,7 @@ const Teacher = {
         <div>
           <div class="date-schedule-col-title">
             <span>Time Slot Availability</span>
-            <span style="font-size: 0.75rem; color: var(--gold-400); font-weight: 600;">⚡ Live</span>
+            <span style="font-size: 0.75rem; color: var(--gold-400); font-weight: 600; display: inline-flex; align-items: center; gap: 0.25rem;">${Icons.zap(12, 'color: var(--gold-500);')} Live</span>
           </div>
 
           <!-- Specify & Edit Available Hours Card -->
@@ -2885,17 +2886,17 @@ const Teacher = {
                 <div class="tsa-current-label">Current Hours (${dayOfWeekName})</div>
                 <div class="tsa-current-value ${isDateOccupied ? 'is-occupied' : ''}">${activeHoursDisplayText}</div>
               </div>
-              <button type="button" class="btn btn-outline-gold btn-sm" onclick="Teacher.toggleHoursEditor()" style="padding: 0.3rem 0.7rem; font-size: 0.76rem; font-weight: 700;">
-                ${this.showHoursEditor ? '✕ Close' : '✏️ Edit Hours'}
+              <button type="button" class="btn btn-outline-gold btn-sm" onclick="Teacher.toggleHoursEditor()" style="padding: 0.3rem 0.7rem; font-size: 0.76rem; font-weight: 700; display: inline-flex; align-items: center; gap: 0.3rem;">
+                ${this.showHoursEditor ? Icons.x(13) + ' Close' : Icons.edit(13) + ' Edit Hours'}
               </button>
             </div>
 
             <div class="tsa-mode-pills-row">
-              <button type="button" class="tsa-mode-pill ${!isDateOccupied && activeMode === 'all_day' ? 'active' : ''}" onclick="Teacher.selectAvailabilityMode('all_day')">
-                🌞 All Day (8 AM – 8 PM)
+              <button type="button" class="tsa-mode-pill ${!isDateOccupied && activeMode === 'all_day' ? 'active' : ''}" onclick="Teacher.selectAvailabilityMode('all_day')" style="display: inline-flex; align-items: center; gap: 0.35rem; justify-content: center;">
+                ${Icons.sun(14)} All Day (8 AM – 8 PM)
               </button>
-              <button type="button" class="tsa-mode-pill ${!isDateOccupied && activeMode === 'specific' ? 'active' : ''}" onclick="Teacher.selectAvailabilityMode('specific')">
-                🎯 Specific Hours
+              <button type="button" class="tsa-mode-pill ${!isDateOccupied && activeMode === 'specific' ? 'active' : ''}" onclick="Teacher.selectAvailabilityMode('specific')" style="display: inline-flex; align-items: center; gap: 0.35rem; justify-content: center;">
+                ${Icons.target(14)} Specific Hours
               </button>
             </div>
 
@@ -2930,8 +2931,8 @@ const Teacher = {
                     <option value="all_days">All Days (Mon–Sun)</option>
                   </select>
                 </div>
-                <button type="button" class="btn btn-primary btn-sm" onclick="Teacher.saveTimeSlotAvailabilityHours('${activeMode}')" style="height: 36px; padding: 0 0.85rem; font-weight: 700; white-space: nowrap;">
-                  💾 Save Hours
+                <button type="button" class="btn btn-primary btn-sm" onclick="Teacher.saveTimeSlotAvailabilityHours('${activeMode}')" style="height: 36px; padding: 0 0.85rem; font-weight: 700; white-space: nowrap; display: inline-flex; align-items: center; gap: 0.35rem;">
+                  ${Icons.save(14)} Save Hours
                 </button>
               </div>
             </div>
@@ -2965,7 +2966,7 @@ const Teacher = {
                        onclick="Teacher.toggleOccupiedSlot('${dayOfWeekName}', '${slot}', 'Unavailable', '${this.selectedDate}')"
                        title="${isDateOccupied ? 'Date marked Occupied. Click to make this slot available.' : 'Occupied. Click to make Available.'}">
                     <span class="slot-pill-time">${slot}</span>
-                    <span class="slot-pill-status">${isDateOccupied ? '🚫 Occupied' : '🔒 Unavailable'}</span>
+                    <span class="slot-pill-status" style="display: inline-flex; align-items: center; gap: 0.2rem;">${isDateOccupied ? Icons.ban(11, 'color: #EF4444;') + ' Occupied' : Icons.lock(11, 'color: var(--text-secondary);') + ' Unavailable'}</span>
                   </div>
                 `;
       }
@@ -2975,7 +2976,7 @@ const Teacher = {
                      onclick="Teacher.toggleOccupiedSlot('${dayOfWeekName}', '${slot}', 'Unavailable', '${this.selectedDate}')"
                      title="Available. Click to mark Unavailable.">
                   <span class="slot-pill-time">${slot}</span>
-                  <span class="slot-pill-status">🟢 Available</span>
+                  <span class="slot-pill-status" style="display: inline-flex; align-items: center; gap: 0.2rem;">${Icons.checkCircle(11, 'color: #10B981;')} Available</span>
                 </div>
               `;
     }).join('')}
@@ -3148,7 +3149,7 @@ const Teacher = {
         </div>
         <div onclick="event.stopPropagation();">
           ${!this.isApproved() ? `
-            <span class="badge" style="background: rgba(245, 158, 11, 0.15); color: #D97706; font-size: 0.75rem; padding: 0.3rem 0.6rem; border-radius: 4px;" title="Operations locked while application is under review">🔒 Locked</span>
+            <span class="badge" style="background: rgba(245, 158, 11, 0.15); color: #D97706; font-size: 0.75rem; padding: 0.3rem 0.6rem; border-radius: 4px; display: inline-flex; align-items: center; gap: 0.25rem;" title="Operations locked while application is under review">${Icons.lock(12)} Locked</span>
           ` : apt.room_status === 'open' ? `
             <button class="btn btn-primary btn-sm" onclick="VirtualRoom.joinRoom(${apt.id}, 'tutor')" style="background: #10B981; border-color: #10B981;">Enter (Live)</button>
           ` : `
@@ -3225,7 +3226,7 @@ const Teacher = {
     if (this.buddySessions.length === 0) {
       container.innerHTML = `
         <div style="grid-column: 1 / -1; text-align: center; padding: 4rem 2rem; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-xl);">
-          <div style="font-size: 2.5rem; margin-bottom: 0.75rem;">🤝</div>
+          <div style="margin-bottom: 0.75rem; color: var(--gold-600);">${Icons.users(40)}</div>
           <h3 style="color: var(--text-primary); font-size: 1.25rem;">No Active Aviora Buddy Cohorts</h3>
           <p style="color: var(--text-secondary); font-size: 0.9rem; max-width: 500px; margin: 0.5rem auto 1.5rem;">
             When students pair up in your subjects for 2-student collaborative study sessions, their cohort pairings and battle sessions will appear here.
@@ -3271,8 +3272,8 @@ const Teacher = {
             <div>${Icons.calendar(14)} ${b.scheduled_date}</div>
             <div>${Icons.clock(14)} ${b.scheduled_time}</div>
           </div>
-          <button type="button" class="btn btn-primary btn-sm" onclick="window.location.hash = '#aviora-buddy'">
-            Launch Session 🎮
+          <button type="button" class="btn btn-primary btn-sm" onclick="window.location.hash = '#aviora-buddy'" style="display: inline-flex; align-items: center; gap: 0.35rem;">
+            ${Icons.video(14)} Launch Session
           </button>
         </div>
       </div>
@@ -3649,7 +3650,7 @@ const Teacher = {
 
       const isApproved = (app.status === 'approved');
       if (statusBadge) {
-        statusBadge.textContent = isApproved ? '✓ Verified Educator' : (app.status === 'pending' ? '⏳ Application Under Review' : 'Accredited Educator');
+        statusBadge.innerHTML = isApproved ? `${Icons.check(13)} Verified Educator` : (app.status === 'pending' ? `${Icons.hourglass(13)} Application Under Review` : 'Accredited Educator');
         statusBadge.className = isApproved ? 'badge-gold' : 'badge-accent';
       }
 

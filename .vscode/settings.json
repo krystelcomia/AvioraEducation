@@ -1,0 +1,9 @@
+{
+  "files.exclude": {
+    "**/.git": true
+  },
+  "files.watcherExclude": {
+    "**/.git/**": true
+  },
+  "git.useEditorAsCommitInput": false
+}

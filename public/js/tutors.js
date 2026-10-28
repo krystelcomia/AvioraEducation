@@ -1503,6 +1503,7 @@ const Tutors = {
       }
 
       // Navigate to student portal to view confirmed booking
+
       window.location.hash = '#student-portal';
       Router.handleRoute();
     } catch (err) {

@@ -2083,7 +2083,7 @@ const Teacher = {
       this.students.forEach(s => {
         const opt = document.createElement('option');
         opt.value = s.student_id;
-        opt.textContent = `${s.student_name} (${s.student_grade || 'Student'}) - ${(s.enrolled_subjects || []).join(', ')}`;
+        opt.textContent = `${s.student_name} (${s.student_grade || 'Student'})`;
         studentSelect.appendChild(opt);
       });
 
@@ -2107,18 +2107,13 @@ const Teacher = {
 
   handleStudentSelectChange(studentId) {
     const subjectInput = document.getElementById('assign-task-subject');
-    const subjectPill = document.getElementById('assign-task-auto-subject-pill');
-
     const student = this.students.find(s => String(s.student_id) === String(studentId));
     const availedSubject = (student && Array.isArray(student.enrolled_subjects) && student.enrolled_subjects.length > 0)
-      ? student.enrolled_subjects.join(', ')
+      ? student.enrolled_subjects[0]
       : '';
 
     if (subjectInput) {
       subjectInput.value = availedSubject;
-    }
-    if (subjectPill) {
-      subjectPill.textContent = availedSubject || 'Select a student above';
     }
   },
 

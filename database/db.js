@@ -281,7 +281,7 @@ function initSchema() {
       date TEXT,
       reason TEXT DEFAULT 'Occupied / Unavailable',
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      UNIQUE(tutor_id, day_of_week, time_slot)
+      UNIQUE(tutor_id, date, day_of_week, time_slot)
     );
 
     -- Enforce case-insensitive uniqueness and relational indexes across the entire system
@@ -368,6 +368,30 @@ function initSchema() {
       const rateMap = {};
       subs.forEach(s => { if (s) rateMap[String(s).trim()] = baseRate; });
       db.prepare("UPDATE teacher_applications SET subject_rates = ? WHERE id = ?").run(JSON.stringify(rateMap), a.id);
+    }
+    const tblRow = db.prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'tutor_occupied_slots'").get();
+    if (tblRow && tblRow.sql && tblRow.sql.includes('UNIQUE(tutor_id, day_of_week, time_slot)')) {
+      const existingRows = db.prepare("SELECT tutor_id, day_of_week, time_slot, date, reason, created_at FROM tutor_occupied_slots").all();
+      db.exec(`
+        DROP TABLE tutor_occupied_slots;
+        CREATE TABLE tutor_occupied_slots (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          tutor_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          day_of_week TEXT NOT NULL,
+          time_slot TEXT NOT NULL,
+          date TEXT,
+          reason TEXT DEFAULT 'Occupied / Unavailable',
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          UNIQUE(tutor_id, date, day_of_week, time_slot)
+        );
+        CREATE INDEX IF NOT EXISTS idx_tutor_occupied_tutor ON tutor_occupied_slots(tutor_id);
+      `);
+      const ins = db.prepare("INSERT OR IGNORE INTO tutor_occupied_slots (tutor_id, day_of_week, time_slot, date, reason, created_at) VALUES (?, ?, ?, ?, ?, ?)");
+      for (const r of existingRows) {
+        ins.run(r.tutor_id, r.day_of_week, r.time_slot, r.date || null, r.reason || 'Occupied / Unavailable', r.created_at || new Date().toISOString());
+      }
+    }
+    if (false) {
     }
   } catch (e) {}
 }

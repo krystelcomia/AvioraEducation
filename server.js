@@ -208,6 +208,245 @@ function getRateForTutorSubject(tutorRecord, subjectName) {
 }
 
 // ==========================================
+// ==========================================
+// TUTOR SCHEDULE & AVAILABILITY NORMALIZATION
+// ==========================================
+
+const WEEKDAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const STANDARD_DAY_TIME_SLOTS = [
+  '08:00 AM', '09:00 AM', '10:00 AM', '11:00 AM', '12:00 PM',
+  '01:00 PM', '02:00 PM', '03:00 PM', '04:00 PM',
+  '05:00 PM', '06:00 PM', '07:00 PM', '08:00 PM'
+];
+
+function parseHour24(timeStr) {
+  if (!timeStr) return null;
+  const m = String(timeStr).trim().match(/(\d{1,2}):(\d{2})\s*(AM|PM)?/i);
+  if (!m) return null;
+  let hr = parseInt(m[1], 10);
+  const ampm = m[3] ? m[3].toUpperCase() : null;
+  if (ampm === 'PM' && hr < 12) hr += 12;
+  if (ampm === 'AM' && hr === 12) hr = 0;
+  return hr;
+}
+
+function formatHourToSlotLabel(hr) {
+  const ampm = hr >= 12 ? 'PM' : 'AM';
+  const hr12 = hr % 12 === 0 ? 12 : hr % 12;
+  return `${String(hr12).padStart(2, '0')}:00 ${ampm}`;
+}
+
+function convertHoursListToRanges(hoursArr) {
+  const sorted = Array.from(new Set(hoursArr.filter(h => typeof h === 'number' && !isNaN(h) && h >= 0 && h <= 23))).sort((a, b) => a - b);
+  if (sorted.length === 0) return [];
+  const ranges = [];
+  let rangeStart = sorted[0];
+  let prev = sorted[0];
+  for (let i = 1; i < sorted.length; i++) {
+    if (sorted[i] === prev + 1) {
+      prev = sorted[i];
+    } else {
+      ranges.push(`${String(rangeStart).padStart(2, '0')}:00 - ${String(prev + 1).padStart(2, '0')}:00`);
+      rangeStart = sorted[i];
+      prev = sorted[i];
+    }
+  }
+  ranges.push(`${String(rangeStart).padStart(2, '0')}:00 - ${String(prev + 1).padStart(2, '0')}:00`);
+  return ranges;
+}
+
+function expandRangesToHours(blocks) {
+  if (!Array.isArray(blocks)) return [];
+  const hours = [];
+  for (const b of blocks) {
+    if (typeof b !== 'string') continue;
+    const parts = b.split('-').map(s => s.trim());
+    if (parts.length === 2) {
+      const sH = parseHour24(parts[0]);
+      const eH = parseHour24(parts[1]);
+      if (sH !== null && eH !== null && eH > sH) {
+        for (let h = sH; h < eH; h++) {
+          if (!hours.includes(h)) hours.push(h);
+        }
+      }
+    } else {
+      const singleH = parseHour24(b);
+      if (singleH !== null && !hours.includes(singleH)) {
+        hours.push(singleH);
+      }
+    }
+  }
+  return hours.sort((a, b) => a - b);
+}
+
+function normalizeAvailabilitySchedule(rawInput) {
+  const raw = safeParseObject(rawInput);
+  const normalized = {
+    Sunday: [],
+    Monday: ['09:00 - 17:00'],
+    Tuesday: ['09:00 - 17:00'],
+    Wednesday: ['09:00 - 17:00'],
+    Thursday: ['09:00 - 17:00'],
+    Friday: ['09:00 - 17:00'],
+    Saturday: [],
+    day_modes: safeParseObject(raw.day_modes),
+    date_hours: safeParseObject(raw.date_hours),
+    date_modes: safeParseObject(raw.date_modes),
+    unavailable_dates: Array.isArray(raw.unavailable_dates) ? Array.from(new Set(raw.unavailable_dates.filter(Boolean))) : []
+  };
+
+  let foundAnyWeekday = false;
+  for (const dayName of WEEKDAY_NAMES) {
+    const lowerName = dayName.toLowerCase();
+    const val = raw[dayName] !== undefined ? raw[dayName] : raw[lowerName];
+    if (val !== undefined) {
+      foundAnyWeekday = true;
+      if (Array.isArray(val)) {
+        normalized[dayName] = val.map(v => String(v).trim()).filter(Boolean);
+      } else if (typeof val === 'object' && val !== null) {
+        if (val.available === false) {
+          normalized[dayName] = [];
+        } else if (val.start && val.end) {
+          normalized[dayName] = [`${val.start} - ${val.end}`];
+        } else if (Array.isArray(val.hours)) {
+          normalized[dayName] = val.hours.map(v => String(v).trim()).filter(Boolean);
+        }
+      } else if (typeof val === 'string' && val.trim()) {
+        normalized[dayName] = [val.trim()];
+      } else {
+        normalized[dayName] = [];
+      }
+    }
+  }
+
+  if (!foundAnyWeekday) {
+    normalized.Monday = ['09:00 - 12:00', '14:00 - 17:00'];
+    normalized.Tuesday = ['10:00 - 13:00', '15:00 - 18:00'];
+    normalized.Wednesday = ['09:00 - 12:00', '14:00 - 17:00'];
+    normalized.Thursday = ['13:00 - 18:00'];
+    normalized.Friday = ['09:00 - 15:00'];
+  }
+
+  for (const dayName of WEEKDAY_NAMES) {
+    if (!normalized.day_modes[dayName]) {
+      const hrs = expandRangesToHours(normalized[dayName]);
+      normalized.day_modes[dayName] = hrs.length >= 11 ? 'all_day' : 'specific';
+    }
+  }
+
+  return normalized;
+}
+
+function getTutorLiveAvailability(tutorUserId, rawSchedule) {
+  const schedule = normalizeAvailabilitySchedule(rawSchedule);
+  let occupiedSlots = [];
+  let bookedSlots = [];
+  try {
+    occupiedSlots = db.prepare(`
+      SELECT id, tutor_id, day_of_week, time_slot, date, reason
+      FROM tutor_occupied_slots
+      WHERE tutor_id = ?
+      ORDER BY date ASC, day_of_week ASC, time_slot ASC
+    `).all(tutorUserId);
+  } catch (e) {
+    occupiedSlots = [];
+  }
+
+  try {
+    bookedSlots = db.prepare(`
+      SELECT id, requested_date as date, requested_time as time, status, subject
+      FROM tutoring_requests
+      WHERE tutor_id = ? AND status IN ('accepted', 'pending')
+      ORDER BY requested_date ASC, requested_time ASC
+    `).all(tutorUserId);
+  } catch (e) {
+    bookedSlots = [];
+  }
+
+  const unavailableSet = new Set(schedule.unavailable_dates || []);
+  for (const [dKey, modeVal] of Object.entries(schedule.date_modes || {})) {
+    if (modeVal === 'unavailable') unavailableSet.add(dKey);
+  }
+
+  // Group date-specific occupied slots to detect full-day blocks or ALL_DAY markers
+  const slotsByDate = {};
+  for (const o of occupiedSlots) {
+    if (o.date) {
+      if (o.time_slot === 'ALL_DAY') {
+        unavailableSet.add(o.date);
+      }
+      if (!slotsByDate[o.date]) slotsByDate[o.date] = new Set();
+      const h = parseHour24(o.time_slot);
+      if (h !== null) slotsByDate[o.date].add(h);
+    }
+  }
+
+  for (const [dStr, blockedHoursSet] of Object.entries(slotsByDate)) {
+    if (unavailableSet.has(dStr)) continue;
+    const dObj = new Date(dStr + 'T00:00:00');
+    if (isNaN(dObj.getTime())) continue;
+    const dayName = WEEKDAY_NAMES[dObj.getDay()];
+    const activeBlocks = Array.isArray(schedule.date_hours?.[dStr])
+      ? schedule.date_hours[dStr]
+      : (schedule[dayName] || []);
+    const configuredHours = expandRangesToHours(activeBlocks);
+    if (configuredHours.length > 0 && configuredHours.every(h => blockedHoursSet.has(h))) {
+      unavailableSet.add(dStr);
+    } else if (blockedHoursSet.size >= 11) {
+      unavailableSet.add(dStr);
+    }
+  }
+
+  const unavailableDates = Array.from(unavailableSet).sort();
+  schedule.unavailable_dates = unavailableDates;
+
+  return {
+    availability_schedule: schedule,
+    occupied_slots: occupiedSlots,
+    unavailable_dates: unavailableDates,
+    booked_slots: bookedSlots
+  };
+}
+
+function checkTutorSlotBookable(tutorUserId, requestedDate, requestedTime) {
+  if (!tutorUserId || !requestedDate) return { bookable: true };
+  const tp = db.prepare('SELECT availability_schedule FROM tutor_profiles WHERE user_id = ?').get(tutorUserId);
+  const ta = db.prepare('SELECT availability_schedule FROM teacher_applications WHERE user_id = ?').get(tutorUserId);
+  const live = getTutorLiveAvailability(tutorUserId, tp?.availability_schedule || ta?.availability_schedule);
+
+  const cleanDate = String(requestedDate).split('T')[0].trim();
+  if (live.unavailable_dates.includes(cleanDate)) {
+    return {
+      bookable: false,
+      error: `The selected date (${cleanDate}) is marked as Not Available / Date Occupied by the tutor. Please choose another date.`
+    };
+  }
+
+  if (requestedTime) {
+    const reqHour = parseHour24(requestedTime);
+    const dObj = new Date(cleanDate + 'T00:00:00');
+    const dayName = !isNaN(dObj.getTime()) ? WEEKDAY_NAMES[dObj.getDay()] : null;
+
+    const isSlotOccupied = live.occupied_slots.some(o => {
+      const matchesDate = o.date === cleanDate || (!o.date && dayName && o.day_of_week === dayName);
+      if (!matchesDate) return false;
+      if (o.time_slot === 'ALL_DAY') return true;
+      const occHour = parseHour24(o.time_slot);
+      if (reqHour !== null && occHour !== null) return reqHour === occHour;
+      return String(o.time_slot).trim().toLowerCase() === String(requestedTime).trim().toLowerCase();
+    });
+
+    if (isSlotOccupied) {
+      return {
+        bookable: false,
+        error: `The time slot (${requestedTime}) on ${cleanDate} is marked as unavailable/occupied by the tutor. Please choose an available time slot.`
+      };
+    }
+  }
+
+  return { bookable: true };
+}
+
 // NOTIFICATION PREFERENCE FILTERS & DELIVERY
 // ==========================================
 
@@ -2120,7 +2359,7 @@ app.get('/api/tutors', (req, res) => {
         subjects: norm.subjects,
         subject_rates: norm.subject_rates,
         grade_levels: safeParseArray(r.grade_levels),
-        availability_schedule: safeParseObject(r.availability_schedule)
+        ...getTutorLiveAvailability(r.user_id, r.availability_schedule)
       };
     });
 
@@ -2198,7 +2437,11 @@ app.get('/api/tutors/:id', (req, res) => {
     tutor.subjects = normTutor.subjects;
     tutor.subject_rates = normTutor.subject_rates;
     tutor.grade_levels = safeParseArray(tutor.grade_levels);
-    tutor.availability_schedule = safeParseObject(tutor.availability_schedule);
+    const liveAvail = getTutorLiveAvailability(tutor.user_id, tutor.availability_schedule);
+    tutor.availability_schedule = liveAvail.availability_schedule;
+    tutor.occupied_slots = liveAvail.occupied_slots;
+    tutor.unavailable_dates = liveAvail.unavailable_dates;
+    tutor.booked_slots = liveAvail.booked_slots;
     tutor.reviews = reviews;
 
     // Calculate total distinct students mentored
@@ -2583,6 +2826,11 @@ app.post('/api/student/subscription/purchase', authenticateToken, requireRole('s
           return res.status(400).json({ error: `Educator for Lesson ${i + 1} is not active.` });
         }
 
+        const slotCheck = checkTutorSlotBookable(tProf.user_id, item.scheduled_date, item.scheduled_time);
+        if (!slotCheck.bookable) {
+          return res.status(400).json({ error: `Lesson ${i + 1}: ${slotCheck.error}` });
+        }
+
         // 3-hour notice check
         const timeStart = (item.scheduled_time.split(' - ')[0] || item.scheduled_time).trim();
         const requestedDateTime = new Date(`${item.scheduled_date}T${timeStart.length === 5 ? timeStart : timeStart.padStart(5, '0')}:00`);
@@ -2871,6 +3119,11 @@ app.post('/api/student/requests', authenticateToken, requireRole('student'), (re
     const tutorProfile = db.prepare('SELECT hourly_rate, is_active, subjects, subject_rates FROM tutor_profiles WHERE user_id = ?').get(tutor_user_id);
     if (!tutorProfile || !tutorProfile.is_active) {
       return res.status(400).json({ error: 'Selected tutor is not currently accepting requests.' });
+    }
+
+    const slotCheck = checkTutorSlotBookable(tutor_user_id, requested_date, requested_time);
+    if (!slotCheck.bookable) {
+      return res.status(400).json({ error: slotCheck.error });
     }
 
     // Minimum 3 hours notice requirement
@@ -4002,18 +4255,34 @@ app.get('/api/teacher/schedule', authenticateToken, requireRole('teacher'), (req
       ORDER BY day_of_week ASC, time_slot ASC
     `).all(teacherId);
 
-    res.json({ appointments, occupiedSlots });
+    const tp = db.prepare('SELECT availability_schedule FROM tutor_profiles WHERE user_id = ?').get(teacherId);
+    const ta = db.prepare('SELECT availability_schedule FROM teacher_applications WHERE user_id = ?').get(teacherId);
+    const live = getTutorLiveAvailability(teacherId, tp?.availability_schedule || ta?.availability_schedule);
+
+    res.json({
+      appointments,
+      occupiedSlots: live.occupied_slots,
+      availabilitySchedule: live.availability_schedule,
+      unavailableDates: live.unavailable_dates
+    });
   } catch (error) {
     console.error('Teacher schedule error:', error);
     res.status(500).json({ error: 'Failed to retrieve schedule.' });
   }
 });
 
+// Helper to save tutor availability_schedule to both tutor_profiles and teacher_applications
+function saveTutorAvailabilitySchedule(teacherId, scheduleObj) {
+  const jsonStr = JSON.stringify(scheduleObj);
+  db.prepare('UPDATE tutor_profiles SET availability_schedule = ?, updated_at = CURRENT_TIMESTAMP WHERE user_id = ?').run(jsonStr, teacherId);
+  db.prepare('UPDATE teacher_applications SET availability_schedule = ?, updated_at = CURRENT_TIMESTAMP WHERE user_id = ?').run(jsonStr, teacherId);
+}
+
 // Toggle Occupied Time Slot (Mark as Unavailable / Available)
 app.post('/api/teacher/schedule/toggle-slot', authenticateToken, requireRole('teacher'), (req, res) => {
   try {
     const teacherId = req.user.id;
-    const appRecord = db.prepare('SELECT status FROM teacher_applications WHERE user_id = ?').get(teacherId);
+    const appRecord = db.prepare('SELECT status, availability_schedule FROM teacher_applications WHERE user_id = ?').get(teacherId);
     if (!appRecord || appRecord.status !== 'approved') {
       return res.status(403).json({ error: 'Your account is currently under review. Schedule slot management will unlock once approved by the administrator.' });
     }
@@ -4024,6 +4293,8 @@ app.post('/api/teacher/schedule/toggle-slot', authenticateToken, requireRole('te
     }
 
     const dayName = day_of_week || (date ? new Date(date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long' }) : 'Monday');
+    const tp = db.prepare('SELECT availability_schedule FROM tutor_profiles WHERE user_id = ?').get(teacherId);
+    const schedule = normalizeAvailabilitySchedule(tp?.availability_schedule || appRecord.availability_schedule);
 
     let existing;
     if (date) {
@@ -4038,12 +4309,40 @@ app.post('/api/teacher/schedule/toggle-slot', authenticateToken, requireRole('te
       `).get(teacherId, dayName, time_slot);
     }
 
-    if (existing) {
-      db.prepare('DELETE FROM tutor_occupied_slots WHERE id = ?').run(existing.id);
+    const allDayRow = date ? db.prepare(`
+      SELECT id FROM tutor_occupied_slots
+      WHERE tutor_id = ? AND date = ? AND time_slot = 'ALL_DAY'
+    `).get(teacherId, date) : null;
+
+    if (existing || allDayRow) {
+      if (existing) {
+        db.prepare('DELETE FROM tutor_occupied_slots WHERE id = ?').run(existing.id);
+      }
+      if (allDayRow) {
+        db.prepare('DELETE FROM tutor_occupied_slots WHERE id = ?').run(allDayRow.id);
+      }
+      if (date) {
+        schedule.unavailable_dates = (schedule.unavailable_dates || []).filter(d => d !== date);
+        if (schedule.date_modes && schedule.date_modes[date] === 'unavailable') {
+          schedule.date_modes[date] = 'specific';
+        }
+        // Ensure this slot's hour is included in active hours for this date
+        const slotHour = parseHour24(time_slot);
+        if (slotHour !== null) {
+          const baseBlocks = Array.isArray(schedule.date_hours?.[date]) ? schedule.date_hours[date] : (schedule[dayName] || []);
+          const currentHours = expandRangesToHours(baseBlocks);
+          if (!currentHours.includes(slotHour)) {
+            currentHours.push(slotHour);
+            if (!schedule.date_hours) schedule.date_hours = {};
+            schedule.date_hours[date] = convertHoursListToRanges(currentHours);
+          }
+        }
+        saveTutorAvailabilitySchedule(teacherId, schedule);
+      }
       res.json({ message: `${time_slot} is now marked as Available for student bookings.`, isOccupied: false });
     } else {
       db.prepare(`
-        INSERT INTO tutor_occupied_slots (tutor_id, day_of_week, time_slot, date, reason)
+        INSERT OR REPLACE INTO tutor_occupied_slots (tutor_id, day_of_week, time_slot, date, reason)
         VALUES (?, ?, ?, ?, ?)
       `).run(teacherId, dayName, time_slot, date || null, reason || 'Occupied / Unavailable');
       res.json({ message: `${time_slot} is now marked as Occupied (Unavailable).`, isOccupied: true });
@@ -4054,43 +4353,166 @@ app.post('/api/teacher/schedule/toggle-slot', authenticateToken, requireRole('te
   }
 });
 
-// Bulk Set Day Availability (Block Entire Day or Free Entire Day)
+// Bulk Set Day Availability (Mark Date Unavailable / Date Occupied, Set Available, or Save Available Hours)
 app.post('/api/teacher/schedule/set-day-availability', authenticateToken, requireRole('teacher'), (req, res) => {
   try {
     const teacherId = req.user.id;
-    const appRecord = db.prepare('SELECT status FROM teacher_applications WHERE user_id = ?').get(teacherId);
+    const appRecord = db.prepare('SELECT status, availability_schedule FROM teacher_applications WHERE user_id = ?').get(teacherId);
     if (!appRecord || appRecord.status !== 'approved') {
       return res.status(403).json({ error: 'Your account is currently under review. Schedule slot management will unlock once approved by the administrator.' });
     }
-    const { date, day_of_week, action } = req.body;
+    const {
+      date,
+      day_of_week,
+      action,
+      mode,
+      start_time,
+      end_time,
+      second_start_time,
+      second_end_time,
+      time_ranges,
+      selected_slots,
+      apply_scope
+    } = req.body;
+
     const dayName = day_of_week || (date ? new Date(date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long' }) : 'Monday');
+    const tp = db.prepare('SELECT availability_schedule FROM tutor_profiles WHERE user_id = ?').get(teacherId);
+    const schedule = normalizeAvailabilitySchedule(tp?.availability_schedule || appRecord.availability_schedule);
+    if (!schedule.date_hours) schedule.date_hours = {};
+    if (!schedule.date_modes) schedule.date_modes = {};
+    if (!schedule.day_modes) schedule.day_modes = {};
+    if (!Array.isArray(schedule.unavailable_dates)) schedule.unavailable_dates = [];
 
-    const timeSlots = [
-      '09:00 AM', '10:00 AM', '11:00 AM', '12:00 PM',
-      '01:00 PM', '02:00 PM', '03:00 PM', '04:00 PM',
-      '05:00 PM', '06:00 PM', '07:00 PM'
-    ];
-
-    if (action === 'free_all') {
+    if (action === 'free_all' || action === 'date_available') {
       if (date) {
         db.prepare('DELETE FROM tutor_occupied_slots WHERE tutor_id = ? AND (date = ? OR (date IS NULL AND day_of_week = ?))').run(teacherId, date, dayName);
+        schedule.unavailable_dates = schedule.unavailable_dates.filter(d => d !== date);
+        if (schedule.date_modes[date] === 'unavailable') {
+          delete schedule.date_modes[date];
+        }
+        // If this date or weekday had 0 configured hours (e.g. weekend), open standard hours for this date
+        const currentBlocks = Array.isArray(schedule.date_hours[date]) ? schedule.date_hours[date] : (schedule[dayName] || []);
+        if (expandRangesToHours(currentBlocks).length === 0) {
+          schedule.date_hours[date] = ['08:00 - 20:00'];
+          schedule.date_modes[date] = 'all_day';
+        }
       } else {
         db.prepare('DELETE FROM tutor_occupied_slots WHERE tutor_id = ? AND day_of_week = ?').run(teacherId, dayName);
+        if (expandRangesToHours(schedule[dayName] || []).length === 0) {
+          schedule[dayName] = ['09:00 - 17:00'];
+        }
       }
-      return res.json({ message: `All slots for ${date || dayName} are now marked as Available.` });
-    } else if (action === 'block_all') {
+      saveTutorAvailabilitySchedule(teacherId, schedule);
+      const live = getTutorLiveAvailability(teacherId, schedule);
+      return res.json({
+        message: `${date || dayName} is now marked as Available for student bookings.`,
+        isDateOccupied: false,
+        availabilitySchedule: live.availability_schedule,
+        unavailableDates: live.unavailable_dates
+      });
+    } else if (action === 'block_all' || action === 'date_occupied') {
       if (date) {
         db.prepare('DELETE FROM tutor_occupied_slots WHERE tutor_id = ? AND date = ?').run(teacherId, date);
+        if (!schedule.unavailable_dates.includes(date)) {
+          schedule.unavailable_dates.push(date);
+        }
+        schedule.date_modes[date] = 'unavailable';
       } else {
         db.prepare('DELETE FROM tutor_occupied_slots WHERE tutor_id = ? AND day_of_week = ? AND date IS NULL').run(teacherId, dayName);
       }
-      const insert = db.prepare('INSERT INTO tutor_occupied_slots (tutor_id, day_of_week, time_slot, date, reason) VALUES (?, ?, ?, ?, ?)');
-      for (const slot of timeSlots) {
-        insert.run(teacherId, dayName, slot, date || null, 'Day Blocked / Unavailable');
+
+      const insert = db.prepare('INSERT OR REPLACE INTO tutor_occupied_slots (tutor_id, day_of_week, time_slot, date, reason) VALUES (?, ?, ?, ?, ?)');
+      if (date) {
+        insert.run(teacherId, dayName, 'ALL_DAY', date, 'Not Available / Date Occupied');
       }
-      return res.json({ message: `All slots for ${date || dayName} are now marked as Unavailable.` });
+      for (const slot of STANDARD_DAY_TIME_SLOTS) {
+        insert.run(teacherId, dayName, slot, date || null, 'Not Available / Date Occupied');
+      }
+      saveTutorAvailabilitySchedule(teacherId, schedule);
+      const live = getTutorLiveAvailability(teacherId, schedule);
+      return res.json({
+        message: `${date || dayName} is now marked as Not Available / Date Occupied. Students will see that this date is unavailable.`,
+        isDateOccupied: true,
+        availabilitySchedule: live.availability_schedule,
+        unavailableDates: live.unavailable_dates
+      });
+    } else if (action === 'save_hours') {
+      const chosenMode = mode === 'all_day' ? 'all_day' : 'specific';
+      let blocks = [];
+
+      if (chosenMode === 'all_day') {
+        blocks = ['08:00 - 20:00'];
+      } else {
+        if (Array.isArray(selected_slots) && selected_slots.length > 0) {
+          const hrs = selected_slots.map(s => parseHour24(s)).filter(h => h !== null);
+          blocks = convertHoursListToRanges(hrs);
+        } else if (Array.isArray(time_ranges) && time_ranges.length > 0) {
+          blocks = time_ranges.map(r => String(r).trim()).filter(Boolean);
+        } else if (start_time && end_time) {
+          const sH = parseHour24(start_time);
+          const eH = parseHour24(end_time);
+          if (sH === null || eH === null || eH <= sH) {
+            return res.status(400).json({ error: 'End time must be after start time.' });
+          }
+          blocks.push(`${String(sH).padStart(2, '0')}:00 - ${String(eH).padStart(2, '0')}:00`);
+          if (second_start_time && second_end_time) {
+            const sH2 = parseHour24(second_start_time);
+            const eH2 = parseHour24(second_end_time);
+            if (sH2 !== null && eH2 !== null && eH2 > sH2) {
+              blocks.push(`${String(sH2).padStart(2, '0')}:00 - ${String(eH2).padStart(2, '0')}:00`);
+            }
+          }
+        }
+        // Consolidate overlapping ranges cleanly
+        const expandedHrs = expandRangesToHours(blocks);
+        if (expandedHrs.length === 0) {
+          return res.status(400).json({ error: 'Please select at least one available time slot or hour range, or mark the date as Not Available / Date Occupied.' });
+        }
+        blocks = convertHoursListToRanges(expandedHrs);
+      }
+
+      const scope = apply_scope || 'weekday';
+      if (date) {
+        schedule.unavailable_dates = schedule.unavailable_dates.filter(d => d !== date);
+        db.prepare('DELETE FROM tutor_occupied_slots WHERE tutor_id = ? AND date = ?').run(teacherId, date);
+      }
+
+      if (scope === 'date' && date) {
+        schedule.date_hours[date] = blocks;
+        schedule.date_modes[date] = chosenMode;
+      } else if (scope === 'all_days') {
+        for (const d of WEEKDAY_NAMES) {
+          schedule[d] = blocks;
+          schedule.day_modes[d] = chosenMode;
+        }
+        if (date) {
+          schedule.date_hours[date] = blocks;
+          schedule.date_modes[date] = chosenMode;
+        }
+        db.prepare('DELETE FROM tutor_occupied_slots WHERE tutor_id = ? AND date IS NULL').run(teacherId);
+      } else {
+        // Default: apply to this weekday (e.g., Every Wednesday) + selected date
+        schedule[dayName] = blocks;
+        schedule.day_modes[dayName] = chosenMode;
+        if (date) {
+          schedule.date_hours[date] = blocks;
+          schedule.date_modes[date] = chosenMode;
+        }
+        db.prepare('DELETE FROM tutor_occupied_slots WHERE tutor_id = ? AND day_of_week = ? AND date IS NULL').run(teacherId, dayName);
+      }
+
+      saveTutorAvailabilitySchedule(teacherId, schedule);
+      const live = getTutorLiveAvailability(teacherId, schedule);
+      const modeDesc = chosenMode === 'all_day' ? 'Available All Day (08:00 AM – 08:00 PM)' : `Specific Time Slots (${blocks.join(', ')})`;
+      const scopeDesc = scope === 'date' ? `${date}` : (scope === 'all_days' ? 'all days' : `every ${dayName}${date ? ` (including ${date})` : ''}`);
+
+      return res.json({
+        message: `Time Slot Availability updated: ${modeDesc} applied to ${scopeDesc}! Reflected live for students.`,
+        availabilitySchedule: live.availability_schedule,
+        unavailableDates: live.unavailable_dates
+      });
     } else {
-      return res.status(400).json({ error: 'Invalid action. Supported actions are "free_all" or "block_all".' });
+      return res.status(400).json({ error: 'Invalid action. Supported actions are "free_all", "date_available", "block_all", "date_occupied", or "save_hours".' });
     }
   } catch (error) {
     console.error('Set day availability error:', error);

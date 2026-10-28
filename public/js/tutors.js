@@ -389,9 +389,19 @@ const Tutors = {
       const sched = tutor.availability_schedule || {};
 
       daysOfWeek.forEach(day => {
-        const slots = sched[day] || (day !== 'Sunday' ? ['10:00 - 12:00', '14:00 - 17:00'] : ['Flexible Consultation']);
-        const slotsArray = Array.isArray(slots) ? slots : [slots];
-        const badgesHtml = slotsArray.map(slot => `<span class="schedule-slot-badge" style="display: inline-flex; align-items: center; gap: 0.3rem;">${Icons.clock(12)} ${slot}</span>`).join(' ');
+        const hasKey = Object.prototype.hasOwnProperty.call(sched, day);
+        const slots = hasKey ? sched[day] : (day !== 'Sunday' ? ['09:00 - 12:00', '14:00 - 17:00'] : []);
+        const slotsArray = Array.isArray(slots) ? slots : (slots ? [slots] : []);
+        const dayMode = sched.day_modes && sched.day_modes[day];
+        let badgesHtml = '';
+        if (slotsArray.length === 0) {
+          badgesHtml = `<span class="schedule-slot-badge" style="display: inline-flex; align-items: center; gap: 0.3rem; background: rgba(239, 68, 68, 0.08); color: #DC2626; border-color: rgba(239, 68, 68, 0.25);">🚫 Not Available</span>`;
+        } else {
+          const modeTag = dayMode === 'all_day'
+            ? `<span class="badge-gold" style="font-size: 0.68rem; margin-right: 0.35rem;">All Day</span>`
+            : '';
+          badgesHtml = modeTag + slotsArray.map(slot => `<span class="schedule-slot-badge" style="display: inline-flex; align-items: center; gap: 0.3rem;">${Icons.clock(12)} ${slot}</span>`).join(' ');
+        }
 
         scheduleRowsHtml += `
           <tr class="schedule-row">
@@ -400,6 +410,17 @@ const Tutors = {
           </tr>
         `;
       });
+      const unavailDates = Array.isArray(tutor.unavailable_dates) ? tutor.unavailable_dates : [];
+      if (unavailDates.length > 0) {
+        scheduleRowsHtml += `
+          <tr class="schedule-row">
+            <td class="schedule-day-td" style="color: #DC2626; font-weight: 700;">Unavailable Dates</td>
+            <td class="schedule-slots-td">
+              ${unavailDates.map(d => `<span class="schedule-slot-badge" style="background: rgba(239,68,68,0.1); color: #DC2626; border: 1px solid rgba(239,68,68,0.28); font-weight: 600;">🚫 ${d} (Occupied)</span>`).join(' ')}
+            </td>
+          </tr>
+        `;
+      }
 
       // Reviews
       let reviewsHtml = '';
@@ -1022,6 +1043,64 @@ const Tutors = {
   selectedTime: null,
   paymentMethod: 'subscription',
 
+  getTutorDateBlocks(tutor, dateStr, dayOfWeekName) {
+    if (!tutor) return [];
+    const sched = tutor.availability_schedule || {
+      Monday: ['09:00 - 12:00', '14:00 - 17:00'],
+      Tuesday: ['10:00 - 13:00', '15:00 - 18:00'],
+      Wednesday: ['09:00 - 12:00', '14:00 - 17:00'],
+      Thursday: ['13:00 - 18:00'],
+      Friday: ['09:00 - 15:00']
+    };
+    if (dateStr && sched.date_hours && Object.prototype.hasOwnProperty.call(sched.date_hours, dateStr)) {
+      return Array.isArray(sched.date_hours[dateStr]) ? sched.date_hours[dateStr] : [];
+    }
+    if (dayOfWeekName && Object.prototype.hasOwnProperty.call(sched, dayOfWeekName)) {
+      return Array.isArray(sched[dayOfWeekName]) ? sched[dayOfWeekName] : [];
+    }
+    return [];
+  },
+
+  isTutorDateOccupied(tutor, dateStr, dayOfWeekName) {
+    if (!tutor || !dateStr) return false;
+    const unavailList = Array.isArray(tutor.unavailable_dates) ? tutor.unavailable_dates : [];
+    if (unavailList.includes(dateStr)) return true;
+    const sched = tutor.availability_schedule || {};
+    if (Array.isArray(sched.unavailable_dates) && sched.unavailable_dates.includes(dateStr)) return true;
+    if (sched.date_modes && sched.date_modes[dateStr] === 'unavailable') return true;
+    if (sched.date_hours && Array.isArray(sched.date_hours[dateStr]) && sched.date_hours[dateStr].length === 0) return true;
+    const occSlots = Array.isArray(tutor.occupied_slots) ? tutor.occupied_slots : [];
+    if (occSlots.some(s => s.date === dateStr && s.time_slot === 'ALL_DAY')) return true;
+    return false;
+  },
+
+  getTutorSlotOccupancyState(tutor, dateStr, dayOfWeekName, slotHour) {
+    if (!tutor) return { occupied: false, booked: false };
+    const bookedSlots = Array.isArray(tutor.booked_slots) ? tutor.booked_slots : [];
+    const isBooked = bookedSlots.some(b => {
+      if (b.scheduled_date !== dateStr) return false;
+      const m = String(b.scheduled_time || '').match(/(\d{1,2}):\d{2}/);
+      return m && parseInt(m[1], 10) === slotHour;
+    });
+    if (isBooked) return { occupied: true, booked: true, reason: 'Booked' };
+
+    const occSlots = Array.isArray(tutor.occupied_slots) ? tutor.occupied_slots : [];
+    const isOccupied = occSlots.some(o => {
+      const matchesDay = (o.date && o.date === dateStr) || (!o.date && o.day_of_week === dayOfWeekName);
+      if (!matchesDay) return false;
+      if (o.time_slot === 'ALL_DAY') return true;
+      const m = String(o.time_slot || '').match(/(\d{1,2}):\d{2}\s*(AM|PM)?/i);
+      if (!m) return false;
+      let h = parseInt(m[1], 10);
+      const ampm = m[2] ? m[2].toUpperCase() : null;
+      if (ampm === 'PM' && h < 12) h += 12;
+      if (ampm === 'AM' && h === 12) h = 0;
+      return h === slotHour;
+    });
+    if (isOccupied) return { occupied: true, booked: false, reason: 'Occupied' };
+    return { occupied: false, booked: false, reason: null };
+  },
+
   async openBookingModal(tutorId) {
     const user = Auth.currentUser;
 
@@ -1044,7 +1123,17 @@ const Tutors = {
       return;
     }
 
-    const tutor = this.allTutors.find(t => t.id == tutorId) || this.allTutors[0];
+    // Refresh tutors from API so tutor calendar/time-slot edits are immediately reflected
+    try {
+      const freshData = await API.getTutors();
+      if (freshData && Array.isArray(freshData.tutors) && freshData.tutors.length > 0) {
+        this.allTutors = freshData.tutors;
+      }
+    } catch (e) {
+      // Fallback to cached tutors
+    }
+
+    const tutor = this.allTutors.find(t => t.id == tutorId || t.user_id == tutorId) || this.allTutors[0];
     if (!tutor) {
       showToast('Tutor not found.', 'error');
       return;
@@ -1219,16 +1308,6 @@ const Tutors = {
 
     const firstDayIndex = monthDate.getDay();
     const daysInMonth = new Date(this.calYear, this.calMonth + 1, 0).getDate();
-
-    // Tutor availability schedule lookup
-    const sched = this.selectedTutor?.availability_schedule || {
-      Monday: ['09:00 - 12:00', '14:00 - 17:00'],
-      Tuesday: ['10:00 - 13:00', '15:00 - 18:00'],
-      Wednesday: ['09:00 - 12:00', '14:00 - 17:00'],
-      Thursday: ['13:00 - 18:00'],
-      Friday: ['09:00 - 15:00']
-    };
-
     const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
     // Today at midnight
@@ -1250,24 +1329,33 @@ const Tutors = {
       const isPast = cellTime < todayMidnight;
       const isToday = cellTime === todayMidnight;
 
-      // Check if tutor works this day of week
-      const hasTutorSchedule = !!(sched[dayOfWeekName] && sched[dayOfWeekName].length > 0);
-      const isAvailable = !isPast && hasTutorSchedule;
-
       const dateStr = `${this.calYear}-${String(this.calMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
       const isSelected = this.selectedDate === dateStr;
+      const isDateOccupied = !isPast && this.isTutorDateOccupied(this.selectedTutor, dateStr, dayOfWeekName);
+      const blocks = this.getTutorDateBlocks(this.selectedTutor, dateStr, dayOfWeekName);
+      const hasTutorSchedule = !isDateOccupied && blocks.length > 0;
+      const isAvailable = !isPast && hasTutorSchedule;
 
       const cell = document.createElement('button');
       cell.type = 'button';
       cell.className = 'cal-day-cell';
-      cell.textContent = day;
 
       if (isToday) cell.classList.add('is-today');
 
-      if (!isAvailable) {
+      if (isDateOccupied) {
+        cell.classList.add('date-occupied');
+        if (isSelected) cell.classList.add('selected');
+        cell.title = 'Not Available / Date Occupied — Tutor marked this date as unavailable';
+        cell.innerHTML = `<span>${day}</span><span class="cal-occupied-tag">Unavail</span>`;
+        cell.addEventListener('click', () => {
+          this.selectCalendarDate(dateStr);
+        });
+      } else if (!isAvailable) {
+        cell.textContent = day;
         cell.classList.add('disabled');
         cell.disabled = true;
       } else {
+        cell.textContent = day;
         cell.classList.add('available');
         if (isSelected) cell.classList.add('selected');
 
@@ -1294,15 +1382,36 @@ const Tutors = {
     const dateFormatted = parsedDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
 
     const label = document.getElementById('booking-selected-date-label');
-    if (label) label.textContent = dateFormatted;
+    const slotsContainer = document.getElementById('booking-slots-container');
+    const gotoPayBtn = document.getElementById('btn-goto-payment');
+    if (gotoPayBtn) gotoPayBtn.disabled = true;
 
-    // Generate 50-minute time slots
+    const isDateOccupied = this.isTutorDateOccupied(this.selectedTutor, dateStr, dayName);
+    if (isDateOccupied) {
+      if (label) label.innerHTML = `<span style="color: #DC2626; font-weight: 700;">🚫 ${dateFormatted} — Not Available / Date Occupied</span>`;
+      if (slotsContainer) {
+        slotsContainer.innerHTML = `
+          <div class="student-date-occupied-notice" style="grid-column: 1 / -1; background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: var(--radius-md); padding: 0.9rem 1rem; color: #B91C1C; font-size: 0.84rem; display: flex; align-items: center; gap: 0.6rem;">
+            <span style="font-size: 1.15rem;">🚫</span>
+            <div>
+              <strong>Not Available / Date Occupied:</strong> ${this.escapeHtml(this.selectedTutor?.name || 'This tutor')} has marked <strong>${dateFormatted}</strong> as unavailable. Please select another available date on the calendar.
+            </div>
+          </div>
+        `;
+      }
+      return;
+    }
+
+    const blocks = this.getTutorDateBlocks(this.selectedTutor, dateStr, dayName);
     const sched = this.selectedTutor?.availability_schedule || {};
-    const blocks = sched[dayName] || ['09:00 - 12:00', '14:00 - 17:00'];
-    const slots = [];
+    const dateMode = (sched.date_modes && sched.date_modes[dateStr]) || (sched.day_modes && sched.day_modes[dayName]) || null;
+    const modeLabel = dateMode === 'all_day' ? ' • Available All Day' : (blocks.length > 0 ? ` • ${blocks.join(', ')}` : '');
+    if (label) label.textContent = `${dateFormatted}${modeLabel}`;
 
+    // Generate 50-minute time slots from tutor's configured hours
+    const slots = [];
     blocks.forEach(b => {
-      const parts = b.split('-').map(s => s.trim());
+      const parts = String(b).split('-').map(s => s.trim());
       if (parts.length === 2) {
         const startH = parseInt(parts[0].split(':')[0], 10);
         const endH = parseInt(parts[1].split(':')[0], 10);
@@ -1319,10 +1428,6 @@ const Tutors = {
       }
     });
 
-    const slotsContainer = document.getElementById('booking-slots-container');
-    const gotoPayBtn = document.getElementById('btn-goto-payment');
-    if (gotoPayBtn) gotoPayBtn.disabled = true;
-
     if (!slotsContainer) return;
 
     if (slots.length === 0) {
@@ -1337,6 +1442,7 @@ const Tutors = {
       // Check 3-hour notice rule
       const slotDateTime = new Date(`${dateStr}T${slot.start}:00`).getTime();
       const isUnder3Hours = (slotDateTime - now) < (3 * 60 * 60 * 1000);
+      const occState = this.getTutorSlotOccupancyState(this.selectedTutor, dateStr, dayName, slot.hour);
 
       // 12-hour format label
       const h = slot.hour;
@@ -1347,7 +1453,11 @@ const Tutors = {
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'slot-pill-btn';
-      if (isUnder3Hours) {
+      if (occState.occupied) {
+        btn.disabled = true;
+        btn.classList.add('slot-occupied');
+        btn.innerHTML = `<span>${displayLabel}</span><span class="slot-sub" style="color: var(--danger); font-size: 0.65rem;">🚫 ${occState.reason || 'Unavailable'}</span>`;
+      } else if (isUnder3Hours) {
         btn.disabled = true;
         btn.innerHTML = `<span>${displayLabel}</span><span class="slot-sub" style="color: var(--danger); font-size: 0.65rem;">&lt; 3h notice</span>`;
       } else {

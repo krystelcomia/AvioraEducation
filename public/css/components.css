@@ -2612,3 +2612,46 @@
 
 
 
+
+/* ========================================================
+   STUDENT CALENDAR OCCUPIED / UNAVAILABLE DATE INDICATORS
+   ======================================================== */
+.cal-day-cell.date-occupied {
+  background: rgba(239, 68, 68, 0.08) !important;
+  border: 1px dashed rgba(239, 68, 68, 0.45) !important;
+  color: #DC2626 !important;
+  cursor: pointer !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 1px !important;
+  padding: 2px !important;
+  line-height: 1.05 !important;
+}
+
+.cal-day-cell.date-occupied:hover {
+  background: rgba(239, 68, 68, 0.16) !important;
+  border-color: #EF4444 !important;
+}
+
+.cal-day-cell.date-occupied.selected {
+  background: rgba(239, 68, 68, 0.2) !important;
+  border: 2px solid #DC2626 !important;
+  color: #991B1B !important;
+}
+
+.cal-occupied-tag {
+  font-size: 0.52rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: #DC2626;
+  display: block;
+}
+
+.slot-pill-btn.slot-occupied {
+  background: rgba(239, 68, 68, 0.06) !important;
+  border-color: rgba(239, 68, 68, 0.28) !important;
+  opacity: 0.78;
+}

@@ -2353,10 +2353,56 @@ const Teacher = {
     return String(requestedTime).replace(/\s+/g, '').toLowerCase().includes(String(slotLabel).replace(/\s+/g, '').toLowerCase());
   },
 
+  expandBlocksToHours(blocks) {
+    if (!Array.isArray(blocks)) return [];
+    const hours = [];
+    blocks.forEach(b => {
+      if (typeof b !== 'string') return;
+      const parts = b.split('-').map(s => s.trim());
+      if (parts.length === 2) {
+        const sParsed = this.parseTimeHour(parts[0]);
+        const eParsed = this.parseTimeHour(parts[1]);
+        if (sParsed && eParsed && eParsed.hour > sParsed.hour) {
+          for (let h = sParsed.hour; h < eParsed.hour; h++) {
+            if (!hours.includes(h)) hours.push(h);
+          }
+        }
+      } else {
+        const single = this.parseTimeHour(b);
+        if (single && !hours.includes(single.hour)) hours.push(single.hour);
+      }
+    });
+    return hours.sort((a, b) => a - b);
+  },
+
+  formatHour12Label(hr) {
+    const ampm = hr >= 12 ? 'PM' : 'AM';
+    const hr12 = hr % 12 === 0 ? 12 : hr % 12;
+    return `${String(hr12).padStart(2, '0')}:00 ${ampm}`;
+  },
+
+  isDateMarkedUnavailable(dateStr, dayOfWeekName) {
+    const unavailableDates = this.scheduleData?.unavailableDates || this.scheduleData?.availabilitySchedule?.unavailable_dates || [];
+    if (unavailableDates.includes(dateStr)) return true;
+    const dateMode = this.scheduleData?.availabilitySchedule?.date_modes?.[dateStr];
+    if (dateMode === 'unavailable') return true;
+    const occupiedSlots = this.scheduleData?.occupiedSlots || [];
+    const dayOccupied = occupiedSlots.filter(o => o.date === dateStr || (!o.date && dayOfWeekName && o.day_of_week === dayOfWeekName));
+    if (dayOccupied.some(o => o.time_slot === 'ALL_DAY')) return true;
+    if (dayOccupied.filter(o => o.date === dateStr).length >= 11) return true;
+    return false;
+  },
+
   renderCalendar() {
     const calendarGrid = document.getElementById('teacher-calendar-grid');
     const monthTitle = document.getElementById('teacher-cal-month-title');
     if (!calendarGrid) return;
+
+    const now = new Date();
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    if (!this.selectedDate) {
+      this.selectedDate = todayStr;
+    }
 
     const monthDate = new Date(this.calYear, this.calMonth, 1);
     if (monthTitle) {
@@ -2366,13 +2412,35 @@ const Teacher = {
     const firstDayIndex = monthDate.getDay(); // 0 is Sunday
     const daysInMonth = new Date(this.calYear, this.calMonth + 1, 0).getDate();
     const daysInPrevMonth = new Date(this.calYear, this.calMonth, 0).getDate();
-
-    const now = new Date();
-    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
     const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
     const appointments = this.scheduleData?.appointments || [];
     const occupiedSlots = this.scheduleData?.occupiedSlots || [];
+
+    // Update top-right calendar header bar with selected date & "Not Available / Date Occupied" button
+    const calHintBox = document.querySelector('#view-teacher-schedule .teacher-cal-hint');
+    if (calHintBox && this.selectedDate) {
+      const selDateObj = new Date(this.selectedDate + 'T00:00:00');
+      const selDayName = dayNames[selDateObj.getDay()];
+      const selShortDate = selDateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      const selIsOccupied = this.isDateMarkedUnavailable(this.selectedDate, selDayName);
+
+      calHintBox.innerHTML = `
+        <div class="teacher-cal-selected-bar">
+          <span class="teacher-cal-selected-label">Selected: <strong>${selShortDate}</strong></span>
+          ${selIsOccupied ? `
+            <span class="cal-occupied-state-pill">🚫 Not Available / Date Occupied</span>
+            <button type="button" class="btn btn-outline-gold btn-sm" onclick="Teacher.bulkSetDayAvailability('date_available')" style="padding: 0.32rem 0.75rem; font-size: 0.78rem; font-weight: 700;">
+              🟢 Mark Date Available
+            </button>
+          ` : `
+            <button type="button" class="btn btn-sm btn-mark-date-unavailable" onclick="Teacher.bulkSetDayAvailability('date_occupied')" title="Mark ${selShortDate} as Not Available / Date Occupied (reflected for students)">
+              🚫 Not Available / Date Occupied
+            </button>
+          `}
+        </div>
+      `;
+    }
 
     // Map appointments by YYYY-MM-DD
     const aptsByDate = {};
@@ -2412,18 +2480,24 @@ const Teacher = {
 
       const isToday = dateStr === todayStr;
       const isSelected = dateStr === this.selectedDate;
+      const isDateOccupied = this.isDateMarkedUnavailable(dateStr, dayOfWeekName);
 
       const dayApts = aptsByDate[dateStr] || [];
-      const dayOccupied = occupiedSlots.filter(o => o.date === dateStr || (!o.date && o.day_of_week === dayOfWeekName));
+      const dayOccupied = occupiedSlots.filter(o => (o.date === dateStr || (!o.date && o.day_of_week === dayOfWeekName)) && o.time_slot !== 'ALL_DAY');
 
       cellsHtml += `
-        <div class="teacher-cal-day-cell ${isToday ? 'is-today' : ''} ${isSelected ? 'is-selected' : ''}" 
+        <div class="teacher-cal-day-cell ${isToday ? 'is-today' : ''} ${isSelected ? 'is-selected' : ''} ${isDateOccupied ? 'is-date-occupied' : ''}" 
              onclick="Teacher.selectCalendarDate('${dateStr}')">
           <div class="teacher-cal-day-header">
             <span class="teacher-cal-day-num">${day}</span>
-            ${dayApts.length > 0 ? `<span class="cal-classes-badge">${dayApts.length} class${dayApts.length === 1 ? '' : 'es'}</span>` : ''}
+            ${isDateOccupied ? `<span class="cal-date-occupied-badge">Occupied</span>` : (dayApts.length > 0 ? `<span class="cal-classes-badge">${dayApts.length} class${dayApts.length === 1 ? '' : 'es'}</span>` : '')}
           </div>
           <div class="teacher-cal-events-list">
+            ${isDateOccupied ? `
+              <div class="cal-event-chip chip-date-unavailable" title="Marked Not Available / Date Occupied — Students cannot book on this date">
+                🚫 Not Available / Date Occupied
+              </div>
+            ` : ''}
             ${dayApts.slice(0, 2).map(apt => `
               <div class="cal-event-chip chip-class" title="${apt.student_name}: ${apt.subject} (${apt.requested_time})">
                 <span class="chip-time">${apt.requested_time}</span>
@@ -2431,8 +2505,8 @@ const Teacher = {
               </div>
             `).join('')}
             ${dayApts.length > 2 ? `<div class="cal-more-events">+${dayApts.length - 2} more classes</div>` : ''}
-            ${dayOccupied.length > 0 && dayApts.length <= 1 ? `
-              <div class="cal-event-chip chip-occupied" title="${dayOccupied.length} slot(s) blocked unavailable">
+            ${!isDateOccupied && dayOccupied.length > 0 && dayApts.length <= 1 ? `
+              <div class="cal-event-chip chip-occupied" title="${dayOccupied.length} slot(s) marked unavailable">
                 🔒 ${dayOccupied.length} slot${dayOccupied.length === 1 ? '' : 's'} unavailable
               </div>
             ` : ''}
@@ -2473,11 +2547,6 @@ const Teacher = {
     }
     this.renderCalendar();
     this.renderDateSchedulePanel();
-
-    const panel = document.getElementById('teacher-date-schedule-panel');
-    if (panel) {
-      panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    }
   },
 
   renderDateSchedulePanel() {
@@ -2500,33 +2569,80 @@ const Teacher = {
 
     const appointments = this.scheduleData?.appointments || [];
     const occupiedSlots = this.scheduleData?.occupiedSlots || [];
+    const availSched = this.scheduleData?.availabilitySchedule || this.tutorProfile?.availability_schedule || {};
 
+    const isDateOccupied = this.isDateMarkedUnavailable(this.selectedDate, dayOfWeekName);
     const dayApts = appointments.filter(a => (a.requested_date || '').startsWith(this.selectedDate));
-    const dayOccupied = occupiedSlots.filter(o => o.date === this.selectedDate || (!o.date && o.day_of_week === dayOfWeekName));
+    const dayOccupied = occupiedSlots.filter(o => (o.date === this.selectedDate || (!o.date && o.day_of_week === dayOfWeekName)) && o.time_slot !== 'ALL_DAY');
+
+    // Resolve configured available hours for this date / weekday
+    const hasDateOverride = Array.isArray(availSched.date_hours?.[this.selectedDate]);
+    const rawBlocks = hasDateOverride
+      ? availSched.date_hours[this.selectedDate]
+      : (Array.isArray(availSched[dayOfWeekName]) ? availSched[dayOfWeekName] : ['09:00 - 17:00']);
+    const configuredHours = this.expandBlocksToHours(rawBlocks);
+
+    const savedMode = availSched.date_modes?.[this.selectedDate] || availSched.day_modes?.[dayOfWeekName] || (configuredHours.length >= 11 ? 'all_day' : 'specific');
+    const activeMode = this.editingHoursMode || (savedMode === 'all_day' ? 'all_day' : 'specific');
+
+    const defaultStartHour = configuredHours.length > 0 ? configuredHours[0] : 9;
+    const defaultEndHour = configuredHours.length > 0 ? (configuredHours[configuredHours.length - 1] + 1) : 17;
 
     const timeSlots = [
-      '09:00 AM', '10:00 AM', '11:00 AM', '12:00 PM',
+      '08:00 AM', '09:00 AM', '10:00 AM', '11:00 AM', '12:00 PM',
       '01:00 PM', '02:00 PM', '03:00 PM', '04:00 PM',
-      '05:00 PM', '06:00 PM', '07:00 PM'
+      '05:00 PM', '06:00 PM', '07:00 PM', '08:00 PM'
     ];
+
+    const startHourOptions = [];
+    const endHourOptions = [];
+    for (let h = 8; h <= 20; h++) {
+      const val24 = `${String(h).padStart(2, '0')}:00`;
+      const lbl12 = this.formatHour12Label(h);
+      startHourOptions.push(`<option value="${val24}" ${h === defaultStartHour ? 'selected' : ''}>${lbl12} (${val24})</option>`);
+    }
+    for (let h = 9; h <= 21; h++) {
+      const val24 = `${String(h).padStart(2, '0')}:00`;
+      const lbl12 = this.formatHour12Label(h);
+      endHourOptions.push(`<option value="${val24}" ${h === defaultEndHour ? 'selected' : ''}>${lbl12} (${val24})</option>`);
+    }
+
+    const activeHoursDisplayText = isDateOccupied
+      ? 'Not Available / Date Occupied (Blocked for Student Bookings)'
+      : (savedMode === 'all_day'
+          ? 'Available All Day (08:00 AM – 08:00 PM)'
+          : (rawBlocks.length > 0 ? `Specific Time Slots (${rawBlocks.join(', ')})` : 'No active hours configured'));
 
     panel.innerHTML = `
       <div class="date-schedule-header">
         <div>
-          <h3 class="date-schedule-title">
-            ${Icons.calendar(20)} Schedule for ${formattedDate}
-          </h3>
+          <div style="display: flex; align-items: center; gap: 0.65rem; flex-wrap: wrap;">
+            <h3 class="date-schedule-title">
+              ${Icons.calendar(20)} Schedule for ${formattedDate}
+            </h3>
+            ${isDateOccupied ? `
+              <span class="status-pill declined" style="font-size: 0.72rem; padding: 0.2rem 0.65rem;">🚫 Not Available / Date Occupied</span>
+            ` : `
+              <span class="status-pill accepted" style="font-size: 0.72rem; padding: 0.2rem 0.65rem;">🟢 Date Open for Student Bookings</span>
+            `}
+          </div>
           <p style="margin: 0.25rem 0 0; font-size: 0.85rem; color: var(--text-secondary);">
-            Click any slot below to toggle Availability, or inspect student sessions booked on this date.
+            Mark this date as unavailable/occupied or customize your available hours under Time Slot Availability. All changes sync immediately to students.
           </p>
         </div>
         <div class="date-schedule-actions">
-          <button type="button" class="btn btn-outline-gold btn-sm" onclick="Teacher.bulkSetDayAvailability('free_all')">
-            🟢 Set All Slots Available
-          </button>
-          <button type="button" class="btn btn-secondary btn-sm" onclick="Teacher.bulkSetDayAvailability('block_all')">
-            🔒 Block Entire Day
-          </button>
+          ${isDateOccupied ? `
+            <button type="button" class="btn btn-primary btn-sm" onclick="Teacher.bulkSetDayAvailability('date_available')" style="background: #10B981; border-color: #10B981;">
+              🟢 Mark Date Available
+            </button>
+          ` : `
+            <button type="button" class="btn btn-sm btn-mark-date-unavailable" onclick="Teacher.bulkSetDayAvailability('date_occupied')">
+              🚫 Not Available / Date Occupied
+            </button>
+            <button type="button" class="btn btn-outline-gold btn-sm" onclick="Teacher.bulkSetDayAvailability('date_available')">
+              🟢 Set All Slots Available
+            </button>
+          `}
         </div>
       </div>
 
@@ -2540,9 +2656,15 @@ const Teacher = {
 
           ${dayApts.length === 0 ? `
             <div style="padding: 2rem 1.5rem; text-align: center; color: var(--text-secondary); background: rgba(0,0,0,0.02); border-radius: var(--radius-lg); border: 1px dashed var(--border-color);">
-              <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">📅</div>
-              <strong style="color: var(--text-primary); font-size: 0.95rem;">No Classes Booked on this Date</strong>
-              <p style="margin: 0.25rem 0 0; font-size: 0.825rem;">Open slots on this day are ready for students to reserve.</p>
+              <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">${isDateOccupied ? '🚫' : '📅'}</div>
+              <strong style="color: var(--text-primary); font-size: 0.95rem;">
+                ${isDateOccupied ? 'Date Marked as Not Available / Date Occupied' : 'No Classes Booked on this Date'}
+              </strong>
+              <p style="margin: 0.25rem 0 0; font-size: 0.825rem;">
+                ${isDateOccupied
+                  ? 'Students see that this date is unavailable when they set up their schedule.'
+                  : 'Open slots on this day are ready for students to reserve.'}
+              </p>
             </div>
           ` : `
             <div style="display: flex; flex-direction: column; gap: 0.75rem;">
@@ -2581,13 +2703,83 @@ const Teacher = {
         <div>
           <div class="date-schedule-col-title">
             <span>Time Slot Availability</span>
-            <span style="font-size: 0.75rem; color: var(--gold-400); font-weight: 600;">⚡ Click to toggle</span>
+            <span style="font-size: 0.75rem; color: var(--gold-400); font-weight: 600;">⚡ Reflected live for students</span>
+          </div>
+
+          <!-- Specify & Edit Available Hours Card -->
+          <div class="time-slot-availability-editor">
+            <div class="tsa-current-bar">
+              <div>
+                <div class="tsa-current-label">Current Availability Hours (${dayOfWeekName})</div>
+                <div class="tsa-current-value ${isDateOccupied ? 'is-occupied' : ''}">${activeHoursDisplayText}</div>
+              </div>
+              <button type="button" class="btn btn-outline-gold btn-sm" onclick="Teacher.toggleHoursEditor()" style="padding: 0.3rem 0.7rem; font-size: 0.76rem; font-weight: 700;">
+                ${this.showHoursEditor ? '✕ Close Editor' : '✏️ Edit Available Hours'}
+              </button>
+            </div>
+
+            <div class="tsa-mode-pills-row">
+              <button type="button" class="tsa-mode-pill ${!isDateOccupied && activeMode === 'all_day' ? 'active' : ''}" onclick="Teacher.selectAvailabilityMode('all_day')">
+                🌞 Available All Day (08:00 AM – 08:00 PM)
+              </button>
+              <button type="button" class="tsa-mode-pill ${!isDateOccupied && activeMode === 'specific' ? 'active' : ''}" onclick="Teacher.selectAvailabilityMode('specific')">
+                🎯 Only During Specific Time Slots
+              </button>
+            </div>
+
+            <div id="teacher-hours-editor-body" class="tsa-editor-body" style="display: ${this.showHoursEditor || activeMode === 'specific' ? 'block' : 'none'};">
+              ${activeMode === 'all_day' ? `
+                <div style="font-size: 0.82rem; color: var(--text-secondary); margin-bottom: 0.75rem;">
+                  You are set to <strong>Available All Day (08:00 AM – 08:00 PM)</strong>. Students can book any open 50-minute session throughout the day.
+                </div>
+              ` : `
+                <div class="tsa-time-range-grid">
+                  <div>
+                    <label class="tsa-field-label">Available From (Start Hour)</label>
+                    <select id="tsa-start-hour" class="form-control tsa-select">
+                      ${startHourOptions.join('')}
+                    </select>
+                  </div>
+                  <div>
+                    <label class="tsa-field-label">Available Until (End Hour)</label>
+                    <select id="tsa-end-hour" class="form-control tsa-select">
+                      ${endHourOptions.join('')}
+                    </select>
+                  </div>
+                </div>
+                <div style="font-size: 0.76rem; color: var(--text-secondary); margin-top: 0.45rem; margin-bottom: 0.75rem;">
+                  💡 Tip: Set your start &amp; end hours above and click <strong>Save Available Hours</strong>, or click individual time slot pills below to toggle specific hours.
+                </div>
+              `}
+
+              <div class="tsa-save-row">
+                <div style="flex: 1; min-width: 170px;">
+                  <label class="tsa-field-label">Apply Schedule Changes To</label>
+                  <select id="tsa-apply-scope" class="form-control tsa-select">
+                    <option value="weekday" selected>Every ${dayOfWeekName} (including ${this.selectedDate})</option>
+                    <option value="date">Selected Date Only (${this.selectedDate})</option>
+                    <option value="all_days">All Days of the Week (Mon–Sun)</option>
+                  </select>
+                </div>
+                <button type="button" class="btn btn-primary btn-sm" onclick="Teacher.saveTimeSlotAvailabilityHours('${activeMode}')" style="height: 36px; padding: 0 1rem; font-weight: 700; white-space: nowrap;">
+                  💾 Save Available Hours
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div style="display: flex; justify-content: space-between; align-items: center; margin: 0.85rem 0 0.55rem; font-size: 0.78rem; color: var(--text-secondary);">
+            <span><strong>Hourly Time Slots</strong> (Click any slot to toggle Available / Occupied)</span>
           </div>
 
           <div class="date-slot-pills-grid">
             ${timeSlots.map(slot => {
+      const slotParsed = this.parseTimeHour(slot);
+      const slotHour = slotParsed ? slotParsed.hour : null;
       const booked = dayApts.find(a => this.doesTimeMatchSlot(a.requested_time, slot));
-      const isOccupied = dayOccupied.some(o => o.time_slot === slot || this.doesTimeMatchSlot(o.time_slot, slot));
+      const isExplicitlyOccupied = dayOccupied.some(o => o.time_slot === slot || this.doesTimeMatchSlot(o.time_slot, slot));
+      const isWithinConfiguredHours = configuredHours.length === 0 ? false : (slotHour !== null ? configuredHours.includes(slotHour) : true);
+      const isOccupied = isDateOccupied || isExplicitlyOccupied || !isWithinConfiguredHours;
 
       if (booked) {
         return `
@@ -2602,9 +2794,9 @@ const Teacher = {
         return `
                   <div class="date-slot-pill is-occupied" 
                        onclick="Teacher.toggleOccupiedSlot('${dayOfWeekName}', '${slot}', 'Unavailable', '${this.selectedDate}')"
-                       title="Marked Unavailable. Click to make Open & Available.">
+                       title="${isDateOccupied ? 'Date marked Not Available / Occupied. Click to make this slot available.' : 'Unavailable / Occupied. Click to make Open & Available.'}">
                     <span class="slot-pill-time">${slot}</span>
-                    <span class="slot-pill-status">🔒 Blocked</span>
+                    <span class="slot-pill-status">${isDateOccupied ? '🚫 Date Occupied' : '🔒 Unavailable'}</span>
                   </div>
                 `;
       }
@@ -2612,7 +2804,7 @@ const Teacher = {
       return `
                 <div class="date-slot-pill is-available" 
                      onclick="Teacher.toggleOccupiedSlot('${dayOfWeekName}', '${slot}', 'Unavailable', '${this.selectedDate}')"
-                     title="Available for bookings. Click to mark Unavailable.">
+                     title="Available for student bookings. Click to mark Unavailable.">
                   <span class="slot-pill-time">${slot}</span>
                   <span class="slot-pill-status">🟢 Available</span>
                 </div>
@@ -2622,6 +2814,68 @@ const Teacher = {
         </div>
       </div>
     `;
+  },
+
+  toggleHoursEditor() {
+    this.showHoursEditor = !this.showHoursEditor;
+    this.renderDateSchedulePanel();
+  },
+
+  async selectAvailabilityMode(mode) {
+    this.editingHoursMode = mode;
+    this.showHoursEditor = true;
+    if (mode === 'all_day') {
+      await this.saveTimeSlotAvailabilityHours('all_day');
+    } else {
+      this.renderDateSchedulePanel();
+    }
+  },
+
+  async saveTimeSlotAvailabilityHours(modeOverride) {
+    if (this.application?.status !== 'approved') {
+      showToast('Operational Lock: Schedule availability unlocks once your account has been approved by the Administrator following your virtual interview.', 'warning');
+      return;
+    }
+    try {
+      const mode = modeOverride || this.editingHoursMode || 'specific';
+      const dateObj = new Date((this.selectedDate || '') + 'T00:00:00');
+      const dayOfWeekName = dateObj.toLocaleDateString('en-US', { weekday: 'long' });
+      const startEl = document.getElementById('tsa-start-hour');
+      const endEl = document.getElementById('tsa-end-hour');
+      const scopeEl = document.getElementById('tsa-apply-scope');
+
+      const startTime = startEl ? startEl.value : '09:00';
+      const endTime = endEl ? endEl.value : '17:00';
+      const applyScope = scopeEl ? scopeEl.value : 'weekday';
+
+      if (mode === 'specific') {
+        const sH = parseInt(startTime.split(':')[0], 10);
+        const eH = parseInt(endTime.split(':')[0], 10);
+        if (eH <= sH) {
+          showToast('Available end hour must be after the start hour.', 'warning');
+          return;
+        }
+      }
+
+      const res = await API.setDayAvailability({
+        date: this.selectedDate,
+        day_of_week: dayOfWeekName,
+        action: 'save_hours',
+        mode,
+        start_time: startTime,
+        end_time: endTime,
+        apply_scope: applyScope
+      });
+
+      this.editingHoursMode = mode;
+      showToast(res.message || 'Available hours saved and reflected for students!', 'success');
+      await this.loadSchedule();
+      if (typeof Tutors !== 'undefined' && typeof Tutors.loadTutors === 'function') {
+        Tutors.loadTutors();
+      }
+    } catch (err) {
+      showToast(err.message || 'Failed to save available hours.', 'error');
+    }
   },
 
   renderUpcomingAppointmentsList() {
@@ -2685,6 +2939,9 @@ const Teacher = {
 
       showToast(res.message, res.isOccupied ? 'info' : 'success');
       await this.loadSchedule();
+      if (typeof Tutors !== 'undefined' && typeof Tutors.loadTutors === 'function') {
+        Tutors.loadTutors();
+      }
     } catch (err) {
       showToast(err.message || 'Failed to update schedule slot.', 'error');
     }
@@ -2703,8 +2960,11 @@ const Teacher = {
         day_of_week: dayOfWeekName,
         action
       });
-      showToast(res.message, 'success');
+      showToast(res.message, (action === 'date_occupied' || action === 'block_all') ? 'info' : 'success');
       await this.loadSchedule();
+      if (typeof Tutors !== 'undefined' && typeof Tutors.loadTutors === 'function') {
+        Tutors.loadTutors();
+      }
     } catch (err) {
       showToast(err.message || 'Failed to update schedule: ' + err.message, 'error');
     }

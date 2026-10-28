@@ -292,6 +292,7 @@ function normalizeAvailabilitySchedule(rawInput) {
     day_modes: safeParseObject(raw.day_modes),
     date_hours: safeParseObject(raw.date_hours),
     date_modes: safeParseObject(raw.date_modes),
+    date_notes: safeParseObject(raw.date_notes),
     unavailable_dates: Array.isArray(raw.unavailable_dates) ? Array.from(new Set(raw.unavailable_dates.filter(Boolean))) : []
   };
 
@@ -4511,8 +4512,28 @@ app.post('/api/teacher/schedule/set-day-availability', authenticateToken, requir
         availabilitySchedule: live.availability_schedule,
         unavailableDates: live.unavailable_dates
       });
+    } else if (action === 'save_date_note') {
+      if (!schedule.date_notes || typeof schedule.date_notes !== 'object') {
+        schedule.date_notes = {};
+      }
+      const noteVal = typeof req.body.note === 'string' ? req.body.note.trim() : '';
+      if (date) {
+        if (noteVal) {
+          schedule.date_notes[date] = noteVal;
+        } else {
+          delete schedule.date_notes[date];
+        }
+      }
+      saveTutorAvailabilitySchedule(teacherId, schedule);
+      const live = getTutorLiveAvailability(teacherId, schedule);
+      return res.json({
+        message: noteVal ? `Note saved for ${date}.` : `Note removed for ${date}.`,
+        date_notes: schedule.date_notes,
+        availabilitySchedule: live.availability_schedule,
+        unavailableDates: live.unavailable_dates
+      });
     } else {
-      return res.status(400).json({ error: 'Invalid action. Supported actions are "free_all", "date_available", "block_all", "date_occupied", or "save_hours".' });
+      return res.status(400).json({ error: 'Invalid action. Supported actions are "free_all", "date_available", "block_all", "date_occupied", "save_hours", or "save_date_note".' });
     }
   } catch (error) {
     console.error('Set day availability error:', error);

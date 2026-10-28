@@ -19,6 +19,8 @@ const Teacher = {
   students: [],
   tasks: [],
   scheduleData: { appointments: [], occupiedSlots: [] },
+  dateNotes: {},
+  isEditingDateNote: false,
   calYear: new Date().getFullYear(),
   calMonth: new Date().getMonth(),
   selectedDate: (() => {
@@ -2275,6 +2277,17 @@ const Teacher = {
     try {
       const data = await API.getTeacherSchedule();
       this.scheduleData = data || { appointments: [], occupiedSlots: [] };
+
+      // Load educator personal date notes (both from server & localStorage)
+      const user = Auth.currentUser;
+      const localKey = user ? `aviora_teacher_date_notes_${user.id}` : null;
+      let localNotes = {};
+      if (localKey) {
+        try { localNotes = JSON.parse(localStorage.getItem(localKey) || '{}'); } catch (e) {}
+      }
+      const serverNotes = data?.availabilitySchedule?.date_notes || {};
+      this.dateNotes = Object.assign({}, localNotes, serverNotes);
+
       this.renderSchedule();
     } catch (err) {
       console.error('Failed to load teacher schedule:', err);
@@ -2483,33 +2496,28 @@ const Teacher = {
       const isDateOccupied = this.isDateMarkedUnavailable(dateStr, dayOfWeekName);
 
       const dayApts = aptsByDate[dateStr] || [];
-      const dayOccupied = occupiedSlots.filter(o => (o.date === dateStr || (!o.date && o.day_of_week === dayOfWeekName)) && o.time_slot !== 'ALL_DAY');
+      const hasPersonalNote = !!(this.dateNotes && this.dateNotes[dateStr]);
+      const personalNote = hasPersonalNote ? this.dateNotes[dateStr] : '';
+      const hasStudentNotes = dayApts.some(a => a.notes);
 
       cellsHtml += `
         <div class="teacher-cal-day-cell ${isToday ? 'is-today' : ''} ${isSelected ? 'is-selected' : ''} ${isDateOccupied ? 'is-date-occupied' : ''}" 
-             onclick="Teacher.selectCalendarDate('${dateStr}')">
+             onclick="Teacher.selectCalendarDate('${dateStr}')"
+             title="${dayOfWeekName}, ${dateStr}${isDateOccupied ? ' • Marked Occupied' : ''}${dayApts.length > 0 ? ` • ${dayApts.length} class(es)` : ''}${hasPersonalNote ? ` • Note: ${personalNote}` : ''} — Click to view notes & schedule">
           <div class="teacher-cal-day-header">
             <span class="teacher-cal-day-num">${day}</span>
-            ${isDateOccupied ? `<span class="cal-date-occupied-badge">Occupied</span>` : (dayApts.length > 0 ? `<span class="cal-classes-badge">${dayApts.length} class${dayApts.length === 1 ? '' : 'es'}</span>` : '')}
+            ${hasPersonalNote || hasStudentNotes ? `<span class="cal-note-indicator-dot" title="Has Notes (Click to view)">📝</span>` : ''}
           </div>
-          <div class="teacher-cal-events-list">
+          <div class="teacher-cal-compact-indicators">
             ${isDateOccupied ? `
-              <div class="cal-event-chip chip-date-unavailable" title="Marked Not Available / Date Occupied — Students cannot book on this date">
-                🚫 Not Available / Date Occupied
-              </div>
-            ` : ''}
-            ${dayApts.slice(0, 2).map(apt => `
-              <div class="cal-event-chip chip-class" title="${apt.student_name}: ${apt.subject} (${apt.requested_time})">
-                <span class="chip-time">${apt.requested_time}</span>
-                <span class="chip-student">${apt.student_name} · ${apt.subject}</span>
-              </div>
-            `).join('')}
-            ${dayApts.length > 2 ? `<div class="cal-more-events">+${dayApts.length - 2} more classes</div>` : ''}
-            ${!isDateOccupied && dayOccupied.length > 0 && dayApts.length <= 1 ? `
-              <div class="cal-event-chip chip-occupied" title="${dayOccupied.length} slot(s) marked unavailable">
-                🔒 ${dayOccupied.length} slot${dayOccupied.length === 1 ? '' : 's'} unavailable
-              </div>
-            ` : ''}
+              <span class="cal-mini-badge badge-occupied">🚫 Occupied</span>
+            ` : dayApts.length > 0 ? `
+              <span class="cal-mini-badge badge-class">
+                ● ${dayApts.length === 1 ? (dayApts[0].requested_time || '1 class') : `${dayApts.length} classes`}
+              </span>
+            ` : (hasPersonalNote ? `
+              <span class="cal-mini-badge badge-note">📝 Note</span>
+            ` : '')}
           </div>
         </div>
       `;
@@ -2547,6 +2555,12 @@ const Teacher = {
     }
     this.renderCalendar();
     this.renderDateSchedulePanel();
+
+    // Smooth scroll down to date schedule & notes panel so the note is instantly visible
+    const panel = document.getElementById('teacher-date-schedule-panel');
+    if (panel) {
+      panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
   },
 
   renderDateSchedulePanel() {
@@ -2613,6 +2627,8 @@ const Teacher = {
           ? 'Available All Day (08:00 AM – 08:00 PM)'
           : (rawBlocks.length > 0 ? `Specific Time Slots (${rawBlocks.join(', ')})` : 'No active hours configured'));
 
+    const savedDateNote = (this.dateNotes && this.dateNotes[this.selectedDate]) || '';
+
     panel.innerHTML = `
       <div class="date-schedule-header">
         <div>
@@ -2627,7 +2643,7 @@ const Teacher = {
             `}
           </div>
           <p style="margin: 0.25rem 0 0; font-size: 0.85rem; color: var(--text-secondary);">
-            Mark this date as unavailable/occupied or customize your available hours under Time Slot Availability. All changes sync immediately to students.
+            Click any date on the calendar above to view notes &amp; schedule details for that date.
           </p>
         </div>
         <div class="date-schedule-actions">
@@ -2643,6 +2659,85 @@ const Teacher = {
               🟢 Set All Slots Available
             </button>
           `}
+        </div>
+      </div>
+
+      <!-- Selected Date Notes Section (View & Edit Date Note) -->
+      <div class="date-notes-section">
+        <div class="date-notes-title-row">
+          <h4 class="date-notes-title">
+            <span>📝 Notes &amp; Session Focus for ${formattedDate}</span>
+          </h4>
+          <div style="display: flex; gap: 0.4rem; align-items: center;">
+            ${savedDateNote && !this.isEditingDateNote ? `
+              <button type="button" class="btn btn-outline-gold btn-sm" onclick="Teacher.toggleEditDateNote()" style="padding: 0.25rem 0.65rem; font-size: 0.76rem;">
+                ✏️ Edit Note
+              </button>
+              <button type="button" class="btn btn-secondary btn-sm" onclick="Teacher.deleteDateNote('${this.selectedDate}')" style="padding: 0.25rem 0.65rem; font-size: 0.76rem; color: #EF4444;">
+                ✕ Clear
+              </button>
+            ` : !this.isEditingDateNote ? `
+              <button type="button" class="btn btn-outline-gold btn-sm" onclick="Teacher.toggleEditDateNote()" style="padding: 0.25rem 0.65rem; font-size: 0.76rem;">
+                + Add Date Note
+              </button>
+            ` : ''}
+          </div>
+        </div>
+
+        <div class="date-notes-grid">
+          ${isDateOccupied ? `
+            <div class="date-note-box occupied-note-box">
+              <div class="date-note-header">
+                <span class="date-note-badge" style="color: #DC2626;">🚫 Date Availability Status</span>
+                <span class="status-pill declined" style="font-size: 0.68rem; padding: 0.1rem 0.45rem;">Occupied</span>
+              </div>
+              <div class="date-note-body" style="font-style: normal; color: #B91C1C;">
+                This date is marked as <strong>Not Available / Date Occupied</strong>. Student bookings are disabled on this date.
+              </div>
+            </div>
+          ` : ''}
+
+          <!-- Personal Educator Note / Reminders -->
+          <div class="date-note-box personal-note-box">
+            <div class="date-note-header">
+              <span class="date-note-badge" style="color: #2563EB;">📌 Personal Educator Note / Reminders</span>
+            </div>
+            ${this.isEditingDateNote ? `
+              <div style="margin-top: 0.5rem;">
+                <textarea id="teacher-date-note-input" class="form-control" rows="2" style="font-size: 0.85rem;" placeholder="Write a note, student prep reminders, or task checklist for ${formattedDate}...">${savedDateNote || ''}</textarea>
+                <div style="display: flex; justify-content: flex-end; gap: 0.45rem; margin-top: 0.45rem;">
+                  <button type="button" class="btn btn-secondary btn-sm" onclick="Teacher.toggleEditDateNote()">Cancel</button>
+                  <button type="button" class="btn btn-primary btn-sm" onclick="Teacher.saveDateNote('${this.selectedDate}')">Save Note</button>
+                </div>
+              </div>
+            ` : savedDateNote ? `
+              <div class="date-note-body" style="font-style: normal; color: var(--text-primary);">
+                ${this.escapeHtml(savedDateNote)}
+              </div>
+            ` : `
+              <div class="date-note-empty">
+                No personal note added for this date. Click <strong>+ Add Date Note</strong> above to write reminders or lesson prep.
+              </div>
+            `}
+          </div>
+
+          <!-- Student Focus & Booking Notes for this Date -->
+          ${dayApts.length > 0 ? dayApts.filter(a => a.notes).map(apt => `
+            <div class="date-note-box student-focus-box">
+              <div class="date-note-header">
+                <span class="date-note-badge">🎓 Student Session Focus &amp; Note</span>
+                <span class="date-note-author">${apt.student_name} (${apt.subject} • ${apt.requested_time})</span>
+              </div>
+              <div class="date-note-body">
+                "${this.escapeHtml(apt.notes)}"
+              </div>
+              ${apt.tutor_response_note ? `
+                <div class="date-note-response">
+                  <strong>Your Note / Response:</strong> ${this.escapeHtml(apt.tutor_response_note)}
+                </div>
+              ` : ''}
+            </div>
+          `).join('') : ''}
         </div>
       </div>
 
@@ -2669,30 +2764,43 @@ const Teacher = {
           ` : `
             <div style="display: flex; flex-direction: column; gap: 0.75rem;">
               ${dayApts.map(apt => `
-                <div class="appointment-card" style="margin-bottom: 0;">
-                  <div style="display: flex; gap: 0.75rem; align-items: center;">
-                    <img src="${apt.student_avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=80&q=80'}" class="appointment-avatar" />
-                    <div>
-                      <strong style="color: var(--text-primary); font-size: 0.95rem;">${apt.student_name}</strong>
-                      <div style="font-size: 0.8rem; color: var(--text-secondary);">${apt.subject} • <span class="status-pill ${apt.status}" style="font-size: 0.68rem; padding: 0.1rem 0.45rem;">${(apt.status || 'accepted').toUpperCase()}</span></div>
+                <div class="appointment-card" style="margin-bottom: 0.5rem; flex-direction: column; align-items: stretch;">
+                  <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+                    <div style="display: flex; gap: 0.75rem; align-items: center;">
+                      <img src="${apt.student_avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=80&q=80'}" class="appointment-avatar" />
+                      <div>
+                        <strong style="color: var(--text-primary); font-size: 0.95rem;">${apt.student_name}</strong>
+                        <div style="font-size: 0.8rem; color: var(--text-secondary);">${apt.subject} • <span class="status-pill ${apt.status}" style="font-size: 0.68rem; padding: 0.1rem 0.45rem;">${(apt.status || 'accepted').toUpperCase()}</span></div>
+                      </div>
+                    </div>
+                    <div class="appointment-meta">
+                      <div>${Icons.clock(14)} ${apt.requested_time}</div>
+                      <div>${apt.hourly_rate ? `$${apt.hourly_rate}/hr` : 'Booked'}</div>
+                    </div>
+                    <div style="display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap;">
+                      ${!this.isApproved() ? `
+                        <span class="badge" style="background: rgba(245, 158, 11, 0.15); color: #D97706; font-size: 0.75rem; padding: 0.3rem 0.6rem; border-radius: 4px;" title="Operations locked while application is under review">🔒 Locked</span>
+                      ` : apt.status === 'completed' ? `
+                        <span style="font-size: 0.78rem; color: #10B981; font-weight: 700;">✓ Completed</span>
+                      ` : apt.room_status === 'open' ? `
+                        <button class="btn btn-primary btn-sm" onclick="VirtualRoom.joinRoom(${apt.id}, 'tutor')" style="background: #10B981; border-color: #10B981;">Enter (Live)</button>
+                      ` : `
+                        <button class="btn btn-secondary btn-sm" onclick="VirtualRoom.openRoomAsTutor(${apt.id})">Open Room</button>
+                        <button class="btn btn-outline-gold btn-sm" onclick="Teacher.updateStatus(${apt.id}, 'completed', this)">Done</button>
+                      `}
                     </div>
                   </div>
-                  <div class="appointment-meta">
-                    <div>${Icons.clock(14)} ${apt.requested_time}</div>
-                    <div>${apt.hourly_rate ? `$${apt.hourly_rate}/hr` : 'Booked'}</div>
-                  </div>
-                  <div style="display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap;">
-                    ${!this.isApproved() ? `
-                      <span class="badge" style="background: rgba(245, 158, 11, 0.15); color: #D97706; font-size: 0.75rem; padding: 0.3rem 0.6rem; border-radius: 4px;" title="Operations locked while application is under review">🔒 Locked</span>
-                    ` : apt.status === 'completed' ? `
-                      <span style="font-size: 0.78rem; color: #10B981; font-weight: 700;">✓ Completed</span>
-                    ` : apt.room_status === 'open' ? `
-                      <button class="btn btn-primary btn-sm" onclick="VirtualRoom.joinRoom(${apt.id}, 'tutor')" style="background: #10B981; border-color: #10B981;">Enter (Live)</button>
-                    ` : `
-                      <button class="btn btn-secondary btn-sm" onclick="VirtualRoom.openRoomAsTutor(${apt.id})">Open Room</button>
-                      <button class="btn btn-outline-gold btn-sm" onclick="Teacher.updateStatus(${apt.id}, 'completed', this)">Done</button>
-                    `}
-                  </div>
+                  ${apt.notes ? `
+                    <div class="date-note-box student-focus-box" style="margin-top: 0.65rem; padding: 0.6rem 0.8rem; font-size: 0.82rem;">
+                      <div class="date-note-header" style="margin-bottom: 0.2rem;">
+                        <span class="date-note-badge">📝 Student Focus / Note:</span>
+                      </div>
+                      <div class="date-note-body" style="font-size: 0.82rem;">"${this.escapeHtml(apt.notes)}"</div>
+                      ${apt.tutor_response_note ? `
+                        <div class="date-note-response" style="font-size: 0.76rem;"><strong>Your Note:</strong> ${this.escapeHtml(apt.tutor_response_note)}</div>
+                      ` : ''}
+                    </div>
+                  ` : ''}
                 </div>
               `).join('')}
             </div>
@@ -2814,6 +2922,72 @@ const Teacher = {
         </div>
       </div>
     `;
+  },
+
+  toggleEditDateNote() {
+    this.isEditingDateNote = !this.isEditingDateNote;
+    this.renderDateSchedulePanel();
+    if (this.isEditingDateNote) {
+      setTimeout(() => {
+        const inp = document.getElementById('teacher-date-note-input');
+        if (inp) inp.focus();
+      }, 50);
+    }
+  },
+
+  async saveDateNote(dateStr) {
+    const input = document.getElementById('teacher-date-note-input');
+    const noteText = input ? input.value.trim() : '';
+    const user = Auth.currentUser;
+    const localKey = user ? `aviora_teacher_date_notes_${user.id}` : null;
+
+    if (!this.dateNotes) this.dateNotes = {};
+    if (noteText) {
+      this.dateNotes[dateStr] = noteText;
+    } else {
+      delete this.dateNotes[dateStr];
+    }
+
+    if (localKey) {
+      try { localStorage.setItem(localKey, JSON.stringify(this.dateNotes)); } catch (e) {}
+    }
+
+    this.isEditingDateNote = false;
+    this.renderCalendar();
+    this.renderDateSchedulePanel();
+
+    try {
+      await API.post('/teacher/schedule/set-day-availability', {
+        date: dateStr,
+        action: 'save_date_note',
+        note: noteText
+      });
+      showToast(noteText ? `Note saved for ${dateStr}!` : `Note cleared for ${dateStr}.`, 'success');
+    } catch (err) {
+      showToast('Note saved locally.', 'info');
+    }
+  },
+
+  async deleteDateNote(dateStr) {
+    const user = Auth.currentUser;
+    const localKey = user ? `aviora_teacher_date_notes_${user.id}` : null;
+    if (this.dateNotes) {
+      delete this.dateNotes[dateStr];
+    }
+    if (localKey) {
+      try { localStorage.setItem(localKey, JSON.stringify(this.dateNotes)); } catch (e) {}
+    }
+    this.isEditingDateNote = false;
+    this.renderCalendar();
+    this.renderDateSchedulePanel();
+    try {
+      await API.post('/teacher/schedule/set-day-availability', {
+        date: dateStr,
+        action: 'save_date_note',
+        note: ''
+      });
+      showToast('Note removed.', 'info');
+    } catch (err) {}
   },
 
   toggleHoursEditor() {

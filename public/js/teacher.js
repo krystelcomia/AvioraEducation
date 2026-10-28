@@ -876,6 +876,10 @@ const Teacher = {
     `).join('');
   },
 
+  renderDashboard() {
+    this.renderTeacherRequests();
+  },
+
   renderTeacherRequests() {
     const container = document.getElementById('teacher-requests-table-body');
     if (!container) return;
@@ -1056,9 +1060,15 @@ const Teacher = {
       }
 
       // Re-render active views immediately
-      this.renderClasses();
-      this.renderSchedule();
-      this.renderDashboard();
+      try {
+        this.renderClasses();
+        this.renderSchedule();
+        if (typeof this.renderTeacherRequests === 'function') {
+          this.renderTeacherRequests();
+        }
+      } catch (renderErr) {
+        console.error('Error re-rendering teacher views:', renderErr);
+      }
 
       showToast(res.message || `Class updated (${actionType.toUpperCase()}).`, 'success');
 
@@ -1069,11 +1079,11 @@ const Teacher = {
       }
 
       // Sync all teacher datasets with SQLite in background
-      await Promise.all([
+      Promise.all([
         this.loadClasses(),
         this.loadSchedule(),
         this.loadTeacherDashboard()
-      ]);
+      ]).catch(bgErr => console.error('Background sync error:', bgErr));
     } catch (err) {
       if (btnEl) {
         btnEl.disabled = false;

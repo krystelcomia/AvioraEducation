@@ -12,6 +12,8 @@
 const Teacher = {
   application: null,
   tutorProfile: null,
+  subjects: [],
+  subjectRates: {},
   requests: [],
   classes: [],
   students: [],
@@ -960,15 +962,259 @@ const Teacher = {
   },
 
   // ==============================================================
-  // 2. VIRTUAL CLASSES & SESSIONS
+  // 2. VIRTUAL CLASSES & SESSIONS + SUBJECTS & INDIVIDUAL RATES
   // ==============================================================
   async loadClasses() {
     try {
       const data = await API.getTeacherClasses();
       this.classes = data.classes || [];
+      if (Array.isArray(data.subjects)) {
+        this.subjects = data.subjects;
+      } else if (Array.isArray(this.tutorProfile?.subjects)) {
+        this.subjects = this.tutorProfile.subjects;
+      } else if (Array.isArray(this.application?.subjects)) {
+        this.subjects = this.application.subjects;
+      }
+      if (data.subject_rates && typeof data.subject_rates === 'object') {
+        this.subjectRates = data.subject_rates;
+      } else if (this.tutorProfile?.subject_rates && typeof this.tutorProfile.subject_rates === 'object') {
+        this.subjectRates = this.tutorProfile.subject_rates;
+      } else if (this.application?.subject_rates && typeof this.application.subject_rates === 'object') {
+        this.subjectRates = this.application.subject_rates;
+      }
+      this.renderTeacherSubjects();
       this.renderClasses();
     } catch (err) {
       console.error('Failed to load teacher classes:', err);
+    }
+  },
+
+  escapeSubjectAttr(str) {
+    return String(str || '')
+      .replace(/&/g, '&amp;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+  },
+
+  renderTeacherSubjects() {
+    const grid = document.getElementById('teacher-subjects-rates-grid');
+    const countBadge = document.getElementById('teacher-subjects-count-badge');
+    const addBtn = document.getElementById('btn-teacher-add-subject');
+    const newNameInp = document.getElementById('teacher-new-subject-name');
+    const newRateInp = document.getElementById('teacher-new-subject-rate');
+    if (!grid) return;
+
+    const approved = this.isApproved();
+    const subjectsList = Array.isArray(this.subjects) ? this.subjects : [];
+    const ratesMap = this.subjectRates || {};
+    const defaultRate = Number(this.tutorProfile?.hourly_rate || this.application?.hourly_rate || 45);
+
+    if (countBadge) {
+      countBadge.textContent = `${subjectsList.length} ${subjectsList.length === 1 ? 'Subject' : 'Subjects'}`;
+    }
+
+    if (addBtn) {
+      addBtn.disabled = !approved;
+      addBtn.title = approved ? 'Add new subject or specialization with its specific rate' : 'Operations locked while application is under review';
+    }
+    if (newNameInp) newNameInp.disabled = !approved;
+    if (newRateInp) newRateInp.disabled = !approved;
+
+    if (subjectsList.length === 0) {
+      grid.innerHTML = `
+        <div class="teacher-subject-empty">
+          No subjects or specializations listed yet. Add your first subject and its hourly rate below.
+        </div>
+      `;
+      return;
+    }
+
+    grid.innerHTML = subjectsList.map((subj, idx) => {
+      const rateVal = ratesMap[subj] !== undefined ? Number(ratesMap[subj]) : defaultRate;
+      const safeSubj = this.escapeSubjectAttr(subj);
+      return `
+        <div class="teacher-subject-rate-card" data-subject="${safeSubj}">
+          <div class="teacher-subject-card-top">
+            <div class="teacher-subject-name-wrap">
+              <span class="teacher-subject-icon">📚</span>
+              <div>
+                <div class="teacher-subject-name">${safeSubj}</div>
+                <div class="teacher-subject-meta">50-min 1-on-1 Session • Individual Rate</div>
+              </div>
+            </div>
+            <span class="teacher-subject-rate-pill">$${rateVal.toFixed(2)}/hr</span>
+          </div>
+
+          <div class="teacher-subject-card-controls">
+            <div class="subject-rate-input-group subject-rate-inline-group">
+              <span class="subject-rate-currency">$</span>
+              <input
+                type="number"
+                id="teacher-subj-rate-input-${idx}"
+                class="form-control subject-rate-inline-input"
+                min="5"
+                max="1000"
+                step="1"
+                value="${rateVal}"
+                ${!approved ? 'disabled' : ''}
+                aria-label="Hourly rate for ${safeSubj}"
+              />
+              <span class="subject-rate-unit">/hr</span>
+            </div>
+
+            <button
+              type="button"
+              class="btn btn-primary btn-sm teacher-subject-save-btn"
+              data-subject="${safeSubj}"
+              data-idx="${idx}"
+              onclick="Teacher.updateSubjectRateFromBtn(this)"
+              ${!approved ? 'disabled title="Locked while application is under review"' : 'title="Save rate for this subject"'}
+            >
+              Save Rate
+            </button>
+
+            ${subjectsList.length > 1 ? `
+              <button
+                type="button"
+                class="btn btn-secondary btn-sm teacher-subject-remove-btn"
+                data-subject="${safeSubj}"
+                onclick="Teacher.removeSubjectFromBtn(this)"
+                ${!approved ? 'disabled title="Locked while application is under review"' : 'title="Remove subject"'}
+              >
+                ✕
+              </button>
+            ` : ''}
+          </div>
+        </div>
+      `;
+    }).join('');
+  },
+
+  syncUpdatedSubjectsAcrossApp(res) {
+    if (!res) return;
+    if (Array.isArray(res.subjects)) this.subjects = res.subjects;
+    if (res.subject_rates && typeof res.subject_rates === 'object') this.subjectRates = res.subject_rates;
+
+    if (this.tutorProfile) {
+      this.tutorProfile.subjects = this.subjects;
+      this.tutorProfile.subject_rates = this.subjectRates;
+      if (res.hourly_rate) this.tutorProfile.hourly_rate = res.hourly_rate;
+    }
+    if (this.application) {
+      this.application.subjects = this.subjects;
+      this.application.subject_rates = this.subjectRates;
+      if (res.hourly_rate) this.application.hourly_rate = res.hourly_rate;
+    }
+
+    this.renderTeacherSubjects();
+
+    // Refresh public Tutors cache so Student views on the same session also reflect immediately
+    if (typeof Tutors !== 'undefined' && typeof Tutors.loadTutors === 'function') {
+      Tutors.loadTutors().catch(() => {});
+    }
+  },
+
+  async addSubjectSpecialization() {
+    if (!this.isApproved()) {
+      showToast('Operational Lock: Managing subjects and rates unlocks once your account is approved by the Administrator following your virtual interview.', 'warning');
+      return;
+    }
+    const nameInput = document.getElementById('teacher-new-subject-name');
+    const rateInput = document.getElementById('teacher-new-subject-rate');
+    const btn = document.getElementById('btn-teacher-add-subject');
+
+    const subject = (nameInput?.value || '').trim();
+    const rate = parseFloat(rateInput?.value);
+
+    if (!subject) {
+      showToast('Please enter a subject or area of specialization name.', 'warning');
+      return;
+    }
+    if (isNaN(rate) || rate < 5 || rate > 1000) {
+      showToast('Please enter a valid hourly rate between $5 and $1,000.', 'warning');
+      return;
+    }
+
+    try {
+      if (btn) {
+        btn.disabled = true;
+        btn.textContent = 'Saving...';
+      }
+      const res = await API.updateTeacherSubjects({
+        action: 'add',
+        subject,
+        rate
+      });
+      this.syncUpdatedSubjectsAcrossApp(res);
+      if (nameInput) nameInput.value = '';
+      await this.loadClasses();
+      showToast(`"${subject}" ($${rate.toFixed(2)}/hr) saved and synced to Student & Admin portals!`, 'success');
+    } catch (err) {
+      showToast(err.message || 'Failed to add subject.', 'error');
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = '+ Add Subject & Rate';
+      }
+    }
+  },
+
+  async updateSubjectRateFromBtn(btnEl) {
+    if (!this.isApproved()) {
+      showToast('Operational Lock: Managing subjects and rates unlocks once your account is approved by the Administrator.', 'warning');
+      return;
+    }
+    const subject = btnEl?.getAttribute('data-subject');
+    const idx = btnEl?.getAttribute('data-idx');
+    const rateInput = document.getElementById(`teacher-subj-rate-input-${idx}`);
+    const rate = parseFloat(rateInput?.value);
+
+    if (!subject) return;
+    if (isNaN(rate) || rate < 5 || rate > 1000) {
+      showToast('Please enter a valid hourly rate between $5 and $1,000.', 'warning');
+      return;
+    }
+
+    try {
+      btnEl.disabled = true;
+      btnEl.textContent = 'Saving...';
+      const res = await API.updateTeacherSubjects({
+        action: 'update',
+        subject,
+        rate
+      });
+      this.syncUpdatedSubjectsAcrossApp(res);
+      await this.loadClasses();
+      showToast(`Updated "${subject}" rate to $${rate.toFixed(2)}/hr (synced to Student & Admin).`, 'success');
+    } catch (err) {
+      showToast(err.message || 'Failed to update subject rate.', 'error');
+      btnEl.disabled = false;
+      btnEl.textContent = 'Save Rate';
+    }
+  },
+
+  async removeSubjectFromBtn(btnEl) {
+    if (!this.isApproved()) {
+      showToast('Operational Lock: Managing subjects and rates unlocks once your account is approved by the Administrator.', 'warning');
+      return;
+    }
+    const subject = btnEl?.getAttribute('data-subject');
+    if (!subject) return;
+
+    try {
+      btnEl.disabled = true;
+      const res = await API.updateTeacherSubjects({
+        action: 'remove',
+        subject
+      });
+      this.syncUpdatedSubjectsAcrossApp(res);
+      await this.loadClasses();
+      showToast(`Removed "${subject}" from your active subjects.`, 'info');
+    } catch (err) {
+      showToast(err.message || 'Failed to remove subject.', 'error');
+      btnEl.disabled = false;
     }
   },
 

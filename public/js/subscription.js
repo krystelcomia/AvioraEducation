@@ -241,15 +241,32 @@ const StudentSub = {
     return Array.from({ length: count }, (_, i) => list[i % list.length]);
   },
 
+  getTutorSubjectRate(tutor, subjectName) {
+    if (!tutor) return 58;
+    const baseRate = Number(tutor.hourly_rate) || 58;
+    const rates = tutor.subject_rates && typeof tutor.subject_rates === 'object' ? tutor.subject_rates : {};
+    if (!subjectName) return baseRate;
+    const target = String(subjectName).trim();
+    if (rates[target] !== undefined) return Number(rates[target]) || baseRate;
+    const lowerTarget = target.toLowerCase();
+    for (const [k, v] of Object.entries(rates)) {
+      if (k.toLowerCase() === lowerTarget) return Number(v) || baseRate;
+    }
+    return baseRate;
+  },
+
   updateTutorDisciplines(tutor) {
     const container = document.getElementById('sub-enroll-tutor-disciplines-tags');
     if (!container || !tutor) return;
     const subjects = this.getTutorSubjects(tutor);
-    container.innerHTML = subjects.map(s => `
+    container.innerHTML = subjects.map(s => {
+      const sRate = this.getTutorSubjectRate(tutor, s);
+      return `
       <span class="badge-gold" style="font-size: 0.72rem; padding: 0.2rem 0.5rem; background: rgba(198, 138, 40, 0.1); border: 1.5px solid rgba(198, 138, 40, 0.35); font-weight: 700; display: inline-flex; align-items: center; gap: 0.25rem;">
-        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> ${s}
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> ${s} ($${sRate}/hr)
       </span>
-    `).join('');
+    `;
+    }).join('');
   },
 
   // OPEN INTERACTIVE SUBSCRIPTION & LESSONS SCHEDULING STUDIO
@@ -363,19 +380,22 @@ const StudentSub = {
       }
     }
 
-    // Initialize lesson setup
-    const tutorRate = planConfig.isTrial ? 0.00 : Number(this.selectedTutor?.hourly_rate || 58);
-    this.selectedLessons = Array.from({ length: lessonCount }, (_, i) => ({
-      index: i,
-      label: planConfig.isTrial ? 'Trial Lesson' : `Lesson ${i + 1}`,
-      tutor_id: this.selectedTutor?.user_id || this.selectedTutor?.id || 1,
-      tutor_name: this.selectedTutor?.name || 'Educator',
-      tutor_avatar: this.selectedTutor?.avatar_url || this.selectedTutor?.avatar || '',
-      subject: distributedTopics[i] || subjects[0] || 'General Tutoring',
-      hourly_rate: tutorRate,
-      scheduled_date: null,
-      scheduled_time: null
-    }));
+    // Initialize lesson setup (using subject-specific rates)
+    this.selectedLessons = Array.from({ length: lessonCount }, (_, i) => {
+      const subj = distributedTopics[i] || subjects[0] || 'General Tutoring';
+      const lessonRate = planConfig.isTrial ? 0.00 : this.getTutorSubjectRate(this.selectedTutor, subj);
+      return {
+        index: i,
+        label: planConfig.isTrial ? 'Trial Lesson' : `Lesson ${i + 1}`,
+        tutor_id: this.selectedTutor?.user_id || this.selectedTutor?.id || 1,
+        tutor_name: this.selectedTutor?.name || 'Educator',
+        tutor_avatar: this.selectedTutor?.avatar_url || this.selectedTutor?.avatar || '',
+        subject: subj,
+        hourly_rate: lessonRate,
+        scheduled_date: null,
+        scheduled_time: null
+      };
+    });
 
     this.isSchedulerOpen = false;
     this.activeLessonIndex = -1;
@@ -437,15 +457,15 @@ const StudentSub = {
     const subjects = this.getTutorSubjects(tutor);
     const distributedTopics = this.distributeSubjectsForLessons(subjects, this.selectedLessons.length);
 
-    // Apply this tutor & rate to all lessons in the plan
-    const rate = planConfig.isTrial ? 0.00 : Number(tutor.hourly_rate || 58);
+    // Apply this tutor & subject-specific rate to all lessons in the plan
     const tutorIdToSet = tutor.user_id || tutor.id;
     this.selectedLessons.forEach((l, idx) => {
+      const subj = distributedTopics[idx] || subjects[0] || 'General Tutoring';
       l.tutor_id = tutorIdToSet;
       l.tutor_name = tutor.name;
       l.tutor_avatar = tutor.avatar_url || tutor.avatar;
-      l.subject = distributedTopics[idx] || subjects[0] || 'General Tutoring';
-      l.hourly_rate = rate;
+      l.subject = subj;
+      l.hourly_rate = planConfig.isTrial ? 0.00 : this.getTutorSubjectRate(tutor, subj);
     });
 
     if (this.isSchedulerOpen && this.activeLessonIndex >= 0) {
@@ -458,8 +478,11 @@ const StudentSub = {
 
   onApplySubjectToAll(subj) {
     if (!subj) return;
+    const planConfig = this.getPlanConfig(this.activePackageKey);
+    const newRate = planConfig.isTrial ? 0.00 : this.getTutorSubjectRate(this.selectedTutor, subj);
     this.selectedLessons.forEach(l => {
       l.subject = subj;
+      l.hourly_rate = newRate;
     });
     if (this.isSchedulerOpen && this.activeLessonIndex >= 0) {
       this.updateActiveLessonBanner();
@@ -485,13 +508,15 @@ const StudentSub = {
       subject = customTopic.trim();
     }
 
+    const planConfig = this.getPlanConfig(this.activePackageKey);
     this.selectedLessons[lessonIdx].subject = subject;
+    this.selectedLessons[lessonIdx].hourly_rate = planConfig.isTrial ? 0.00 : this.getTutorSubjectRate(this.selectedTutor, subject);
     if (this.isSchedulerOpen && this.activeLessonIndex === lessonIdx) {
       this.updateActiveLessonBanner();
     }
     this.renderLessonTabs();
     this.updateSummary();
-    showToast(`Lesson ${lessonIdx + 1} topic set to "${subject}"`, 'info');
+    showToast(`Lesson ${lessonIdx + 1} topic set to "${subject}" ($${this.selectedLessons[lessonIdx].hourly_rate.toFixed(2)}/hr)`, 'info');
   },
 
   onActiveLessonSubjectChanged(subject) {

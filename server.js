@@ -116,6 +116,83 @@ function safeParseObject(val) {
   return {};
 }
 
+// Normalize a tutor's subjects array and per-subject rates map
+function normalizeSubjectRates(subjectsInput, subjectRatesInput, fallbackRate = 45) {
+  const baseRate = Number(fallbackRate) > 0 ? Number(fallbackRate) : 45;
+  const rawSubjects = safeParseArray(subjectsInput)
+    .map(s => String(s || '').trim())
+    .filter(Boolean);
+  const rawRates = safeParseObject(subjectRatesInput);
+
+  // Deduplicate subjects case-insensitively while preserving casing
+  const seen = new Set();
+  const subjects = [];
+  for (const s of rawSubjects) {
+    const key = s.toLowerCase();
+    if (!seen.has(key)) {
+      seen.add(key);
+      subjects.push(s);
+    }
+  }
+
+  // Also include any keys from rawRates that weren't in rawSubjects if rawSubjects was empty
+  if (subjects.length === 0 && Object.keys(rawRates).length > 0) {
+    for (const k of Object.keys(rawRates)) {
+      const trimmed = String(k || '').trim();
+      if (trimmed && !seen.has(trimmed.toLowerCase())) {
+        seen.add(trimmed.toLowerCase());
+        subjects.push(trimmed);
+      }
+    }
+  }
+
+  // Case-insensitive lookup helper for rawRates
+  const lowerRateMap = {};
+  for (const [k, v] of Object.entries(rawRates)) {
+    const num = parseFloat(v);
+    if (String(k || '').trim() && !isNaN(num) && num > 0) {
+      lowerRateMap[String(k).trim().toLowerCase()] = Math.round(num * 100) / 100;
+    }
+  }
+
+  const subject_rates = {};
+  for (const subj of subjects) {
+    const key = subj.toLowerCase();
+    subject_rates[subj] = lowerRateMap[key] !== undefined ? lowerRateMap[key] : baseRate;
+  }
+
+  const rateValues = Object.values(subject_rates);
+  const primaryRate = rateValues.length > 0 ? rateValues[0] : baseRate;
+
+  return {
+    subjects,
+    subject_rates,
+    hourly_rate: primaryRate
+  };
+}
+
+// Resolve the hourly rate for a specific subject taught by a tutor
+function getRateForTutorSubject(tutorRecord, subjectName) {
+  if (!tutorRecord) return 45;
+  const fallback = Number(tutorRecord.hourly_rate) > 0 ? Number(tutorRecord.hourly_rate) : 45;
+  const { subject_rates } = normalizeSubjectRates(tutorRecord.subjects, tutorRecord.subject_rates, fallback);
+  if (!subjectName) return fallback;
+  const target = String(subjectName).trim().toLowerCase();
+  if (subject_rates[String(subjectName).trim()] !== undefined) {
+    return subject_rates[String(subjectName).trim()];
+  }
+  for (const [subj, rate] of Object.entries(subject_rates)) {
+    if (subj.toLowerCase() === target) return rate;
+  }
+  // Partial match (e.g. "Calculus BC" vs "Calculus")
+  for (const [subj, rate] of Object.entries(subject_rates)) {
+    if (target.includes(subj.toLowerCase()) || subj.toLowerCase().includes(target)) {
+      return rate;
+    }
+  }
+  return fallback;
+}
+
 // ==========================================
 // NOTIFICATION PREFERENCE FILTERS & DELIVERY
 // ==========================================
@@ -1504,6 +1581,18 @@ app.get('/api/auth/me', authenticateToken, (req, res) => {
     } else if ((req.user.role === 'teacher' || req.user.role === 'tutor')) {
       const teacherApp = db.prepare('SELECT * FROM teacher_applications WHERE user_id = ?').get(userId);
       const tutorProfile = db.prepare('SELECT * FROM tutor_profiles WHERE user_id = ?').get(userId);
+      if (teacherApp) {
+        const normApp = normalizeSubjectRates(teacherApp.subjects, teacherApp.subject_rates, teacherApp.hourly_rate);
+        teacherApp.subjects = normApp.subjects;
+        teacherApp.subject_rates = normApp.subject_rates;
+        teacherApp.grade_levels = safeParseArray(teacherApp.grade_levels);
+      }
+      if (tutorProfile) {
+        const normProf = normalizeSubjectRates(tutorProfile.subjects, tutorProfile.subject_rates || teacherApp?.subject_rates, tutorProfile.hourly_rate);
+        tutorProfile.subjects = normProf.subjects;
+        tutorProfile.subject_rates = normProf.subject_rates;
+        tutorProfile.grade_levels = safeParseArray(tutorProfile.grade_levels);
+      }
       extra.teacherApplication = teacherApp;
       extra.tutorProfile = tutorProfile;
     }
@@ -1566,6 +1655,8 @@ app.put('/api/auth/profile', authenticateToken, (req, res) => {
     }
 
     if ((req.user.role === 'teacher' || req.user.role === 'tutor') && tutorData) {
+      const existingProf = db.prepare('SELECT subjects, subject_rates, hourly_rate FROM tutor_profiles WHERE user_id = ?').get(userId);
+      const newBaseRate = parseFloat(tutorData.hourly_rate) || existingProf?.hourly_rate || 45;
       db.prepare(`
         UPDATE tutor_profiles
         SET headline = ?, bio = ?, hourly_rate = ?, availability_schedule = ?, updated_at = CURRENT_TIMESTAMP
@@ -1573,8 +1664,18 @@ app.put('/api/auth/profile', authenticateToken, (req, res) => {
       `).run(
         tutorData.headline || null,
         tutorData.bio || null,
-        tutorData.hourly_rate || 40,
+        newBaseRate,
         tutorData.availability_schedule || null,
+        userId
+      );
+      db.prepare(`
+        UPDATE teacher_applications
+        SET headline = COALESCE(?, headline), bio = COALESCE(?, bio), hourly_rate = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE user_id = ?
+      `).run(
+        tutorData.headline || null,
+        tutorData.bio || null,
+        newBaseRate,
         userId
       );
     }
@@ -1932,13 +2033,15 @@ app.get('/api/tutors', (req, res) => {
         tp.institution,
         tp.years_experience,
         tp.subjects,
+        tp.subject_rates,
         tp.grade_levels,
         tp.hourly_rate,
         tp.rating,
         tp.reviews_count,
         tp.total_sessions,
         tp.is_featured,
-        tp.availability_schedule
+        tp.availability_schedule,
+        ta.subject_rates as app_subject_rates
       FROM tutor_profiles tp
       JOIN users u ON tp.user_id = u.id
       LEFT JOIN teacher_applications ta ON ta.user_id = tp.user_id
@@ -1970,11 +2073,6 @@ app.get('/api/tutors', (req, res) => {
       params.push(`%${grade}%`);
     }
 
-    if (max_rate) {
-      query += ` AND tp.hourly_rate <= ?`;
-      params.push(parseFloat(max_rate));
-    }
-
     if (min_rating) {
       query += ` AND tp.rating >= ?`;
       params.push(parseFloat(min_rating));
@@ -2001,12 +2099,29 @@ app.get('/api/tutors', (req, res) => {
 
     const rows = db.prepare(query).all(...params);
 
-    const formattedTutors = rows.map(r => ({
-      ...r,
-      subjects: safeParseArray(r.subjects),
-      grade_levels: safeParseArray(r.grade_levels),
-      availability_schedule: safeParseObject(r.availability_schedule)
-    }));
+    let formattedTutors = rows.map(r => {
+      const norm = normalizeSubjectRates(r.subjects, r.subject_rates || r.app_subject_rates, r.hourly_rate);
+      return {
+        ...r,
+        subjects: norm.subjects,
+        subject_rates: norm.subject_rates,
+        grade_levels: safeParseArray(r.grade_levels),
+        availability_schedule: safeParseObject(r.availability_schedule)
+      };
+    });
+
+    if (max_rate) {
+      const maxRateNum = parseFloat(max_rate);
+      if (!isNaN(maxRateNum)) {
+        formattedTutors = formattedTutors.filter(t => {
+          const rates = Object.values(t.subject_rates || {});
+          if (rates.length > 0) {
+            return rates.some(val => Number(val) <= maxRateNum);
+          }
+          return Number(t.hourly_rate) <= maxRateNum;
+        });
+      }
+    }
 
     res.json({ tutors: formattedTutors });
   } catch (error) {
@@ -2065,7 +2180,9 @@ app.get('/api/tutors/:id', (req, res) => {
       ORDER BY r.created_at DESC
     `).all(tutor.user_id);
 
-    tutor.subjects = safeParseArray(tutor.subjects);
+    const normTutor = normalizeSubjectRates(tutor.subjects, tutor.subject_rates, tutor.hourly_rate);
+    tutor.subjects = normTutor.subjects;
+    tutor.subject_rates = normTutor.subject_rates;
     tutor.grade_levels = safeParseArray(tutor.grade_levels);
     tutor.availability_schedule = safeParseObject(tutor.availability_schedule);
     tutor.reviews = reviews;
@@ -2439,9 +2556,9 @@ app.post('/api/student/subscription/purchase', authenticateToken, requireRole('s
           return res.status(400).json({ error: `Lesson ${i + 1} must have a respective date and time selected.` });
         }
 
-        let tProf = db.prepare('SELECT id, user_id, hourly_rate, is_active, subjects FROM tutor_profiles WHERE user_id = ?').get(item.tutor_id);
+        let tProf = db.prepare('SELECT id, user_id, hourly_rate, is_active, subjects, subject_rates FROM tutor_profiles WHERE user_id = ?').get(item.tutor_id);
         if (!tProf) {
-          tProf = db.prepare('SELECT id, user_id, hourly_rate, is_active, subjects FROM tutor_profiles WHERE id = ?').get(item.tutor_id);
+          tProf = db.prepare('SELECT id, user_id, hourly_rate, is_active, subjects, subject_rates FROM tutor_profiles WHERE id = ?').get(item.tutor_id);
         }
         let tUser = null;
         if (tProf) {
@@ -2462,9 +2579,6 @@ app.post('/api/student/subscription/purchase', authenticateToken, requireRole('s
           }
         }
 
-        const lessonRate = selectedPkg.is_trial ? 0.00 : (Number(tProf.hourly_rate) || 58.00);
-        totalCalculatedPrice += lessonRate;
-
         let lessonSubject = item.subject ? String(item.subject).trim() : '';
         if (!lessonSubject) {
           if (tProf.subjects) {
@@ -2477,6 +2591,10 @@ app.post('/api/student/subscription/purchase', authenticateToken, requireRole('s
           }
           if (!lessonSubject) lessonSubject = 'General Tutoring';
         }
+
+        const resolvedSubjectRate = getRateForTutorSubject(tProf, lessonSubject);
+        const lessonRate = selectedPkg.is_trial ? 0.00 : (Number(resolvedSubjectRate) || Number(tProf.hourly_rate) || 58.00);
+        totalCalculatedPrice += lessonRate;
 
         validatedLessons.push({
           index: i + 1,
@@ -2736,7 +2854,7 @@ app.post('/api/student/requests', authenticateToken, requireRole('student'), (re
     }
 
     const tutorUser = db.prepare('SELECT name FROM users WHERE id = ?').get(tutor_user_id);
-    const tutorProfile = db.prepare('SELECT hourly_rate, is_active FROM tutor_profiles WHERE user_id = ?').get(tutor_user_id);
+    const tutorProfile = db.prepare('SELECT hourly_rate, is_active, subjects, subject_rates FROM tutor_profiles WHERE user_id = ?').get(tutor_user_id);
     if (!tutorProfile || !tutorProfile.is_active) {
       return res.status(400).json({ error: 'Selected tutor is not currently accepting requests.' });
     }
@@ -2756,7 +2874,8 @@ app.post('/api/student/requests', authenticateToken, requireRole('student'), (re
       return res.status(400).json({ error: 'All subjects are a maximum of 50 minutes of class.' });
     }
     const duration = Math.min(requestedDuration, 1.0);
-    const calculatedAmount = duration * tutorProfile.hourly_rate;
+    const subjectRate = getRateForTutorSubject(tutorProfile, subject);
+    const calculatedAmount = Math.round(duration * subjectRate * 100) / 100;
 
     let finalPaymentMethod = payment_method === 'subscription' ? 'subscription' : 'card';
     let remainingCreditsAfter = null;
@@ -2799,7 +2918,7 @@ app.post('/api/student/requests', authenticateToken, requireRole('student'), (re
       requested_date,
       requested_time,
       duration,
-      tutorProfile.hourly_rate,
+      subjectRate,
       finalPaymentMethod === 'subscription' ? 0.00 : calculatedAmount,
       notes || '',
       finalPaymentMethod
@@ -2994,9 +3113,18 @@ app.get('/api/teacher/application-status', authenticateToken, requireRole('teach
     const tutorProfile = db.prepare('SELECT * FROM tutor_profiles WHERE user_id = ?').get(userId);
 
     if (application) {
-      application.subjects = safeParseArray(application.subjects);
+      const normApp = normalizeSubjectRates(application.subjects, application.subject_rates, application.hourly_rate);
+      application.subjects = normApp.subjects;
+      application.subject_rates = normApp.subject_rates;
       application.grade_levels = safeParseArray(application.grade_levels);
       application.availability_schedule = safeParseObject(application.availability_schedule);
+    }
+    if (tutorProfile) {
+      const normProf = normalizeSubjectRates(tutorProfile.subjects, tutorProfile.subject_rates || application?.subject_rates, tutorProfile.hourly_rate);
+      tutorProfile.subjects = normProf.subjects;
+      tutorProfile.subject_rates = normProf.subject_rates;
+      tutorProfile.grade_levels = safeParseArray(tutorProfile.grade_levels);
+      tutorProfile.availability_schedule = safeParseObject(tutorProfile.availability_schedule);
     }
 
     res.json({ application, tutorProfile });
@@ -3214,8 +3342,13 @@ app.get('/api/teacher/dashboard', authenticateToken, requireRole('teacher'), (re
   try {
     const teacherId = req.user.id;
 
-    const application = db.prepare('SELECT status, admin_notes FROM teacher_applications WHERE user_id = ?').get(teacherId);
+    const application = db.prepare('SELECT status, admin_notes, subjects, subject_rates, hourly_rate FROM teacher_applications WHERE user_id = ?').get(teacherId);
     const tutorProfile = db.prepare('SELECT * FROM tutor_profiles WHERE user_id = ?').get(teacherId);
+    if (tutorProfile) {
+      const normProf = normalizeSubjectRates(tutorProfile.subjects, tutorProfile.subject_rates || application?.subject_rates, tutorProfile.hourly_rate);
+      tutorProfile.subjects = normProf.subjects;
+      tutorProfile.subject_rates = normProf.subject_rates;
+    }
 
     const requests = db.prepare(`
       SELECT 
@@ -3343,7 +3476,7 @@ app.get('/api/teacher/dashboard', authenticateToken, requireRole('teacher'), (re
   }
 });
 
-// Teacher Classes List (Virtual Classes & Sessions)
+// Teacher Classes List (Virtual Classes & Sessions + Tutor Subjects & Individual Rates)
 app.get('/api/teacher/classes', authenticateToken, requireRole('teacher'), (req, res) => {
   try {
     const teacherId = req.user.id;
@@ -3369,10 +3502,178 @@ app.get('/api/teacher/classes', authenticateToken, requireRole('teacher'), (req,
         tr.requested_date ASC, tr.requested_time ASC
     `).all(teacherId);
 
-    res.json({ classes });
+    const tutorProfile = db.prepare('SELECT subjects, subject_rates, hourly_rate FROM tutor_profiles WHERE user_id = ?').get(teacherId);
+    const teacherApp = db.prepare('SELECT subjects, subject_rates, hourly_rate FROM teacher_applications WHERE user_id = ?').get(teacherId);
+    const sourceRec = tutorProfile || teacherApp || { subjects: '[]', subject_rates: '{}', hourly_rate: 45 };
+    const norm = normalizeSubjectRates(
+      sourceRec.subjects || teacherApp?.subjects,
+      sourceRec.subject_rates || teacherApp?.subject_rates,
+      sourceRec.hourly_rate || teacherApp?.hourly_rate || 45
+    );
+
+    res.json({
+      classes,
+      subjects: norm.subjects,
+      subject_rates: norm.subject_rates,
+      hourly_rate: norm.hourly_rate
+    });
   } catch (error) {
     console.error('Teacher classes error:', error);
     res.status(500).json({ error: 'Failed to retrieve classes.' });
+  }
+});
+
+// Teacher Subjects & Specializations Management (Get all subjects & individual rates)
+app.get('/api/teacher/subjects', authenticateToken, requireRole('teacher'), (req, res) => {
+  try {
+    const teacherId = req.user.id;
+    const tutorProfile = db.prepare('SELECT subjects, subject_rates, hourly_rate FROM tutor_profiles WHERE user_id = ?').get(teacherId);
+    const teacherApp = db.prepare('SELECT subjects, subject_rates, hourly_rate FROM teacher_applications WHERE user_id = ?').get(teacherId);
+    const sourceRec = tutorProfile || teacherApp || { subjects: '[]', subject_rates: '{}', hourly_rate: 45 };
+    const norm = normalizeSubjectRates(
+      sourceRec.subjects || teacherApp?.subjects,
+      sourceRec.subject_rates || teacherApp?.subject_rates,
+      sourceRec.hourly_rate || teacherApp?.hourly_rate || 45
+    );
+    res.json({
+      subjects: norm.subjects,
+      subject_rates: norm.subject_rates,
+      hourly_rate: norm.hourly_rate
+    });
+  } catch (error) {
+    console.error('Get teacher subjects error:', error);
+    res.status(500).json({ error: 'Failed to retrieve tutor subjects and rates.' });
+  }
+});
+
+// Teacher Subjects & Specializations Management (Add, Update Rate/Name, or Remove Subject - Synced to Student & Admin via DB)
+app.put('/api/teacher/subjects', authenticateToken, requireRole('teacher'), (req, res) => {
+  try {
+    const teacherId = req.user.id;
+    const appRecord = db.prepare('SELECT * FROM teacher_applications WHERE user_id = ?').get(teacherId);
+    if (!appRecord || appRecord.status !== 'approved') {
+      return res.status(403).json({
+        error: 'Your account is currently under review. Managing subjects and hourly rates will unlock once approved by the administrator following your virtual interview.'
+      });
+    }
+
+    const tutorProfile = db.prepare('SELECT * FROM tutor_profiles WHERE user_id = ?').get(teacherId);
+    const currentNorm = normalizeSubjectRates(
+      tutorProfile?.subjects || appRecord.subjects,
+      tutorProfile?.subject_rates || appRecord.subject_rates,
+      tutorProfile?.hourly_rate || appRecord.hourly_rate || 45
+    );
+
+    const { action, subject, new_subject, rate, subjects: fullSubjects, subject_rates: fullSubjectRates } = req.body;
+
+    let updatedSubjects = [...currentNorm.subjects];
+    let updatedRates = { ...currentNorm.subject_rates };
+
+    if (action === 'add') {
+      const cleanSubj = String(subject || '').trim();
+      const parsedRate = parseFloat(rate);
+      if (!cleanSubj) {
+        return res.status(400).json({ error: 'Please enter a subject or area of specialization name.' });
+      }
+      if (isNaN(parsedRate) || parsedRate < 5 || parsedRate > 1000) {
+        return res.status(400).json({ error: 'Please enter a valid hourly rate between $5 and $1,000.' });
+      }
+      const existingIdx = updatedSubjects.findIndex(s => s.toLowerCase() === cleanSubj.toLowerCase());
+      const roundedRate = Math.round(parsedRate * 100) / 100;
+      if (existingIdx !== -1) {
+        const existingName = updatedSubjects[existingIdx];
+        updatedRates[existingName] = roundedRate;
+      } else {
+        updatedSubjects.push(cleanSubj);
+        updatedRates[cleanSubj] = roundedRate;
+      }
+    } else if (action === 'update') {
+      const targetSubj = String(subject || '').trim();
+      const renamedSubj = new_subject !== undefined ? String(new_subject || '').trim() : targetSubj;
+      const parsedRate = parseFloat(rate);
+      if (!targetSubj || !renamedSubj) {
+        return res.status(400).json({ error: 'Subject name cannot be empty.' });
+      }
+      if (isNaN(parsedRate) || parsedRate < 5 || parsedRate > 1000) {
+        return res.status(400).json({ error: 'Please enter a valid hourly rate between $5 and $1,000.' });
+      }
+      const roundedRate = Math.round(parsedRate * 100) / 100;
+      const idx = updatedSubjects.findIndex(s => s.toLowerCase() === targetSubj.toLowerCase());
+      if (idx === -1) {
+        updatedSubjects.push(renamedSubj);
+        updatedRates[renamedSubj] = roundedRate;
+      } else {
+        const oldKey = updatedSubjects[idx];
+        if (oldKey !== renamedSubj) {
+          delete updatedRates[oldKey];
+          updatedSubjects[idx] = renamedSubj;
+        }
+        updatedRates[renamedSubj] = roundedRate;
+      }
+    } else if (action === 'remove') {
+      const targetSubj = String(subject || '').trim();
+      const filtered = updatedSubjects.filter(s => s.toLowerCase() !== targetSubj.toLowerCase());
+      if (filtered.length === 0) {
+        return res.status(400).json({ error: 'You must maintain at least one active subject or area of specialization.' });
+      }
+      for (const k of Object.keys(updatedRates)) {
+        if (k.toLowerCase() === targetSubj.toLowerCase()) {
+          delete updatedRates[k];
+        }
+      }
+      updatedSubjects = filtered;
+    } else if (Array.isArray(fullSubjects) || (fullSubjectRates && typeof fullSubjectRates === 'object')) {
+      const bulkNorm = normalizeSubjectRates(fullSubjects || updatedSubjects, fullSubjectRates || updatedRates, currentNorm.hourly_rate);
+      if (bulkNorm.subjects.length === 0) {
+        return res.status(400).json({ error: 'You must maintain at least one active subject or area of specialization.' });
+      }
+      updatedSubjects = bulkNorm.subjects;
+      updatedRates = bulkNorm.subject_rates;
+    } else {
+      return res.status(400).json({ error: 'Invalid subject update action.' });
+    }
+
+    const finalNorm = normalizeSubjectRates(updatedSubjects, updatedRates, currentNorm.hourly_rate);
+    const subjectsJson = JSON.stringify(finalNorm.subjects);
+    const subjectRatesJson = JSON.stringify(finalNorm.subject_rates);
+    const primaryHourlyRate = finalNorm.hourly_rate;
+
+    // Persist to both tutor_profiles and teacher_applications so Tutor, Student, and Admin are 100% synchronized
+    if (tutorProfile) {
+      db.prepare(`
+        UPDATE tutor_profiles
+        SET subjects = ?, subject_rates = ?, hourly_rate = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE user_id = ?
+      `).run(subjectsJson, subjectRatesJson, primaryHourlyRate, teacherId);
+    }
+
+    db.prepare(`
+      UPDATE teacher_applications
+      SET subjects = ?, subject_rates = ?, hourly_rate = ?, updated_at = CURRENT_TIMESTAMP
+      WHERE user_id = ?
+    `).run(subjectsJson, subjectRatesJson, primaryHourlyRate, teacherId);
+
+    // Also update any pending tutoring requests for this tutor & subject so pending classes reflect updated subject rate
+    for (const [subjName, subjRate] of Object.entries(finalNorm.subject_rates)) {
+      db.prepare(`
+        UPDATE tutoring_requests
+        SET hourly_rate = ?,
+            total_amount = CASE WHEN payment_method = 'subscription' OR payment_method = 'free_trial' THEN 0.00 ELSE ROUND(duration_hours * ?, 2) END,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE tutor_id = ? AND LOWER(subject) = LOWER(?) AND status IN ('pending', 'accepted')
+      `).run(subjRate, subjRate, teacherId, subjName);
+    }
+
+    res.json({
+      success: true,
+      message: 'Subjects and individual rates updated and synced across Student and Admin portals.',
+      subjects: finalNorm.subjects,
+      subject_rates: finalNorm.subject_rates,
+      hourly_rate: primaryHourlyRate
+    });
+  } catch (error) {
+    console.error('Update teacher subjects error:', error);
+    res.status(500).json({ error: 'Failed to update subjects and rates: ' + error.message });
   }
 });
 
@@ -3395,8 +3696,8 @@ app.post('/api/teacher/classes/launch-instant', authenticateToken, requireRole('
       return res.status(404).json({ error: 'Student not found.' });
     }
 
-    const tutorProfile = db.prepare('SELECT hourly_rate FROM tutor_profiles WHERE user_id = ?').get(teacherId);
-    const rate = tutorProfile ? tutorProfile.hourly_rate : 50.0;
+    const tutorProfile = db.prepare('SELECT hourly_rate, subjects, subject_rates FROM tutor_profiles WHERE user_id = ?').get(teacherId);
+    const rate = tutorProfile ? getRateForTutorSubject(tutorProfile, subject) : 50.0;
     const today = new Date().toISOString().split('T')[0];
     const nowTime = new Date().toTimeString().substring(0, 5);
 
@@ -4632,6 +4933,8 @@ app.get('/api/admin/users', authenticateToken, requireRole('admin'), (req, res) 
         tp.is_active as tutor_active,
         tp.rating as tutor_rating,
         tp.hourly_rate as tutor_rate,
+        COALESCE(tp.subjects, ta.subjects) as tutor_subjects,
+        COALESCE(tp.subject_rates, ta.subject_rates) as tutor_subject_rates,
         (SELECT COUNT(*) FROM tutoring_requests WHERE student_id = u.id) as student_requests,
         (SELECT COUNT(*) FROM tutoring_requests WHERE tutor_id = u.id) as tutor_requests
       FROM users u
@@ -4650,7 +4953,18 @@ app.get('/api/admin/users', authenticateToken, requireRole('admin'), (req, res) 
     }
     query += ` ORDER BY u.created_at DESC`;
 
-    const users = db.prepare(query).all(...params);
+    const rawUsers = db.prepare(query).all(...params);
+    const users = rawUsers.map(u => {
+      if (u.role === 'teacher' || u.role === 'tutor') {
+        const norm = normalizeSubjectRates(u.tutor_subjects, u.tutor_subject_rates, u.tutor_rate || 45);
+        return {
+          ...u,
+          tutor_subjects: norm.subjects,
+          tutor_subject_rates: norm.subject_rates
+        };
+      }
+      return u;
+    });
     res.json({ users });
   } catch (error) {
     console.error('Admin get users error:', error);
@@ -4779,12 +5093,16 @@ app.get('/api/admin/teacher-applications', authenticateToken, requireRole('admin
 
     const apps = db.prepare(query).all(...params);
 
-    const formatted = apps.map(a => ({
-      ...a,
-      subjects: safeParseArray(a.subjects),
-      grade_levels: safeParseArray(a.grade_levels),
-      availability_schedule: safeParseObject(a.availability_schedule)
-    }));
+    const formatted = apps.map(a => {
+      const norm = normalizeSubjectRates(a.subjects, a.subject_rates, a.hourly_rate);
+      return {
+        ...a,
+        subjects: norm.subjects,
+        subject_rates: norm.subject_rates,
+        grade_levels: safeParseArray(a.grade_levels),
+        availability_schedule: safeParseObject(a.availability_schedule)
+      };
+    });
 
     res.json({ applications: formatted });
   } catch (error) {
@@ -4861,12 +5179,13 @@ app.post('/api/admin/teacher-applications/:id/review', authenticateToken, requir
     if (status === 'approved') {
       db.prepare(`UPDATE teacher_applications SET interview_status = 'completed' WHERE id = ? AND interview_status = 'scheduled'`).run(appId);
       // Upsert into tutor_profiles so they immediately appear in the public directory!
+      const normApp = normalizeSubjectRates(application.subjects, application.subject_rates, application.hourly_rate);
       const existingTutor = db.prepare('SELECT id FROM tutor_profiles WHERE user_id = ?').get(application.user_id);
       if (existingTutor) {
         db.prepare(`
           UPDATE tutor_profiles
           SET application_id = ?, headline = ?, bio = ?, highest_degree = ?,
-              institution = ?, years_experience = ?, subjects = ?, grade_levels = ?,
+              institution = ?, years_experience = ?, subjects = ?, subject_rates = ?, grade_levels = ?,
               hourly_rate = ?, availability_schedule = ?, is_active = 1, updated_at = CURRENT_TIMESTAMP
           WHERE user_id = ?
         `).run(
@@ -4876,7 +5195,8 @@ app.post('/api/admin/teacher-applications/:id/review', authenticateToken, requir
           application.highest_degree,
           application.institution,
           application.years_experience,
-          application.subjects,
+          JSON.stringify(normApp.subjects),
+          JSON.stringify(normApp.subject_rates),
           application.grade_levels,
           application.hourly_rate,
           application.availability_schedule,
@@ -4886,10 +5206,10 @@ app.post('/api/admin/teacher-applications/:id/review', authenticateToken, requir
         db.prepare(`
           INSERT INTO tutor_profiles (
             user_id, application_id, headline, bio, highest_degree,
-            institution, years_experience, subjects, grade_levels,
+            institution, years_experience, subjects, subject_rates, grade_levels,
             hourly_rate, rating, reviews_count, total_sessions,
             availability_schedule, is_featured, is_active
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 5.0, 0, 0, ?, 0, 1)
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 5.0, 0, 0, ?, 0, 1)
         `).run(
           application.user_id,
           appId,
@@ -4898,7 +5218,8 @@ app.post('/api/admin/teacher-applications/:id/review', authenticateToken, requir
           application.highest_degree,
           application.institution,
           application.years_experience,
-          application.subjects,
+          JSON.stringify(normApp.subjects),
+          JSON.stringify(normApp.subject_rates),
           application.grade_levels,
           application.hourly_rate,
           application.availability_schedule
@@ -4949,11 +5270,15 @@ app.get('/api/admin/tutors', authenticateToken, requireRole('admin'), (req, res)
       ORDER BY tp.created_at DESC
     `).all();
 
-    const formatted = tutors.map(t => ({
-      ...t,
-      subjects: safeParseArray(t.subjects),
-      grade_levels: safeParseArray(t.grade_levels)
-    }));
+    const formatted = tutors.map(t => {
+      const norm = normalizeSubjectRates(t.subjects, t.subject_rates, t.hourly_rate);
+      return {
+        ...t,
+        subjects: norm.subjects,
+        subject_rates: norm.subject_rates,
+        grade_levels: safeParseArray(t.grade_levels)
+      };
+    });
 
     res.json({ tutors: formatted });
   } catch (error) {

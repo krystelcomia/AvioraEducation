@@ -248,12 +248,43 @@ const Tutors = {
     this.applyFilters();
   },
 
+  getTutorSubjectRate(tutor, subjectName) {
+    if (!tutor) return 45;
+    const baseRate = Number(tutor.hourly_rate) || 45;
+    const rates = tutor.subject_rates && typeof tutor.subject_rates === 'object' ? tutor.subject_rates : {};
+    if (!subjectName) return baseRate;
+    const target = String(subjectName).trim();
+    if (rates[target] !== undefined) return Number(rates[target]) || baseRate;
+    const lowerTarget = target.toLowerCase();
+    for (const [k, v] of Object.entries(rates)) {
+      if (k.toLowerCase() === lowerTarget) return Number(v) || baseRate;
+    }
+    return baseRate;
+  },
+
+  getTutorRateDisplay(tutor) {
+    if (!tutor) return '$45';
+    const ratesObj = tutor.subject_rates && typeof tutor.subject_rates === 'object' ? tutor.subject_rates : {};
+    const vals = Object.values(ratesObj).map(v => Number(v)).filter(v => !isNaN(v) && v > 0);
+    if (vals.length === 0) return `$${tutor.hourly_rate || 45}`;
+    const minRate = Math.min(...vals);
+    const maxRate = Math.max(...vals);
+    if (minRate === maxRate) return `$${minRate}`;
+    return `$${minRate}–$${maxRate}`;
+  },
+
   createTutorCardHtml(t) {
-    const subjectsHtml = (t.subjects || []).slice(0, 3).map(s => `
-      <span class="subject-tag">${s}</span>
-    `).join('');
+    const ratesMap = t.subject_rates && typeof t.subject_rates === 'object' ? t.subject_rates : {};
+    const rateValues = Object.values(ratesMap).map(v => Number(v)).filter(v => !isNaN(v) && v > 0);
+    const hasVaryingRates = rateValues.length > 1 && Math.min(...rateValues) !== Math.max(...rateValues);
+
+    const subjectsHtml = (t.subjects || []).slice(0, 3).map(s => {
+      const sRate = this.getTutorSubjectRate(t, s);
+      return `<span class="subject-tag">${s}${hasVaryingRates ? ` • $${sRate}/hr` : ''}</span>`;
+    }).join('');
 
     const moreSubjects = (t.subjects || []).length > 3 ? `<span class="subject-tag">+${t.subjects.length - 3} more</span>` : '';
+    const rateDisplay = this.getTutorRateDisplay(t);
 
     return `
       <div class="tutor-card" data-tutor-id="${t.id}">
@@ -283,7 +314,7 @@ const Tutors = {
 
         <div class="tutor-card-footer">
           <div class="tutor-rate-box">
-            <span class="rate-amount">$${t.hourly_rate}</span>
+            <span class="rate-amount">${rateDisplay}</span>
             <span class="rate-period">per hour</span>
           </div>
           <div class="tutor-card-actions" style="display: flex; align-items: center; gap: 0.45rem;">
@@ -346,7 +377,10 @@ const Tutors = {
       const tutor = data.tutor;
       this.selectedTutor = tutor;
 
-      const subjectsTags = (tutor.subjects || []).map(s => `<span class="subject-tag">${s}</span>`).join(' ');
+      const subjectsTags = (tutor.subjects || []).map(s => {
+        const sRate = this.getTutorSubjectRate(tutor, s);
+        return `<span class="subject-tag">${s} <strong style="color: var(--gold-700); margin-left: 0.25rem;">($${sRate}/hr)</strong></span>`;
+      }).join(' ');
       const gradeLevelsTags = (tutor.grade_levels || []).map(g => `<span class="badge-gold">${g}</span>`).join(' ');
 
       // Format Schedule Table (Monday through Sunday)
@@ -473,8 +507,8 @@ const Tutors = {
             <div class="tutor-stat-item">
               <div class="tutor-stat-icon" style="display: flex; align-items: center; justify-content: center; color: var(--gold-700);">${Icons.gem(22)}</div>
               <div class="tutor-stat-info-col">
-                <span class="tutor-stat-num">$${tutor.hourly_rate}</span>
-                <span class="tutor-stat-label">Standard Hourly Rate</span>
+                <span class="tutor-stat-num">${this.getTutorRateDisplay(tutor)}</span>
+                <span class="tutor-stat-label">Subject Hourly Rate</span>
               </div>
             </div>
           </div>
@@ -1105,11 +1139,20 @@ const Tutors = {
       }
     }
 
-    // 4. Populate Subjects for Selected Tutor
+    // 4. Populate Subjects for Selected Tutor (with individual subject rates)
     if (subjectSelect) {
-      subjectSelect.innerHTML = (tutor.subjects || []).map(s => `                             
-        <option value="${s}">${s}</option>
-      `).join('');
+      subjectSelect.innerHTML = (tutor.subjects || []).map(s => {
+        const sRate = this.getTutorSubjectRate(tutor, s);
+        return `<option value="${s}">${s} ($${sRate.toFixed(2)}/hr)</option>`;
+      }).join('');
+      subjectSelect.onchange = () => {
+        const chosenSubj = subjectSelect.value;
+        const chosenRate = this.getTutorSubjectRate(tutor, chosenSubj);
+        const rateHeadlineEl = document.getElementById('booking-tutor-rate-display');
+        if (rateHeadlineEl) {
+          rateHeadlineEl.textContent = `$${chosenRate.toFixed(2)}/hour (${chosenSubj})`;
+        }
+      };
     }
 
     // 5. Reset to Step 1 & Initialize Calendar
@@ -1327,15 +1370,16 @@ const Tutors = {
     }
 
     const subject = document.getElementById('booking-subject-select')?.value || 'Tutoring Session';
+    const activeRate = this.getTutorSubjectRate(this.selectedTutor, subject);
     const parsedDate = new Date(this.selectedDate + 'T00:00:00');
     const dateFormatted = parsedDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
 
     // Populate order summary
     document.getElementById('pay-summary-tutor').textContent = `${this.selectedTutor.name} (${this.selectedTutor.highest_degree || 'Verified Educator'})`;
-    document.getElementById('pay-summary-subject').textContent = subject;
+    document.getElementById('pay-summary-subject').textContent = `${subject} ($${activeRate.toFixed(2)}/hr)`;
     document.getElementById('pay-summary-datetime').textContent = `${dateFormatted} • ${this.selectedTime}`;
-    document.getElementById('pay-summary-amount').textContent = `$${this.selectedTutor.hourly_rate.toFixed(2)}`;
-    document.getElementById('pay-card-amount-label').textContent = `$${this.selectedTutor.hourly_rate.toFixed(2)}`;
+    document.getElementById('pay-summary-amount').textContent = `$${activeRate.toFixed(2)}`;
+    document.getElementById('pay-card-amount-label').textContent = `$${activeRate.toFixed(2)}`;
 
     // Configure Payment Choices based on Subscription Status
     const subOption = document.getElementById('pay-opt-subscription');
@@ -1386,7 +1430,7 @@ const Tutors = {
 
       if (subDesc) subDesc.textContent = 'No subscription lesson credits remaining on your account.';
       if (cardInputs) cardInputs.style.display = 'block';
-      if (payText) payText.textContent = `Pay $${this.selectedTutor.hourly_rate.toFixed(2)} & Confirm Lesson`;
+      if (payText) payText.textContent = `Pay $${activeRate.toFixed(2)} & Confirm Lesson`;
     }
 
     this.showStep(2);
@@ -1398,6 +1442,8 @@ const Tutors = {
     const cardCardBox = document.getElementById('pay-method-card-card');
     const cardInputs = document.getElementById('payment-card-inputs');
     const payText = document.getElementById('btn-pay-text');
+    const subject = document.getElementById('booking-subject-select')?.value;
+    const activeRate = this.getTutorSubjectRate(this.selectedTutor, subject);
 
     if (method === 'subscription') {
       if (subCardBox) subCardBox.classList.add('selected');
@@ -1408,7 +1454,7 @@ const Tutors = {
       if (subCardBox) subCardBox.classList.remove('selected');
       if (cardCardBox) cardCardBox.classList.add('selected');
       if (cardInputs) cardInputs.style.display = 'block';
-      if (payText) payText.textContent = `Pay $${this.selectedTutor.hourly_rate.toFixed(2)} & Confirm Lesson`;
+      if (payText) payText.textContent = `Pay $${activeRate.toFixed(2)} & Confirm Lesson`;
     }
   },
 

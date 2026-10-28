@@ -659,9 +659,15 @@ const Admin = {
         roleIcon = Icons.user(14);
         roleClass = 'teacher';
         roleLabel = 'Teacher / Tutor';
+        const tSubjs = Array.isArray(u.tutor_subjects) ? u.tutor_subjects : [];
+        const tRates = u.tutor_subject_rates && typeof u.tutor_subject_rates === 'object' ? u.tutor_subject_rates : {};
+        const subjSummary = tSubjs.length > 0
+          ? tSubjs.map(s => `${s} ($${tRates[s] !== undefined ? tRates[s] : (u.tutor_rate || 45)}/hr)`).join(', ')
+          : '';
         detailsHtml = `
           <div style="font-weight: 600; color: var(--charcoal-900); font-size: 0.85rem;">${u.highest_degree || u.teacher_headline || 'Educator Specialist'}</div>
           <div style="font-size: 0.775rem; color: var(--text-secondary); display: flex; align-items: center; gap: 0.25rem;">${u.institution || 'Aviora Faculty'} • ${u.application_status === 'approved' ? Icons.check(12) + ' Verified' : (u.application_status || 'Pending')}</div>
+          ${subjSummary ? `<div style="font-size: 0.75rem; color: var(--gold-800); font-weight: 600; margin-top: 0.2rem;">${subjSummary}</div>` : ''}
         `;
       } else if (u.role === 'admin') {
         roleIcon = Icons.shield(14);
@@ -849,7 +855,14 @@ const Admin = {
       return;
     }
 
-    tbody.innerHTML = this.applications.map(app => `
+    tbody.innerHTML = this.applications.map(app => {
+      const appRates = app.subject_rates && typeof app.subject_rates === 'object' ? app.subject_rates : {};
+      const appSubjs = (app.subjects || []).map(s => `${s} ($${appRates[s] !== undefined ? appRates[s] : app.hourly_rate}/hr)`);
+      const rateVals = Object.values(appRates).map(v => Number(v)).filter(v => !isNaN(v) && v > 0);
+      const rateDisplay = rateVals.length > 1 && Math.min(...rateVals) !== Math.max(...rateVals)
+        ? `$${Math.min(...rateVals)}–$${Math.max(...rateVals)}/hr`
+        : `$${app.hourly_rate}/hr`;
+      return `
       <tr>
         <td>
           <div class="user-cell">
@@ -865,12 +878,12 @@ const Admin = {
           <div style="font-size: 0.775rem; color: var(--gold-800);">${app.institution || 'University'} (${app.years_experience} yrs exp)</div>
         </td>
         <td>
-          <div style="font-size: 0.8rem; color: var(--charcoal-700); max-width: 180px;">
-            ${(app.subjects || []).slice(0, 2).join(', ')} ${(app.subjects || []).length > 2 ? `+${app.subjects.length - 2}` : ''}
+          <div style="font-size: 0.8rem; color: var(--charcoal-700); max-width: 220px;">
+            ${appSubjs.slice(0, 2).join(', ')} ${appSubjs.length > 2 ? `+${appSubjs.length - 2}` : ''}
           </div>
         </td>
         <td>
-          <span style="font-weight: 700; color: var(--charcoal-900);">$${app.hourly_rate}/hr</span>
+          <span style="font-weight: 700; color: var(--charcoal-900);">${rateDisplay}</span>
         </td>
         <td>
           <span class="status-pill ${this.getAppStage(app) === 'interview' ? 'accepted' : app.status}">${this.getAppStageLabel(this.getAppStage(app))}</span>
@@ -887,7 +900,8 @@ const Admin = {
           </div>
         </td>
       </tr>
-    `).join('');
+    `;
+    }).join('');
   },
 
   inspectApplication(appId) {
@@ -927,8 +941,10 @@ const Admin = {
         </div>
 
         <div style="margin-bottom: 1.25rem;">
-          <h4 style="color: var(--charcoal-900); margin-bottom: 0.35rem; font-size: 0.95rem;">Subjects &amp; Grade Levels</h4>
-          <p style="color: var(--gold-800); font-size: 0.85rem; font-weight: 600; margin-bottom: 0.25rem;">${(app.subjects || []).join(', ')}</p>
+          <h4 style="color: var(--charcoal-900); margin-bottom: 0.35rem; font-size: 0.95rem;">Subjects, Specializations &amp; Individual Rates</h4>
+          <p style="color: var(--gold-800); font-size: 0.85rem; font-weight: 600; margin-bottom: 0.25rem;">
+            ${(app.subjects || []).map(s => `${s} ($${(app.subject_rates && app.subject_rates[s] !== undefined) ? app.subject_rates[s] : app.hourly_rate}/hr)`).join(' • ')}
+          </p>
           <p style="color: var(--text-secondary); font-size: 0.8rem;">Grade Levels: ${(app.grade_levels || []).join(', ')}</p>
         </div>
 
@@ -1093,7 +1109,14 @@ const Admin = {
     const tbody = document.getElementById('admin-tutors-table-body');
     if (!tbody) return;
 
-    tbody.innerHTML = this.tutors.map(t => `
+    tbody.innerHTML = this.tutors.map(t => {
+      const tRates = t.subject_rates && typeof t.subject_rates === 'object' ? t.subject_rates : {};
+      const subjListHtml = (t.subjects || []).map(s => `<span style="display:inline-block; background: rgba(198,138,40,0.1); border: 1px solid rgba(198,138,40,0.3); border-radius: 999px; padding: 0.1rem 0.45rem; font-size: 0.72rem; font-weight: 700; color: var(--gold-800); margin: 0.1rem 0.2rem 0.1rem 0;">${s}: $${tRates[s] !== undefined ? tRates[s] : t.hourly_rate}/hr</span>`).join('');
+      const rateVals = Object.values(tRates).map(v => Number(v)).filter(v => !isNaN(v) && v > 0);
+      const rateSummary = rateVals.length > 1 && Math.min(...rateVals) !== Math.max(...rateVals)
+        ? `$${Math.min(...rateVals)}–$${Math.max(...rateVals)}/hr`
+        : `$${t.hourly_rate}/hr`;
+      return `
       <tr>
         <td>
           <div class="user-cell">
@@ -1107,13 +1130,14 @@ const Admin = {
         <td>
           <div style="font-size: 0.85rem; color: var(--gold-800); font-weight: 600;">${t.headline || 'Tutor Specialist'}</div>
           <div style="font-size: 0.775rem; color: var(--text-secondary);">${t.institution}</div>
+          ${subjListHtml ? `<div style="margin-top: 0.25rem;">${subjListHtml}</div>` : ''}
         </td>
         <td>
           <div style="font-size: 0.85rem; color: #F59E0B; font-weight: 700; display: flex; align-items: center; gap: 0.25rem;">${Icons.star(13)} ${t.rating.toFixed(1)} (${t.reviews_count})</div>
           <div style="font-size: 0.775rem; color: var(--text-secondary);">${t.total_sessions} completed</div>
         </td>
         <td>
-          <strong style="color: var(--charcoal-900);">$${t.hourly_rate}/hr</strong>
+          <strong style="color: var(--charcoal-900);">${rateSummary}</strong>
         </td>
         <td>
           <span class="status-pill ${t.is_active === 1 ? 'active' : 'inactive'}">
@@ -1127,7 +1151,8 @@ const Admin = {
           </label>
         </td>
       </tr>
-    `).join('');
+    `;
+    }).join('');
   },
 
   async toggleTutorVisibility(profileId) {

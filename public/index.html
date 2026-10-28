@@ -3195,6 +3195,50 @@
               </div>
             </div>
 
+            <!-- Tutor Subjects, Areas of Specialization & Individual Rates Management -->
+            <div class="teacher-subjects-panel" id="teacher-subjects-panel">
+              <div class="teacher-subjects-panel-header">
+                <div>
+                  <div style="display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;">
+                    <h3 class="teacher-subjects-panel-title">Subjects &amp; Areas of Specialization</h3>
+                    <span class="badge-gold" id="teacher-subjects-count-badge" style="font-size: 0.75rem;">0 Subjects</span>
+                    <span class="teacher-subjects-sync-pill" title="Connected via shared database with Student Booking and Admin Console">
+                      <span class="sync-dot"></span> Shared Database • Synced with Student &amp; Admin
+                    </span>
+                  </div>
+                  <p class="teacher-subjects-panel-subtitle">
+                    View all your subjects, add new ones or additional areas of specialization, and set specific hourly rates for each subject individually. Rate and subject updates immediately reflect for students and administrators.
+                  </p>
+                </div>
+              </div>
+
+              <!-- Individual Subject Rate Cards Grid -->
+              <div id="teacher-subjects-rates-grid" class="teacher-subjects-rates-grid">
+                <!-- Populated dynamically via teacher.js -->
+              </div>
+
+              <!-- Add New Subject / Area of Specialization Form -->
+              <form id="teacher-add-subject-form" class="teacher-add-subject-bar" onsubmit="event.preventDefault(); Teacher.addSubjectSpecialization();">
+                <div class="teacher-add-subject-input-wrap">
+                  <label for="teacher-new-subject-name" class="teacher-add-subject-label">New Subject or Area of Specialization</label>
+                  <input type="text" id="teacher-new-subject-name" class="form-control" placeholder="e.g. Multivariable Calculus, AP Physics C, SAT Math Prep..." required />
+                </div>
+                <div class="teacher-add-subject-rate-wrap">
+                  <label for="teacher-new-subject-rate" class="teacher-add-subject-label">Subject Rate ($ USD / hr)</label>
+                  <div class="subject-rate-input-group">
+                    <span class="subject-rate-currency">$</span>
+                    <input type="number" id="teacher-new-subject-rate" class="form-control" min="5" max="1000" step="1" placeholder="45" value="45" required />
+                    <span class="subject-rate-unit">/hr</span>
+                  </div>
+                </div>
+                <div class="teacher-add-subject-btn-wrap">
+                  <button type="submit" class="btn btn-primary btn-sm" id="btn-teacher-add-subject">
+                    + Add Subject &amp; Rate
+                  </button>
+                </div>
+              </form>
+            </div>
+
             <!-- Classes Filter & Search Bar -->
             <div class="teacher-classes-controls">
               <div class="search-input-box teacher-classes-search-box">

@@ -318,6 +318,41 @@ function initSchema() {
       db.prepare("ALTER TABLE user_preferences ADD COLUMN font_size TEXT DEFAULT 'normal'").run();
     }
   } catch (e) {}
+  try {
+    const tutorCols = db.prepare("PRAGMA table_info(tutor_profiles)").all();
+    if (tutorCols.length > 0 && !tutorCols.some(c => c.name === 'subject_rates')) {
+      db.prepare("ALTER TABLE tutor_profiles ADD COLUMN subject_rates TEXT").run();
+    }
+  } catch (e) {}
+  try {
+    const appCols = db.prepare("PRAGMA table_info(teacher_applications)").all();
+    if (appCols.length > 0 && !appCols.some(c => c.name === 'subject_rates')) {
+      db.prepare("ALTER TABLE teacher_applications ADD COLUMN subject_rates TEXT").run();
+    }
+  } catch (e) {}
+  try {
+    // Backfill subject_rates for any existing tutor_profiles and teacher_applications that don't have it set yet
+    const profiles = db.prepare("SELECT id, subjects, hourly_rate, subject_rates FROM tutor_profiles WHERE subject_rates IS NULL OR subject_rates = ''").all();
+    for (const p of profiles) {
+      let subs = [];
+      try { subs = JSON.parse(p.subjects || '[]'); } catch (_) { subs = []; }
+      if (!Array.isArray(subs)) subs = [];
+      const baseRate = Number(p.hourly_rate) || 45;
+      const rateMap = {};
+      subs.forEach(s => { if (s) rateMap[String(s).trim()] = baseRate; });
+      db.prepare("UPDATE tutor_profiles SET subject_rates = ? WHERE id = ?").run(JSON.stringify(rateMap), p.id);
+    }
+    const apps = db.prepare("SELECT id, subjects, hourly_rate, subject_rates FROM teacher_applications WHERE subject_rates IS NULL OR subject_rates = ''").all();
+    for (const a of apps) {
+      let subs = [];
+      try { subs = JSON.parse(a.subjects || '[]'); } catch (_) { subs = []; }
+      if (!Array.isArray(subs)) subs = [];
+      const baseRate = Number(a.hourly_rate) || 45;
+      const rateMap = {};
+      subs.forEach(s => { if (s) rateMap[String(s).trim()] = baseRate; });
+      db.prepare("UPDATE teacher_applications SET subject_rates = ? WHERE id = ?").run(JSON.stringify(rateMap), a.id);
+    }
+  } catch (e) {}
 }
 
 function seedData() {
@@ -1117,17 +1152,20 @@ function ensureJoshuaAccount(customPassword) {
       friday: { available: true, start: '09:00', end: '17:00' }
     });
 
-    let app = db.prepare('SELECT id FROM teacher_applications WHERE user_id = ?').get(userId);
+    const defaultSubjects = JSON.stringify(['Mathematics', 'Algebra', 'Calculus']);
+    const defaultSubjectRates = JSON.stringify({ Mathematics: 45, Algebra: 45, Calculus: 45 });
+
+    let app = db.prepare('SELECT id, subjects, subject_rates, hourly_rate FROM teacher_applications WHERE user_id = ?').get(userId);
     if (!app) {
       const appRes = db.prepare(`
         INSERT INTO teacher_applications (
           user_id, headline, highest_degree, institution, graduation_year,
-          years_experience, subjects, grade_levels, hourly_rate, bio, teaching_philosophy,
+          years_experience, subjects, subject_rates, grade_levels, hourly_rate, bio, teaching_philosophy,
           resume_file, resume_filename, diploma_file, diploma_filename, credentials_file, credentials_filename,
           availability_schedule, status, interview_status, reviewed_by, reviewed_at
         ) VALUES (
           ?, 'Mathematics & Calculus Specialist', 'Bachelor of Science in Education',
-          'University of California, Berkeley', 2021, 3, ?,
+          'University of California, Berkeley', 2021, 3, ?, ?,
           ?, 45.0,
           'Dedicated mathematics educator passionate about guiding students through algebra, geometry, and calculus with interactive problem solving.',
           'Inspiring student curiosity through real-world applications and intuitive conceptual frameworks.',
@@ -1136,19 +1174,20 @@ function ensureJoshuaAccount(customPassword) {
           'credential_verified_sample.pdf', 'Joshua_Garcia_Resume.pdf',
           ?, 'approved', 'completed', 1, CURRENT_TIMESTAMP
         )
-      `).run(userId, JSON.stringify(['Mathematics', 'Algebra', 'Calculus']), JSON.stringify(['Grade 9-12', 'College Prep']), defaultSchedule);
+      `).run(userId, defaultSubjects, defaultSubjectRates, JSON.stringify(['Grade 9-12', 'College Prep']), defaultSchedule);
       app = { id: appRes.lastInsertRowid };
     } else {
       db.prepare(`
         UPDATE teacher_applications
-        SET headline = 'Mathematics & Calculus Specialist',
-            highest_degree = 'Bachelor of Science in Education',
-            institution = 'University of California, Berkeley',
-            graduation_year = 2021,
-            years_experience = 3,
-            subjects = ?,
-            grade_levels = ?,
-            hourly_rate = 45.0,
+        SET headline = COALESCE(NULLIF(headline, ''), 'Mathematics & Calculus Specialist'),
+            highest_degree = COALESCE(NULLIF(highest_degree, ''), 'Bachelor of Science in Education'),
+            institution = COALESCE(NULLIF(institution, ''), 'University of California, Berkeley'),
+            graduation_year = COALESCE(graduation_year, 2021),
+            years_experience = COALESCE(years_experience, 3),
+            subjects = CASE WHEN subjects IS NULL OR subjects = '' OR subjects = '[]' THEN ? ELSE subjects END,
+            subject_rates = CASE WHEN subject_rates IS NULL OR subject_rates = '' OR subject_rates = '{}' THEN ? ELSE subject_rates END,
+            grade_levels = CASE WHEN grade_levels IS NULL OR grade_levels = '' OR grade_levels = '[]' THEN ? ELSE grade_levels END,
+            hourly_rate = COALESCE(hourly_rate, 45.0),
             resume_file = COALESCE(resume_file, 'credential_verified_sample.pdf'),
             resume_filename = COALESCE(resume_filename, 'Joshua_Garcia_Resume.pdf'),
             diploma_file = COALESCE(diploma_file, 'applicant_diploma.pdf'),
@@ -1161,7 +1200,7 @@ function ensureJoshuaAccount(customPassword) {
             reviewed_by = COALESCE(reviewed_by, 1),
             reviewed_at = COALESCE(reviewed_at, CURRENT_TIMESTAMP)
         WHERE user_id = ?
-      `).run(JSON.stringify(['Mathematics', 'Algebra', 'Calculus']), JSON.stringify(['Grade 9-12', 'College Prep']), defaultSchedule, userId);
+      `).run(defaultSubjects, defaultSubjectRates, JSON.stringify(['Grade 9-12', 'College Prep']), defaultSchedule, userId);
     }
 
     const appId = app.id;
@@ -1172,30 +1211,31 @@ function ensureJoshuaAccount(customPassword) {
       db.prepare(`
         INSERT INTO tutor_profiles (
           user_id, application_id, headline, bio, highest_degree, institution, years_experience,
-          subjects, grade_levels, hourly_rate, availability_schedule, is_featured, is_active, rating, reviews_count, total_sessions
+          subjects, subject_rates, grade_levels, hourly_rate, availability_schedule, is_featured, is_active, rating, reviews_count, total_sessions
         ) VALUES (
           ?, ?, 'Mathematics & Calculus Specialist',
           'Dedicated mathematics educator passionate about guiding students through algebra, geometry, and calculus with interactive problem solving.',
           'Bachelor of Science in Education', 'University of California, Berkeley', 3,
-          ?, ?, 45.0, ?, 0, 1, 5.0, 0, 0
+          ?, ?, ?, 45.0, ?, 0, 1, 5.0, 0, 0
         )
-      `).run(userId, appId, JSON.stringify(['Mathematics', 'Algebra', 'Calculus']), JSON.stringify(['Grade 9-12', 'College Prep']), defaultSchedule);
+      `).run(userId, appId, defaultSubjects, defaultSubjectRates, JSON.stringify(['Grade 9-12', 'College Prep']), defaultSchedule);
     } else {
       db.prepare(`
         UPDATE tutor_profiles 
         SET application_id = COALESCE(application_id, ?),
-            headline = 'Mathematics & Calculus Specialist',
-            bio = 'Dedicated mathematics educator passionate about guiding students through algebra, geometry, and calculus with interactive problem solving.',
-            highest_degree = 'Bachelor of Science in Education',
-            institution = 'University of California, Berkeley',
-            years_experience = 3,
-            subjects = ?,
-            grade_levels = ?,
-            hourly_rate = 45.0,
+            headline = COALESCE(NULLIF(headline, ''), 'Mathematics & Calculus Specialist'),
+            bio = COALESCE(NULLIF(bio, ''), 'Dedicated mathematics educator passionate about guiding students through algebra, geometry, and calculus with interactive problem solving.'),
+            highest_degree = COALESCE(NULLIF(highest_degree, ''), 'Bachelor of Science in Education'),
+            institution = COALESCE(NULLIF(institution, ''), 'University of California, Berkeley'),
+            years_experience = COALESCE(years_experience, 3),
+            subjects = CASE WHEN subjects IS NULL OR subjects = '' OR subjects = '[]' THEN ? ELSE subjects END,
+            subject_rates = CASE WHEN subject_rates IS NULL OR subject_rates = '' OR subject_rates = '{}' THEN ? ELSE subject_rates END,
+            grade_levels = CASE WHEN grade_levels IS NULL OR grade_levels = '' OR grade_levels = '[]' THEN ? ELSE grade_levels END,
+            hourly_rate = COALESCE(hourly_rate, 45.0),
             availability_schedule = COALESCE(availability_schedule, ?),
             is_active = 1
         WHERE user_id = ?
-      `).run(appId, JSON.stringify(['Mathematics', 'Algebra', 'Calculus']), JSON.stringify(['Grade 9-12', 'College Prep']), defaultSchedule, userId);
+      `).run(appId, defaultSubjects, defaultSubjectRates, JSON.stringify(['Grade 9-12', 'College Prep']), defaultSchedule, userId);
     }
 
     // 3. Ensure approved welcome notification for Joshua

@@ -52,8 +52,7 @@ const BookLesson = {
     if (subjSelect) {
       subjSelect.addEventListener('change', (e) => {
         this.selectedSubject = e.target.value;
-        const subjSummary = document.getElementById('page-pay-summary-subject');
-        if (subjSummary) subjSummary.textContent = this.selectedSubject;
+        this.syncSelectedSubjectPricing();
       });
     }
 
@@ -208,6 +207,36 @@ const BookLesson = {
     });
   },
 
+  getTutorSubjectRate(tutor, subjectName) {
+    if (!tutor) return 50;
+    const baseRate = Number(tutor.hourly_rate) || 50;
+    const rates = tutor.subject_rates && typeof tutor.subject_rates === 'object' ? tutor.subject_rates : {};
+    if (!subjectName) return baseRate;
+    const target = String(subjectName).trim();
+    if (rates[target] !== undefined) return Number(rates[target]) || baseRate;
+    const lowerTarget = target.toLowerCase();
+    for (const [k, v] of Object.entries(rates)) {
+      if (k.toLowerCase() === lowerTarget) return Number(v) || baseRate;
+    }
+    return baseRate;
+  },
+
+  syncSelectedSubjectPricing() {
+    if (!this.selectedTutor) return;
+    const activeRate = this.getTutorSubjectRate(this.selectedTutor, this.selectedSubject);
+    const subjSummary = document.getElementById('page-pay-summary-subject');
+    const summaryAmount = document.getElementById('page-pay-summary-amount');
+    const cardAmount = document.getElementById('page-pay-card-amount');
+    const calTutorLabel = document.getElementById('page-cal-tutor-label');
+
+    if (subjSummary) subjSummary.textContent = `${this.selectedSubject || 'Tutoring Session'} ($${activeRate.toFixed(2)}/hr)`;
+    if (summaryAmount) summaryAmount.textContent = `$${activeRate.toFixed(2)}`;
+    if (cardAmount) cardAmount.textContent = `$${activeRate.toFixed(2)}`;
+    if (calTutorLabel) calTutorLabel.textContent = `Showing live schedule for ${this.selectedTutor.name} • $${activeRate.toFixed(2)}/hour (${this.selectedSubject})`;
+
+    this.updateButtonText();
+  },
+
   selectTutor(tutor) {
     this.selectedTutor = tutor;
     this.selectedDate = null;
@@ -221,17 +250,19 @@ const BookLesson = {
     const tutorBadge = document.getElementById('selected-tutor-badge');
     if (tutorBadge) tutorBadge.textContent = tutor.name;
 
-    const calTutorLabel = document.getElementById('page-cal-tutor-label');
-    if (calTutorLabel) calTutorLabel.textContent = `Showing live schedule for ${tutor.name} • $${tutor.hourly_rate}/hour`;
-
-    // Populate Subjects
+    // Populate Subjects with individual rates
     const subjSelect = document.getElementById('page-booking-subject-select');
     if (subjSelect) {
-      subjSelect.innerHTML = (tutor.subjects || []).map(s => `
-        <option value="${s}">${s}</option>
-      `).join('');
+      subjSelect.innerHTML = (tutor.subjects || []).map(s => {
+        const sRate = this.getTutorSubjectRate(tutor, s);
+        return `<option value="${s}">${s} ($${sRate.toFixed(2)}/hr)</option>`;
+      }).join('');
       this.selectedSubject = subjSelect.value;
     }
+
+    const activeRate = this.getTutorSubjectRate(tutor, this.selectedSubject);
+    const calTutorLabel = document.getElementById('page-cal-tutor-label');
+    if (calTutorLabel) calTutorLabel.textContent = `Showing live schedule for ${tutor.name} • $${activeRate.toFixed(2)}/hour`;
 
     // Reset calendar & slots
     const now = new Date();
@@ -253,9 +284,9 @@ const BookLesson = {
     const cardAmount = document.getElementById('page-pay-card-amount');
 
     if (summaryTutor) summaryTutor.textContent = `${tutor.name} (${tutor.highest_degree || 'Specialist'})`;
-    if (summarySubj) summarySubj.textContent = this.selectedSubject || (tutor.subjects && tutor.subjects[0]) || 'Tutoring Session';
-    if (summaryAmount) summaryAmount.textContent = `$${tutor.hourly_rate.toFixed(2)}`;
-    if (cardAmount) cardAmount.textContent = `$${tutor.hourly_rate.toFixed(2)}`;
+    if (summarySubj) summarySubj.textContent = `${this.selectedSubject || (tutor.subjects && tutor.subjects[0]) || 'Tutoring Session'} ($${activeRate.toFixed(2)}/hr)`;
+    if (summaryAmount) summaryAmount.textContent = `$${activeRate.toFixed(2)}`;
+    if (cardAmount) cardAmount.textContent = `$${activeRate.toFixed(2)}`;
 
     // Configure payment radio availability
     this.configurePaymentOptions();
@@ -518,7 +549,7 @@ const BookLesson = {
     if (this.paymentMethod === 'subscription') {
       btnText.textContent = 'Confirm Booking (Use 1 Lesson Credit — $0.00)';
     } else {
-      const price = this.selectedTutor?.hourly_rate || 50;
+      const price = this.getTutorSubjectRate(this.selectedTutor, this.selectedSubject);
       btnText.textContent = `Pay $${price.toFixed(2)} & Confirm Booking`;
     }
   },

@@ -1108,15 +1108,23 @@ function ensureJoshuaAccount(customPassword) {
 
     const userId = user.id;
 
-    // 1. Ensure teacher application
-    const app = db.prepare('SELECT id FROM teacher_applications WHERE user_id = ?').get(userId);
+    // 1. Ensure teacher application is APPROVED
+    const defaultSchedule = JSON.stringify({
+      monday: { available: true, start: '09:00', end: '17:00' },
+      tuesday: { available: true, start: '09:00', end: '17:00' },
+      wednesday: { available: true, start: '09:00', end: '17:00' },
+      thursday: { available: true, start: '09:00', end: '17:00' },
+      friday: { available: true, start: '09:00', end: '17:00' }
+    });
+
+    let app = db.prepare('SELECT id FROM teacher_applications WHERE user_id = ?').get(userId);
     if (!app) {
-      db.prepare(`
+      const appRes = db.prepare(`
         INSERT INTO teacher_applications (
           user_id, headline, highest_degree, institution, graduation_year,
           years_experience, subjects, grade_levels, hourly_rate, bio, teaching_philosophy,
           resume_file, resume_filename, diploma_file, diploma_filename, credentials_file, credentials_filename,
-          status, interview_status
+          availability_schedule, status, interview_status, reviewed_by, reviewed_at
         ) VALUES (
           ?, 'Mathematics & Calculus Specialist', 'Bachelor of Science in Education',
           'University of California, Berkeley', 2021, 3, ?,
@@ -1126,44 +1134,113 @@ function ensureJoshuaAccount(customPassword) {
           'credential_verified_sample.pdf', 'Joshua_Garcia_Resume.pdf',
           'applicant_diploma.pdf', 'UC_Berkeley_Diploma.pdf',
           'credential_verified_sample.pdf', 'Joshua_Garcia_Resume.pdf',
-          'pending', 'pending'
+          ?, 'approved', 'completed', 1, CURRENT_TIMESTAMP
         )
-      `).run(userId, JSON.stringify(['Mathematics', 'Algebra', 'Calculus']), JSON.stringify(['Grade 9-12', 'College Prep']));
+      `).run(userId, JSON.stringify(['Mathematics', 'Algebra', 'Calculus']), JSON.stringify(['Grade 9-12', 'College Prep']), defaultSchedule);
+      app = { id: appRes.lastInsertRowid };
     } else {
       db.prepare(`
         UPDATE teacher_applications
-        SET resume_file = COALESCE(resume_file, 'credential_verified_sample.pdf'),
+        SET headline = 'Mathematics & Calculus Specialist',
+            highest_degree = 'Bachelor of Science in Education',
+            institution = 'University of California, Berkeley',
+            graduation_year = 2021,
+            years_experience = 3,
+            subjects = ?,
+            grade_levels = ?,
+            hourly_rate = 45.0,
+            resume_file = COALESCE(resume_file, 'credential_verified_sample.pdf'),
             resume_filename = COALESCE(resume_filename, 'Joshua_Garcia_Resume.pdf'),
             diploma_file = COALESCE(diploma_file, 'applicant_diploma.pdf'),
             diploma_filename = COALESCE(diploma_filename, 'UC_Berkeley_Diploma.pdf'),
             credentials_file = COALESCE(credentials_file, 'credential_verified_sample.pdf'),
             credentials_filename = COALESCE(credentials_filename, 'Joshua_Garcia_Resume.pdf'),
-            status = 'pending'
+            availability_schedule = COALESCE(availability_schedule, ?),
+            status = 'approved',
+            interview_status = 'completed',
+            reviewed_by = COALESCE(reviewed_by, 1),
+            reviewed_at = COALESCE(reviewed_at, CURRENT_TIMESTAMP)
         WHERE user_id = ?
-      `).run(userId);
+      `).run(JSON.stringify(['Mathematics', 'Algebra', 'Calculus']), JSON.stringify(['Grade 9-12', 'College Prep']), defaultSchedule, userId);
     }
 
-    // 2. Ensure tutor profile
+    const appId = app.id;
+
+    // 2. Ensure tutor profile is ACTIVE and APPROVED
     const profile = db.prepare('SELECT id FROM tutor_profiles WHERE user_id = ?').get(userId);
     if (!profile) {
       db.prepare(`
         INSERT INTO tutor_profiles (
-          user_id, headline, bio, highest_degree, institution, years_experience,
-          subjects, grade_levels, hourly_rate, availability_schedule, is_active
+          user_id, application_id, headline, bio, highest_degree, institution, years_experience,
+          subjects, grade_levels, hourly_rate, availability_schedule, is_featured, is_active, rating, reviews_count, total_sessions
         ) VALUES (
-          ?, 'Mathematics & Calculus Specialist',
+          ?, ?, 'Mathematics & Calculus Specialist',
           'Dedicated mathematics educator passionate about guiding students through algebra, geometry, and calculus with interactive problem solving.',
           'Bachelor of Science in Education', 'University of California, Berkeley', 3,
-          ?, ?, 45.0, '{}', 0
+          ?, ?, 45.0, ?, 0, 1, 5.0, 0, 0
         )
-      `).run(userId, JSON.stringify(['Mathematics', 'Algebra', 'Calculus']), JSON.stringify(['Grade 9-12', 'College Prep']));
+      `).run(userId, appId, JSON.stringify(['Mathematics', 'Algebra', 'Calculus']), JSON.stringify(['Grade 9-12', 'College Prep']), defaultSchedule);
     } else {
-      // Ensure existing profile has valid JSON arrays and correct pending status
       db.prepare(`
         UPDATE tutor_profiles 
-        SET subjects = ?, grade_levels = ?, availability_schedule = COALESCE(availability_schedule, '{}'), is_active = 0
-        WHERE user_id = ? AND (subjects NOT LIKE '[%' OR is_active = 1)
-      `).run(JSON.stringify(['Mathematics', 'Algebra', 'Calculus']), JSON.stringify(['Grade 9-12', 'College Prep']), userId);
+        SET application_id = COALESCE(application_id, ?),
+            headline = 'Mathematics & Calculus Specialist',
+            bio = 'Dedicated mathematics educator passionate about guiding students through algebra, geometry, and calculus with interactive problem solving.',
+            highest_degree = 'Bachelor of Science in Education',
+            institution = 'University of California, Berkeley',
+            years_experience = 3,
+            subjects = ?,
+            grade_levels = ?,
+            hourly_rate = 45.0,
+            availability_schedule = COALESCE(availability_schedule, ?),
+            is_active = 1
+        WHERE user_id = ?
+      `).run(appId, JSON.stringify(['Mathematics', 'Algebra', 'Calculus']), JSON.stringify(['Grade 9-12', 'College Prep']), defaultSchedule, userId);
+    }
+
+    // 3. Ensure approved welcome notification for Joshua
+    const existingNotif = db.prepare("SELECT id FROM notifications WHERE user_id = ? AND title LIKE '%Approved%'").get(userId);
+    if (!existingNotif) {
+      db.prepare(`
+        INSERT INTO notifications (user_id, title, message, type, is_read, link)
+        VALUES (?, 'Application Approved! Welcome to Aviora Education', 'Congratulations! Following your virtual interview, your tutor application has been marked as approved. All features are now accessible: you can begin operations, accept student bookings, and conduct classes. Your tutor profile is now live in the Aviora directory.', 'approval', 0, '#teacher-dashboard')
+      `).run(userId);
+    }
+
+    // 4. Ensure operational sample data (upcoming accepted class and pending student request) so functions can be operated immediately
+    const krystel = db.prepare("SELECT id FROM users WHERE email = 'comiakrystel65@gmail.com'").get();
+    if (krystel) {
+      const existingReq = db.prepare('SELECT id FROM tutoring_requests WHERE tutor_id = ? AND student_id = ?').get(userId, krystel.id);
+      if (!existingReq) {
+        db.prepare(`
+          INSERT INTO tutoring_requests (
+            student_id, tutor_id, subject, grade_level, requested_date, requested_time,
+            duration_hours, hourly_rate, total_amount, status, notes, room_status
+          ) VALUES (?, ?, 'Calculus BC', 'Grade 11-12', '2026-10-29', '14:00', 1.0, 45.0, 45.0, 'accepted', 'Need help with Taylor Series convergence and integration by parts.', 'closed')
+        `).run(krystel.id, userId);
+
+        const existingTask = db.prepare('SELECT id FROM tutor_tasks WHERE tutor_id = ? AND student_id = ?').get(userId, krystel.id);
+        if (!existingTask) {
+          db.prepare(`
+            INSERT INTO tutor_tasks (
+              tutor_id, student_id, subject, title, description, due_date, status
+            ) VALUES (?, ?, 'Calculus BC', 'Taylor Polynomials Practice Worksheet', 'Complete exercises 1 through 8 on finding the 3rd-degree Taylor polynomial centered at x=0.', '2026-11-02', 'assigned')
+          `).run(userId, krystel.id);
+        }
+      }
+    }
+
+    const lucas = db.prepare("SELECT id FROM users WHERE email = 'student@aviora.edu'").get();
+    if (lucas) {
+      const existingReq2 = db.prepare('SELECT id FROM tutoring_requests WHERE tutor_id = ? AND student_id = ?').get(userId, lucas.id);
+      if (!existingReq2) {
+        db.prepare(`
+          INSERT INTO tutoring_requests (
+            student_id, tutor_id, subject, grade_level, requested_date, requested_time,
+            duration_hours, hourly_rate, total_amount, status, notes, room_status
+          ) VALUES (?, ?, 'Algebra', 'Grade 9-10', '2026-10-30', '10:00', 1.0, 45.0, 45.0, 'pending', 'Looking for a structured review on quadratic functions and graphing parabolas.', 'closed')
+        `).run(lucas.id, userId);
+      }
     }
   } catch (err) {
     console.error('Error ensuring Joshua Garcia account:', err);

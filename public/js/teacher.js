@@ -483,46 +483,52 @@ const Teacher = {
     const app = this.application || {};
     const user = (typeof Auth !== 'undefined' && Auth.currentUser) ? Auth.currentUser : {};
     const applicantName = user.name || app.name || 'Joshua Garcia';
-    const isInterview = app.interview_status === 'scheduled';
-    const accent = isInterview ? '#3B82F6' : '#F59E0B';
-    const accentBg = isInterview ? 'rgba(59, 130, 246, 0.08)' : 'rgba(245, 158, 11, 0.08)';
-    const accentBorder = isInterview ? 'rgba(59, 130, 246, 0.35)' : 'rgba(245, 158, 11, 0.35)';
+    const isApproved = app.status === 'approved';
+    const isInterview = !isApproved && app.interview_status === 'scheduled';
+    const accent = isApproved ? '#10B981' : (isInterview ? '#3B82F6' : '#F59E0B');
+    const accentBg = isApproved ? 'rgba(16, 185, 129, 0.08)' : (isInterview ? 'rgba(59, 130, 246, 0.08)' : 'rgba(245, 158, 11, 0.08)');
+    const accentBorder = isApproved ? 'rgba(16, 185, 129, 0.35)' : (isInterview ? 'rgba(59, 130, 246, 0.35)' : 'rgba(245, 158, 11, 0.35)');
 
-    const interviewNotice = isInterview
-      ? `Virtual interview is scheduled for <strong>${this.formatInterviewDate(app.interview_scheduled_at)}</strong>. Please check your notification bell in the top header for instructions.`
-      : `Your submitted credentials and academic qualifications are undergoing review by the Academic Board. You will be notified once a schedule for your virtual interview is set.`;
+    let interviewNotice = `Your submitted credentials and academic qualifications are undergoing review by the Academic Board. You will be notified once a schedule for your virtual interview is set.`;
+    if (isApproved) {
+      interviewNotice = `Congratulations, <strong>${applicantName}</strong>! Following your virtual interview, your educator application was officially approved by the Academic Board. All teacher operations and functions are fully unlocked across your account.`;
+    } else if (isInterview) {
+      interviewNotice = `Virtual interview is scheduled for <strong>${this.formatInterviewDate(app.interview_scheduled_at)}</strong>. Please check your notification bell in the top header for instructions.`;
+    }
 
     const subjectsArr = Array.isArray(app.subjects) ? app.subjects : (typeof app.subjects === 'string' ? app.subjects.split(',').map(s => s.trim()).filter(Boolean) : ['Mathematics', 'Algebra', 'Calculus']);
     const subjectsBadges = subjectsArr.map(s => `<span class="badge-gold" style="font-size: 0.8rem; margin-right: 0.35rem; margin-bottom: 0.35rem; display: inline-block;">${s}</span>`).join('');
 
     appSection.innerHTML = `
       <div style="text-align: center; margin-bottom: 2rem;">
-        <span class="badge-gold" style="font-size: 0.8rem; padding: 0.35rem 0.85rem;">EDUCATOR ACCREDITATION • UNDER REVIEW</span>
+        <span class="badge-gold" style="font-size: 0.8rem; padding: 0.35rem 0.85rem;">${isApproved ? 'EDUCATOR ACCREDITATION • FULLY APPROVED' : 'EDUCATOR ACCREDITATION • UNDER REVIEW'}</span>
         <h2 style="font-size: 1.85rem; color: var(--text-primary); margin-top: 0.65rem; font-weight: 800;">
-          Application Under Review
+          ${isApproved ? 'Application Approved & Active' : 'Application Under Review'}
         </h2>
         <p style="font-size: 0.95rem; color: var(--text-secondary); max-width: 680px; margin: 0.5rem auto 0; line-height: 1.6;">
-          Your tutor application is currently under review by the Academic Board. <strong style="color: var(--text-primary);">There is no need to re-apply or fill out the form again.</strong> You can explore and view everything within your account while the review is underway.
+          ${isApproved
+            ? 'Your tutor credentials and virtual interview have been approved. All operational features are unlocked for live teaching, booking management, and coursework.'
+            : 'Your tutor application is currently under review by the Academic Board. <strong style="color: var(--text-primary);">There is no need to re-apply or fill out the form again.</strong> You can explore and view everything within your account while the review is underway.'}
         </p>
       </div>
 
       <!-- Main Status Card -->
       <div style="background: ${accentBg}; border: 1.5px solid ${accentBorder}; border-radius: var(--radius-lg, 16px); padding: 1.75rem; margin-bottom: 2rem;">
         <div style="display: flex; gap: 1.25rem; align-items: flex-start; flex-wrap: wrap;">
-          <div style="width: 48px; height: 48px; border-radius: 50%; background: ${isInterview ? 'rgba(59, 130, 246, 0.2)' : 'rgba(245, 158, 11, 0.2)'}; color: ${accent}; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-            ${isInterview ? Icons.calendar(24) : Icons.hourglass(24)}
+          <div style="width: 48px; height: 48px; border-radius: 50%; background: ${isApproved ? 'rgba(16, 185, 129, 0.2)' : (isInterview ? 'rgba(59, 130, 246, 0.2)' : 'rgba(245, 158, 11, 0.2)')}; color: ${accent}; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+            ${isApproved ? Icons.check(24) : (isInterview ? Icons.calendar(24) : Icons.hourglass(24))}
           </div>
           <div style="flex: 1; min-width: 260px;">
             <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
               <span style="font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; color: var(--text-secondary);">
                 Applicant: ${applicantName} • Application ID: #${app.id || 'APP-2026'}
               </span>
-              <span class="status-pill pending" style="font-size: 0.8rem; background: ${accentBg}; color: ${accent}; border: 1px solid ${accentBorder};">
-                ● ${isInterview ? 'Virtual Interview Scheduled' : 'Status: Under Review'}
+              <span class="status-pill ${isApproved ? 'approved' : 'pending'}" style="font-size: 0.8rem; background: ${accentBg}; color: ${accent}; border: 1px solid ${accentBorder};">
+                ● ${isApproved ? 'Status: Approved & Active' : (isInterview ? 'Virtual Interview Scheduled' : 'Status: Under Review')}
               </span>
             </div>
             <h3 style="color: var(--text-primary); font-size: 1.25rem; margin: 0.4rem 0 0.25rem; font-weight: 800;">
-              ${isInterview ? 'Interview Scheduled • Pending Board Confirmation' : 'Credentials Under Review • No Further Action Needed'}
+              ${isApproved ? 'Accreditation Approved • All Operations Unlocked' : (isInterview ? 'Interview Scheduled • Pending Board Confirmation' : 'Credentials Under Review • No Further Action Needed')}
             </h3>
             <p style="color: var(--text-secondary); font-size: 0.9rem; line-height: 1.6; margin: 0.4rem 0 0;">
               ${interviewNotice}
@@ -548,29 +554,40 @@ const Teacher = {
 
             <!-- Step 2 -->
             <div style="display: flex; align-items: center; gap: 0.5rem; flex: 1; min-width: 170px;">
-              <span style="width: 26px; height: 26px; border-radius: 50%; background: ${isInterview ? '#3B82F6' : '#F59E0B'}; color: #fff; display: inline-flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 700;">${isInterview ? '✓' : '2'}</span>
+              <span style="width: 26px; height: 26px; border-radius: 50%; background: #10B981; color: #fff; display: inline-flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 700;">✓</span>
               <div>
                 <div style="font-size: 0.82rem; font-weight: 700; color: var(--text-primary);">2. Virtual Interview</div>
-                <div style="font-size: 0.72rem; color: ${accent}; font-weight: 600;">${isInterview ? 'Interview Scheduled' : 'Pending Scheduling'}</div>
+                <div style="font-size: 0.72rem; color: #10B981; font-weight: 600;">${isApproved ? 'Completed & Verified' : (isInterview ? 'Interview Scheduled' : 'Pending Scheduling')}</div>
               </div>
-              <span style="flex: 1; height: 2px; min-width: 12px; background: ${isInterview ? '#3B82F6' : 'rgba(0,0,0,0.1)'}; margin: 0 0.25rem;"></span>
+              <span style="flex: 1; height: 2px; min-width: 12px; background: ${isApproved || isInterview ? '#10B981' : 'rgba(0,0,0,0.1)'}; margin: 0 0.25rem;"></span>
             </div>
 
             <!-- Step 3 -->
             <div style="display: flex; align-items: center; gap: 0.5rem; flex: 0 0 auto;">
-              <span style="width: 26px; height: 26px; border-radius: 50%; background: rgba(0,0,0,0.12); color: var(--text-secondary); display: inline-flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 700;">3</span>
+              <span style="width: 26px; height: 26px; border-radius: 50%; background: ${isApproved ? '#10B981' : 'rgba(0,0,0,0.12)'}; color: ${isApproved ? '#fff' : 'var(--text-secondary)'}; display: inline-flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 700;">${isApproved ? '✓' : '3'}</span>
               <div>
-                <div style="font-size: 0.82rem; font-weight: 600; color: var(--text-secondary);">3. Final Approval</div>
-                <div style="font-size: 0.72rem; color: var(--text-secondary);">Unlocks operations</div>
+                <div style="font-size: 0.82rem; font-weight: ${isApproved ? '700' : '600'}; color: ${isApproved ? '#10B981' : 'var(--text-secondary)'};">3. Final Approval</div>
+                <div style="font-size: 0.72rem; color: ${isApproved ? '#10B981' : 'var(--text-secondary)'}; font-weight: 600;">${isApproved ? 'Approved & Operating' : 'Unlocks operations'}</div>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- Operational Lock Notice Box -->
-        <div style="margin-top: 1.25rem; background: rgba(0,0,0,0.05); border-left: 3px solid ${accent}; padding: 0.75rem 1rem; border-radius: 0 var(--radius-sm) var(--radius-sm) 0; font-size: 0.84rem; color: var(--text-primary); line-height: 1.55;">
-          <strong>🔒 Operational Lock Notice:</strong> While your application is under review, you can freely view and explore everything within your account (Dashboard, Classes, Students, Schedule, and Aviora Buddy). Operational actions (conducting live sessions, assigning tasks, and accepting student bookings) remain locked until your application is approved following your virtual interview.
-        </div>
+        <!-- Operational Status Box -->
+        ${isApproved ? `
+          <div style="margin-top: 1.25rem; background: rgba(16, 185, 129, 0.12); border-left: 3px solid #10B981; padding: 0.85rem 1.1rem; border-radius: 0 var(--radius-sm) var(--radius-sm) 0; font-size: 0.86rem; color: var(--text-primary); line-height: 1.55;">
+            <strong>✅ Live Operations Active:</strong> Your tutor account has received final approval from the Administrator following your virtual interview. All operational functions are accessible: you can now conduct live virtual classes, accept student booking requests, assign coursework, and update your public teaching rates and availability schedule.
+          </div>
+          <div style="margin-top: 1rem; display: flex; gap: 0.75rem; flex-wrap: wrap;">
+            <a href="#teacher-classes" class="btn btn-primary btn-sm">View Classes &amp; Launch Sessions →</a>
+            <a href="#teacher-schedule" class="btn btn-secondary btn-sm">Configure Schedule Availability →</a>
+            <a href="#teacher-profile" class="btn btn-secondary btn-sm">Configure Profile &amp; Rates →</a>
+          </div>
+        ` : `
+          <div style="margin-top: 1.25rem; background: rgba(0,0,0,0.05); border-left: 3px solid ${accent}; padding: 0.75rem 1rem; border-radius: 0 var(--radius-sm) var(--radius-sm) 0; font-size: 0.84rem; color: var(--text-primary); line-height: 1.55;">
+            <strong>🔒 Operational Lock Notice:</strong> While your application is under review, you can freely view and explore everything within your account (Dashboard, Classes, Students, Schedule, and Aviora Buddy). Operational actions (conducting live sessions, assigning tasks, and accepting student bookings) remain locked until your application is approved following your virtual interview.
+          </div>
+        `}
       </div>
 
       <!-- Submitted Information Overview (Read-Only) -->

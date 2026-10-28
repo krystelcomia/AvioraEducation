@@ -6313,17 +6313,17 @@
       </div>
       <div class="modal-body" style="padding: 1.5rem 1.75rem;">
         <form id="form-teacher-assign-task" onsubmit="event.preventDefault(); Teacher.handleAssignTaskSubmit();">
-          <div class="form-group">
-            <label class="form-label">Select Enrolled Student *</label>
-            <select id="assign-task-student-id" class="form-control" required onchange="Teacher.handleStudentSelectChange(this.value)">
-              <option value="">-- Choose an enrolled student --</option>
-            </select>
-          </div>
-
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+          <input type="hidden" id="assign-task-subject" value="" />
+          <div style="display: grid; grid-template-columns: 1.35fr 1fr; gap: 1rem;">
             <div class="form-group">
-              <label class="form-label">Respective Subject *</label>
-              <input type="text" id="assign-task-subject" class="form-control" placeholder="e.g. Calculus BC" required />
+              <label class="form-label">Select Enrolled Student *</label>
+              <select id="assign-task-student-id" class="form-control" required onchange="Teacher.handleStudentSelectChange(this.value)">
+                <option value="">-- Choose an enrolled student --</option>
+              </select>
+              <div id="assign-task-auto-subject-info" style="margin-top: 0.4rem; font-size: 0.78rem; color: var(--gold-600); font-weight: 700; display: flex; align-items: center; gap: 0.35rem;">
+                <span>📚 Subject automatically set from student's availed course:</span>
+                <span id="assign-task-auto-subject-pill" class="badge-gold" style="font-size: 0.74rem; padding: 0.15rem 0.55rem;">Auto-detected</span>
+              </div>
             </div>
             <div class="form-group">
               <label class="form-label">Due Date *</label>
@@ -6338,10 +6338,22 @@
 
           <div class="form-group">
             <label class="form-label">Instructions / Problem Description *</label>
-            <textarea id="assign-task-desc" class="form-control" rows="4" placeholder="Detail the questions, exercises, or diagnostic prompt for the student..." required></textarea>
+            <textarea id="assign-task-desc" class="form-control" rows="3" placeholder="Detail the questions, exercises, or diagnostic prompt for the student..." required></textarea>
           </div>
 
-          <div style="display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1.5rem;">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div class="form-group">
+              <label class="form-label">Activity Link (Optional)</label>
+              <input type="url" id="assign-task-link" class="form-control" placeholder="https://... (Worksheet, Docs, Desmos, etc.)" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Upload Activity File (Optional)</label>
+              <input type="file" id="assign-task-file" class="form-control" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.ppt,.pptx,.xls,.xlsx,.txt,.zip" onchange="Teacher.handleAssignTaskFileSelect(this)" style="padding: 0.4rem 0.6rem; font-size: 0.82rem;" />
+              <div id="assign-task-file-badge" style="display: none; margin-top: 0.35rem; font-size: 0.76rem; color: #10B981; font-weight: 700;"></div>
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1.25rem;">
             <button type="button" class="btn btn-secondary btn-sm" onclick="Teacher.closeModal('modal-teacher-assign-task')">Cancel</button>
             <button type="submit" class="btn btn-primary btn-sm" id="btn-submit-assign-task">Assign Coursework Task</button>
           </div>

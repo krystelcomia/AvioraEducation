@@ -75,6 +75,20 @@ const upload = multer({
   }
 });
 
+const taskUpload = multer({
+  storage,
+  limits: { fileSize: 15 * 1024 * 1024 }, // 15MB limit for coursework activities
+  fileFilter: (req, file, cb) => {
+    const allowed = ['.pdf', '.doc', '.docx', '.png', '.jpg', '.jpeg', '.ppt', '.pptx', '.xls', '.xlsx', '.txt', '.zip'];
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (allowed.includes(ext)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Unsupported activity file format. Allowed: PDF, Word, PowerPoint, Excel, Text, ZIP, or Images.'));
+    }
+  }
+});
+
 // Middleware
 app.use(cors());
 app.use(express.json());
@@ -3829,15 +3843,24 @@ app.get('/api/teacher/tasks', authenticateToken, requireRole('teacher'), (req, r
   }
 });
 
-// Teacher Assigns New Task to Student
-app.post('/api/teacher/tasks', authenticateToken, requireRole('teacher'), (req, res) => {
+// Teacher Assigns New Task to Student (Subject auto-set from student's availed course; supports file upload & activity link)
+app.post('/api/teacher/tasks', authenticateToken, requireRole('teacher'), (req, res, next) => {
+  const contentType = req.headers['content-type'] || '';
+  if (contentType.includes('multipart/form-data')) {
+    return taskUpload.single('activity_file')(req, res, (err) => {
+      if (err) return res.status(400).json({ error: err.message });
+      next();
+    });
+  }
+  next();
+}, (req, res) => {
   try {
     const teacherId = req.user.id;
     const appRecord = db.prepare('SELECT status FROM teacher_applications WHERE user_id = ?').get(teacherId);
     if (!appRecord || appRecord.status !== 'approved') {
       return res.status(403).json({ error: 'Your account is currently under review. Assigning student tasks will unlock once approved by the administrator.' });
     }
-    const { student_id, subject, title, description, due_date } = req.body;
+    const { student_id, subject, title, description, due_date, activity_link } = req.body;
 
     if (!student_id || !title) {
       return res.status(400).json({ error: 'Student and task title are required.' });
@@ -3848,29 +3871,60 @@ app.post('/api/teacher/tasks', authenticateToken, requireRole('teacher'), (req, 
       return res.status(404).json({ error: 'Student not found.' });
     }
 
+    // Automatically resolve the subject the student has availed from this tutor
+    const availedReq = db.prepare(`
+      SELECT subject FROM tutoring_requests
+      WHERE tutor_id = ? AND student_id = ?
+      ORDER BY
+        CASE
+          WHEN status = 'accepted' THEN 1
+          WHEN status = 'completed' THEN 2
+          WHEN status = 'pending' THEN 3
+          ELSE 4
+        END,
+        created_at DESC
+      LIMIT 1
+    `).get(teacherId, student_id);
+
+    const autoSubject = availedReq?.subject || (subject && String(subject).trim()) || 'General Study';
+    const cleanLink = activity_link && String(activity_link).trim() ? String(activity_link).trim() : null;
+    const attachmentUrl = req.file ? `/uploads/${req.file.filename}` : null;
+    const attachmentName = req.file ? req.file.originalname : null;
+
     const result = db.prepare(`
-      INSERT INTO tutor_tasks (tutor_id, student_id, subject, title, description, due_date, status)
-      VALUES (?, ?, ?, ?, ?, ?, 'assigned')
+      INSERT INTO tutor_tasks (
+        tutor_id, student_id, subject, title, description,
+        due_date, activity_link, attachment_url, attachment_name, status
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'assigned')
     `).run(
       teacherId,
       student_id,
-      subject || 'General Study',
+      autoSubject,
       title,
       description || null,
-      due_date || null
+      due_date || null,
+      cleanLink,
+      attachmentUrl,
+      attachmentName
     );
 
     // Notify student
+    const extraNotice = (cleanLink || attachmentName) ? ' (Includes activity materials/links)' : '';
     sendNotification(
       student_id,
       'New Academic Task Assigned',
-      `${req.user.name} assigned you a new task: "${title}" in ${subject || 'your course'}.`,
+      `${req.user.name} assigned you a new task: "${title}" in ${autoSubject}${extraNotice}.`,
       'assignment',
       '/#student-portal'
     );
 
     const createdTask = db.prepare('SELECT * FROM tutor_tasks WHERE id = ?').get(result.lastInsertRowid);
-    res.status(201).json({ message: 'Task successfully assigned to student!', taskId: result.lastInsertRowid, task: createdTask });
+    res.status(201).json({
+      message: `Task successfully assigned to ${student.name} (${autoSubject})!`,
+      taskId: result.lastInsertRowid,
+      task: createdTask
+    });
   } catch (error) {
     console.error('Assign task error:', error);
     res.status(500).json({ error: 'Failed to assign task: ' + error.message });

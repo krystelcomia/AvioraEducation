@@ -515,8 +515,8 @@ const Teacher = {
         </h2>
         <p style="font-size: 0.95rem; color: var(--text-secondary); max-width: 680px; margin: 0.5rem auto 0; line-height: 1.6;">
           ${isApproved
-            ? 'Your tutor credentials and virtual interview have been approved. All operational features are unlocked for live teaching, booking management, and coursework.'
-            : 'Your tutor application is currently under review by the Academic Board. <strong style="color: var(--text-primary);">There is no need to re-apply or fill out the form again.</strong> You can explore and view everything within your account while the review is underway.'}
+        ? 'Your tutor credentials and virtual interview have been approved. All operational features are unlocked for live teaching, booking management, and coursework.'
+        : 'Your tutor application is currently under review by the Academic Board. <strong style="color: var(--text-primary);">There is no need to re-apply or fill out the form again.</strong> You can explore and view everything within your account while the review is underway.'}
         </p>
       </div>
 
@@ -1335,7 +1335,7 @@ const Teacher = {
 
     // Refresh public Tutors cache so Student views on the same session also reflect immediately
     if (typeof Tutors !== 'undefined' && typeof Tutors.loadTutors === 'function') {
-      Tutors.loadTutors().catch(() => {});
+      Tutors.loadTutors().catch(() => { });
     }
   },
 
@@ -1495,10 +1495,10 @@ const Teacher = {
           <h3 style="color: var(--text-primary); font-size: 1.25rem;">No Classes Found</h3>
           <p style="color: var(--text-secondary); font-size: 0.9rem; max-width: 480px; margin: 0.5rem auto 1.5rem;">
             ${q
-              ? 'No classes match your current search or filter criteria.'
-              : this.classFilter === 'open' 
-                ? 'No live virtual classrooms currently open. You can launch a virtual session for any accepted student booking.' 
-                : 'You do not have any classes in this category yet.'}
+          ? 'No classes match your current search or filter criteria.'
+          : this.classFilter === 'open'
+            ? 'No live virtual classrooms currently open. You can launch a virtual session for any accepted student booking.'
+            : 'You do not have any classes in this category yet.'}
           </p>
           <button type="button" class="btn btn-primary btn-sm" onclick="Teacher.openInstantClassModal()">
             🚀 Launch Instant Class with Student
@@ -1916,8 +1916,8 @@ const Teacher = {
           <h4 style="color: var(--text-primary); font-size: 1.15rem;">No Coursework Tasks Found</h4>
           <p style="color: var(--text-secondary); font-size: 0.85rem; max-width: 450px; margin: 0.5rem auto 1.25rem;">
             ${this.taskFilter === 'submitted'
-              ? 'Great job! You have graded all submitted student assignments.'
-              : 'You have not assigned tasks in this view yet.'}
+          ? 'Great job! You have graded all submitted student assignments.'
+          : 'You have not assigned tasks in this view yet.'}
           </p>
           <button type="button" class="btn btn-primary btn-sm" onclick="Teacher.openAssignTaskModal()">
             + Assign Task to Student
@@ -1958,9 +1958,24 @@ const Teacher = {
             <h4 class="task-title" style="color: var(--text-primary); font-size: 1.15rem; margin: 0.65rem 0 0.35rem;">
               ${task.title}
             </h4>
-            <p class="task-desc" style="color: var(--text-secondary); font-size: 0.875rem; line-height: 1.5; margin: 0 0 1rem;">
+            <p class="task-desc" style="color: var(--text-secondary); font-size: 0.875rem; line-height: 1.5; margin: 0 0 0.85rem;">
               ${task.description}
             </p>
+
+            ${(task.activity_link || task.attachment_url) ? `
+              <div style="display: flex; gap: 0.6rem; flex-wrap: wrap; margin-bottom: 1rem;">
+                ${task.attachment_url ? `
+                  <a href="${task.attachment_url}" target="_blank" rel="noopener noreferrer" class="btn btn-outline-gold btn-sm" style="font-size: 0.78rem; padding: 0.3rem 0.7rem; text-decoration: none;">
+                    📎 ${task.attachment_name || 'Download Activity File'}
+                  </a>
+                ` : ''}
+                ${task.activity_link ? `
+                  <a href="${task.activity_link}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-sm" style="font-size: 0.78rem; padding: 0.3rem 0.7rem; text-decoration: none;">
+                    🔗 Open Activity Link ↗
+                  </a>
+                ` : ''}
+              </div>
+            ` : ''}
 
             <!-- Student Submission Content -->
             ${task.student_submission ? `
@@ -2022,8 +2037,17 @@ const Teacher = {
       return;
     }
     const studentSelect = document.getElementById('assign-task-student-id');
-    const subjectInput = document.getElementById('assign-task-subject');
     const dueDateInput = document.getElementById('assign-task-due-date');
+    const linkInput = document.getElementById('assign-task-link');
+    const fileInput = document.getElementById('assign-task-file');
+    const fileBadge = document.getElementById('assign-task-file-badge');
+
+    if (linkInput) linkInput.value = '';
+    if (fileInput) fileInput.value = '';
+    if (fileBadge) {
+      fileBadge.style.display = 'none';
+      fileBadge.textContent = '';
+    }
 
     if (studentSelect) {
       studentSelect.innerHTML = '<option value="">-- Choose an enrolled student --</option>';
@@ -2034,9 +2058,12 @@ const Teacher = {
         studentSelect.appendChild(opt);
       });
 
-      if (preselectedStudentId) {
-        studentSelect.value = preselectedStudentId;
-        this.handleStudentSelectChange(preselectedStudentId);
+      const targetId = preselectedStudentId || (this.students.length > 0 ? this.students[0].student_id : '');
+      if (targetId) {
+        studentSelect.value = targetId;
+        this.handleStudentSelectChange(targetId);
+      } else {
+        this.handleStudentSelectChange('');
       }
     }
 
@@ -2051,11 +2078,31 @@ const Teacher = {
 
   handleStudentSelectChange(studentId) {
     const subjectInput = document.getElementById('assign-task-subject');
-    if (!subjectInput) return;
+    const subjectPill = document.getElementById('assign-task-auto-subject-pill');
 
     const student = this.students.find(s => String(s.student_id) === String(studentId));
-    if (student && student.enrolled_subjects && student.enrolled_subjects.length > 0) {
-      subjectInput.value = student.enrolled_subjects[0];
+    const availedSubject = (student && Array.isArray(student.enrolled_subjects) && student.enrolled_subjects.length > 0)
+      ? student.enrolled_subjects.join(', ')
+      : '';
+
+    if (subjectInput) {
+      subjectInput.value = availedSubject;
+    }
+    if (subjectPill) {
+      subjectPill.textContent = availedSubject || 'Select a student above';
+    }
+  },
+
+  handleAssignTaskFileSelect(inputEl) {
+    const fileBadge = document.getElementById('assign-task-file-badge');
+    if (!fileBadge) return;
+    if (inputEl && inputEl.files && inputEl.files.length > 0) {
+      const f = inputEl.files[0];
+      fileBadge.style.display = 'block';
+      fileBadge.textContent = `✓ Attached file: ${f.name}`;
+    } else {
+      fileBadge.style.display = 'none';
+      fileBadge.textContent = '';
     }
   },
 
@@ -2064,15 +2111,21 @@ const Teacher = {
       showToast('Operational Lock: Assigning coursework tasks unlocks once your tutor account has been approved by the Administrator.', 'warning');
       return;
     }
-    const studentId = document.getElementById('assign-task-student-id').value;
-    const subject = document.getElementById('assign-task-subject').value.trim();
-    const dueDate = document.getElementById('assign-task-due-date').value;
-    const title = document.getElementById('assign-task-title').value.trim();
-    const desc = document.getElementById('assign-task-desc').value.trim();
+    const studentId = document.getElementById('assign-task-student-id')?.value || '';
+    const student = this.students.find(s => String(s.student_id) === String(studentId));
+    const autoSubject = (student && Array.isArray(student.enrolled_subjects) && student.enrolled_subjects.length > 0)
+      ? student.enrolled_subjects[0]
+      : (document.getElementById('assign-task-subject')?.value.trim() || '');
+    const dueDate = document.getElementById('assign-task-due-date')?.value || '';
+    const title = document.getElementById('assign-task-title')?.value.trim() || '';
+    const desc = document.getElementById('assign-task-desc')?.value.trim() || '';
+    const activityLink = document.getElementById('assign-task-link')?.value.trim() || '';
+    const fileInput = document.getElementById('assign-task-file');
+    const activityFile = (fileInput && fileInput.files && fileInput.files.length > 0) ? fileInput.files[0] : null;
     const submitBtn = document.getElementById('btn-submit-assign-task');
 
-    if (!studentId || !subject || !dueDate || !title || !desc) {
-      showToast('Please fill in all required task fields.', 'warning');
+    if (!studentId || !dueDate || !title || !desc) {
+      showToast('Please select a student and fill in the required task fields.', 'warning');
       return;
     }
 
@@ -2082,13 +2135,16 @@ const Teacher = {
         submitBtn.textContent = 'Assigning...';
       }
 
-      const res = await API.assignStudentTask({
-        student_id: parseInt(studentId, 10),
-        subject,
-        due_date: dueDate,
-        title,
-        description: desc
-      });
+      const formData = new FormData();
+      formData.append('student_id', String(parseInt(studentId, 10)));
+      if (autoSubject) formData.append('subject', autoSubject);
+      formData.append('due_date', dueDate);
+      formData.append('title', title);
+      formData.append('description', desc);
+      if (activityLink) formData.append('activity_link', activityLink);
+      if (activityFile) formData.append('activity_file', activityFile);
+
+      const res = await API.assignStudentTask(formData);
 
       showToast(res.message || 'Coursework task successfully assigned!', 'success');
       this.closeModal('modal-teacher-assign-task');
@@ -2099,6 +2155,11 @@ const Teacher = {
 
       // Reset form
       document.getElementById('form-teacher-assign-task')?.reset();
+      const fileBadge = document.getElementById('assign-task-file-badge');
+      if (fileBadge) {
+        fileBadge.style.display = 'none';
+        fileBadge.textContent = '';
+      }
     } catch (err) {
       showToast(err.message || 'Failed to assign task.', 'error');
     } finally {
@@ -2501,20 +2562,20 @@ const Teacher = {
 
           <div class="date-slot-pills-grid">
             ${timeSlots.map(slot => {
-              const booked = dayApts.find(a => this.doesTimeMatchSlot(a.requested_time, slot));
-              const isOccupied = dayOccupied.some(o => o.time_slot === slot || this.doesTimeMatchSlot(o.time_slot, slot));
+      const booked = dayApts.find(a => this.doesTimeMatchSlot(a.requested_time, slot));
+      const isOccupied = dayOccupied.some(o => o.time_slot === slot || this.doesTimeMatchSlot(o.time_slot, slot));
 
-              if (booked) {
-                return `
+      if (booked) {
+        return `
                   <div class="date-slot-pill is-booked" title="Scheduled Class: ${booked.student_name} (${booked.subject}) at ${booked.requested_time}">
                     <span class="slot-pill-time">${slot}</span>
                     <span class="slot-pill-status">Booked: ${booked.student_name.split(' ')[0]}</span>
                   </div>
                 `;
-              }
+      }
 
-              if (isOccupied) {
-                return `
+      if (isOccupied) {
+        return `
                   <div class="date-slot-pill is-occupied" 
                        onclick="Teacher.toggleOccupiedSlot('${dayOfWeekName}', '${slot}', 'Unavailable', '${this.selectedDate}')"
                        title="Marked Unavailable. Click to make Open & Available.">
@@ -2522,9 +2583,9 @@ const Teacher = {
                     <span class="slot-pill-status">🔒 Blocked</span>
                   </div>
                 `;
-              }
+      }
 
-              return `
+      return `
                 <div class="date-slot-pill is-available" 
                      onclick="Teacher.toggleOccupiedSlot('${dayOfWeekName}', '${slot}', 'Unavailable', '${this.selectedDate}')"
                      title="Available for bookings. Click to mark Unavailable.">
@@ -2532,7 +2593,7 @@ const Teacher = {
                   <span class="slot-pill-status">🟢 Available</span>
                 </div>
               `;
-            }).join('')}
+    }).join('')}
           </div>
         </div>
       </div>
@@ -3020,7 +3081,7 @@ const Teacher = {
 
       const res = await API.submitTeacherApplication(formData);
       showToast('Application submitted! Your documents are undergoing review and you will be notified once a virtual interview schedule is set. You can now explore the platform.', 'success');
-      
+
       // Update application state
       await this.ensureTeacherStatus();
       this.viewingDashboard = true;
@@ -3100,9 +3161,9 @@ const Teacher = {
       if (rateInp) rateInp.value = rateVal;
       if (headlineInp) headlineInp.value = tp.headline || app.headline || '';
       if (instInp) instInp.value = `${app.highest_degree || tp.highest_degree || ''}${app.institution ? ' • ' + app.institution : ''}`;
-      
-      const subjectsList = Array.isArray(tp.subjects || app.subjects) 
-        ? (tp.subjects || app.subjects).join(', ') 
+
+      const subjectsList = Array.isArray(tp.subjects || app.subjects)
+        ? (tp.subjects || app.subjects).join(', ')
         : (tp.subjects || app.subjects || '');
       if (subjInp) subjInp.value = subjectsList;
 

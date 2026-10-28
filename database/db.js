@@ -260,6 +260,9 @@ function initSchema() {
       title TEXT NOT NULL,
       description TEXT,
       due_date TEXT,
+      activity_link TEXT,
+      attachment_url TEXT,
+      attachment_name TEXT,
       status TEXT DEFAULT 'assigned' CHECK(status IN ('assigned', 'submitted', 'graded')),
       student_submission TEXT,
       submitted_at DATETIME,
@@ -328,6 +331,20 @@ function initSchema() {
     const appCols = db.prepare("PRAGMA table_info(teacher_applications)").all();
     if (appCols.length > 0 && !appCols.some(c => c.name === 'subject_rates')) {
       db.prepare("ALTER TABLE teacher_applications ADD COLUMN subject_rates TEXT").run();
+    }
+  } catch (e) {}
+  try {
+    const taskCols = db.prepare("PRAGMA table_info(tutor_tasks)").all();
+    if (taskCols.length > 0) {
+      if (!taskCols.some(c => c.name === 'activity_link')) {
+        db.prepare("ALTER TABLE tutor_tasks ADD COLUMN activity_link TEXT").run();
+      }
+      if (!taskCols.some(c => c.name === 'attachment_url')) {
+        db.prepare("ALTER TABLE tutor_tasks ADD COLUMN attachment_url TEXT").run();
+      }
+      if (!taskCols.some(c => c.name === 'attachment_name')) {
+        db.prepare("ALTER TABLE tutor_tasks ADD COLUMN attachment_name TEXT").run();
+      }
     }
   } catch (e) {}
   try {

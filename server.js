@@ -3925,16 +3925,19 @@ app.get('/api/teacher/schedule', authenticateToken, requireRole('teacher'), (req
   try {
     const teacherId = req.user.id;
 
-    // Get all appointments (accepted, pending, completed)
+    // Get all calendar appointments (once accepted, the set schedule is added to the calendar)
     const appointments = db.prepare(`
       SELECT 
         tr.*,
         u.name as student_name,
         u.email as student_email,
-        u.avatar_url as student_avatar
+        u.avatar_url as student_avatar,
+        sp.school as student_school,
+        sp.grade_level as student_grade
       FROM tutoring_requests tr
       JOIN users u ON tr.student_id = u.id
-      WHERE tr.tutor_id = ? AND tr.status IN ('accepted', 'pending', 'completed')
+      LEFT JOIN student_profiles sp ON sp.user_id = u.id
+      WHERE tr.tutor_id = ? AND tr.status IN ('accepted', 'completed')
       ORDER BY tr.requested_date ASC, tr.requested_time ASC
     `).all(teacherId);
 
@@ -4068,16 +4071,12 @@ app.get('/api/teacher/buddy-sessions', authenticateToken, requireRole('teacher')
   }
 });
 
-// Teacher responds to request (Accept, Decline, Mark Completed)
+// Teacher responds to or updates request (Accept, Decline, Mark Completed, Pending, or Adjust Schedule)
 app.post('/api/teacher/requests/:id/status', authenticateToken, requireRole('teacher'), (req, res) => {
   try {
     const requestId = req.params.id;
     const teacherId = req.user.id;
-    const { status, note } = req.body;
-
-    if (!['accepted', 'declined', 'completed'].includes(status)) {
-      return res.status(400).json({ error: 'Invalid status update.' });
-    }
+    const { status, note, requested_date, requested_time } = req.body;
 
     const appRecord = db.prepare('SELECT status FROM teacher_applications WHERE user_id = ?').get(teacherId);
     if (!appRecord || appRecord.status !== 'approved') {
@@ -4089,42 +4088,111 @@ app.post('/api/teacher/requests/:id/status', authenticateToken, requireRole('tea
       return res.status(404).json({ error: 'Request not found.' });
     }
 
+    const finalStatus = status ? String(status).toLowerCase().trim() : request.status;
+    if (!['accepted', 'declined', 'completed', 'pending'].includes(finalStatus)) {
+      return res.status(400).json({ error: 'Invalid status update.' });
+    }
+
+    const finalDate = requested_date && String(requested_date).trim() ? String(requested_date).trim() : request.requested_date;
+    const finalTime = requested_time && String(requested_time).trim() ? String(requested_time).trim() : request.requested_time;
+    const finalNote = note !== undefined ? (note || null) : request.tutor_response_note;
+
     db.prepare(`
       UPDATE tutoring_requests 
-      SET status = ?, tutor_response_note = ?, updated_at = CURRENT_TIMESTAMP
+      SET status = ?,
+          requested_date = ?,
+          requested_time = ?,
+          tutor_response_note = ?,
+          room_status = CASE WHEN ? IN ('declined', 'completed', 'pending') THEN 'closed' ELSE room_status END,
+          updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
-    `).run(status, note || null, requestId);
+    `).run(finalStatus, finalDate, finalTime, finalNote, finalStatus, requestId);
 
-    if (status === 'completed') {
+    if (finalStatus === 'completed' && request.status !== 'completed') {
       db.prepare(`
         UPDATE tutor_profiles 
         SET total_sessions = total_sessions + 1, updated_at = CURRENT_TIMESTAMP 
         WHERE user_id = ?
       `).run(teacherId);
+    } else if (request.status === 'completed' && finalStatus !== 'completed') {
+      db.prepare(`
+        UPDATE tutor_profiles 
+        SET total_sessions = CASE WHEN total_sessions > 0 THEN total_sessions - 1 ELSE 0 END,
+            updated_at = CURRENT_TIMESTAMP 
+        WHERE user_id = ?
+      `).run(teacherId);
+    }
+
+    // When accepted, ensure any conflicting manual "Unavailable" block on that exact date/time slot is cleared so the calendar shows the scheduled class
+    if (finalStatus === 'accepted' && finalDate && finalTime) {
+      const timeMatch = String(finalTime).match(/(\d{1,2}):(\d{2})\s*(AM|PM)?/i);
+      if (timeMatch) {
+        let hr = parseInt(timeMatch[1], 10);
+        const ampm = timeMatch[3] ? timeMatch[3].toUpperCase() : null;
+        if (ampm === 'PM' && hr < 12) hr += 12;
+        if (ampm === 'AM' && hr === 12) hr = 0;
+        const suffix = hr >= 12 ? 'PM' : 'AM';
+        const hr12 = hr % 12 === 0 ? 12 : hr % 12;
+        const normalizedSlot = `${String(hr12).padStart(2, '0')}:00 ${suffix}`;
+        db.prepare(`
+          DELETE FROM tutor_occupied_slots
+          WHERE tutor_id = ? AND date = ? AND time_slot = ?
+        `).run(teacherId, finalDate, normalizedSlot);
+      }
     }
 
     // Notify student
+    const scheduleChanged = finalDate !== request.requested_date || finalTime !== request.requested_time;
     const statusTitles = {
-      accepted: 'Tutoring Request Accepted!',
+      accepted: scheduleChanged ? 'Class Accepted & Schedule Updated!' : 'Tutoring Request Accepted!',
       declined: 'Tutoring Request Declined',
-      completed: 'Tutoring Session Completed'
+      completed: 'Tutoring Session Completed',
+      pending: 'Tutoring Request Updated'
     };
 
     const statusMessages = {
-      accepted: `Great news! ${req.user.name} accepted your request for ${request.subject} on ${request.requested_date}.`,
-      declined: `${req.user.name} was unable to accept your request for ${request.subject}. Note: ${note || 'Scheduling conflict.'}`,
-      completed: `Your session on ${request.subject} has been marked completed. You can now leave a review for your tutor!`
+      accepted: `Great news! ${req.user.name} accepted your ${request.subject} session and added it to the calendar for ${finalDate} at ${finalTime}.`,
+      declined: `${req.user.name} was unable to accept your request for ${request.subject}. Note: ${finalNote || 'Scheduling conflict.'}`,
+      completed: `Your session on ${request.subject} (${finalDate} at ${finalTime}) has been marked completed. You can now leave a review for your tutor!`,
+      pending: `${req.user.name} updated your ${request.subject} request (${finalDate} at ${finalTime}).`
     };
 
-    sendNotification(
-      request.student_id,
-      statusTitles[status],
-      statusMessages[status],
-      'status',
-      '/#student-requests'
-    );
+    if (statusTitles[finalStatus]) {
+      sendNotification(
+        request.student_id,
+        statusTitles[finalStatus],
+        statusMessages[finalStatus],
+        'status',
+        '/#student-lessons'
+      );
+    }
 
-    res.json({ message: `Request successfully marked as ${status}.` });
+    const updatedRequest = db.prepare(`
+      SELECT 
+        tr.*,
+        u.name as student_name,
+        u.email as student_email,
+        u.avatar_url as student_avatar,
+        sp.school as student_school,
+        sp.grade_level as student_grade
+      FROM tutoring_requests tr
+      JOIN users u ON tr.student_id = u.id
+      LEFT JOIN student_profiles sp ON sp.user_id = u.id
+      WHERE tr.id = ?
+    `).get(requestId);
+
+    const responseMsg = finalStatus === 'accepted'
+      ? `Session accepted and added to calendar for ${finalDate} at ${finalTime}!`
+      : scheduleChanged
+        ? `Class schedule and status (${finalStatus.toUpperCase()}) saved!`
+        : `Class status updated to ${finalStatus.toUpperCase()} and saved.`;
+
+    res.json({
+      success: true,
+      message: responseMsg,
+      calendarSynced: finalStatus === 'accepted',
+      request: updatedRequest
+    });
   } catch (error) {
     console.error('Update request status error:', error);
     res.status(500).json({ error: 'Failed to update request status.' });

@@ -374,14 +374,16 @@ const Teacher = {
 
   // 1. Dedicated Class Page
   async loadClassesPage() {
+    this.currentTab = 'classes';
     await this.ensureTeacherStatus();
     this.renderStatusBanner('teacher-banner-classes');
-    await this.loadClasses();
+    await Promise.all([this.loadClasses(), this.loadSchedule()]);
     if (typeof Router !== 'undefined' && Router.updateActiveNav) Router.updateActiveNav();
   },
 
   // 2. Dedicated Students Page
   async loadStudentsPage() {
+    this.currentTab = 'students';
     await this.ensureTeacherStatus();
     this.renderStatusBanner('teacher-banner-students');
     await this.loadStudents();
@@ -391,6 +393,7 @@ const Teacher = {
 
   // 3. Dedicated Schedule Page
   async loadSchedulePage() {
+    this.currentTab = 'schedule';
     await this.ensureTeacherStatus();
     this.renderStatusBanner('teacher-banner-schedule');
     this.setupCalendarListeners();
@@ -400,6 +403,7 @@ const Teacher = {
 
   // 4. Dedicated Aviora Buddy Page
   async loadBuddyPage() {
+    this.currentTab = 'buddy';
     await this.ensureTeacherStatus();
     this.renderStatusBanner('teacher-banner-buddy');
     await this.loadBuddySessions();
@@ -408,6 +412,7 @@ const Teacher = {
 
   // 5. Dedicated Dashboard Page
   async loadDashboardPage() {
+    this.currentTab = 'dashboard';
     await this.ensureTeacherStatus();
     this.renderStatusBanner('teacher-banner-dashboard');
 
@@ -920,15 +925,15 @@ const Teacher = {
             ${!this.isApproved() ? `
               <span class="badge" style="background: rgba(245, 158, 11, 0.15); color: #D97706; font-size: 0.75rem; padding: 0.35rem 0.65rem; border-radius: 4px;" title="Operations locked while application is under review">🔒 Locked (Under Review)</span>
             ` : r.status === 'pending' ? `
-              <button class="btn btn-primary btn-sm" onclick="Teacher.updateStatus(${r.id}, 'accepted')">Accept</button>
-              <button class="btn btn-secondary btn-sm" onclick="Teacher.updateStatus(${r.id}, 'declined')">Decline</button>
+              <button class="btn btn-primary btn-sm" onclick="Teacher.updateStatus(${r.id}, 'accepted', this)">Accept</button>
+              <button class="btn btn-secondary btn-sm" onclick="Teacher.updateStatus(${r.id}, 'declined', this)">Decline</button>
             ` : r.status === 'accepted' ? `
               ${r.room_status === 'open' ? `
                 <button class="btn btn-primary btn-sm" onclick="VirtualRoom.joinRoom(${r.id}, 'tutor')" style="background: #10B981; border-color: #10B981;">${Icons.video(14)} Enter Room (Live)</button>
               ` : `
                 <button class="btn btn-primary btn-sm" onclick="VirtualRoom.openRoomAsTutor(${r.id})">${Icons.video(14)} Open Room</button>
               `}
-              <button class="btn btn-outline-gold btn-sm" onclick="Teacher.updateStatus(${r.id}, 'completed')">Mark Done</button>
+              <button class="btn btn-outline-gold btn-sm" onclick="Teacher.updateStatus(${r.id}, 'completed', this)">Mark Done</button>
             ` : r.status === 'completed' ? `
               <span style="font-size: 0.8rem; color: #10B981; font-weight: 600;">✓ Completed</span>
             ` : ''}
@@ -938,27 +943,170 @@ const Teacher = {
     `).join('');
   },
 
-  async updateStatus(requestId, status) {
+  async updateStatus(requestId, status, btnEl = null, customPayload = null) {
     if (!this.isApproved()) {
       showToast('Account Under Review: Responding to tutoring requests is locked until your application is approved by the Administrator following your virtual interview.', 'warning');
       return;
     }
-    let note = '';
-    if (status === 'declined') {
-      note = prompt('Please specify a brief reason for declining (e.g. Schedule conflict):', 'Scheduling conflict on this date.');
-      if (note === null) return;
+
+    let note = customPayload?.note !== undefined ? customPayload.note : '';
+    if (status === 'declined' && !note) {
+      note = 'Scheduling conflict on this date.';
+    }
+
+    const payload = {
+      status,
+      note,
+      ...(customPayload?.requested_date ? { requested_date: customPayload.requested_date } : {}),
+      ...(customPayload?.requested_time ? { requested_time: customPayload.requested_time } : {})
+    };
+
+    const origText = btnEl ? btnEl.innerHTML : '';
+    if (btnEl) {
+      btnEl.disabled = true;
+      btnEl.innerHTML = status === 'accepted' ? 'Accepting...' : status === 'completed' ? 'Saving...' : 'Updating...';
     }
 
     try {
-      const res = await API.updateRequestStatus(requestId, { status, note });
-      showToast(res.message, 'success');
-      await this.loadTeacherDashboard();
-      if (this.currentTab === 'classes') {
-        await this.loadClasses();
+      const res = await API.updateRequestStatus(requestId, payload);
+      const updated = res.request;
+
+      if (this.editingClassId === Number(requestId)) {
+        this.editingClassId = null;
       }
+
+      // Immediately update in-memory state so UI responds with zero delay
+      if (Array.isArray(this.classes)) {
+        this.classes = this.classes.map(c => {
+          if (Number(c.id) === Number(requestId)) {
+            return updated ? { ...c, ...updated } : { ...c, ...payload, status };
+          }
+          return c;
+        });
+      }
+
+      if (Array.isArray(this.requests)) {
+        this.requests = this.requests.map(r => {
+          if (Number(r.id) === Number(requestId)) {
+            return updated ? { ...r, ...updated } : { ...r, ...payload, status };
+          }
+          return r;
+        });
+      }
+
+      // Immediately sync accepted/completed schedule to Calendar state
+      const targetRec = updated || (this.classes || []).find(c => Number(c.id) === Number(requestId));
+      if (targetRec) {
+        if (!this.scheduleData) {
+          this.scheduleData = { appointments: [], occupiedSlots: [] };
+        }
+        const existingApts = Array.isArray(this.scheduleData.appointments) ? [...this.scheduleData.appointments] : [];
+        const aptIdx = existingApts.findIndex(a => Number(a.id) === Number(requestId));
+
+        if (status === 'accepted' || status === 'completed') {
+          if (aptIdx !== -1) {
+            existingApts[aptIdx] = { ...existingApts[aptIdx], ...targetRec, status };
+          } else {
+            existingApts.push({ ...targetRec, status });
+          }
+          existingApts.sort((a, b) => {
+            const dCmp = String(a.requested_date || '').localeCompare(String(b.requested_date || ''));
+            return dCmp !== 0 ? dCmp : String(a.requested_time || '').localeCompare(String(b.requested_time || ''));
+          });
+
+          if (status === 'accepted' && targetRec.requested_date) {
+            const cleanDate = String(targetRec.requested_date).split('T')[0];
+            this.selectedDate = cleanDate;
+            const dObj = new Date(cleanDate + 'T00:00:00');
+            if (!isNaN(dObj.getTime())) {
+              this.calYear = dObj.getFullYear();
+              this.calMonth = dObj.getMonth();
+            }
+          }
+        } else {
+          if (aptIdx !== -1) {
+            existingApts.splice(aptIdx, 1);
+          }
+        }
+        this.scheduleData.appointments = existingApts;
+      }
+
+      // Re-render active views immediately
+      this.renderClasses();
+      this.renderSchedule();
+      this.renderDashboard();
+
+      showToast(res.message || `Class updated to ${status.toUpperCase()}.`, 'success');
+
+      // Sync all teacher datasets with SQLite in background
+      await Promise.all([
+        this.loadClasses(),
+        this.loadSchedule(),
+        this.loadTeacherDashboard()
+      ]);
     } catch (err) {
-      showToast(err.message, 'error');
+      if (btnEl) {
+        btnEl.disabled = false;
+        btnEl.innerHTML = origText;
+      }
+      showToast(err.message || 'Failed to update class status.', 'error');
     }
+  },
+
+  toggleClassUpdatePanel(requestId) {
+    if (!this.isApproved()) {
+      showToast('Account Under Review: Updating class schedules and statuses is locked until your application is approved by the Administrator.', 'warning');
+      return;
+    }
+    const numId = Number(requestId);
+    this.editingClassId = this.editingClassId === numId ? null : numId;
+    this.renderClasses();
+  },
+
+  async saveClassUpdate(requestId, btnEl) {
+    if (!this.isApproved()) {
+      showToast('Account Under Review: Updating class schedules and statuses is locked until your application is approved by the Administrator.', 'warning');
+      return;
+    }
+    const statusEl = document.getElementById(`class-update-status-${requestId}`);
+    const dateEl = document.getElementById(`class-update-date-${requestId}`);
+    const timeEl = document.getElementById(`class-update-time-${requestId}`);
+    const noteEl = document.getElementById(`class-update-note-${requestId}`);
+
+    const status = statusEl ? statusEl.value : 'accepted';
+    const requested_date = dateEl ? dateEl.value.trim() : '';
+    const requested_time = timeEl ? timeEl.value.trim() : '';
+    const note = noteEl ? noteEl.value.trim() : undefined;
+
+    if (!requested_date || !requested_time) {
+      showToast('Please provide both a valid Date and Time for the class schedule.', 'warning');
+      return;
+    }
+
+    await this.updateStatus(requestId, status, btnEl, {
+      requested_date,
+      requested_time,
+      ...(note !== undefined ? { note } : {})
+    });
+  },
+
+  viewClassOnCalendar(dateStr) {
+    if (!dateStr) return;
+    const cleanDate = String(dateStr).split('T')[0];
+    this.selectedDate = cleanDate;
+    const dObj = new Date(cleanDate + 'T00:00:00');
+    if (!isNaN(dObj.getTime())) {
+      this.calYear = dObj.getFullYear();
+      this.calMonth = dObj.getMonth();
+    }
+    if (typeof Router !== 'undefined' && Router.navigate) {
+      Router.navigate('#teacher-schedule');
+    } else {
+      window.location.hash = '#teacher-schedule';
+    }
+    setTimeout(() => {
+      this.selectCalendarDate(cleanDate);
+    }, 120);
   },
 
   // ==============================================================
@@ -1290,13 +1438,16 @@ const Teacher = {
       const isAccepted = c.status === 'accepted';
       const isPending = c.status === 'pending';
       const isCompleted = c.status === 'completed';
+      const isDeclined = c.status === 'declined';
+      const isEditing = this.editingClassId === Number(c.id);
+      const cleanDateVal = String(c.requested_date || '').split('T')[0];
 
       return `
-        <div class="teacher-class-card ${isLive ? 'is-live-room' : ''}">
+        <div class="teacher-class-card ${isLive ? 'is-live-room' : ''}" id="teacher-class-card-${c.id}">
           
           <!-- Card Header: Status & Room Badge -->
           <div class="class-card-header">
-            <div>
+            <div class="class-card-header-left">
               <span class="badge-accent">${c.subject}</span>
               ${isLive ? `
                 <span class="live-pulse-badge">
@@ -1304,7 +1455,9 @@ const Teacher = {
                 </span>
               ` : ''}
             </div>
-            <span class="status-pill ${c.status}">${c.status.toUpperCase()}</span>
+            <div class="class-card-header-right">
+              <span class="status-pill ${c.status}">${c.status.toUpperCase()}</span>
+            </div>
           </div>
 
           <!-- Student Profile in Card -->
@@ -1330,12 +1483,59 @@ const Teacher = {
               <span class="detail-icon">${Icons.award(14)}</span>
               <span><strong>Fee:</strong> $${Number(c.total_amount || 0).toFixed(2)} (${c.payment_method === 'subscription' ? 'Subscription Credit' : 'Card Payment'})</span>
             </div>
+            ${(isAccepted || isCompleted) ? `
+              <div class="class-calendar-sync-badge" onclick="Teacher.viewClassOnCalendar('${cleanDateVal}')" title="Open Schedule Calendar on ${cleanDateVal}">
+                <span>📅 Added to Calendar (${c.requested_date} • ${c.requested_time})</span>
+                <span class="class-calendar-sync-link">View Calendar →</span>
+              </div>
+            ` : isPending ? `
+              <div class="class-calendar-pending-hint">
+                <span>🗓️ Set schedule (${c.requested_date} • ${c.requested_time}) will be added to Calendar once accepted</span>
+              </div>
+            ` : ''}
             ${c.notes ? `
               <div class="class-card-notes">
                 <strong>Student Focus:</strong> "${c.notes}"
               </div>
             ` : ''}
           </div>
+
+          <!-- Inline Schedule & Status Update Drawer -->
+          ${this.isApproved() && isEditing ? `
+            <div class="class-update-drawer">
+              <div class="class-update-drawer-header">
+                <strong>Update Class Status & Set Schedule</strong>
+                <span>Changes save & sync to Calendar</span>
+              </div>
+              <div class="class-update-fields-grid">
+                <div class="class-update-field">
+                  <label for="class-update-status-${c.id}">Status</label>
+                  <select id="class-update-status-${c.id}" class="form-control">
+                    <option value="accepted" ${isAccepted ? 'selected' : ''}>Accepted (Add to Calendar)</option>
+                    <option value="pending" ${isPending ? 'selected' : ''}>Pending Request</option>
+                    <option value="completed" ${isCompleted ? 'selected' : ''}>Completed Session</option>
+                    <option value="declined" ${isDeclined ? 'selected' : ''}>Declined</option>
+                  </select>
+                </div>
+                <div class="class-update-field">
+                  <label for="class-update-date-${c.id}">Set Date</label>
+                  <input type="date" id="class-update-date-${c.id}" class="form-control" value="${cleanDateVal}" />
+                </div>
+                <div class="class-update-field">
+                  <label for="class-update-time-${c.id}">Set Time</label>
+                  <input type="text" id="class-update-time-${c.id}" class="form-control" value="${this.escapeSubjectAttr(c.requested_time || '10:00')}" placeholder="e.g. 10:00 or 14:00" />
+                </div>
+              </div>
+              <div class="class-update-drawer-actions">
+                <button type="button" class="btn btn-primary btn-sm" onclick="Teacher.saveClassUpdate(${c.id}, this)">
+                  Save Update
+                </button>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="Teacher.toggleClassUpdatePanel(${c.id})">
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ` : ''}
 
           <!-- Action Launch Pad -->
           <div class="class-card-actions">
@@ -1352,20 +1552,37 @@ const Teacher = {
                 🎥 Launch Virtual Class Session
               </button>
             ` : isPending ? `
-              <button type="button" class="btn btn-primary btn-sm" style="flex: 1;" onclick="Teacher.updateStatus(${c.id}, 'accepted')">Accept</button>
-              <button type="button" class="btn btn-secondary btn-sm" onclick="Teacher.updateStatus(${c.id}, 'declined')">Decline</button>
+              <button type="button" class="btn btn-primary btn-sm" style="flex: 1; font-weight: 700;" onclick="Teacher.updateStatus(${c.id}, 'accepted', this)">
+                Accept
+              </button>
+              <button type="button" class="btn btn-secondary btn-sm" onclick="Teacher.updateStatus(${c.id}, 'declined', this)">
+                Decline
+              </button>
+            ` : isDeclined ? `
+              <div class="class-status-summary-pill is-declined-summary">
+                ✕ Request Declined
+              </div>
+              <button type="button" class="btn btn-primary btn-sm" onclick="Teacher.updateStatus(${c.id}, 'accepted', this)">
+                Accept
+              </button>
             ` : ''}
 
             ${this.isApproved() && isAccepted ? `
-              <button type="button" class="btn btn-secondary btn-sm" title="Mark session as completed" onclick="Teacher.updateStatus(${c.id}, 'completed')">
+              <button type="button" class="btn btn-secondary btn-sm" title="Mark session as completed" onclick="Teacher.updateStatus(${c.id}, 'completed', this)">
                 Done
               </button>
             ` : ''}
 
             ${isCompleted ? `
-              <div style="flex: 1; text-align: center; color: #10B981; font-size: 0.85rem; font-weight: 700; padding: 0.5rem; background: rgba(16, 185, 129, 0.1); border-radius: var(--radius-md);">
+              <div class="class-status-summary-pill is-completed-summary">
                 ✓ Class Session Completed
               </div>
+            ` : ''}
+
+            ${this.isApproved() ? `
+              <button type="button" class="btn btn-outline-gold btn-sm class-card-update-toggle-btn ${isEditing ? 'active' : ''}" title="Adjust status or schedule date & time" onclick="Teacher.toggleClassUpdatePanel(${c.id})">
+                ${isEditing ? 'Close' : 'Update'}
+              </button>
             ` : ''}
           </div>
 
@@ -1930,6 +2147,28 @@ const Teacher = {
     this.renderUpcomingAppointmentsList();
   },
 
+  parseTimeHour(timeStr) {
+    if (!timeStr) return null;
+    const m = String(timeStr).trim().match(/(\d{1,2}):(\d{2})\s*(AM|PM)?/i);
+    if (!m) return null;
+    let hr = parseInt(m[1], 10);
+    const min = parseInt(m[2], 10);
+    const ampm = m[3] ? m[3].toUpperCase() : null;
+    if (ampm === 'PM' && hr < 12) hr += 12;
+    if (ampm === 'AM' && hr === 12) hr = 0;
+    return { hour: hr, minute: min };
+  },
+
+  doesTimeMatchSlot(requestedTime, slotLabel) {
+    if (!requestedTime || !slotLabel) return false;
+    const reqParsed = this.parseTimeHour(requestedTime);
+    const slotParsed = this.parseTimeHour(slotLabel);
+    if (reqParsed && slotParsed) {
+      return reqParsed.hour === slotParsed.hour;
+    }
+    return String(requestedTime).replace(/\s+/g, '').toLowerCase().includes(String(slotLabel).replace(/\s+/g, '').toLowerCase());
+  },
+
   renderCalendar() {
     const calendarGrid = document.getElementById('teacher-calendar-grid');
     const monthTitle = document.getElementById('teacher-cal-month-title');
@@ -2129,20 +2368,23 @@ const Teacher = {
                     <img src="${apt.student_avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=80&q=80'}" class="appointment-avatar" />
                     <div>
                       <strong style="color: var(--text-primary); font-size: 0.95rem;">${apt.student_name}</strong>
-                      <div style="font-size: 0.8rem; color: var(--text-secondary);">${apt.subject}</div>
+                      <div style="font-size: 0.8rem; color: var(--text-secondary);">${apt.subject} • <span class="status-pill ${apt.status}" style="font-size: 0.68rem; padding: 0.1rem 0.45rem;">${(apt.status || 'accepted').toUpperCase()}</span></div>
                     </div>
                   </div>
                   <div class="appointment-meta">
                     <div>${Icons.clock(14)} ${apt.requested_time}</div>
                     <div>${apt.hourly_rate ? `$${apt.hourly_rate}/hr` : 'Booked'}</div>
                   </div>
-                  <div>
+                  <div style="display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap;">
                     ${!this.isApproved() ? `
                       <span class="badge" style="background: rgba(245, 158, 11, 0.15); color: #D97706; font-size: 0.75rem; padding: 0.3rem 0.6rem; border-radius: 4px;" title="Operations locked while application is under review">🔒 Locked</span>
+                    ` : apt.status === 'completed' ? `
+                      <span style="font-size: 0.78rem; color: #10B981; font-weight: 700;">✓ Completed</span>
                     ` : apt.room_status === 'open' ? `
                       <button class="btn btn-primary btn-sm" onclick="VirtualRoom.joinRoom(${apt.id}, 'tutor')" style="background: #10B981; border-color: #10B981;">Enter (Live)</button>
                     ` : `
                       <button class="btn btn-secondary btn-sm" onclick="VirtualRoom.openRoomAsTutor(${apt.id})">Open Room</button>
+                      <button class="btn btn-outline-gold btn-sm" onclick="Teacher.updateStatus(${apt.id}, 'completed', this)">Done</button>
                     `}
                   </div>
                 </div>
@@ -2160,12 +2402,12 @@ const Teacher = {
 
           <div class="date-slot-pills-grid">
             ${timeSlots.map(slot => {
-              const booked = dayApts.find(a => a.requested_time && a.requested_time.includes(slot.replace(' ', '')));
-              const isOccupied = dayOccupied.some(o => o.time_slot === slot);
+              const booked = dayApts.find(a => this.doesTimeMatchSlot(a.requested_time, slot));
+              const isOccupied = dayOccupied.some(o => o.time_slot === slot || this.doesTimeMatchSlot(o.time_slot, slot));
 
               if (booked) {
                 return `
-                  <div class="date-slot-pill is-booked" title="Booked by student: ${booked.student_name}">
+                  <div class="date-slot-pill is-booked" title="Scheduled Class: ${booked.student_name} (${booked.subject}) at ${booked.requested_time}">
                     <span class="slot-pill-time">${slot}</span>
                     <span class="slot-pill-status">Booked: ${booked.student_name.split(' ')[0]}</span>
                   </div>

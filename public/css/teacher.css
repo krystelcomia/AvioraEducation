@@ -811,11 +811,165 @@
   border-left: 3px solid var(--gold-400);
 }
 
+.class-calendar-sync-badge {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+  padding: 0.5rem 0.75rem;
+  margin-top: 0.25rem;
+  background: rgba(16, 185, 129, 0.09);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  border-radius: var(--radius-md);
+  color: #059669;
+  font-size: 0.79rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.class-calendar-sync-badge:hover {
+  background: rgba(16, 185, 129, 0.16);
+  border-color: #10B981;
+}
+
+.class-calendar-sync-link {
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: #10B981;
+  text-decoration: underline;
+  white-space: nowrap;
+}
+
+.class-calendar-pending-hint {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.45rem 0.7rem;
+  margin-top: 0.25rem;
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px dashed rgba(245, 158, 11, 0.35);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  font-size: 0.77rem;
+  font-weight: 600;
+}
+
+.class-update-drawer {
+  background: rgba(198, 138, 40, 0.05);
+  border: 1px solid rgba(198, 138, 40, 0.28);
+  border-radius: var(--radius-lg);
+  padding: 0.9rem 1rem;
+  margin-bottom: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.class-update-drawer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+  color: var(--text-primary);
+}
+
+.class-update-drawer-header span {
+  font-size: 0.72rem;
+  color: var(--gold-600);
+  font-weight: 600;
+}
+
+.class-update-fields-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(135px, 1fr));
+  gap: 0.65rem;
+}
+
+.class-update-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.class-update-field label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.class-update-field .form-control {
+  padding: 0.4rem 0.6rem !important;
+  font-size: 0.82rem !important;
+  height: 36px !important;
+}
+
+.class-update-drawer-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.class-status-summary-pill {
+  flex: 1 1 180px;
+  text-align: center;
+  font-size: 0.84rem;
+  font-weight: 700;
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius-md);
+}
+
+.class-status-summary-pill.is-completed-summary {
+  color: #10B981;
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.22);
+}
+
+.class-status-summary-pill.is-declined-summary {
+  color: #EF4444;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.22);
+}
+
+.class-card-update-toggle-btn {
+  white-space: nowrap;
+  font-weight: 700 !important;
+}
+
+.class-card-update-toggle-btn.active {
+  background: rgba(198, 138, 40, 0.15) !important;
+  border-color: var(--gold-500) !important;
+}
+
 .class-card-actions {
   display: flex;
   gap: 0.5rem;
   margin-top: auto;
   align-items: center;
+  flex-wrap: wrap;
+}
+
+[data-theme="dark"] .class-calendar-sync-badge {
+  color: #34D399;
+  background: rgba(16, 185, 129, 0.12);
+}
+
+[data-theme="dark"] .class-update-drawer {
+  background: rgba(198, 138, 40, 0.08);
+  border-color: rgba(198, 138, 40, 0.3);
+}
+
+@media (max-width: 600px) {
+  .class-card-actions .btn {
+    flex: 1 1 auto;
+    justify-content: center;
+  }
 }
 
 /* Enrolled Students Directory */

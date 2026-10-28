@@ -33,6 +33,7 @@ const Teacher = {
   classFilter: 'all',
   classSearchQuery: '',
   taskFilter: 'all',
+  taskSearchQuery: '',
   initialApplicationFormHtml: null,
   showEditApplicationForm: false,
   uploadValidation: {
@@ -1888,11 +1889,20 @@ const Teacher = {
   },
 
   filterTasks(filter, btn) {
-    this.taskFilter = filter;
+    this.taskFilter = filter || 'all';
+    const selectEl = document.getElementById('teacher-tasks-status-filter');
+    if (selectEl && selectEl.value !== this.taskFilter) {
+      selectEl.value = this.taskFilter;
+    }
     if (btn) {
       document.querySelectorAll('#teacher-tab-students .teacher-filter-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
     }
+    this.renderTasks();
+  },
+
+  searchTasks(query) {
+    this.taskSearchQuery = (query || '').trim().toLowerCase();
     this.renderTasks();
   },
 
@@ -1907,6 +1917,25 @@ const Teacher = {
       filtered = filtered.filter(t => t.status === 'graded');
     } else if (this.taskFilter === 'assigned') {
       filtered = filtered.filter(t => t.status === 'assigned');
+    }
+
+    if (this.taskSearchQuery) {
+      filtered = filtered.filter(t => {
+        const studentName = (t.student_name || '').toLowerCase();
+        const subject = (t.subject || '').toLowerCase();
+        const title = (t.title || '').toLowerCase();
+        const desc = (t.description || '').toLowerCase();
+        const dueDate = (t.due_date || '').toLowerCase();
+        const status = (t.status || '').toLowerCase();
+        return (
+          studentName.includes(this.taskSearchQuery) ||
+          subject.includes(this.taskSearchQuery) ||
+          title.includes(this.taskSearchQuery) ||
+          desc.includes(this.taskSearchQuery) ||
+          dueDate.includes(this.taskSearchQuery) ||
+          status.includes(this.taskSearchQuery)
+        );
+      });
     }
 
     if (filtered.length === 0) {

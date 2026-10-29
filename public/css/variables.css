@@ -1119,3 +1119,16 @@ body {
   background: none !important;
   box-shadow: none !important;
 }
+
+/* Unboxed Tutors Filter Dark Mode */
+[data-theme="dark"] .tutor-filter-container {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+[data-theme="dark"] .tutor-filter-container .form-control {
+  background: #111111 !important;
+  border-color: rgba(216, 170, 60, 0.3) !important;
+  color: #FFFFFF !important;
+}

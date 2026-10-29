@@ -1733,23 +1733,15 @@
     <!-- =======================================
          VIEW 2: TUTORS DIRECTORY
          ======================================= -->
-    <div id="view-tutors" class="app-page-view" style="display: none; padding-top: calc(var(--header-height) + 2rem); padding-bottom: 5rem;">
+    <div id="view-tutors" class="app-page-view" style="display: none; padding-top: calc(var(--header-height) + 1.5rem); padding-bottom: 5rem;">
       <div class="container">
-        <div class="portal-header">
-          <div>
-            <span class="badge-gold">Public Tutor Directory</span>
-            <h1 class="portal-title" style="margin-top: 0.5rem; text-align: left !important;">Explore Vetted Academic Specialists</h1>
-            <p class="portal-subtitle">Browse approved educators, view academic qualifications, inspect schedules, and book 1-on-1 sessions.</p>
-          </div>
-          <div>
-            <span class="badge-gold" id="tutor-count-badge" style="display: none;"></span>
-          </div>
-        </div>
+        <!-- Hidden tutor count badge for dynamic scripts -->
+        <span class="badge-gold" id="tutor-count-badge" style="display: none !important;"></span>
 
         <!-- Student Subscription Status Banner (Shown if logged in as student) -->
         <div id="tutors-student-sub-banner" style="display: none; margin-bottom: 1.5rem;"></div>
 
-        <!-- Filter & Search Controls -->
+        <!-- Filter & Search Controls (Unboxed, Borderless Container) -->
         <div class="tutor-filter-container">
           <div class="filter-grid">
             <div class="search-input-box">
@@ -1760,6 +1752,7 @@
             <div>
               <select id="tutor-grade-filter" class="form-control">
                 <option value="all" hidden selected>All Grade Levels</option>
+                <option value="all">All Grade Levels</option>
                 <option value="Elementary School">Elementary School</option>
                 <option value="Middle School">Middle School</option>
                 <option value="High School">High School</option>
@@ -1773,6 +1766,7 @@
             <div>
               <select id="tutor-rate-filter" class="form-control">
                 <option value="" hidden selected>Any Hourly Rate</option>
+                <option value="">Any Hourly Rate</option>
                 <option value="45">Under $45/hr</option>
                 <option value="55">Under $55/hr</option>
                 <option value="65">Under $65/hr</option>
@@ -1780,31 +1774,22 @@
             </div>
 
             <div>
-              <select id="tutor-sort-filter" class="form-control">
-                <option value="featured" hidden selected>Sort: Featured & Recommended</option>
-                <option value="featured">Featured & Recommended</option>
-                <option value="rating_desc">Highest Rated</option>
-                <option value="price_asc">Price: Low to High</option>
-                <option value="price_desc">Price: High to Low</option>
-                <option value="experience_desc">Most Experienced</option>
+              <select id="tutor-subject-filter" class="form-control">
+                <option value="all" hidden selected>All Subjects</option>
+                <option value="all">All Subjects</option>
+                <option value="Calculus">Calculus</option>
+                <option value="Physics">Physics</option>
+                <option value="Chemistry">Chemistry</option>
+                <option value="Python">Computer Science</option>
+                <option value="English">English &amp; Essays</option>
+                <option value="French">Languages</option>
+                <option value="SAT">SAT / ACT Prep</option>
               </select>
             </div>
 
             <div>
               <button class="btn btn-secondary btn-sm" onclick="Tutors.resetFilters()" style="height: 100%;">Reset</button>
             </div>
-          </div>
-
-          <!-- Subject Filter Pills -->
-          <div class="subject-pills">
-            <button class="pill-btn subject-pill-btn active" data-subject="all">All Subjects</button>
-            <button class="pill-btn subject-pill-btn" data-subject="Calculus">Calculus</button>
-            <button class="pill-btn subject-pill-btn" data-subject="Physics">Physics</button>
-            <button class="pill-btn subject-pill-btn" data-subject="Chemistry">Chemistry</button>
-            <button class="pill-btn subject-pill-btn" data-subject="Python">Computer Science</button>
-            <button class="pill-btn subject-pill-btn" data-subject="English">English & Essays</button>
-            <button class="pill-btn subject-pill-btn" data-subject="French">Languages</button>
-            <button class="pill-btn subject-pill-btn" data-subject="SAT">SAT / ACT Prep</button>
           </div>
         </div>
 

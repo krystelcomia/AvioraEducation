@@ -36,6 +36,14 @@ const Tutors = {
       sortFilter.addEventListener('change', () => this.applyFilters());
     }
 
+    const subjectFilter = document.getElementById('tutor-subject-filter');
+    if (subjectFilter) {
+      subjectFilter.addEventListener('change', () => {
+        this.activeSubjectFilter = subjectFilter.value || 'all';
+        this.applyFilters();
+      });
+    }
+
     const maxRateFilter = document.getElementById('tutor-rate-filter');
     if (maxRateFilter) {
       maxRateFilter.addEventListener('change', () => this.applyFilters());
@@ -168,12 +176,17 @@ const Tutors = {
   async applyFilters() {
     const searchVal = document.getElementById('tutor-search-input')?.value.trim() || '';
     const gradeVal = document.getElementById('tutor-grade-filter')?.value || 'all';
+    const subjectFilterEl = document.getElementById('tutor-subject-filter');
+    if (subjectFilterEl && this.activeSubjectFilter && this.activeSubjectFilter !== 'all' && subjectFilterEl.value !== this.activeSubjectFilter) {
+      subjectFilterEl.value = this.activeSubjectFilter;
+    }
+    const subjectVal = subjectFilterEl?.value || this.activeSubjectFilter || 'all';
     const sortVal = document.getElementById('tutor-sort-filter')?.value || 'featured';
     const rateVal = document.getElementById('tutor-rate-filter')?.value || '';
 
     let params = new URLSearchParams();
     if (searchVal) params.append('q', searchVal);
-    if (this.activeSubjectFilter && this.activeSubjectFilter !== 'all') params.append('subject', this.activeSubjectFilter);
+    if (subjectVal && subjectVal !== 'all') params.append('subject', subjectVal);
     if (gradeVal && gradeVal !== 'all') params.append('grade', gradeVal);
     if (rateVal) params.append('max_rate', rateVal);
     if (sortVal) params.append('sort', sortVal);
@@ -233,11 +246,13 @@ const Tutors = {
   resetFilters() {
     const searchInput = document.getElementById('tutor-search-input');
     const gradeFilter = document.getElementById('tutor-grade-filter');
+    const subjectFilter = document.getElementById('tutor-subject-filter');
     const sortFilter = document.getElementById('tutor-sort-filter');
     const rateFilter = document.getElementById('tutor-rate-filter');
 
     if (searchInput) searchInput.value = '';
     if (gradeFilter) gradeFilter.selectedIndex = 0;
+    if (subjectFilter) subjectFilter.selectedIndex = 0;
     if (sortFilter) sortFilter.selectedIndex = 0;
     if (rateFilter) rateFilter.selectedIndex = 0;
 

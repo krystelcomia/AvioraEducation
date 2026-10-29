@@ -2,14 +2,36 @@
    AVIORA EDUCATION - COMPONENTS & MODALS
    ========================================= */
 
-/* Filter & Search Bar */
+/* Filter & Search Bar - Unboxed & Clean */
 .tutor-filter-container {
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  margin-bottom: 2rem;
+  box-shadow: none;
+}
+
+.tutor-filter-container .form-control {
   background: #FFFFFF;
-  border: 1px solid rgba(198, 138, 40, 0.25);
-  border-radius: var(--radius-md);
-  padding: 1.25rem 1.5rem;
-  margin-bottom: 2.5rem;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(198, 138, 40, 0.28);
+  border-radius: var(--radius-sm);
+  padding: 0.65rem 1rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+}
+
+.tutor-filter-container .form-control:focus {
+  border-color: var(--gold-600);
+  background: #FFFFFF;
+  box-shadow: 0 0 0 2px rgba(198, 138, 40, 0.2);
+}
+
+.tutor-filter-container .btn {
+  height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 1.25rem;
 }
 
 .filter-grid {

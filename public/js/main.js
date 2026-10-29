@@ -751,12 +751,12 @@ const RealTimeAnalyticsChart = {
       minVal = 40;
     }
 
-    const width = 880;
-    const height = 260;
-    const padLeft = 52;
-    const padRight = 36;
-    const padTop = 24;
-    const padBottom = 38;
+    const width = 800;
+    const height = 200;
+    const padLeft = 44;
+    const padRight = 28;
+    const padTop = 16;
+    const padBottom = 28;
     const plotW = width - padLeft - padRight;
     const plotH = height - padTop - padBottom;
     const baseY = padTop + plotH;
@@ -801,7 +801,7 @@ const RealTimeAnalyticsChart = {
 
       gridSvg += `
         <line x1="${padLeft}" y1="${yPos.toFixed(1)}" x2="${(padLeft + plotW).toFixed(1)}" y2="${yPos.toFixed(1)}" stroke="rgba(198, 138, 40, 0.12)" stroke-dasharray="3 3" />
-        <text x="${padLeft - 10}" y="${(yPos + 4).toFixed(1)}" font-size="10.5" font-family="var(--font-heading)" font-weight="600" text-anchor="end" fill="var(--gold-700)">${label}</text>
+        <text x="${padLeft - 10}" y="${(yPos + 4).toFixed(1)}" font-size="9.5" font-family="var(--font-heading)" font-weight="600" text-anchor="end" fill="var(--gold-700)">${label}</text>
       `;
     }
 
@@ -810,7 +810,7 @@ const RealTimeAnalyticsChart = {
       const isNow = idx === points.length - 1;
       xLabelsSvg += `
         <line x1="${pt.x.toFixed(1)}" y1="${baseY}" x2="${pt.x.toFixed(1)}" y2="${(baseY + 4).toFixed(1)}" stroke="rgba(198, 138, 40, 0.25)" />
-        <text x="${pt.x.toFixed(1)}" y="${(baseY + 18).toFixed(1)}" font-size="10.5" font-family="var(--font-sans)" font-weight="${isNow ? '700' : '500'}" text-anchor="middle" fill="${isNow ? '#C68A28' : 'var(--text-muted)'}">${pt.time}</text>
+        <text x="${pt.x.toFixed(1)}" y="${(baseY + 15).toFixed(1)}" font-size="9.5" font-family="var(--font-sans)" font-weight="${isNow ? '700' : '500'}" text-anchor="middle" fill="${isNow ? '#C68A28' : 'var(--text-muted)'}">${pt.time}</text>
       `;
     });
 
@@ -820,9 +820,9 @@ const RealTimeAnalyticsChart = {
       pointsSvg += `
         <g class="analytics-chart-hit" data-idx="${pt.i}" data-val="${pt.val}" data-time="${pt.time}">
           <circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="14" fill="transparent" style="cursor: pointer;" />
-          <circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="${isLast ? '5.5' : '4'}" fill="${isLast ? '#C68A28' : '#FFFFFF'}" stroke="#C68A28" stroke-width="2.5" class="chart-point-dot" />
+          <circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="${isLast ? '4.8' : '3.6'}" fill="${isLast ? '#C68A28' : '#FFFFFF'}" stroke="#C68A28" stroke-width="2.5" class="chart-point-dot" />
           ${isLast ? `
-            <circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="12" fill="none" stroke="#C68A28" stroke-width="2" class="live-chart-pulse-ring" />
+            <circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="10" fill="none" stroke="#C68A28" stroke-width="1.8" class="live-chart-pulse-ring" />
           ` : ''}
         </g>
       `;
@@ -844,7 +844,7 @@ const RealTimeAnalyticsChart = {
         </defs>
         ${gridSvg}
         <path d="${areaPath}" fill="url(#realtimeAreaGrad)" />
-        <path d="${curvePath}" fill="none" stroke="url(#realtimeLineGrad)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" />
+        <path d="${curvePath}" fill="none" stroke="url(#realtimeLineGrad)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
         ${xLabelsSvg}
         ${pointsSvg}
       </svg>

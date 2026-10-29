@@ -619,94 +619,299 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 // =========================================
-// REAL-TIME ANALYTICS MODULE
+// REAL-TIME ANALYTICS MODULE (LINE CHART)
 // =========================================
-async function initRealTimeAnalytics() {
-  const onlineEl = document.getElementById('analytics-live-online');
-  const sessionsEl = document.getElementById('analytics-active-sessions');
-  const hoursEl = document.getElementById('analytics-study-hours');
-  const subjectsContainer = document.getElementById('analytics-subjects-list');
-  const contentContainer = document.getElementById('analytics-content-list');
-  const liveFeedContainer = document.getElementById('analytics-live-feed');
+const RealTimeAnalyticsChart = {
+  currentMetric: 'views', // 'views' | 'sessions' | 'demand'
+  timeSeriesData: [],
+  isInitialized: false,
 
-  if (!subjectsContainer && !contentContainer) return;
+  init() {
+    const chartContainer = document.getElementById('analytics-line-chart-container');
+    if (!chartContainer) return;
+
+    if (!this.isInitialized) {
+      this.setupToggles();
+      this.setupSubjectPills();
+      this.isInitialized = true;
+    }
+  },
+
+  setupToggles() {
+    const toggleBtns = document.querySelectorAll('.analytics-toggle-btn');
+    toggleBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        toggleBtns.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        this.currentMetric = btn.dataset.metric || 'views';
+        this.renderChart();
+      });
+    });
+  },
+
+  setupSubjectPills() {
+    const pills = document.querySelectorAll('.legend-subject-pill');
+    pills.forEach(pill => {
+      pill.addEventListener('click', () => {
+        pills.forEach(p => p.classList.remove('active'));
+        pill.classList.add('active');
+        const subject = pill.dataset.subject;
+        if (subject && window.Tutors) {
+          window.location.hash = '#tutors';
+          Tutors.activeSubjectFilter = subject;
+          Tutors.applyFilters();
+        }
+      });
+    });
+  },
+
+  updateData(analyticsData) {
+    if (analyticsData && Array.isArray(analyticsData.timeSeries)) {
+      this.timeSeriesData = analyticsData.timeSeries;
+    } else if (this.timeSeriesData.length === 0) {
+      this.generateFallbackData();
+    }
+    this.renderChart();
+    this.updateKPIs(analyticsData);
+  },
+
+  generateFallbackData() {
+    const now = Date.now();
+    const data = [];
+    for (let i = 9; i >= 0; i--) {
+      const stepDate = new Date(now - i * 5 * 60 * 1000);
+      const timeLabel = i === 0 ? 'Now' : stepDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const wave = Math.sin((stepDate.getTime() / 480000) * 1.8);
+      data.push({
+        time: timeLabel,
+        views: Math.round(3150 + wave * 620),
+        sessions: Math.round(18 + wave * 5),
+        demand: Math.round(85 + wave * 9),
+        topSubject: 'Calculus BC'
+      });
+    }
+    this.timeSeriesData = data;
+  },
+
+  updateKPIs(data) {
+    if (!data) return;
+    const onlineEl = document.getElementById('kpi-online-students');
+    const sessionsEl = document.getElementById('kpi-active-sessions');
+    const hoursEl = document.getElementById('kpi-study-hours');
+    const clockEl = document.getElementById('analytics-live-clock');
+
+    if (onlineEl && data.activeStudentsOnline) onlineEl.textContent = data.activeStudentsOnline;
+    if (sessionsEl && data.activeSessionsNow) sessionsEl.textContent = data.activeSessionsNow;
+    if (hoursEl && data.totalStudyHoursThisMonth) hoursEl.textContent = data.totalStudyHoursThisMonth.toLocaleString() + '+';
+    const topSubjectEl = document.getElementById('kpi-top-subject');
+    if (topSubjectEl && data.topSubjects && data.topSubjects[0]) {
+      topSubjectEl.textContent = data.topSubjects[0].name.replace('AP ', '').split('&')[0].trim();
+    }
+    if (clockEl) {
+      clockEl.textContent = `Live • Updated ${data.lastUpdated || new Date().toLocaleTimeString()}`;
+    }
+  },
+
+  renderChart() {
+    const container = document.getElementById('analytics-line-chart-container');
+    if (!container || !this.timeSeriesData || this.timeSeriesData.length === 0) return;
+
+    const data = this.timeSeriesData;
+    const metric = this.currentMetric;
+
+    let values = [];
+    let unitSuffix = '';
+
+    if (metric === 'views') {
+      values = data.map(d => d.views || 0);
+      unitSuffix = ' views';
+    } else if (metric === 'sessions') {
+      values = data.map(d => d.sessions || 0);
+      unitSuffix = ' sessions';
+    } else { // demand
+      values = data.map(d => d.demand || 0);
+      unitSuffix = '%';
+    }
+
+    const rawMax = Math.max(...values, 10);
+    const rawMin = Math.min(...values, 0);
+
+    let maxVal, minVal;
+    const stepCount = 4;
+    if (metric === 'views') {
+      const step = Math.ceil(rawMax / 4 / 200) * 200;
+      maxVal = step * 4;
+      minVal = 0;
+    } else if (metric === 'sessions') {
+      const step = Math.ceil(rawMax / 4 / 5) * 5;
+      maxVal = step * 4;
+      minVal = 0;
+    } else { // demand
+      maxVal = 100;
+      minVal = 40;
+    }
+
+    const width = 880;
+    const height = 260;
+    const padLeft = 52;
+    const padRight = 36;
+    const padTop = 24;
+    const padBottom = 38;
+    const plotW = width - padLeft - padRight;
+    const plotH = height - padTop - padBottom;
+    const baseY = padTop + plotH;
+
+    const points = data.map((d, i) => {
+      const val = metric === 'views' ? d.views : (metric === 'sessions' ? d.sessions : d.demand);
+      const x = padLeft + (i / (data.length - 1)) * plotW;
+      const normalized = Math.max(0, Math.min(1, (val - minVal) / (maxVal - minVal)));
+      const y = baseY - normalized * plotH;
+      return { x, y, val, time: d.time, topSubject: d.topSubject, i };
+    });
+
+    let curvePath = `M ${points[0].x.toFixed(1)} ${points[0].y.toFixed(1)}`;
+    for (let i = 0; i < points.length - 1; i++) {
+      const p0 = points[i === 0 ? 0 : i - 1];
+      const p1 = points[i];
+      const p2 = points[i + 1];
+      const p3 = points[i + 2 < points.length ? i + 2 : i + 1];
+
+      const cp1x = p1.x + (p2.x - p0.x) / 6;
+      const cp1y = p1.y + (p2.y - p0.y) / 6;
+      const cp2x = p2.x - (p3.x - p1.x) / 6;
+      const cp2y = p2.y - (p3.y - p1.y) / 6;
+
+      curvePath += ` C ${cp1x.toFixed(1)} ${cp1y.toFixed(1)}, ${cp2x.toFixed(1)} ${cp2y.toFixed(1)}, ${p2.x.toFixed(1)} ${p2.y.toFixed(1)}`;
+    }
+
+    const areaPath = `${curvePath} L ${points[points.length - 1].x.toFixed(1)} ${baseY} L ${points[0].x.toFixed(1)} ${baseY} Z`;
+
+    let gridSvg = '';
+    for (let i = 0; i <= stepCount; i++) {
+      const stepVal = minVal + ((maxVal - minVal) / stepCount) * (stepCount - i);
+      const yPos = padTop + (plotH / stepCount) * i;
+      let label = '';
+      if (metric === 'views') {
+        label = stepVal >= 1000 ? `${(stepVal / 1000).toFixed(stepVal % 1000 === 0 ? 0 : 1)}k` : `${Math.round(stepVal)}`;
+      } else if (metric === 'demand') {
+        label = `${Math.round(stepVal)}%`;
+      } else {
+        label = `${Math.round(stepVal)}`;
+      }
+
+      gridSvg += `
+        <line x1="${padLeft}" y1="${yPos.toFixed(1)}" x2="${(padLeft + plotW).toFixed(1)}" y2="${yPos.toFixed(1)}" stroke="rgba(198, 138, 40, 0.12)" stroke-dasharray="3 3" />
+        <text x="${padLeft - 10}" y="${(yPos + 4).toFixed(1)}" font-size="10.5" font-family="var(--font-heading)" font-weight="600" text-anchor="end" fill="var(--gold-700)">${label}</text>
+      `;
+    }
+
+    let xLabelsSvg = '';
+    points.forEach((pt, idx) => {
+      const isNow = idx === points.length - 1;
+      xLabelsSvg += `
+        <line x1="${pt.x.toFixed(1)}" y1="${baseY}" x2="${pt.x.toFixed(1)}" y2="${(baseY + 4).toFixed(1)}" stroke="rgba(198, 138, 40, 0.25)" />
+        <text x="${pt.x.toFixed(1)}" y="${(baseY + 18).toFixed(1)}" font-size="10.5" font-family="var(--font-sans)" font-weight="${isNow ? '700' : '500'}" text-anchor="middle" fill="${isNow ? '#C68A28' : 'var(--text-muted)'}">${pt.time}</text>
+      `;
+    });
+
+    let pointsSvg = '';
+    points.forEach((pt, idx) => {
+      const isLast = idx === points.length - 1;
+      pointsSvg += `
+        <g class="analytics-chart-hit" data-idx="${pt.i}" data-val="${pt.val}" data-time="${pt.time}">
+          <circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="14" fill="transparent" style="cursor: pointer;" />
+          <circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="${isLast ? '5.5' : '4'}" fill="${isLast ? '#C68A28' : '#FFFFFF'}" stroke="#C68A28" stroke-width="2.5" class="chart-point-dot" />
+          ${isLast ? `
+            <circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="12" fill="none" stroke="#C68A28" stroke-width="2" class="live-chart-pulse-ring" />
+          ` : ''}
+        </g>
+      `;
+    });
+
+    container.innerHTML = `
+      <svg class="analytics-line-chart-svg" viewBox="0 0 ${width} ${height}" preserveAspectRatio="xMidYMid meet">
+        <defs>
+          <linearGradient id="realtimeLineGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#E5A93C" />
+            <stop offset="50%" stop-color="#C68A28" />
+            <stop offset="100%" stop-color="#9E6B15" />
+          </linearGradient>
+          <linearGradient id="realtimeAreaGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stop-color="#C68A28" stop-opacity="0.28" />
+            <stop offset="60%" stop-color="#E5A93C" stop-opacity="0.08" />
+            <stop offset="100%" stop-color="#C68A28" stop-opacity="0.0" />
+          </linearGradient>
+        </defs>
+        ${gridSvg}
+        <path d="${areaPath}" fill="url(#realtimeAreaGrad)" />
+        <path d="${curvePath}" fill="none" stroke="url(#realtimeLineGrad)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" />
+        ${xLabelsSvg}
+        ${pointsSvg}
+      </svg>
+    `;
+
+    this.bindHoverTooltip(container, points, unitSuffix);
+  },
+
+  bindHoverTooltip(container, points, unitSuffix) {
+    const tooltip = document.getElementById('analytics-chart-tooltip');
+    if (!tooltip) return;
+
+    const hitAreas = container.querySelectorAll('.analytics-chart-hit');
+    hitAreas.forEach(hit => {
+      hit.addEventListener('mouseenter', () => {
+        const idx = parseInt(hit.dataset.idx, 10);
+        const pt = points[idx];
+        if (!pt) return;
+
+        const metricLabel = this.currentMetric === 'views' ? 'Learning Traffic' : (this.currentMetric === 'sessions' ? 'Active Mentorships' : 'Curriculum Demand');
+        const formattedVal = pt.val.toLocaleString() + unitSuffix;
+
+        tooltip.innerHTML = `
+          <div style="font-weight: 700; color: #F59E0B; margin-bottom: 2px;">${pt.time} • ${metricLabel}</div>
+          <div style="font-size: 1.1rem; font-weight: 800; color: #FFFFFF;">${formattedVal}</div>
+          ${pt.topSubject ? `<div style="font-size: 0.72rem; color: #E2E8F0; margin-top: 3px;">Top Subject: ${pt.topSubject}</div>` : ''}
+        `;
+
+        tooltip.style.opacity = '1';
+        const rect = container.getBoundingClientRect();
+        const hitRect = hit.getBoundingClientRect();
+        const xOffset = hitRect.left - rect.left + hitRect.width / 2;
+        const yOffset = hitRect.top - rect.top;
+
+        tooltip.style.left = `${xOffset}px`;
+        tooltip.style.top = `${yOffset - 12}px`;
+        tooltip.style.transform = 'translate(-50%, -100%)';
+      });
+
+      hit.addEventListener('mouseleave', () => {
+        tooltip.style.opacity = '0';
+      });
+    });
+  }
+};
+
+async function initRealTimeAnalytics() {
+  const chartContainer = document.getElementById('analytics-line-chart-container');
+  if (!chartContainer) return;
+
+  RealTimeAnalyticsChart.init();
 
   async function updateAnalytics() {
     try {
       const data = await API.getAnalytics();
       if (!data) return;
-
-      if (onlineEl && data.activeStudentsOnline) {
-        onlineEl.innerHTML = `${data.activeStudentsOnline} <span>online</span>`;
-      }
-      if (sessionsEl && data.activeSessionsNow) {
-        sessionsEl.innerHTML = `${data.activeSessionsNow} <span>active</span>`;
-      }
-      if (hoursEl && data.totalStudyHoursThisMonth) {
-        hoursEl.innerHTML = `${data.totalStudyHoursThisMonth.toLocaleString()}+ <span>hrs</span>`;
-      }
-
-      // Populate Subjects
-      if (subjectsContainer && Array.isArray(data.topSubjects)) {
-        subjectsContainer.innerHTML = data.topSubjects.map(sub => `
-          <div class="subject-rank-row" onclick="window.location.hash='#tutors'; Tutors.activeSubjectFilter='${sub.category.split(' ')[0]}'; Tutors.applyFilters();" style="cursor: pointer;" title="Explore ${sub.name} tutors">
-            <div class="subject-rank-num">0${sub.rank}</div>
-            <div class="subject-info-col">
-              <div class="subject-name-line">
-                <span class="subject-title-text">${sub.name}</span>
-                <span class="subject-cat-tag">${sub.category}</span>
-              </div>
-              <div class="subject-meter-wrap">
-                <div class="subject-meter-fill" style="width: ${sub.demandIndex || 85}%;"></div>
-              </div>
-            </div>
-            <div class="subject-traffic-col">
-              <div class="subject-views-count">${sub.accessCount.toLocaleString()} views</div>
-              <div class="subject-growth-tag">▲ ${sub.growth} ${sub.trend}</div>
-            </div>
-          </div>
-        `).join('');
-      }
-
-      // Populate Content
-      if (contentContainer && Array.isArray(data.topContent)) {
-        contentContainer.innerHTML = data.topContent.map(res => `
-          <div class="content-resource-item">
-            <div class="content-resource-meta">
-              <span class="content-resource-title">${res.title}</span>
-              <span class="content-resource-sub">${res.subject} • ${res.format}</span>
-            </div>
-            <div class="content-resource-stat">${res.views.toLocaleString()} views</div>
-          </div>
-        `).join('');
-      }
-
-      // Populate Live Activity Feed
-      if (liveFeedContainer && Array.isArray(data.liveActivityStream)) {
-        liveFeedContainer.innerHTML = data.liveActivityStream.map(evt => {
-          const iconRenderer = (window.AvioraIcons && typeof AvioraIcons[evt.icon] === 'function')
-            ? AvioraIcons[evt.icon]
-            : (typeof Icons !== 'undefined' && typeof Icons[evt.icon] === 'function' ? Icons[evt.icon] : Icons.zap);
-          return `
-            <div class="live-activity-event">
-              <span style="display: inline-flex; align-items: center; color: var(--gold-700);">${iconRenderer(15)}</span>
-              <span style="flex: 1;">${evt.action}</span>
-              <span class="live-activity-time">${evt.time}</span>
-            </div>
-          `;
-        }).join('');
-      }
+      RealTimeAnalyticsChart.updateData(data);
     } catch (e) {
       console.warn('Analytics polling error:', e);
     }
   }
 
   await updateAnalytics();
-  // Poll periodically every 12 seconds for dynamic live feeling
-  setInterval(updateAnalytics, 12000);
+  // Real-time automatic update every 5 seconds
+  setInterval(updateAnalytics, 5000);
 }
 
-// =========================================
 // STUDENT WORK SHOWCASE MODULE
 // =========================================
 let allStudentWorks = [];

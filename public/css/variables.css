@@ -1050,6 +1050,54 @@
   color: #FFFFFF !important;
 }
 
+/* Real-Time Line Chart Dark Mode */
+[data-theme="dark"] .analytics-chart-card {
+  background: #0A0A0A !important;
+  border-color: rgba(216, 170, 60, 0.28) !important;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6), 0 2px 10px rgba(216, 170, 60, 0.08) !important;
+}
+
+[data-theme="dark"] .analytics-chart-title,
+[data-theme="dark"] .kpi-value {
+  color: #FFFFFF !important;
+}
+
+[data-theme="dark"] .analytics-kpi-card {
+  background: rgba(255, 255, 255, 0.04) !important;
+  border-color: rgba(216, 170, 60, 0.2) !important;
+}
+
+[data-theme="dark"] .kpi-label {
+  color: #94A3B8 !important;
+}
+
+[data-theme="dark"] .kpi-sub {
+  color: #64748B !important;
+}
+
+[data-theme="dark"] .analytics-chart-toggles {
+  background: rgba(255, 255, 255, 0.06) !important;
+  border-color: rgba(216, 170, 60, 0.3) !important;
+}
+
+[data-theme="dark"] .analytics-toggle-btn {
+  color: #CBD5E1 !important;
+}
+
+[data-theme="dark"] .analytics-toggle-btn.active {
+  color: #FFFFFF !important;
+}
+
+[data-theme="dark"] .legend-subject-pill {
+  background: rgba(255, 255, 255, 0.05) !important;
+  border-color: rgba(216, 170, 60, 0.25) !important;
+  color: #E2E8F0 !important;
+}
+
+[data-theme="dark"] .legend-subject-pill:hover {
+  background: rgba(216, 170, 60, 0.2) !important;
+}
+
 /* =========================================
    CLEAN GOOGLE TRANSLATE STYLES
    Suppresses Google toolbars, banners, and frames

@@ -2143,6 +2143,27 @@ app.get('/api/public/analytics', (req, res) => {
       { time: '11 mins ago', action: 'AP Physics C Free-Body practice pack downloaded', icon: 'book', category: 'Resource' }
     ];
 
+    // Generate real-time rolling telemetry time series for line chart (past 10 rolling intervals)
+    const now = Date.now();
+    const timeSeries = [];
+    const stepCount = 10;
+    for (let i = stepCount - 1; i >= 0; i--) {
+      const stepDate = new Date(now - i * 5 * 60 * 1000);
+      const timeLabel = i === 0 ? 'Now' : stepDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const wave = Math.sin((stepDate.getTime() / 480000) * 1.8);
+      const views = Math.round(3150 + wave * 620 + ((secondsSeed + i * 7) % 190));
+      const sessions = Math.round(18 + wave * 5 + ((secondsSeed + i) % 4));
+      const demand = Math.round(85 + wave * 9 + ((secondsSeed + i * 3) % 7));
+      timeSeries.push({
+        time: timeLabel,
+        views: Math.max(1200, views),
+        sessions: Math.max(6, sessions),
+        demand: Math.min(100, Math.max(65, demand)),
+        timestamp: stepDate.getTime(),
+        topSubject: topSubjects[i % topSubjects.length].name
+      });
+    }
+
     res.json({
       activeStudentsOnline: liveOnline,
       activeSessionsNow: liveActiveSessions,
@@ -2153,6 +2174,7 @@ app.get('/api/public/analytics', (req, res) => {
       topSubjects,
       topContent,
       liveActivityStream,
+      timeSeries,
       lastUpdated: new Date().toLocaleTimeString()
     });
   } catch (error) {

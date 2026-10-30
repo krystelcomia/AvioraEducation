@@ -645,10 +645,7 @@ const Tutors = {
                   ${scheduleRowsHtml}
                 </tbody>
               </table>
-              <button class="btn btn-primary btn-md" id="sidebar-book-btn" data-id="${tutor.id}" style="width: 100%; justify-content: center; margin-top: 1.25rem;">
-                <span>Book a Session Slot</span>
-                <span>→</span>
-              </button>
+
             </div>
 
 
@@ -671,9 +668,7 @@ const Tutors = {
         this.openBookingModal(tutor.id);
       });
 
-      document.getElementById('sidebar-book-btn')?.addEventListener('click', () => {
-        this.openBookingModal(tutor.id);
-      });
+
 
     } catch (err) {
       container.innerHTML = `

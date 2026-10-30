@@ -127,6 +127,7 @@ const API = {
   getTutors: (params = '') => apiRequest(`/tutors?${params}`),
   getTutorById: (id) => apiRequest(`/tutors/${id}`),
   sendMessageToTutor: (tutorId, body) => apiRequest(`/tutors/${tutorId}/messages`, { method: 'POST', body }),
+  getTutorMessages: (tutorId) => apiRequest(`/tutors/${tutorId}/messages`),
 
   // Student
   getStudentDashboard: () => apiRequest('/student/dashboard'),
@@ -138,6 +139,8 @@ const API = {
 
   // Teacher & Tutor Portal
   getTeacherStatus: () => apiRequest('/teacher/application-status'),
+  getTeacherMessages: () => apiRequest('/teacher/messages'),
+  teacherReplyMessage: (body) => apiRequest('/teacher/messages/reply', { method: 'POST', body }),
   detectDocument: (formData) => apiRequest('/teacher/detect-document', { method: 'POST', body: formData }),
   submitTeacherApplication: (formData) => apiRequest('/teacher/apply', { method: 'POST', body: formData }),
   getTeacherDashboard: () => apiRequest('/teacher/dashboard'),

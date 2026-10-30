@@ -2486,6 +2486,69 @@ app.get('/api/tutors/:id', (req, res) => {
   }
 });
 
+// Get Direct Messages with Tutor (Student <-> Tutor Real-Time Thread)
+app.get('/api/tutors/:id/messages', (req, res) => {
+  try {
+    const tutorProfileId = req.params.id;
+    const tutor = db.prepare('SELECT user_id, headline FROM tutor_profiles WHERE id = ?').get(tutorProfileId);
+    if (!tutor) {
+      return res.status(404).json({ error: 'Tutor not found.' });
+    }
+
+    let currentUserId = null;
+    let currentUserEmail = null;
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+    if (token) {
+      try {
+        const decoded = jwt.verify(token, JWT_SECRET);
+        currentUserId = decoded.id;
+        const u = db.prepare('SELECT email FROM users WHERE id = ?').get(currentUserId);
+        if (u) currentUserEmail = u.email;
+      } catch (e) {}
+    }
+
+    let rows = [];
+    if (currentUserId) {
+      rows = db.prepare(`
+        SELECT m.*
+        FROM messages m
+        WHERE (m.sender_id = ? AND m.receiver_id = ?)
+           OR (m.sender_id = ? AND m.receiver_id = ?)
+        ORDER BY m.created_at ASC
+      `).all(currentUserId, tutor.user_id, tutor.user_id, currentUserId);
+
+      // Mark incoming messages to the current user as read
+      db.prepare(`
+        UPDATE messages SET is_read = 1 
+        WHERE receiver_id = ? AND sender_id = ? AND is_read = 0
+      `).run(currentUserId, tutor.user_id);
+    } else if (currentUserEmail) {
+      rows = db.prepare(`
+        SELECT m.*
+        FROM messages m
+        WHERE m.receiver_id = ? AND m.sender_email = ?
+        ORDER BY m.created_at ASC
+      `).all(tutor.user_id, currentUserEmail);
+    }
+
+    res.json({
+      messages: rows.map(r => ({
+        id: r.id,
+        sender: r.sender_id === tutor.user_id ? 'tutor' : 'student',
+        senderName: r.sender_name,
+        text: r.content,
+        time: new Date(r.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        created_at: r.created_at,
+        is_read: r.is_read
+      }))
+    });
+  } catch (error) {
+    console.error('Get tutor messages error:', error);
+    res.status(500).json({ error: 'Failed to fetch messages.' });
+  }
+});
+
 // Send Message to Tutor
 app.post('/api/tutors/:id/messages', (req, res) => {
   try {
@@ -3394,6 +3457,91 @@ app.post('/api/student/requests/:id/review', authenticateToken, requireRole('stu
 // ==========================================
 // TEACHER & TUTOR PORTAL ROUTES
 // ==========================================
+
+// Direct Student Messages for Teacher (Real-Time Inquiries)
+app.get('/api/teacher/messages', authenticateToken, requireRole('tutor'), (req, res) => {
+  try {
+    const teacherId = req.user.id;
+
+    const messages = db.prepare(`
+      SELECT 
+        m.*,
+        u.name as student_name,
+        u.avatar_url as student_avatar,
+        u.email as student_email
+      FROM messages m
+      LEFT JOIN users u ON u.id = m.sender_id
+      WHERE m.receiver_id = ?
+      ORDER BY m.created_at DESC
+    `).all(teacherId);
+
+    res.json({ messages });
+  } catch (error) {
+    console.error('Teacher get messages error:', error);
+    res.status(500).json({ error: 'Failed to fetch teacher messages.' });
+  }
+});
+
+// Teacher Reply to Student Message
+app.post('/api/teacher/messages/reply', authenticateToken, requireRole('tutor'), (req, res) => {
+  try {
+    const teacherId = req.user.id;
+    const { student_id, message_id, message } = req.body;
+
+    if (!message || !message.trim()) {
+      return res.status(400).json({ error: 'Reply message cannot be empty.' });
+    }
+
+    const teacherUser = db.prepare('SELECT name, email FROM users WHERE id = ?').get(teacherId);
+    let targetStudentId = student_id;
+
+    if (!targetStudentId && message_id) {
+      const orig = db.prepare('SELECT sender_id FROM messages WHERE id = ?').get(message_id);
+      if (orig) targetStudentId = orig.sender_id;
+    }
+
+    if (!targetStudentId) {
+      return res.status(400).json({ error: 'Cannot reply: Student ID is unknown.' });
+    }
+
+    // Insert real reply from this tutor
+    const info = db.prepare(`
+      INSERT INTO messages (sender_id, receiver_id, sender_name, sender_email, subject, content, is_read)
+      VALUES (?, ?, ?, ?, ?, ?, 0)
+    `).run(
+      teacherId,
+      targetStudentId,
+      teacherUser.name,
+      teacherUser.email,
+      'Re: Direct Mentorship Inquiry',
+      message.trim()
+    );
+
+    // Mark original message as read
+    if (message_id) {
+      db.prepare('UPDATE messages SET is_read = 1 WHERE id = ?').run(message_id);
+    }
+
+    // Real-time notification to the student
+    sendNotification(
+      targetStudentId,
+      `New Message from ${teacherUser.name}`,
+      message.trim().substring(0, 120) + (message.length > 120 ? '...' : ''),
+      'message',
+      '#tutors'
+    );
+
+    res.json({
+      success: true,
+      messageId: info.lastInsertRowid,
+      message: 'Reply delivered directly to the student in real time.'
+    });
+  } catch (error) {
+    console.error('Teacher reply message error:', error);
+    res.status(500).json({ error: 'Failed to send reply: ' + error.message });
+  }
+});
+
 
 // Get teacher application details
 app.get('/api/teacher/application-status', authenticateToken, requireRole('teacher'), (req, res) => {

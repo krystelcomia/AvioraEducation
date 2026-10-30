@@ -781,6 +781,7 @@ const Teacher = {
       this.renderStudentRevenueBreakdown(data.studentRevenueBreakdown || []);
       this.renderTeacherRequests();
       this.populateProfileSettings(data.tutorProfile);
+      await this.loadTeacherMessages();
     } catch (err) {
       console.error('Failed to load teacher dashboard:', err);
     }
@@ -3744,6 +3745,143 @@ const Teacher = {
       if (submitBtn) {
         submitBtn.disabled = false;
         submitBtn.textContent = 'Save Profile Changes';
+      }
+    }
+  },
+
+  // ==========================================
+  // DIRECT STUDENT MESSAGES & REPLIES
+  // ==========================================
+  teacherMessages: [],
+
+  async loadTeacherMessages() {
+    try {
+      const res = await API.getTeacherMessages();
+      this.teacherMessages = res.messages || [];
+      this.renderTeacherMessages();
+    } catch (err) {
+      console.warn('Could not load teacher messages:', err);
+    }
+  },
+
+  renderTeacherMessages() {
+    const tbody = document.getElementById('teacher-messages-table-body');
+    if (!tbody) return;
+
+    if (!this.teacherMessages || this.teacherMessages.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="5" style="text-align: center; padding: 2.5rem 1rem;">
+            <div style="color: var(--gold-700); margin-bottom: 0.35rem;">${Icons.message(24)}</div>
+            <h4 style="font-size: 0.95rem; font-weight: 700; color: var(--charcoal-900); margin: 0 0 0.25rem;">No Direct Student Messages</h4>
+            <p style="font-size: 0.82rem; color: var(--text-secondary); margin: 0;">When students send you a 1-on-1 private message, it will arrive here in real time for you to reply.</p>
+          </td>
+        </tr>
+      `;
+      return;
+    }
+
+    tbody.innerHTML = this.teacherMessages.map(m => {
+      const studentName = m.student_name || m.sender_name || 'Student';
+      const studentEmail = m.student_email || m.sender_email || '';
+      const timeStr = m.created_at ? new Date(m.created_at).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Recent';
+      const isUnread = Number(m.is_read) === 0;
+
+      return `
+        <tr>
+          <td>
+            <div style="display: flex; align-items: center; gap: 0.6rem;">
+              <div style="width: 32px; height: 32px; border-radius: 50%; background: rgba(198, 138, 40, 0.15); display: flex; align-items: center; justify-content: center; font-weight: 700; color: var(--gold-800); font-size: 0.85rem;">
+                ${studentName.charAt(0).toUpperCase()}
+              </div>
+              <div>
+                <strong style="color: var(--charcoal-950); font-size: 0.88rem;">${studentName}</strong>
+                <div style="font-size: 0.74rem; color: var(--text-muted);">${studentEmail}</div>
+              </div>
+            </div>
+          </td>
+          <td style="max-width: 320px;">
+            <div style="font-size: 0.85rem; color: var(--charcoal-900); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${m.content}">
+              ${m.content}
+            </div>
+          </td>
+          <td style="font-size: 0.8rem; color: var(--text-secondary); white-space: nowrap;">
+            ${timeStr}
+          </td>
+          <td>
+            <span class="${isUnread ? 'badge-accent' : 'badge-gold'}" style="font-size: 0.72rem;">
+              ${isUnread ? 'Unread' : 'Delivered'}
+            </span>
+          </td>
+          <td style="text-align: right;">
+            <button type="button" class="btn btn-outline-gold btn-sm" onclick="Teacher.openReplyModal(${m.id}, ${m.sender_id || 'null'}, '${studentName.replace(/'/g, "\\'")}', '${m.content.replace(/'/g, "\\'").replace(/\n/g, ' ')}')">
+              ${Icons.message(13)}
+              <span>Reply</span>
+            </button>
+          </td>
+        </tr>
+      `;
+    }).join('');
+  },
+
+  openReplyModal(messageId, studentId, studentName, content) {
+    const modal = document.getElementById('modal-teacher-reply-message');
+    if (!modal) return;
+
+    const studentIdInput = document.getElementById('teacher-reply-student-id');
+    const msgIdInput = document.getElementById('teacher-reply-orig-message-id');
+    const nameLabel = document.getElementById('teacher-reply-orig-student-name');
+    const contentP = document.getElementById('teacher-reply-orig-content');
+    const textarea = document.getElementById('teacher-reply-textarea');
+
+    if (studentIdInput) studentIdInput.value = studentId || '';
+    if (msgIdInput) msgIdInput.value = messageId || '';
+    if (nameLabel) nameLabel.textContent = `Message from ${studentName}:`;
+    if (contentP) contentP.textContent = content;
+    if (textarea) {
+      textarea.value = '';
+      textarea.focus();
+    }
+
+    this.openModal('modal-teacher-reply-message');
+  },
+
+  async sendReplyToStudent() {
+    const studentIdInput = document.getElementById('teacher-reply-student-id');
+    const msgIdInput = document.getElementById('teacher-reply-orig-message-id');
+    const textarea = document.getElementById('teacher-reply-textarea');
+    const submitBtn = document.getElementById('btn-submit-teacher-reply');
+
+    const studentId = studentIdInput ? studentIdInput.value : null;
+    const messageId = msgIdInput ? msgIdInput.value : null;
+    const replyText = textarea ? textarea.value.trim() : '';
+
+    if (!replyText) {
+      showToast('Please type a reply message.', 'warning');
+      return;
+    }
+
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Sending...';
+    }
+
+    try {
+      const res = await API.teacherReplyMessage({
+        student_id: studentId,
+        message_id: messageId,
+        message: replyText
+      });
+
+      showToast(res.message || 'Reply delivered directly to the student in real time!', 'success');
+      this.closeModal('modal-teacher-reply-message');
+      await this.loadTeacherMessages();
+    } catch (err) {
+      showToast(err.message || 'Failed to send reply.', 'error');
+    } finally {
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Send Reply';
       }
     }
   }

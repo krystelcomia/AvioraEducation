@@ -3556,6 +3556,37 @@
                 </table>
               </div>
             </div>
+
+            <!-- Direct Student Messages Table (Real-Time 1-on-1 Inquiries) -->
+            <div class="data-table-container" style="margin-top: 2rem;">
+              <div class="table-toolbar">
+                <div>
+                  <h3 style="color: var(--text-primary); font-size: 1.15rem; margin-bottom: 0.25rem;">
+                    Direct Student Messages
+                  </h3>
+                  <p style="font-size: 0.85rem; color: var(--text-secondary); margin: 0;">
+                    Real-time private messages from students. Only you as the assigned educator can reply.
+                  </p>
+                </div>
+                <span class="badge-gold">Live Inquiries</span>
+              </div>
+              <div style="overflow-x: auto;">
+                <table class="admin-table">
+                  <thead>
+                    <tr>
+                      <th>Student</th>
+                      <th>Message</th>
+                      <th>Received</th>
+                      <th>Status</th>
+                      <th style="text-align: right;">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody id="teacher-messages-table-body">
+                    <!-- Populated via teacher.js -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
         </div>
 
       </div>
@@ -5023,15 +5054,6 @@
           </div>
         </div>
         <div class="messenger-header-actions">
-          <button type="button" class="btn btn-gold-sm messenger-book-btn" id="messenger-book-session-btn" title="Book a 1-on-1 session with this tutor">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <rect width="18" height="18" x="3" y="4" rx="2" ry="2"></rect>
-              <line x1="16" x2="16" y1="2" y2="6"></line>
-              <line x1="8" x2="8" y1="2" y2="6"></line>
-              <line x1="3" x2="21" y1="10" y2="10"></line>
-            </svg>
-            <span>Book Session</span>
-          </button>
           <button class="modal-close-btn" id="tutor-message-modal-close" aria-label="Close Messenger">✕</button>
         </div>
       </div>
@@ -6406,5 +6428,34 @@
   <script src="/js/virtual-room.js"></script>
   <script src="/js/main.js"></script>
   <!-- Google Translate removed as requested -->
+
+  <!-- Modal: Teacher Reply to Student Message -->
+  <div class="modal-overlay" id="modal-teacher-reply-message">
+    <div class="modal-card" style="max-width: 520px;">
+      <div class="modal-header">
+        <h3 class="modal-title" id="teacher-reply-modal-title">Reply to Student Message</h3>
+        <button class="modal-close-btn" onclick="Teacher.closeModal('modal-teacher-reply-message')">✕</button>
+      </div>
+      <form id="teacher-reply-message-form" onsubmit="event.preventDefault(); Teacher.sendReplyToStudent();">
+        <input type="hidden" id="teacher-reply-student-id" />
+        <input type="hidden" id="teacher-reply-orig-message-id" />
+        <div class="modal-body">
+          <div style="background: rgba(198, 138, 40, 0.08); border-left: 3px solid var(--gold-600); padding: 0.75rem 1rem; border-radius: var(--radius-sm); margin-bottom: 1.25rem;">
+            <div style="font-size: 0.78rem; font-weight: 700; color: var(--gold-800); margin-bottom: 0.25rem;" id="teacher-reply-orig-student-name">Student Message:</div>
+            <p style="font-size: 0.85rem; color: var(--charcoal-900); margin: 0; line-height: 1.5;" id="teacher-reply-orig-content">Original message...</p>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="teacher-reply-textarea">Your Response (Real-Time Delivery to Student):</label>
+            <textarea id="teacher-reply-textarea" class="form-control" rows="4" placeholder="Type your response to this student..." required style="resize: vertical;"></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary btn-sm" onclick="Teacher.closeModal('modal-teacher-reply-message')">Cancel</button>
+          <button type="submit" class="btn btn-primary btn-sm" id="btn-submit-teacher-reply">Send Reply</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
 </body>
 </html>

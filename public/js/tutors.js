@@ -651,25 +651,7 @@ const Tutors = {
               </button>
             </div>
 
-            <!-- Direct Messenger to Tutor Card -->
-            <div class="tutor-quick-message-card" style="border: 1.5px solid rgba(198, 138, 40, 0.35); border-radius: var(--radius-lg); padding: 1.5rem; box-shadow: var(--shadow-sm);">
-              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
-                <div style="display: flex; align-items: center; gap: 0.55rem;">
-                  <span style="display: inline-flex; align-items: center; color: var(--gold-700);">${Icons.message(20)}</span>
-                  <h3 style="font-size: 1.15rem; font-weight: 700; color: var(--charcoal-950); margin: 0;">Direct Messenger</h3>
-                </div>
-                <span style="font-size: 0.72rem; color: #10B981; font-weight: 600; display: inline-flex; align-items: center; gap: 0.3rem;">● Active now</span>
-              </div>
-              <p style="font-size: 0.825rem; color: var(--text-secondary); margin-bottom: 1.15rem; line-height: 1.45;">
-                Chat 1-on-1 with ${tutor.name}. Real-time responses are stored directly in your private conversation thread.
-              </p>
-              <button type="button" class="btn btn-primary btn-md" id="sidebar-open-messenger-btn" style="width: 100%; justify-content: center; display: inline-flex; align-items: center; gap: 0.5rem; font-weight: 600;">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-                </svg>
-                <span>Message ${tutor.name.split(' ')[0]} in Messenger</span>
-              </button>
-            </div>
+
           </div>
         </div>
       `;
@@ -683,9 +665,7 @@ const Tutors = {
         this.openMessageModal(tutor.id);
       });
 
-      document.getElementById('sidebar-open-messenger-btn')?.addEventListener('click', () => {
-        this.openMessageModal(tutor.id);
-      });
+
 
       document.getElementById('hero-book-tutor-btn')?.addEventListener('click', () => {
         this.openBookingModal(tutor.id);
@@ -718,16 +698,7 @@ const Tutors = {
       });
     }
 
-    const bookSessionBtn = document.getElementById('messenger-book-session-btn');
-    if (bookSessionBtn) {
-      bookSessionBtn.addEventListener('click', () => {
-        if (this.currentChatTutor) {
-          const tutorId = this.currentChatTutor.id;
-          this.closeMessageModal();
-          this.openBookingModal(tutorId);
-        }
-      });
-    }
+
 
     // Quick Prompt Chips
     document.querySelectorAll('.quick-prompt-chip').forEach(chip => {
@@ -780,13 +751,17 @@ const Tutors = {
     const modal = document.getElementById('tutor-message-modal');
     if (!modal) return;
 
+    // Clear previous poll interval if any
+    if (this.messengerPollInterval) {
+      clearInterval(this.messengerPollInterval);
+      this.messengerPollInterval = null;
+    }
+
     // Update Header Profile
     const avatarEl = document.getElementById('messenger-tutor-avatar');
     const nameEl = document.getElementById('messenger-tutor-name');
     const headlineEl = document.getElementById('messenger-tutor-headline');
     const idInput = document.getElementById('direct-message-tutor-id');
-    const typingAvatar = document.getElementById('messenger-typing-avatar');
-    const typingText = document.getElementById('messenger-typing-text');
     const chatInput = document.getElementById('messenger-chat-input');
     const activeSenderEl = document.getElementById('messenger-active-sender');
 
@@ -795,8 +770,6 @@ const Tutors = {
     if (nameEl) nameEl.textContent = tutor.name;
     if (headlineEl) headlineEl.textContent = tutor.headline || tutor.subject || 'Verified Faculty Specialist';
     if (idInput) idInput.value = tutor.id;
-    if (typingAvatar) typingAvatar.src = avatarUrl;
-    if (typingText) typingText.textContent = `${tutor.name} is typing...`;
     if (chatInput) {
       chatInput.placeholder = `Type a message to ${tutor.name.split(' ')[0]}...`;
       chatInput.value = '';
@@ -808,33 +781,27 @@ const Tutors = {
       activeSenderEl.textContent = user ? `Chatting as: ${user.name}` : `Direct 1-on-1 Line`;
     }
 
-    // Load or initialize conversation thread for this specific tutor
-    const threadKey = `aviora_tutor_chat_${tutor.id}`;
-    let thread = [];
-    try {
-      const saved = localStorage.getItem(threadKey);
-      if (saved) thread = JSON.parse(saved);
-    } catch (e) {
-      thread = [];
-    }
-
-    // If first time messaging this tutor, initialize with authentic welcoming greeting from this educator
-    if (!thread || thread.length === 0) {
-      const initialGreeting = {
-        id: 'msg-' + Date.now(),
-        sender: 'tutor',
-        senderName: tutor.name,
-        text: `Hello! I'm ${tutor.name}. Welcome to Aviora Education! Whether you need support with ${tutor.subject || 'your coursework'}, structured exam prep, or personalized problem sets, I'm here to help you excel. Feel free to ask any questions or share your schedule preferences!`,
-        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      };
-      thread = [initialGreeting];
+    // Load authentic messages from server (real-time student <-> tutor conversation)
+    const fetchChatMessages = async () => {
       try {
-        localStorage.setItem(threadKey, JSON.stringify(thread));
-      } catch (e) { }
-    }
+        const res = await API.getTutorMessages(tutor.id);
+        if (res && Array.isArray(res.messages)) {
+          this.renderMessengerThread(res.messages, tutor);
+          return;
+        }
+      } catch (e) {
+        // Offline / fallback to localStorage if needed
+      }
 
-    // Render messages in thread
-    this.renderMessengerThread(thread, tutor);
+      const threadKey = `aviora_tutor_chat_${tutor.id}`;
+      const localThread = JSON.parse(localStorage.getItem(threadKey) || '[]');
+      this.renderMessengerThread(localThread, tutor);
+    };
+
+    await fetchChatMessages();
+
+    // Start real-time polling every 3 seconds while chat modal is open
+    this.messengerPollInterval = setInterval(fetchChatMessages, 3000);
 
     modal.classList.add('active');
     document.body.style.overflow = 'hidden';
@@ -851,11 +818,26 @@ const Tutors = {
       modal.classList.remove('active');
       document.body.style.overflow = '';
     }
+    if (this.messengerPollInterval) {
+      clearInterval(this.messengerPollInterval);
+      this.messengerPollInterval = null;
+    }
   },
 
   renderMessengerThread(thread, tutor) {
     const threadContainer = document.getElementById('messenger-messages-thread');
     if (!threadContainer || !tutor) return;
+
+    if (!thread || thread.length === 0) {
+      threadContainer.innerHTML = `
+        <div style="text-align: center; padding: 2.5rem 1rem; color: var(--text-secondary);">
+          <div style="margin-bottom: 0.5rem; color: var(--gold-700);">${Icons.message(30)}</div>
+          <h4 style="font-size: 0.95rem; font-weight: 700; color: var(--charcoal-900); margin-bottom: 0.25rem;">Direct 1-on-1 Conversation</h4>
+          <p style="font-size: 0.82rem; max-width: 320px; margin: 0 auto; line-height: 1.45;">This thread is private between you and ${this.escapeHtml(tutor.name)}. Send a message below to connect.</p>
+        </div>
+      `;
+      return;
+    }
 
     const tutorAvatar = tutor.avatar_url || tutor.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80';
 
@@ -937,83 +919,17 @@ const Tutors = {
     input.value = '';
     input.style.height = 'auto';
 
-    // Async sync with database
-    API.sendMessageToTutor(tutor.id, {
-      name: senderName,
-      email: senderEmail,
-      subject: `Direct Chat with ${tutor.name}`,
-      message: text
-    }).catch(err => console.warn('Direct message sync warning:', err));
-
-    // Show realistic Messenger typing indicator
-    const typingIndicator = document.getElementById('messenger-typing-indicator');
-    setTimeout(() => {
-      if (typingIndicator) {
-        typingIndicator.style.display = 'flex';
-        this.scrollMessengerToBottom();
-      }
-    }, 320);
-
-    // Dynamic tutor response delivery after 1.5 - 2.1 seconds
-    const replyDelay = Math.floor(Math.random() * 600) + 1500;
-    setTimeout(() => {
-      if (typingIndicator) {
-        typingIndicator.style.display = 'none';
-      }
-
-      const replyContent = this.getDynamicTutorReply(tutor, text);
-      const tutorReply = {
-        id: 'msg-' + Date.now(),
-        sender: 'tutor',
-        senderName: tutor.name,
-        text: replyContent,
-        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      };
-
-      let updatedThread = [];
-      try {
-        updatedThread = JSON.parse(localStorage.getItem(threadKey) || '[]');
-      } catch (e) {
-        updatedThread = thread;
-      }
-      updatedThread.push(tutorReply);
-      try {
-        localStorage.setItem(threadKey, JSON.stringify(updatedThread));
-      } catch (e) { }
-
-      this.renderMessengerThread(updatedThread, tutor);
-    }, replyDelay);
-  },
-
-  getDynamicTutorReply(tutor, studentMessage) {
-    const msg = (studentMessage || '').toLowerCase();
-    const subject = tutor.subject || 'coursework';
-
-    if (msg.includes('schedule') || msg.includes('available') || msg.includes('time') || msg.includes('day') || msg.includes('when')) {
-      return `I typically hold 1-on-1 sessions on weekday afternoons and Saturday mornings! You can click "Book Session" at the top of our chat to inspect my available time slots and reserve your spot directly. Let me know if you need any specific time adjustment!`;
+    // Real-Time Delivery: Save directly to the database for this tutor (No fake bot responses)
+    try {
+      await API.sendMessageToTutor(tutor.id, {
+        name: senderName,
+        email: senderEmail,
+        subject: `Direct Chat with ${tutor.name}`,
+        message: text
+      });
+    } catch (err) {
+      console.warn('Direct message sync warning:', err);
     }
-
-    if (msg.includes('rate') || msg.includes('price') || msg.includes('cost') || msg.includes('fee') || msg.includes('dollar') || msg.includes('hour')) {
-      return `My tutoring rate is $${tutor.hourly_rate || 75}/hour through Aviora Education. This covers full 1-on-1 instruction, curated diagnostic exercises, and ongoing progress assessments.`;
-    }
-
-    if (msg.includes('exam') || msg.includes('ap') || msg.includes('sat') || msg.includes('act') || msg.includes('test') || msg.includes('calculus') || msg.includes('physics') || msg.includes('grade')) {
-      return `Exam preparation in ${subject} is one of my core focus areas! We will start with a diagnostic review of past exam questions, identify high-yield topics, and build confidence through active practice. When is your next target exam date?`;
-    }
-
-    if (msg.includes('intro') || msg.includes('first session') || msg.includes('trial') || msg.includes('start') || msg.includes('begin')) {
-      return `I'd love to work with you! In our first session, we will outline your academic timeline, review any tricky chapters you've faced recently, and establish a clear learning pathway. You can use the "Book Session" button above whenever you're ready!`;
-    }
-
-    if (msg.includes('homework') || msg.includes('problem') || msg.includes('assignment') || msg.includes('help')) {
-      return `Feel free to bring any questions, assignments, or problem sets to our session! We can step through each solution method together so you grasp the fundamental principles without getting stuck.`;
-    }
-
-    if (msg.includes('hello') || msg.includes('hi') || msg.includes('hey') || msg.includes('good morning') || msg.includes('good afternoon')) {
-      return `Hi there! Great to connect with you. How is your semester going so far, and what specific topics in ${subject} would you like us to focus on?`;
-    }
-
-    return `Thank you for sharing that! As an Aviora educator specializing in ${subject}, I'm dedicated to helping you achieve mastery. We can dive right into this during our upcoming session—feel free to click "Book Session" above or let me know what questions you have!`;
   },
 
   scrollMessengerToBottom() {

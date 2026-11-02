@@ -17,6 +17,10 @@ const Admin = {
   currentChartMetric: 'sessions',
   analyticsData: [],
   applicationsChartData: [],
+  buddySessions: [],
+  buddyStudents: [],
+  currentBuddyFilter: 'all',
+  selectedBuddySession: null,
 
   async init() {
     this.setupEventListeners();
@@ -177,7 +181,9 @@ const Admin = {
     }
 
     // Load section specific data
-    if (section === 'overview') {
+    if (section === 'buddy') {
+      this.loadBuddySessions(this.currentBuddyFilter || 'all');
+    } else if (section === 'overview') {
       this.loadDashboardMetrics();
     } else if (section === 'users') {
       this.loadUsers(this.currentRoleFilter || 'all');
@@ -219,6 +225,23 @@ const Admin = {
       if (approvedTutorsEl) approvedTutorsEl.textContent = m.approvedTutors || 0;
 
       const pendingAppsEl = document.getElementById('m-pending-apps');
+      
+      // Update pending buddy count
+      try {
+        const bData = await API.getAdminBuddySessions('pending');
+        const bCount = bData.pendingCount || 0;
+        const bBadge = document.getElementById('admin-buddy-badge');
+        const pCountSpan = document.getElementById('admin-buddy-pending-count');
+        if (bBadge) {
+          if (bCount > 0) {
+            bBadge.textContent = bCount;
+            bBadge.style.display = 'inline-block';
+          } else {
+            bBadge.style.display = 'none';
+          }
+        }
+        if (pCountSpan) pCountSpan.textContent = bCount;
+      } catch (e) {}
       if (pendingAppsEl) pendingAppsEl.textContent = m.pendingApps || 0;
 
       const requestsEl = document.getElementById('m-requests');
@@ -1543,6 +1566,261 @@ const Admin = {
     }
 
     if (typeof Router !== 'undefined' && Router.updateActiveNav) Router.updateActiveNav();
+  },
+
+  
+  // ==========================================
+  // AVIORA BUDDY SCHEDULING & STUDENT ASSIGNMENTS
+  // ==========================================
+  async loadBuddySessions(status = 'all') {
+    this.currentBuddyFilter = status;
+    const container = document.getElementById('admin-buddy-sessions-list');
+    if (!container) return;
+
+    container.innerHTML = '<div style="text-align: center; padding: 2.5rem; color: var(--text-secondary);">Loading Aviora Buddy co-learning sessions...</div>';
+
+    try {
+      const data = await API.getAdminBuddySessions(status);
+      this.buddySessions = data.sessions || [];
+      this.buddyStudents = data.students || [];
+
+      const pCountSpan = document.getElementById('admin-buddy-pending-count');
+      if (pCountSpan) pCountSpan.textContent = data.pendingCount || 0;
+
+      const bBadge = document.getElementById('admin-buddy-badge');
+      if (bBadge) {
+        if (data.pendingCount > 0) {
+          bBadge.textContent = data.pendingCount;
+          bBadge.style.display = 'inline-block';
+        } else {
+          bBadge.style.display = 'none';
+        }
+      }
+
+      this.renderBuddySessions();
+    } catch (err) {
+      console.error('Failed to load admin buddy sessions:', err);
+      container.innerHTML = `<div class="alert alert-danger" style="margin: 1.5rem 0;">Error loading Aviora Buddy sessions: ${err.message || 'Unknown error'}</div>`;
+    }
+  },
+
+  filterBuddySessions(status) {
+    document.querySelectorAll('.buddy-admin-filter').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.status === status);
+    });
+    this.loadBuddySessions(status);
+  },
+
+  renderBuddySessions() {
+    const container = document.getElementById('admin-buddy-sessions-list');
+    if (!container) return;
+
+    if (this.buddySessions.length === 0) {
+      container.innerHTML = `
+        <div style="background: var(--bg-surface); border: 1.5px dashed var(--border-light); border-radius: 14px; padding: 3rem 2rem; text-align: center;">
+          <div style="font-size: 2.2rem; margin-bottom: 0.5rem;">👥</div>
+          <h4 style="font-family: var(--font-heading); color: var(--charcoal-900); font-size: 1.15rem; margin-bottom: 0.25rem;">
+            No ${this.currentBuddyFilter === 'pending' ? 'Pending' : ''} Buddy Sessions Found
+          </h4>
+          <p style="color: var(--text-secondary); font-size: 0.85rem; max-width: 440px; margin: 0 auto;">
+            ${this.currentBuddyFilter === 'pending' 
+              ? 'All Aviora Buddy bookings currently have confirmed schedules and paired students.' 
+              : 'Student Aviora Buddy duo bookings will display here for scheduling and student pairing.'}
+          </p>
+        </div>
+      `;
+      return;
+    }
+
+    container.innerHTML = `
+      <div style="display: flex; flex-direction: column; gap: 1rem;">
+        ${this.buddySessions.map(s => {
+          const isPending = s.status === 'pending';
+          const hasStudent2 = !!s.student2_name;
+          const statusBadge = isPending 
+            ? '<span class="badge" style="background: rgba(198, 138, 40, 0.15); color: var(--gold-800); border: 1px solid rgba(198, 138, 40, 0.4); font-weight: 800; font-size: 0.72rem; padding: 0.2rem 0.6rem; border-radius: 999px;">⏳ Pending Schedule &amp; Pair</span>'
+            : '<span class="badge" style="background: rgba(16, 185, 129, 0.12); color: #047857; border: 1px solid rgba(16, 185, 129, 0.35); font-weight: 800; font-size: 0.72rem; padding: 0.2rem 0.6rem; border-radius: 999px;">✓ Scheduled &amp; Active</span>';
+
+          return `
+            <div style="background: #FFFFFF; border: 1px solid var(--border-light); border-radius: 14px; padding: 1.35rem 1.6rem; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; gap: 0.85rem;">
+              <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 0.5rem;">
+                <div style="display: flex; align-items: center; gap: 0.65rem;">
+                  ${statusBadge}
+                  <span style="font-family: monospace; font-size: 0.78rem; font-weight: 700; background: rgba(0,0,0,0.05); padding: 0.2rem 0.5rem; border-radius: 5px;">
+                    Code: ${s.session_code}
+                  </span>
+                  <span style="font-size: 0.8rem; color: var(--text-secondary);">$6 Flat Duo Fee</span>
+                </div>
+                <div style="font-size: 0.8rem; color: var(--text-secondary);">
+                  Created: ${new Date(s.created_at || Date.now()).toLocaleDateString()}
+                </div>
+              </div>
+
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div>
+                  <h4 style="font-family: var(--font-heading); font-size: 1.15rem; font-weight: 800; color: var(--charcoal-900); margin: 0 0 0.25rem 0;">
+                    ${s.subject}
+                  </h4>
+                  <div style="font-size: 0.84rem; color: var(--text-secondary);">
+                    ${s.topic || 'Quiz Bee, Math Duel & Discussion Questions'}
+                  </div>
+                </div>
+
+                <div style="background: rgba(0,0,0,0.02); border: 1px solid rgba(0,0,0,0.06); border-radius: 10px; padding: 0.75rem 1rem;">
+                  <div style="font-size: 0.72rem; text-transform: uppercase; font-weight: 800; color: var(--text-secondary); margin-bottom: 0.35rem;">
+                    Confirmed Schedule
+                  </div>
+                  <div style="font-size: 0.88rem; font-weight: 700; color: ${isPending ? 'var(--gold-700)' : 'var(--charcoal-900)'};">
+                    📅 ${s.scheduled_date || 'Pending Schedule'}
+                  </div>
+                  <div style="font-size: 0.82rem; color: var(--charcoal-700); margin-top: 0.15rem;">
+                    ⏰ ${s.scheduled_time || 'Pending Time Window'}
+                  </div>
+                </div>
+              </div>
+
+              <!-- Paired Students Row -->
+              <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; padding-top: 0.75rem; border-top: 1px dashed var(--border-light);">
+                <div style="display: flex; align-items: center; gap: 1.25rem;">
+                  <!-- Student 1 -->
+                  <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <img src="${s.student1_avatar || '/assets/favicon.png'}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 2px solid var(--gold-400);" />
+                    <div>
+                      <div style="font-size: 0.84rem; font-weight: 800; color: var(--charcoal-900);">${s.student1_name || 'Student 1'}</div>
+                      <div style="font-size: 0.72rem; color: var(--text-secondary);">Initiating Student</div>
+                    </div>
+                  </div>
+
+                  <span style="font-weight: 800; color: var(--gold-600); font-size: 0.85rem;">+</span>
+
+                  <!-- Student 2 -->
+                  <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <img src="${s.student2_avatar || '/assets/favicon.png'}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 2px solid ${hasStudent2 ? '#10B981' : 'rgba(0,0,0,0.2)'};" />
+                    <div>
+                      <div style="font-size: 0.84rem; font-weight: 800; color: ${hasStudent2 ? 'var(--charcoal-900)' : 'var(--text-secondary)'};">
+                        ${s.student2_name || 'Awaiting Peer Assignment'}
+                      </div>
+                      <div style="font-size: 0.72rem; color: var(--text-secondary);">
+                        ${hasStudent2 ? 'Paired Peer' : 'Pending Admin Match'}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Admin Action Button -->
+                <div>
+                  <button type="button" class="btn btn-primary btn-sm" onclick="Admin.openBuddyScheduleModal(${s.id})" style="font-weight: 700; padding: 0.45rem 1rem; display: inline-flex; align-items: center; gap: 0.4rem;">
+                    <span>${isPending ? '⚙️ Schedule &amp; Assign Students' : '✏️ Reschedule / Edit'}</span>
+                    <span>→</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    `;
+  },
+
+  openBuddyScheduleModal(sessionId) {
+    const session = this.buddySessions.find(s => s.id === sessionId);
+    if (!session) return;
+
+    this.selectedBuddySession = session;
+
+    const modal = document.getElementById('modal-admin-schedule-buddy');
+    if (!modal) return;
+
+    const idInput = document.getElementById('admin-buddy-session-id');
+    const subjEl = document.getElementById('admin-buddy-modal-subject');
+    const s1El = document.getElementById('admin-buddy-modal-student1');
+    const s2Select = document.getElementById('admin-buddy-student2-select');
+    const dateInput = document.getElementById('admin-buddy-date');
+    const timeInput = document.getElementById('admin-buddy-time');
+    const notesInput = document.getElementById('admin-buddy-notes');
+
+    if (idInput) idInput.value = session.id;
+    if (subjEl) subjEl.textContent = session.subject + ' (' + session.session_code + ')';
+    if (s1El) s1El.textContent = 'Student 1: ' + (session.student1_name || 'Unknown') + ' (' + (session.student1_email || '') + ')';
+
+    // Populate students dropdown (excluding Student 1)
+    if (s2Select) {
+      const candidates = this.buddyStudents.filter(st => st.id !== session.student1_id);
+      s2Select.innerHTML = candidates.map(st => `
+        <option value="${st.id}" ${session.student2_id === st.id ? 'selected' : ''}>
+          ${st.name} — ${st.email} ${st.grade_level ? ' (' + st.grade_level + ')' : ''}
+        </option>
+      `).join('');
+
+      // If already paired with student2, select them
+      if (session.student2_id) {
+        s2Select.value = session.student2_id;
+      }
+    }
+
+    // Populate default date
+    const today = new Date().toISOString().split('T')[0];
+    if (dateInput) {
+      dateInput.value = (session.scheduled_date && session.scheduled_date !== 'Pending Admin Scheduling') ? session.scheduled_date : today;
+    }
+
+    if (timeInput) {
+      timeInput.value = (session.scheduled_time && session.scheduled_time !== 'Pending Admin Scheduling') ? session.scheduled_time : '16:00 - 16:50';
+    }
+
+    if (notesInput) {
+      notesInput.value = '';
+    }
+
+    modal.classList.add('active');
+  },
+
+  closeBuddyScheduleModal() {
+    const modal = document.getElementById('modal-admin-schedule-buddy');
+    if (modal) modal.classList.remove('active');
+    this.selectedBuddySession = null;
+  },
+
+  async submitBuddySchedule() {
+    const idInput = document.getElementById('admin-buddy-session-id');
+    const s2Select = document.getElementById('admin-buddy-student2-select');
+    const dateInput = document.getElementById('admin-buddy-date');
+    const timeInput = document.getElementById('admin-buddy-time');
+    const notesInput = document.getElementById('admin-buddy-notes');
+
+    if (!idInput || !idInput.value) return;
+
+    const sessionId = idInput.value;
+    const student2_id = s2Select ? s2Select.value : null;
+    const scheduled_date = dateInput ? dateInput.value.trim() : '';
+    const scheduled_time = timeInput ? timeInput.value.trim() : '';
+    const notes = notesInput ? notesInput.value.trim() : '';
+
+    if (!scheduled_date || !scheduled_time) {
+      showToast('Please enter both scheduled date and time slot.', 'warning');
+      return;
+    }
+
+    if (!student2_id) {
+      showToast('Please select a student peer to pair into this session.', 'warning');
+      return;
+    }
+
+    try {
+      const res = await API.scheduleBuddySession(sessionId, {
+        student2_id,
+        scheduled_date,
+        scheduled_time,
+        notes
+      });
+
+      showToast(res.message || 'Aviora Buddy session successfully scheduled and students notified!', 'success');
+      this.closeBuddyScheduleModal();
+      await this.loadBuddySessions(this.currentBuddyFilter || 'all');
+      await this.loadDashboardMetrics();
+    } catch (err) {
+      showToast(err.message || 'Failed to schedule buddy session.', 'error');
+    }
   },
 
   async handleProfileSettingsSubmit(e) {

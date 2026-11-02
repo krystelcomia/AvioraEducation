@@ -1360,33 +1360,33 @@ function ensureBuddySeedData() {
     const existing = db.prepare('SELECT id FROM buddy_sessions LIMIT 1').get();
     if (existing) return;
 
-    const elena = db.prepare('SELECT id FROM users WHERE email = ?').get('elena.vance@aviora.edu');
     const lucas = db.prepare('SELECT id FROM users WHERE email = ?').get('student@aviora.edu');
     const sophia = db.prepare('SELECT id FROM users WHERE email = ?').get('sophia.martinez@gmail.com');
     const maya = db.prepare('SELECT id FROM users WHERE email = ?').get('maya.patel@gmail.com');
+    const adminUser = db.prepare('SELECT id FROM users WHERE role = ?').get('admin');
 
-    if (lucas && sophia && elena) {
-      // 1. Tutor-Led Aviora Buddy Session
+    if (lucas && sophia) {
+      // 1. Scheduled Peer Aviora Buddy Session (Admin assigned & scheduled)
       const sess1 = db.prepare(`
         INSERT INTO buddy_sessions (
           session_code, session_type, tutor_id, student1_id, student2_id,
           subject, topic, scheduled_date, scheduled_time, fee_per_student, total_fee,
           status, room_status, room_started_at
         ) VALUES (
-          'BUDDY-7482', 'tutor_led', ?, ?, ?,
-          'AP Calculus BC & Quiz Bee Duel', 'Derivatives, Limits & Math Speed Battle', '2026-10-26', '16:00 - 16:50',
+          'BUDDY-7482', 'peer_study', NULL, ?, ?,
+          'AP Calculus BC & Quiz Bee Duel', 'Derivatives, Limits & Math Speed Battle', '2026-10-30', '16:00 - 16:50',
           6.00, 12.00, 'active', 'open', CURRENT_TIMESTAMP
         )
-      `).run(elena.id, lucas.id, sophia.id);
+      `).run(lucas.id, sophia.id);
 
       db.prepare(`
         INSERT INTO buddy_messages (session_id, sender_id, sender_name, sender_role, message)
-        VALUES (?, ?, 'Dr. Elena Vance', 'tutor', 'Welcome Lucas and Sophia to today’s Aviora Buddy session! We will do a 10-minute derivative review, followed by our Quiz Bee Championship and Equation Duel.')
-      `).run(sess1.lastInsertRowid, elena.id);
+        VALUES (?, ?, 'Aviora Administration', 'admin', 'Schedule Confirmed by Admin: Date: 2026-10-30 • Time: 16:00 - 16:50. Lucas and Sophia are paired for AP Calculus BC Duo Co-Learning.')
+      `).run(sess1.lastInsertRowid, adminUser ? adminUser.id : lucas.id);
 
       db.prepare(`
         INSERT INTO buddy_messages (session_id, sender_id, sender_name, sender_role, message)
-        VALUES (?, ?, 'Lucas Taylor', 'student', 'Excited for the Quiz Bee! Ready when you are.')
+        VALUES (?, ?, 'Lucas Taylor', 'student', 'Excited for the Quiz Bee and discussion topics! Ready when you are.')
       `).run(sess1.lastInsertRowid, lucas.id);
 
       db.prepare(`
@@ -1396,7 +1396,7 @@ function ensureBuddySeedData() {
     }
 
     if (lucas && maya) {
-      // 2. Peer Study Aviora Buddy Session
+      // 2. Peer Study Aviora Buddy Session (Scheduled)
       const sess2 = db.prepare(`
         INSERT INTO buddy_sessions (
           session_code, session_type, tutor_id, student1_id, student2_id,
@@ -1404,7 +1404,7 @@ function ensureBuddySeedData() {
           status, room_status, room_started_at
         ) VALUES (
           'BUDDY-9134', 'peer_study', NULL, ?, ?,
-          'Physics Mechanics & Vocab Sprint', 'Kinematics Equations & Concept Matching', '2026-10-27', '17:00 - 17:50',
+          'Physics Mechanics & Vocab Sprint', 'Kinematics Equations & Concept Matching', '2026-10-31', '17:00 - 17:50',
           6.00, 12.00, 'active', 'open', CURRENT_TIMESTAMP
         )
       `).run(lucas.id, maya.id);
@@ -1418,6 +1418,21 @@ function ensureBuddySeedData() {
         INSERT INTO buddy_messages (session_id, sender_id, sender_name, sender_role, message)
         VALUES (?, ?, 'Maya Patel', 'student', 'Hey Lucas! Yes, let’s do the Concept Match tiles first to warm up!')
       `).run(sess2.lastInsertRowid, maya.id);
+    }
+
+    if (sophia) {
+      // 3. Pending Aviora Buddy Booking (Awaiting Admin Scheduling & Student Assignment)
+      db.prepare(`
+        INSERT INTO buddy_sessions (
+          session_code, session_type, tutor_id, student1_id, student2_id,
+          subject, topic, scheduled_date, scheduled_time, fee_per_student, total_fee,
+          status, room_status, room_started_at
+        ) VALUES (
+          'BUDDY-3829', 'peer_study', NULL, ?, NULL,
+          'Organic Chemistry & Molecular Reactions', 'Reaction Mechanisms & Discussion Topics', 'Pending Admin Scheduling', 'Pending Admin Scheduling',
+          6.00, 12.00, 'pending', 'closed', CURRENT_TIMESTAMP
+        )
+      `).run(sophia.id);
     }
   } catch (err) {
     console.error('Error seeding buddy sessions:', err);

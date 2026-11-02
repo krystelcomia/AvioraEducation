@@ -1,15 +1,19 @@
 /**
  * AVIORA BUDDY - 2-STUDENT CO-LEARNING & INTERACTIVE BATTLE STUDIO
  * Supports 2-student sessions ($6 flat fee per participant)
- * Both Tutor-Led and Peer-to-Peer modes, full game suite, quiz bee, chat, and whiteboard.
+ * Peer-to-peer duo co-learning mode ($6 flat fee), full game suite, conversational discussion topics, chat, and whiteboard.
  */
 
 const AvioraBuddy = {
   activeSession: null,
   allSessions: [],
   peersList: [],
-  tutorsList: [],
-  currentGame: 'quiz_bee', // 'quiz_bee' | 'math_duel' | 'word_scramble' | 'concept_match' | 'logic_quest' | 'whiteboard'
+  currentGame: 'quiz_bee', // 'quiz_bee' | 'math_duel' | 'word_scramble' | 'concept_match' | 'logic_quest' | 'discussion' | 'whiteboard'
+  
+  // Discussion Topics State
+  discussionIndex: 0,
+  currentDiscussionFilter: 'all',
+  discussedIds: new Set(),
   
   // Game States
   quizIndex: 0,
@@ -107,6 +111,120 @@ const AvioraBuddy = {
     { id: 12, text: "eˣ + C", matchKey: "expintegral" }
   ],
 
+  // Conversational Discussion Questions Bank
+  discussionBank: [
+    {
+      id: 1,
+      category: "Academic & Science",
+      topic: "Artificial Intelligence vs. Human Intuition",
+      question: "Do you believe artificial intelligence can ever truly develop genuine mathematical intuition and conceptual creativity, or is it fundamentally advanced statistical pattern matching? How should students use AI without weakening their own analytical problem-solving abilities?",
+      guidePoints: [
+        "Debate whether deep neural networks can discover fundamentally new theorems in mathematics or physics.",
+        "Share your personal guidelines on where you draw the line between using AI as an interactive tutor vs. relying on it as a mental shortcut.",
+        "Discuss what human skills will become most valuable in future academic research."
+      ]
+    },
+    {
+      id: 2,
+      category: "Academic & Science",
+      topic: "The Nature of Mathematics: Discovered or Invented?",
+      question: "Is mathematics an inherent universal truth discovered by humans, or an elaborate symbolic language invented by human cognition to model our perceptions? What are the implications for physics and the cosmos?",
+      guidePoints: [
+        "Consider why the universe adheres so remarkably well to mathematical equations (Wigner's 'unreasonable effectiveness').",
+        "Give an example of a formula (such as Euler's Identity or the Golden Ratio) that feels discovered rather than invented.",
+        "Discuss how an intelligent alien civilization might formulate calculus or geometry."
+      ]
+    },
+    {
+      id: 3,
+      category: "Study Tactics",
+      topic: "Overcoming Cognitive Plateaus & Complex Proofs",
+      question: "When you encounter a concept or proof that seems entirely impenetrable on your first three attempts, what is your exact psychological and tactical recovery process? How do you prevent frustration from stalling your momentum?",
+      guidePoints: [
+        "Walk through your step-by-step diagnostic: Feynman technique, visual diagrams, or taking a strategic walk.",
+        "Discuss the difference between working memory overload vs. missing foundational prerequisites.",
+        "Share the hardest concept you eventually conquered this semester and how it clicked."
+      ]
+    },
+    {
+      id: 4,
+      category: "Study Tactics",
+      topic: "Deep Work: Active Recall vs. Passive Review",
+      question: "What does your optimal deep-work study ritual look like? Do you rely on active recall, spaced repetition, practice testing, or synthesis summarization, and which has yielded the highest return on exam performance?",
+      guidePoints: [
+        "Contrast passive re-reading against aggressive active recall testing and practice problem sets.",
+        "Discuss how you manage phone distractions and cognitive fatigue during 2+ hour study sessions.",
+        "Share one study hack that significantly boosted your GPA or test scores."
+      ]
+    },
+    {
+      id: 5,
+      category: "Thought Experiments",
+      topic: "The Ship of Theseus & Continuous Identity",
+      question: "If every single wooden plank on a legendary ship is gradually replaced one by one over decades until no original material remains, is it still the same ship? If all cells in our bodies turnover, what defines continuous human identity?",
+      guidePoints: [
+        "Distinguish between identity as physical matter vs. identity as ongoing structural pattern.",
+        "If the old wooden planks were reassembled into a second ship, which ship is the true original?",
+        "How does this relate to memories, consciousness, and personal growth over time?"
+      ]
+    },
+    {
+      id: 6,
+      category: "Thought Experiments",
+      topic: "The 30-Minute Historical Masterclass",
+      question: "If you could schedule an uninterrupted 30-minute one-on-one session with any historical thinker, scientist, or author (e.g., Newton, Euler, Turing, Curie, or Shakespeare), who would you choose and what single core question would you ask them?",
+      guidePoints: [
+        "Identify the thinker and why their specific mental model fascinates you.",
+        "What blind spot in modern understanding could their original perspective illuminate?",
+        "How would you explain one major technological breakthrough of today to them?"
+      ]
+    },
+    {
+      id: 7,
+      category: "Future Horizons",
+      topic: "The Defining Breakthrough of the Next 25 Years",
+      question: "Which frontier of research do you believe holds the greatest promise for humanity—quantum computing, fusion energy, neural interfaces, or CRISPR gene editing—and what ethical guardrails must we establish beforehand?",
+      guidePoints: [
+        "Choose one field and predict its everyday societal impact by 2040.",
+        "Identify the major bottleneck currently delaying full realization of that breakthrough.",
+        "Debate where global research funding and talent should be prioritized."
+      ]
+    },
+    {
+      id: 8,
+      category: "Future Horizons",
+      topic: "Our Ideal Collaborative Prototype",
+      question: "If we were assigned to co-build a high-impact semester project or software system together right now, what real-world problem would you want our prototype to solve?",
+      guidePoints: [
+        "Brainstorm a product, study tool, or research paper topic you're passionate about.",
+        "Discuss how you would divide roles based on your respective academic strengths.",
+        "What would be the first tangible milestone you would build this week?"
+      ]
+    },
+    {
+      id: 9,
+      category: "Icebreakers & Connection",
+      topic: "The Lightning Bolt 'Aha!' Moment",
+      question: "What is a fact, equation, or perspective in school that felt like a bolt of lightning when it finally clicked, completely changing how you perceive the world around you?",
+      guidePoints: [
+        "Share an 'Aha!' moment in math, science, history, or literature.",
+        "Describe what made the initial concept feel unintuitive.",
+        "Teach the core intuition to your peer in under 90 seconds."
+      ]
+    },
+    {
+      id: 10,
+      category: "Icebreakers & Connection",
+      topic: "Academic Ambition & The Year Ahead",
+      question: "What is your boldest academic or personal aspiration for this academic year, and what is the single biggest habit you are building right now to make that ambition inevitable?",
+      guidePoints: [
+        "Share your target milestone (e.g., AP 5s, Olympiad qualification, university admission, research paper).",
+        "Discuss what daily routine adjustment has made the biggest difference so far.",
+        "How can study peers hold each other accountable to prevent burnout?"
+      ]
+    }
+  ],
+
   async init() {
     this.setupEventListeners();
     await this.loadBuddyHub();
@@ -121,7 +239,7 @@ const AvioraBuddy = {
     }
 
     // Modal click outside
-    ['modal-create-buddy-tutor', 'modal-create-buddy-peer', 'modal-join-buddy-code'].forEach(id => {
+    ['modal-create-buddy-peer', 'modal-join-buddy-code'].forEach(id => {
       const el = document.getElementById(id);
       if (el) {
         el.addEventListener('click', (e) => {
@@ -150,7 +268,6 @@ const AvioraBuddy = {
 
       this.allSessions = data.sessions || [];
       this.peersList = data.peers || [];
-      this.tutorsList = data.tutors || [];
 
       this.renderHub(data);
 
@@ -172,7 +289,7 @@ const AvioraBuddy = {
           <div style="font-size: 2rem; margin-bottom: 0.5rem;">👥</div>
           <h4 style="font-family: var(--font-heading); font-size: 1.15rem; color: var(--charcoal-900); margin-bottom: 0.35rem;">Experience Aviora Buddy for $6</h4>
           <p style="color: var(--text-secondary); font-size: 0.88rem; max-width: 480px; margin: 0 auto 1.25rem;">
-            Join two students in a single class for interactive quiz bees, math duels, and live co-learning. Set up with an accredited faculty tutor or study peer-to-peer!
+            Join two students in a single classroom for interactive quiz bees, math duels, conversational discussion questions, and live co-learning. Coordinated and scheduled by our administrator at a flat $6 rate!
           </p>
           <a href="#login" class="btn btn-primary btn-sm" style="font-weight: 700;">Sign In to Aviora Buddy ($6)</a>
         </div>
@@ -195,8 +312,7 @@ const AvioraBuddy = {
             Ready to learn and compete with a buddy for $6? Set up a session with a faculty educator or launch a peer study battle below!
           </p>
           <div style="display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap;">
-            <button class="btn btn-primary btn-sm" onclick="AvioraBuddy.openPeerModal()">⚡ Start Peer Buddy ($6)</button>
-            <button class="btn btn-outline-gold btn-sm" onclick="AvioraBuddy.openTutorModal()">🎓 Set Up with Tutor ($6/student)</button>
+            <button class="btn btn-primary btn-sm" onclick="AvioraBuddy.openPeerModal()">⚡ Book Aviora Buddy Session ($6)</button>
           </div>
         </div>
       `;
@@ -205,16 +321,17 @@ const AvioraBuddy = {
     }
 
     listContainer.innerHTML = data.sessions.map(s => {
-      const isTutorLed = s.session_type === 'tutor_led';
+      const isPending = s.status === 'pending';
       const hasSlot2 = !!s.student2_name;
       const isSelected = this.activeSession && this.activeSession.id === s.id;
 
       return `
         <div class="buddy-card ${isSelected ? 'active' : ''}">
           <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem;">
-            <span class="badge-gold" style="font-size: 0.7rem; font-weight: 800;">
-              ${isTutorLed ? '🎓 Tutor-Led Class ($6/student)' : '⚡ Peer Buddy Session ($6)'}
-            </span>
+            ${isPending 
+              ? '<span class="badge" style="background: rgba(198, 138, 40, 0.15); color: var(--gold-800); border: 1px solid rgba(198, 138, 40, 0.4); font-size: 0.7rem; font-weight: 800; padding: 0.2rem 0.55rem; border-radius: 999px;">⏳ Pending Admin Scheduling</span>'
+              : '<span class="badge-gold" style="font-size: 0.7rem; font-weight: 800;">✓ Scheduled &amp; Active Duo</span>'
+            }
             <span style="font-family: monospace; font-size: 0.76rem; background: rgba(0,0,0,0.06); padding: 0.2rem 0.5rem; border-radius: 4px; font-weight: 700;">
               Code: ${s.session_code}
             </span>
@@ -223,31 +340,47 @@ const AvioraBuddy = {
           <h4 style="font-family: var(--font-heading); font-size: 1.15rem; font-weight: 800; color: var(--charcoal-900); margin-bottom: 0.35rem;">
             ${s.subject}
           </h4>
-          <p style="color: var(--text-secondary); font-size: 0.82rem; margin-bottom: 1rem; line-height: 1.45;">
-            ${s.topic || 'Quiz Bee, Speed Equations & Real-time Co-Learning'}
+          <p style="color: var(--text-secondary); font-size: 0.82rem; margin-bottom: 0.75rem; line-height: 1.45;">
+            ${s.topic || 'Quiz Bee, Speed Equations & Discussion Topics'}
           </p>
+
+          ${isPending ? `
+            <div style="background: rgba(198, 138, 40, 0.08); border-left: 3px solid var(--gold-600); border-radius: 6px; padding: 0.65rem 0.85rem; font-size: 0.76rem; color: var(--charcoal-800); margin-bottom: 0.85rem; line-height: 1.45;">
+              <strong>Admin Coordination in Progress:</strong> The administrator is assigning your study partner and scheduling your session date and time. You will receive an immediate in-app notification once finalized.
+            </div>
+          ` : `
+            <div style="background: rgba(16, 185, 129, 0.06); border-left: 3px solid #10B981; border-radius: 6px; padding: 0.5rem 0.75rem; font-size: 0.76rem; color: #065F46; margin-bottom: 0.85rem; line-height: 1.45;">
+              <strong>Confirmed Schedule:</strong> ${s.scheduled_date} (${s.scheduled_time})
+            </div>
+          `}
 
           <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 0; border-top: 1px dashed var(--border-light); border-bottom: 1px dashed var(--border-light); margin-bottom: 1rem;">
             <div style="display: flex; align-items: center; gap: 0.5rem;">
               <div style="display: flex; align-items: center;">
                 <img src="${s.student1_avatar || '/assets/favicon.png'}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 2px solid var(--gold-400);" title="${s.student1_name || 'Student 1'}" />
-                <img src="${s.student2_avatar || '/assets/favicon.png'}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 2px solid #10B981; margin-left: -10px;" title="${s.student2_name || 'Awaiting Buddy'}" />
+                <img src="${s.student2_avatar || '/assets/favicon.png'}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 2px solid ${hasSlot2 ? '#10B981' : 'rgba(0,0,0,0.2)'}; margin-left: -10px;" title="${s.student2_name || 'Awaiting Partner'}" />
               </div>
               <div style="font-size: 0.78rem;">
                 <div style="font-weight: 700; color: var(--charcoal-900);">${s.student1_name} &amp; ${s.student2_name || 'Open Slot'}</div>
-                <div style="color: var(--text-secondary); font-size: 0.72rem;">${isTutorLed && s.tutor_name ? 'Tutor: ' + s.tutor_name : '2 Students Peer Battle'}</div>
+                <div style="color: var(--text-secondary); font-size: 0.72rem;">2-Student Peer Co-Learning</div>
               </div>
             </div>
             <div style="text-align: right;">
               <span style="font-size: 1.1rem; font-weight: 900; color: var(--gold-700); font-family: var(--font-heading);">$6.00</span>
-              <div style="font-size: 0.7rem; color: var(--text-secondary);">per student</div>
+              <div style="font-size: 0.7rem; color: var(--text-secondary);">flat duo rate</div>
             </div>
           </div>
 
           <div style="display: flex; gap: 0.65rem; align-items: center;">
-            <button class="btn btn-primary btn-sm" onclick="AvioraBuddy.selectSession(${s.id})" style="flex: 1; font-weight: 700; font-size: 0.8rem; justify-content: center;">
-              🎮 Enter Battle Arena
-            </button>
+            ${isPending ? `
+              <button class="btn btn-secondary btn-sm" disabled style="flex: 1; opacity: 0.75; cursor: not-allowed; font-size: 0.8rem; justify-content: center;">
+                ⏳ Awaiting Admin Schedule
+              </button>
+            ` : `
+              <button class="btn btn-primary btn-sm" onclick="AvioraBuddy.selectSession(${s.id})" style="flex: 1; font-weight: 700; font-size: 0.8rem; justify-content: center;">
+                🎮 Enter Battle Arena
+              </button>
+            `}
             <button class="btn btn-outline-gold btn-sm" onclick="navigator.clipboard.writeText('${s.session_code}'); showToast('Buddy code ${s.session_code} copied to clipboard!', 'success');" title="Copy Session Code" style="padding: 0.35rem 0.6rem;">
               📋 Code
             </button>
@@ -349,6 +482,8 @@ const AvioraBuddy = {
       this.renderConceptMatch(stage);
     } else if (gameKey === 'logic_quest') {
       this.renderLogicQuest(stage);
+    } else if (gameKey === 'discussion') {
+      this.renderDiscussionTopics(stage);
     } else if (gameKey === 'whiteboard') {
       this.renderWhiteboard(stage);
     } else if (gameKey === 'video_call') {
@@ -898,41 +1033,16 @@ const AvioraBuddy = {
 
     // Populate peers dropdown
     const select = document.getElementById('buddy-peer-select');
-    if (select && this.peersList.length > 0) {
+    if (select) {
       select.innerHTML = `
-        <option value="">Open Invite (Generate Buddy Code for Any Student)</option>
+        <option value="">Admin Match (Pair with a compatible peer student)</option>
         ${this.peersList.map(p => `<option value="${p.id}">${p.name} — ${p.grade_level || 'Student'}</option>`).join('')}
       `;
     }
 
-    modal.classList.add('active');
-  },
-
-  openTutorModal() {
-    const modal = document.getElementById('modal-create-buddy-tutor');
-    if (!modal) return;
-
-    // Populate tutors dropdown
-    const tSelect = document.getElementById('buddy-tutor-select');
-    if (tSelect && this.tutorsList.length > 0) {
-      tSelect.innerHTML = this.tutorsList.map(t => `
-        <option value="${t.id}">${t.name} — ${t.headline || 'Faculty'}</option>
-      `).join('');
-    }
-
-    // Populate students dropdown
-    const s1Select = document.getElementById('buddy-tutor-student1-select');
-    const s2Select = document.getElementById('buddy-tutor-student2-select');
-    const allStudents = (Auth.currentUser ? [Auth.currentUser, ...this.peersList] : this.peersList);
-
-    if (s1Select) {
-      s1Select.innerHTML = allStudents.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
-    }
-    if (s2Select) {
-      s2Select.innerHTML = `
-        <option value="">Open Slot (Share Buddy Code with Student 2)</option>
-        ${this.peersList.map(s => `<option value="${s.id}">${s.name}</option>`).join('')}
-      `;
+    const dateInp = document.getElementById('buddy-peer-date');
+    if (dateInp) {
+      dateInp.value = new Date().toISOString().split('T')[0];
     }
 
     modal.classList.add('active');
@@ -952,18 +1062,21 @@ const AvioraBuddy = {
     const peerSelect = document.getElementById('buddy-peer-select');
     const subjectInp = document.getElementById('buddy-peer-subject');
     const topicInp = document.getElementById('buddy-peer-topic');
+    const dateInp = document.getElementById('buddy-peer-date');
+    const timeInp = document.getElementById('buddy-peer-time');
 
     const payload = {
-      session_type: 'peer_study',
-      student2_id: peerSelect ? peerSelect.value : null,
-      subject: subjectInp ? subjectInp.value : 'Peer Battle & Quiz Bee',
-      topic: topicInp ? topicInp.value : 'Equation Duel & Concept Matching'
+      student2_id: peerSelect && peerSelect.value ? peerSelect.value : null,
+      subject: subjectInp && subjectInp.value.trim() ? subjectInp.value.trim() : 'AP Calculus & Co-Learning Studio',
+      topic: topicInp && topicInp.value.trim() ? topicInp.value.trim() : 'Quiz Bee, Math Duel & Discussion Topics',
+      scheduled_date: dateInp && dateInp.value ? dateInp.value : 'Pending Admin Scheduling',
+      scheduled_time: timeInp && timeInp.value ? timeInp.value : 'Pending Admin Scheduling'
     };
 
     try {
       const token = Storage.getToken();
       if (!token) {
-        showToast('Please log in with your student account to launch Aviora Buddy ($6).', 'info');
+        showToast('Please log in with your student account to book Aviora Buddy ($6).', 'info');
         window.location.hash = '#login';
         return;
       }
@@ -979,60 +1092,15 @@ const AvioraBuddy = {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
 
-      showToast(data.message, 'success');
+      showToast(data.message || 'Aviora Buddy booking submitted! Status: Pending Admin Scheduling.', 'success');
       this.closeModal('modal-create-buddy-peer');
       await this.loadBuddyHub();
 
-      if (data.session) {
+      if (data.session && data.session.status === 'active') {
         this.selectSession(data.session.id);
       }
     } catch (e) {
-      showToast(e.message || 'Failed to create peer session.', 'error');
-    }
-  },
-
-  async submitTutorSession() {
-    const tutorSelect = document.getElementById('buddy-tutor-select');
-    const s1Select = document.getElementById('buddy-tutor-student1-select');
-    const s2Select = document.getElementById('buddy-tutor-student2-select');
-    const subjectInp = document.getElementById('buddy-tutor-subject');
-
-    const payload = {
-      session_type: 'tutor_led',
-      tutor_id: tutorSelect ? tutorSelect.value : null,
-      student1_id: s1Select ? s1Select.value : null,
-      student2_id: s2Select ? s2Select.value : null,
-      subject: subjectInp ? subjectInp.value : 'Faculty Academic Battle & Quiz Bee ($6/student)'
-    };
-
-    try {
-      const token = Storage.getToken();
-      if (!token) {
-        showToast('Please log in to set up an Aviora Buddy session.', 'info');
-        window.location.hash = '#login';
-        return;
-      }
-
-      const res = await fetch('/api/buddy/create', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(payload)
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
-
-      showToast(data.message, 'success');
-      this.closeModal('modal-create-buddy-tutor');
-      await this.loadBuddyHub();
-
-      if (data.session) {
-        this.selectSession(data.session.id);
-      }
-    } catch (e) {
-      showToast(e.message || 'Failed to create tutor-led session.', 'error');
+      showToast(e.message || 'Failed to book Aviora Buddy session.', 'error');
     }
   },
 

@@ -5212,26 +5212,23 @@ app.get('/api/sessions/:id/room/signal', authenticateToken, (req, res) => {
 // AVIORA BUDDY API ROUTES (2-STUDENT CO-LEARNING & BATTLE STUDIO - $6)
 // ==========================================
 
-// Get All Buddy Sessions for Current User & Available Peers
+// Get All Buddy Sessions for Current User & Available Peers (No Tutors Involved)
 app.get('/api/buddy/sessions', authenticateToken, (req, res) => {
   try {
     const userId = req.user.id;
-    const userRole = req.user.role;
 
-    // Fetch buddy sessions where user is tutor, student1, or student2, or open lobby sessions
+    // Fetch buddy sessions where user is student1, student2, or pending/active open sessions
     const sessions = db.prepare(`
       SELECT 
         bs.*,
-        t.name as tutor_name, t.avatar_url as tutor_avatar,
         s1.name as student1_name, s1.avatar_url as student1_avatar,
         s2.name as student2_name, s2.avatar_url as student2_avatar
       FROM buddy_sessions bs
-      LEFT JOIN users t ON bs.tutor_id = t.id
       LEFT JOIN users s1 ON bs.student1_id = s1.id
       LEFT JOIN users s2 ON bs.student2_id = s2.id
-      WHERE bs.tutor_id = ? OR bs.student1_id = ? OR bs.student2_id = ? OR (bs.student2_id IS NULL AND bs.status = 'active')
+      WHERE bs.student1_id = ? OR bs.student2_id = ? OR (bs.student2_id IS NULL AND bs.status IN ('pending', 'active'))
       ORDER BY bs.id DESC
-    `).all(userId, userId, userId);
+    `).all(userId, userId);
 
     // List of student peers for buddy matchmaking
     const peers = db.prepare(`
@@ -5239,24 +5236,14 @@ app.get('/api/buddy/sessions', authenticateToken, (req, res) => {
       FROM users u
       LEFT JOIN student_profiles sp ON u.id = sp.user_id
       WHERE u.role = 'student' AND u.id != ? AND u.status = 'active'
-      LIMIT 15
+      ORDER BY u.name ASC
+      LIMIT 25
     `).all(userId);
-
-    // List of active tutors (only approved / verified)
-    const tutors = db.prepare(`
-      SELECT u.id, u.name, u.avatar_url, tp.hourly_rate, tp.headline, tp.subjects
-      FROM users u
-      JOIN tutor_profiles tp ON u.id = tp.user_id
-      LEFT JOIN teacher_applications ta ON ta.user_id = tp.user_id
-      WHERE (u.role = 'teacher' OR u.role = 'tutor') AND tp.is_active = 1
-        AND (ta.status = 'approved' OR ta.id IS NULL)
-    `).all();
 
     res.json({
       success: true,
       sessions,
       peers,
-      tutors,
       buddy_fee_per_student: 6.00
     });
   } catch (error) {
@@ -5265,15 +5252,11 @@ app.get('/api/buddy/sessions', authenticateToken, (req, res) => {
   }
 });
 
-// Create an Aviora Buddy Session (Tutor-led or Peer-to-Peer - $6 flat fee per student)
+// Create an Aviora Buddy Session (Peer Co-Learning - $6 flat fee; defaults to Pending for Admin Scheduling)
 app.post('/api/buddy/create', authenticateToken, (req, res) => {
   try {
     const userId = req.user.id;
-    const userRole = req.user.role;
     const {
-      session_type, // 'tutor_led' | 'peer_study'
-      tutor_id,
-      student1_id,
       student2_id,
       subject,
       topic,
@@ -5281,32 +5264,9 @@ app.post('/api/buddy/create', authenticateToken, (req, res) => {
       scheduled_time
     } = req.body;
 
-    const sessionType = (session_type === 'tutor_led') ? 'tutor_led' : 'peer_study';
-    let assignedTutorId = null;
-    let s1 = userId;
+    const sessionType = 'peer_study';
+    const s1 = userId;
     let s2 = student2_id ? parseInt(student2_id, 10) : null;
-
-    if (sessionType === 'tutor_led') {
-      if (userRole === 'teacher' || userRole === 'tutor') {
-        assignedTutorId = userId;
-        s1 = student1_id ? parseInt(student1_id, 10) : null;
-      } else {
-        // Student initiating a tutor-led session
-        assignedTutorId = tutor_id ? parseInt(tutor_id, 10) : null;
-        s1 = userId;
-      }
-
-      if (!assignedTutorId) {
-        return res.status(400).json({ error: 'Please select an accredited tutor for the tutor-led session.' });
-      }
-    } else {
-      // Peer study: two students on their own
-      s1 = userId;
-    }
-
-    if (!s1) {
-      return res.status(400).json({ error: 'Student 1 must be specified.' });
-    }
 
     // Generate unique session code
     let sessionCode = `BUDDY-${Math.floor(1000 + Math.random() * 9000)}`;
@@ -5314,28 +5274,27 @@ app.post('/api/buddy/create', authenticateToken, (req, res) => {
       sessionCode = `BUDDY-${Math.floor(1000 + Math.random() * 9000)}`;
     }
 
-    const todayStr = new Date().toISOString().split('T')[0];
-    const finalDate = scheduled_date || todayStr;
-    const finalTime = scheduled_time || '16:00 - 16:50';
-    const finalSubject = (subject && subject.trim()) || (sessionType === 'tutor_led' ? 'Faculty Academic Mentorship & Quiz Bee' : 'Peer Collaborative Study & Quiz Bee');
-    const finalTopic = (topic && topic.trim()) || 'Concept Mastery, Equation Duel & Quiz Bee Challenge';
+    const finalDate = scheduled_date || 'Pending Admin Scheduling';
+    const finalTime = scheduled_time || 'Pending Admin Scheduling';
+    const finalSubject = (subject && subject.trim()) || 'Peer Co-Learning & Discussion Studio';
+    const finalTopic = (topic && topic.trim()) || 'Concept Mastery, Equation Duel & Discussion Topics';
 
+    // Bookings remain in pending status because admin handles scheduling and student assignments
     const insert = db.prepare(`
       INSERT INTO buddy_sessions (
         session_code, session_type, tutor_id, student1_id, student2_id,
         subject, topic, scheduled_date, scheduled_time, fee_per_student, total_fee,
         status, room_status, room_started_at
       ) VALUES (
-        ?, ?, ?, ?, ?,
+        ?, ?, NULL, ?, ?,
         ?, ?, ?, ?, 6.00, 12.00,
-        'active', 'open', CURRENT_TIMESTAMP
+        'pending', 'closed', CURRENT_TIMESTAMP
       )
     `);
 
     const result = insert.run(
       sessionCode,
       sessionType,
-      assignedTutorId,
       s1,
       s2,
       finalSubject,
@@ -5345,51 +5304,47 @@ app.post('/api/buddy/create', authenticateToken, (req, res) => {
     );
 
     const newSessionId = result.lastInsertRowid;
-
-    // Send notifications
-    const s1User = db.prepare('SELECT name FROM users WHERE id = ?').get(s1);
     const creatorName = req.user.name;
 
-    if (s2) {
+    // Notify Administrators of pending Aviora Buddy booking
+    const admins = db.prepare("SELECT id FROM users WHERE role = 'admin'").all();
+    admins.forEach(adm => {
       sendNotification(
-        s2,
-        'Aviora Buddy Invitation ($6)',
-        `${creatorName} set up an Aviora Buddy session for two students: "${finalSubject}". Cost: $6. Code: ${sessionCode}`,
+        adm.id,
+        'New Aviora Buddy Booking Awaiting Scheduling',
+        `${creatorName} booked an Aviora Buddy duo session for "${finalSubject}". Status: Pending. Please assign peer and confirm schedule.`,
         'booking',
-        '#aviora-buddy'
+        '#admin-portal'
       );
-    }
+    });
 
-    if (assignedTutorId && assignedTutorId !== userId) {
-      sendNotification(
-        assignedTutorId,
-        'New Aviora Buddy Class ($6/student)',
-        `${creatorName} booked a 2-student Aviora Buddy class for ${finalDate} (${finalTime}): "${finalSubject}".`,
-        'booking',
-        '#aviora-buddy'
-      );
-    }
+    // Notify Student that booking is pending admin scheduling
+    sendNotification(
+      userId,
+      'Aviora Buddy Booking Received ($6)',
+      `Your booking for "${finalSubject}" is received with status: Pending. The platform administrator will assign your peer and finalize your schedule shortly. Code: ${sessionCode}`,
+      'booking',
+      '#aviora-buddy'
+    );
 
-    // Add first chat announcement
+    // Initial system announcement in chat
     db.prepare(`
       INSERT INTO buddy_messages (session_id, sender_id, sender_name, sender_role, message)
       VALUES (?, ?, ?, ?, ?)
     `).run(
       newSessionId,
       userId,
-      req.user.name,
-      (userRole === 'teacher' || userRole === 'tutor') ? 'tutor' : 'student',
-      `Welcome to this Aviora Buddy session! Cost: $6 per student. Share code ${sessionCode} to invite your buddy.`
+      'Aviora Co-Learning Bot',
+      'system',
+      `Booking Submitted! Session Code: ${sessionCode}. Status: Pending Admin Scheduling. Once confirmed, you and your buddy can engage in Quiz Bees, Math Duels, and Discussion Topics!`
     );
 
     const created = db.prepare(`
       SELECT 
         bs.*,
-        t.name as tutor_name, t.avatar_url as tutor_avatar,
         s1.name as student1_name, s1.avatar_url as student1_avatar,
         s2.name as student2_name, s2.avatar_url as student2_avatar
       FROM buddy_sessions bs
-      LEFT JOIN users t ON bs.tutor_id = t.id
       LEFT JOIN users s1 ON bs.student1_id = s1.id
       LEFT JOIN users s2 ON bs.student2_id = s2.id
       WHERE bs.id = ?
@@ -5397,7 +5352,7 @@ app.post('/api/buddy/create', authenticateToken, (req, res) => {
 
     res.status(201).json({
       success: true,
-      message: `Aviora Buddy session created successfully at $6! Code: ${sessionCode}`,
+      message: `Aviora Buddy booking submitted! Status: Pending Admin Scheduling. You will be notified once confirmed. Code: ${sessionCode}`,
       session: created
     });
   } catch (error) {
@@ -6328,6 +6283,135 @@ app.post('/api/admin/inquiries/:id/respond', authenticateToken, requireRole('adm
   } catch (error) {
     console.error('Admin respond inquiry error:', error);
     res.status(500).json({ error: 'Failed to save response to inquiry.' });
+  }
+});
+
+// ==========================================
+// ADMIN: AVIORA BUDDY SCHEDULING & STUDENT ASSIGNMENTS
+// ==========================================
+
+// Get All Buddy Sessions for Admin Inspection & Scheduling
+app.get('/api/admin/buddy-sessions', authenticateToken, requireRole('admin'), (req, res) => {
+  try {
+    const { status } = req.query;
+    let query = `
+      SELECT 
+        bs.*,
+        s1.name as student1_name, s1.email as student1_email, s1.avatar_url as student1_avatar,
+        s2.name as student2_name, s2.email as student2_email, s2.avatar_url as student2_avatar
+      FROM buddy_sessions bs
+      LEFT JOIN users s1 ON bs.student1_id = s1.id
+      LEFT JOIN users s2 ON bs.student2_id = s2.id
+    `;
+    const params = [];
+    if (status && status !== 'all') {
+      query += ` WHERE bs.status = ?`;
+      params.push(status);
+    }
+    query += ` ORDER BY CASE WHEN bs.status = 'pending' THEN 0 ELSE 1 END, bs.id DESC`;
+
+    const sessions = db.prepare(query).all(...params);
+
+    // Active students for assignment
+    const students = db.prepare(`
+      SELECT u.id, u.name, u.email, u.avatar_url, sp.grade_level
+      FROM users u
+      LEFT JOIN student_profiles sp ON u.id = sp.user_id
+      WHERE u.role = 'student' AND u.status = 'active'
+      ORDER BY u.name ASC
+    `).all();
+
+    const pendingRow = db.prepare("SELECT COUNT(*) as count FROM buddy_sessions WHERE status = 'pending'").get();
+    const pendingCount = pendingRow ? pendingRow.count : 0;
+
+    res.json({
+      success: true,
+      sessions,
+      students,
+      pendingCount
+    });
+  } catch (error) {
+    console.error('Admin get buddy sessions error:', error);
+    res.status(500).json({ error: 'Failed to retrieve Aviora Buddy sessions for admin.' });
+  }
+});
+
+// Admin Sets Confirmed Schedule & Student 2 Assignment
+app.post('/api/admin/buddy-sessions/:id/schedule', authenticateToken, requireRole('admin'), (req, res) => {
+  try {
+    const sessionId = req.params.id;
+    const { student2_id, scheduled_date, scheduled_time, notes } = req.body;
+
+    if (!scheduled_date || !scheduled_time || !scheduled_date.trim() || !scheduled_time.trim()) {
+      return res.status(400).json({ error: 'Both scheduled date and scheduled time are required.' });
+    }
+
+    const session = db.prepare('SELECT * FROM buddy_sessions WHERE id = ?').get(sessionId);
+    if (!session) {
+      return res.status(404).json({ error: 'Aviora Buddy session not found.' });
+    }
+
+    const s2Id = student2_id ? parseInt(student2_id, 10) : session.student2_id;
+    let finalTopic = session.topic || '';
+    if (notes && notes.trim()) {
+      finalTopic = finalTopic ? `${finalTopic} • Note: ${notes.trim()}` : notes.trim();
+    }
+
+    db.prepare(`
+      UPDATE buddy_sessions
+      SET 
+        student2_id = ?,
+        scheduled_date = ?,
+        scheduled_time = ?,
+        topic = ?,
+        status = 'active',
+        room_status = 'open',
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `).run(s2Id, scheduled_date.trim(), scheduled_time.trim(), finalTopic, sessionId);
+
+    // Retrieve students for notification
+    const s1 = db.prepare('SELECT id, name, email FROM users WHERE id = ?').get(session.student1_id);
+    const s2 = s2Id ? db.prepare('SELECT id, name, email FROM users WHERE id = ?').get(s2Id) : null;
+
+    // Send notifications to students
+    if (s1) {
+      sendNotification(
+        s1.id,
+        'Aviora Buddy Session Scheduled!',
+        `Your Aviora Buddy co-learning session for "${session.subject}" has been scheduled by Admin for ${scheduled_date} at ${scheduled_time}${s2 ? ' with ' + s2.name : ''}. Code: ${session.session_code}`,
+        'booking',
+        '#aviora-buddy'
+      );
+    }
+
+    if (s2 && s2.id !== session.student1_id) {
+      sendNotification(
+        s2.id,
+        'New Aviora Buddy Co-Learning Session Scheduled!',
+        `You have been paired with ${s1 ? s1.name : 'a peer'} for an Aviora Buddy session on ${scheduled_date} at ${scheduled_time}. Subject: "${session.subject}". Code: ${session.session_code}`,
+        'booking',
+        '#aviora-buddy'
+      );
+    }
+
+    // Broadcast system message in buddy chat
+    db.prepare(`
+      INSERT INTO buddy_messages (session_id, sender_id, sender_name, sender_role, message)
+      VALUES (?, ?, 'Aviora Administration', 'admin', ?)
+    `).run(
+      sessionId,
+      req.user.id,
+      `Schedule Confirmed by Admin: Date: ${scheduled_date} • Time: ${scheduled_time}. Both students are now ready to begin in the Activity Arena!`
+    );
+
+    res.json({
+      success: true,
+      message: 'Aviora Buddy session successfully scheduled! Both students have been notified.'
+    });
+  } catch (error) {
+    console.error('Admin schedule buddy session error:', error);
+    res.status(500).json({ error: 'Failed to schedule Aviora Buddy session.' });
   }
 });
 

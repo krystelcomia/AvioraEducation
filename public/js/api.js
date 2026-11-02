@@ -171,6 +171,8 @@ const API = {
   getAdminRequests: () => apiRequest('/admin/requests'),
   getAdminInquiries: (status = 'all', search = '') => apiRequest(`/admin/inquiries?status=${status}&search=${encodeURIComponent(search)}`),
   respondToInquiry: (id, body) => apiRequest(`/admin/inquiries/${id}/respond`, { method: 'POST', body }),
+  getAdminBuddySessions: (status = 'all') => apiRequest(`/admin/buddy-sessions?status=${status}`),
+  scheduleBuddySession: (id, body) => apiRequest(`/admin/buddy-sessions/${id}/schedule`, { method: 'POST', body }),
 
   // Inquiries (Public / Student / Guest Submission)
   submitInquiry: (body) => apiRequest('/inquiries', { method: 'POST', body }),

@@ -502,3 +502,119 @@
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
   overflow: hidden;
 }
+
+/* ==========================================
+   CONVERSATIONAL DISCUSSION TOPICS STAGE
+   ========================================== */
+.discussion-board {
+  width: 100%;
+  max-width: 700px;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.discussion-filter-pills {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-bottom: 0.35rem;
+}
+
+.discussion-filter-pill {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.75);
+  padding: 0.35rem 0.85rem;
+  border-radius: 999px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.discussion-filter-pill:hover,
+.discussion-filter-pill.active {
+  background: rgba(198, 138, 40, 0.25);
+  border-color: var(--gold-400);
+  color: #FFFFFF;
+}
+
+.discussion-card {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1.5px solid rgba(198, 138, 40, 0.35);
+  border-radius: 18px;
+  padding: 1.85rem 2rem;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  position: relative;
+  backdrop-filter: blur(8px);
+}
+
+.discussion-card-topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.85rem;
+}
+
+.discussion-topic-title {
+  color: var(--gold-300);
+  font-size: 0.82rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 0.75rem;
+}
+
+.discussion-question-text {
+  color: #FFFFFF;
+  font-family: var(--font-heading);
+  font-size: 1.28rem;
+  font-weight: 800;
+  line-height: 1.5;
+  margin-bottom: 1.35rem;
+}
+
+.discussion-guide-box {
+  background: rgba(0, 0, 0, 0.32);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.discussion-guide-header {
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: var(--gold-400);
+  margin-bottom: 0.55rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.discussion-guide-list {
+  margin: 0;
+  padding-left: 1.15rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.discussion-guide-list li {
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 0.84rem;
+  line-height: 1.5;
+}
+
+.discussion-actions-row {
+  display: flex;
+  gap: 0.65rem;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+}
+

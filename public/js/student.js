@@ -1183,36 +1183,36 @@ const Student = {
 
     container.innerHTML = completedSessions.map(r => `
       <div class="history-card">
-        <img src="${r.tutor_avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80'}" style="width: 54px; height: 54px; border-radius: 50%; object-fit: cover; border: 2px solid var(--gold-400);" />
+        <img src="${r.tutor_avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80'}" style="width: 44px; height: 44px; border-radius: var(--radius-md); object-fit: cover; border: 1.5px solid var(--gold-500);" />
 
         <div>
-          <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.25rem;">
-            <h4 style="font-size: 1.05rem; color: var(--charcoal-900); font-weight: 700; margin: 0;">${r.subject}</h4>
-            <span class="status-pill completed">${Icons.check(13)} Completed</span>
+          <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.15rem;">
+            <h4 style="font-size: 0.98rem; color: var(--charcoal-900); font-weight: 700; margin: 0;">${r.subject}</h4>
+            <span class="status-pill completed" style="font-size: 0.7rem; padding: 0.15rem 0.5rem;">${Icons.check(11)} Completed</span>
           </div>
-          <p style="font-size: 0.85rem; color: var(--charcoal-700); margin: 0 0 0.25rem 0;">
+          <p style="font-size: 0.82rem; color: var(--charcoal-700); margin: 0 0 0.15rem 0;">
             Instructor: <strong>${r.tutor_name}</strong>
           </p>
-          ${r.notes ? `<p style="font-size: 0.8rem; color: var(--text-secondary); margin: 0 0 0.2rem 0;">Topic: ${escapeHtmlStr(r.notes)}</p>` : ''}
-          ${r.tutor_response_note ? `<p style="font-size: 0.8rem; color: var(--gold-700); margin: 0; font-style: italic;">Instructor Feedback: "${escapeHtmlStr(r.tutor_response_note)}"</p>` : ''}
+          ${r.notes ? `<p style="font-size: 0.78rem; color: var(--text-secondary); margin: 0 0 0.15rem 0;">Topic: ${escapeHtmlStr(r.notes)}</p>` : ''}
+          ${r.tutor_response_note ? `<p style="font-size: 0.78rem; color: var(--gold-700); margin: 0; font-style: italic;">Instructor Feedback: "${escapeHtmlStr(r.tutor_response_note)}"</p>` : ''}
         </div>
 
-        <div style="font-size: 0.88rem; color: var(--charcoal-900);">
-          <div style="font-weight: 700; display: flex; align-items: center; gap: 0.3rem;">${Icons.calendar(14)} ${r.requested_date}</div>
-          <div style="font-size: 0.78rem; color: var(--text-muted);">50 min class completed</div>
+        <div style="font-size: 0.82rem; color: var(--charcoal-900);">
+          <div style="font-weight: 700; display: flex; align-items: center; gap: 0.3rem;">${Icons.calendar(13)} ${r.requested_date}</div>
+          <div style="font-size: 0.75rem; color: var(--text-muted);">50 min class completed</div>
         </div>
 
         <div>
           ${r.review_rating ? `
             <div style="text-align: right;">
               <div style="color: #F59E0B; display: inline-flex; align-items: center; gap: 2px;">
-                ${Array.from({length: Math.min(5, Math.max(1, r.review_rating))}).map(() => Icons.star(14)).join('')}
+                ${Array.from({length: Math.min(5, Math.max(1, r.review_rating))}).map(() => Icons.star(13)).join('')}
               </div>
-              <span style="font-size: 0.78rem; color: var(--text-muted); display: block;">Your Rating (${r.review_rating}/5)</span>
-              ${r.review_comment ? `<p style="font-size: 0.78rem; color: var(--charcoal-700); margin-top: 0.2rem; font-style: italic;">"${escapeHtmlStr(r.review_comment)}"</p>` : ''}
+              <span style="font-size: 0.74rem; color: var(--text-muted); display: block;">Your Rating (${r.review_rating}/5)</span>
+              ${r.review_comment ? `<p style="font-size: 0.75rem; color: var(--charcoal-700); margin-top: 0.15rem; font-style: italic; max-width: 220px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${escapeHtmlStr(r.review_comment)}">"${escapeHtmlStr(r.review_comment)}"</p>` : ''}
             </div>
           ` : `
-            <button class="btn btn-outline-gold btn-sm" onclick="Student.openReviewModal(${r.id}, '${escapeQuotes(r.tutor_name)}', '${escapeQuotes(r.subject)}')">${Icons.star(12)} Rate Tutor (★ 1-5)</button>
+            <button class="btn btn-outline-gold btn-sm" onclick="Student.openReviewModal(${r.id}, '${escapeQuotes(r.tutor_name)}', '${escapeQuotes(r.subject)}')" style="font-size: 0.75rem; padding: 0.25rem 0.6rem;">${Icons.star(12)} Rate Tutor (★ 1-5)</button>
           `}
         </div>
       </div>

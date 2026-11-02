@@ -583,18 +583,23 @@
 .requests-card-list {
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
+  gap: 0.55rem;
+  max-height: 380px;
+  overflow-y: auto;
+  padding-right: 0.4rem;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(198, 138, 40, 0.45) transparent;
 }
 
 .request-item-card {
   background: #FFFFFF;
   border: 1px solid rgba(0, 0, 0, 0.08);
   border-radius: var(--radius-md);
-  padding: 0.95rem 1.25rem;
+  padding: 0.65rem 1.15rem;
   display: grid;
-  grid-template-columns: 50px 1.5fr 1.1fr 1fr auto auto;
+  grid-template-columns: 46px 1.5fr 1.1fr 1fr auto auto;
   align-items: center;
-  gap: 1.15rem;
+  gap: 0.95rem;
   transition: all var(--transition-fast);
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.03);
 }
@@ -605,8 +610,8 @@
 }
 
 .request-tutor-avatar {
-  width: 48px;
-  height: 48px;
+  width: 44px;
+  height: 44px;
   border-radius: var(--radius-md);
   object-fit: cover;
   border: 1.5px solid var(--gold-500);
@@ -1487,20 +1492,25 @@
 .history-list {
   display: flex;
   flex-direction: column;
-  gap: 1.2rem;
+  gap: 0.55rem;
+  max-height: 380px;
+  overflow-y: auto;
+  padding-right: 0.4rem;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(198, 138, 40, 0.45) transparent;
 }
 
 .history-card {
   background: #FFFFFF;
   border: 1px solid rgba(0, 0, 0, 0.08);
-  border-radius: var(--radius-lg);
-  padding: 1.5rem 1.75rem;
+  border-radius: var(--radius-md);
+  padding: 0.65rem 1.15rem;
   display: grid;
-  grid-template-columns: auto 1.5fr 1fr auto;
+  grid-template-columns: 46px 1.5fr 1.1fr auto;
   align-items: center;
-  gap: 1.5rem;
+  gap: 0.95rem;
   transition: all var(--transition-fast);
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.03);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.03);
 }
 
 .history-card:hover {
@@ -2292,4 +2302,37 @@
 
 [data-theme="dark"] .pricing-total-label {
   color: #FBBF24 !important;
+}
+
+
+/* Scrollbar styling for student dashboard cards */
+.schedule-list::-webkit-scrollbar,
+.requests-card-list::-webkit-scrollbar,
+.history-list::-webkit-scrollbar {
+  display: block !important;
+  width: 6px;
+}
+
+.schedule-list::-webkit-scrollbar-track,
+.requests-card-list::-webkit-scrollbar-track,
+.history-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.schedule-list::-webkit-scrollbar-thumb,
+.requests-card-list::-webkit-scrollbar-thumb,
+.history-list::-webkit-scrollbar-thumb {
+  background: rgba(198, 138, 40, 0.4);
+  border-radius: 4px;
+}
+
+.schedule-list::-webkit-scrollbar-thumb:hover,
+.requests-card-list::-webkit-scrollbar-thumb:hover,
+.history-list::-webkit-scrollbar-thumb:hover {
+  background: rgba(198, 138, 40, 0.7);
+}
+
+[data-theme="dark"] .history-card {
+  background: #1C2029;
+  border-color: rgba(255, 255, 255, 0.08);
 }

@@ -7092,7 +7092,9 @@ app.post('/api/student/schedule/set-day-availability', authenticateToken, requir
 
     if (note !== undefined) {
       if (String(note).trim()) {
-        schedule.date_notes[date] = String(note).trim();
+        const cleanNote = String(note).trim();
+        schedule.date_notes[date] = cleanNote;
+        db.prepare("UPDATE student_occupied_slots SET reason = ? WHERE student_id = ? AND date = ? AND time_slot = 'ALL_DAY'").run(cleanNote, studentId, date);
       } else {
         delete schedule.date_notes[date];
       }
@@ -7109,10 +7111,12 @@ app.post('/api/student/schedule/set-day-availability', authenticateToken, requir
       schedule.date_modes[date] = 'unavailable';
       const dObj = new Date(date + 'T00:00:00');
       const dayName = !isNaN(dObj.getTime()) ? WEEKDAY_NAMES[dObj.getDay()] : 'Monday';
+      const reasonVal = (note && String(note).trim()) ? String(note).trim() : (schedule.date_notes[date] || 'Unavailable / Occupied');
+      db.prepare("DELETE FROM student_occupied_slots WHERE student_id = ? AND date = ? AND time_slot = 'ALL_DAY'").run(studentId, date);
       db.prepare(`
-        INSERT OR IGNORE INTO student_occupied_slots (student_id, day_of_week, time_slot, date, reason)
-        VALUES (?, ?, 'ALL_DAY', ?, 'Unavailable / Occupied')
-      `).run(studentId, dayName, date);
+        INSERT INTO student_occupied_slots (student_id, day_of_week, time_slot, date, reason)
+        VALUES (?, ?, 'ALL_DAY', ?, ?)
+      `).run(studentId, dayName, date, reasonVal);
     }
 
     if (Array.isArray(hours)) {
@@ -7123,10 +7127,17 @@ app.post('/api/student/schedule/set-day-availability', authenticateToken, requir
     db.prepare('UPDATE student_profiles SET availability_schedule = ?, updated_at = CURRENT_TIMESTAMP WHERE user_id = ?').run(jsonStr, studentId);
 
     const live = getStudentLiveAvailability(studentId);
+    let respMsg = 'Date availability updated.';
+    if (mode === 'date_occupied' || mode === 'unavailable') {
+      respMsg = `${date} is now marked as Unavailable on your calendar.`;
+    } else if (mode === 'normal' || mode === 'available') {
+      respMsg = `${date} is now marked as Available on your calendar.`;
+    } else if (note !== undefined) {
+      respMsg = String(note).trim() ? 'Date note saved successfully.' : 'Date note removed.';
+    }
+
     res.json({
-      message: mode === 'date_occupied' || mode === 'unavailable' 
-        ? `${date} is now marked as Unavailable on your calendar.`
-        : `${date} is now marked as Available on your calendar.`,
+      message: respMsg,
       availabilitySchedule: live.availability_schedule,
       unavailableDates: live.unavailable_dates,
       occupiedSlots: live.occupied_slots

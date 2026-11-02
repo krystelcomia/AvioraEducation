@@ -705,7 +705,12 @@ const Student = {
         badgesHtml += `<span class="student-cal-badge badge-occupied">${Icons.ban(8)} Unavailable</span>`;
       }
       if (dayNotes) {
-        badgesHtml += `<span class="student-cal-badge badge-note" title="${escapeHtmlStr(dayNotes)}">📝 Note</span>`;
+        badgesHtml += `
+          <div class="student-cal-note-chip" title="Note: ${escapeHtmlStr(dayNotes)}">
+            <span class="cal-note-icon">📝</span>
+            <span class="cal-note-text">${escapeHtmlStr(dayNotes)}</span>
+          </div>
+        `;
       }
 
       cell.innerHTML = `
@@ -864,9 +869,18 @@ const Student = {
               Add private reminders (e.g. school exams, family event, work shift).
             </p>
             <div style="display: flex; gap: 0.5rem;">
-              <input type="text" id="student-date-note-input" class="form-control" style="font-size: 0.84rem; padding: 0.45rem 0.65rem;" placeholder="e.g., High school midterm exam, family dinner..." value="${escapeHtmlStr(dayNote)}" />
-              <button type="button" class="btn btn-outline-gold btn-sm" onclick="Student.saveDateNote('${dateStr}')" style="white-space: nowrap;">Save Note</button>
+              <input type="text" id="student-date-note-input" class="form-control" style="font-size: 0.84rem; padding: 0.45rem 0.65rem;" placeholder="e.g., High school midterm exam, family dinner..." value="${escapeHtmlStr(dayNote)}" onkeydown="if(event.key==='Enter'){event.preventDefault();Student.saveDateNote('${dateStr}');}" />
+              <button type="button" class="btn btn-outline-gold btn-sm" id="student-date-note-save-btn" onclick="Student.saveDateNote('${dateStr}')" style="white-space: nowrap;">Save Note</button>
             </div>
+            ${dayNote ? `
+              <div style="margin-top: 0.65rem; padding: 0.45rem 0.65rem; background: rgba(245, 158, 11, 0.12); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 6px; font-size: 0.82rem; color: #92400E; display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;">
+                <div style="display: flex; align-items: center; gap: 0.45rem; overflow: hidden;">
+                  <span>📝</span>
+                  <span style="font-weight: 700;">Saved Note: <span style="font-weight: 600;">${escapeHtmlStr(dayNote)}</span></span>
+                </div>
+                <button type="button" onclick="Student.clearDateNote('${dateStr}')" style="background: none; border: none; color: #DC2626; font-size: 0.75rem; font-weight: 700; cursor: pointer; padding: 0; text-decoration: underline; white-space: nowrap;">Clear Note</button>
+              </div>
+            ` : ''}
           </div>
 
           <!-- Booked Classes on this date -->
@@ -899,11 +913,21 @@ const Student = {
 
   async setDayAvailability(mode) {
     if (!this.selectedDate) return;
+    const noteInput = document.getElementById('student-date-note-input');
+    const noteVal = noteInput ? noteInput.value : undefined;
     try {
-      const res = await API.setStudentDayAvailability({
+      const payload = {
         date: this.selectedDate,
         mode: mode
-      });
+      };
+      if (noteVal !== undefined && noteVal !== '') {
+        payload.note = noteVal;
+      }
+      const res = await API.setStudentDayAvailability(payload);
+      if (res && res.availabilitySchedule) {
+        if (!this.scheduleData) this.scheduleData = {};
+        this.scheduleData.availabilitySchedule = res.availabilitySchedule;
+      }
       showToast(res.message, 'success');
       await this.renderSchedule();
     } catch (err) {
@@ -926,16 +950,48 @@ const Student = {
 
   async saveDateNote(date) {
     const input = document.getElementById('student-date-note-input');
+    const saveBtn = document.getElementById('student-date-note-save-btn');
     const note = input ? input.value : '';
+    if (saveBtn) {
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Saving...';
+    }
     try {
       const res = await API.setStudentDayAvailability({
         date: date,
         note: note
       });
-      showToast('Date note saved successfully.', 'success');
+      if (res && res.availabilitySchedule) {
+        if (!this.scheduleData) this.scheduleData = {};
+        this.scheduleData.availabilitySchedule = res.availabilitySchedule;
+        if (res.unavailableDates) this.scheduleData.unavailableDates = res.unavailableDates;
+        if (res.occupiedSlots) this.scheduleData.occupiedSlots = res.occupiedSlots;
+      }
+      showToast(note.trim() ? 'Date note saved successfully.' : 'Date note cleared.', 'success');
       await this.renderSchedule();
     } catch (err) {
       showToast(err.message || 'Failed to save date note.', 'error');
+      if (saveBtn) {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Save Note';
+      }
+    }
+  },
+
+  async clearDateNote(date) {
+    try {
+      const res = await API.setStudentDayAvailability({
+        date: date,
+        note: ''
+      });
+      if (res && res.availabilitySchedule) {
+        if (!this.scheduleData) this.scheduleData = {};
+        this.scheduleData.availabilitySchedule = res.availabilitySchedule;
+      }
+      showToast('Date note removed.', 'success');
+      await this.renderSchedule();
+    } catch (err) {
+      showToast(err.message || 'Failed to remove date note.', 'error');
     }
   },
 

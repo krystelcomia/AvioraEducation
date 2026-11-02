@@ -5894,33 +5894,43 @@ app.post('/api/buddy/create', authenticateToken, (req, res) => {
   }
 });
 
-// Join an Aviora Buddy Session using Code
+// Join an Aviora Buddy Session using Code (Strict 2-Person Limit Enforced)
 app.post('/api/buddy/join', authenticateToken, (req, res) => {
   try {
     const userId = req.user.id;
     const { session_code } = req.body;
 
     if (!session_code || !session_code.trim()) {
-      return res.status(400).json({ error: 'Please enter a valid Aviora Buddy code.' });
+      return res.status(400).json({ error: 'Please enter a valid Aviora Buddy access code.' });
     }
 
     const code = session_code.trim().toUpperCase();
-    const session = db.prepare('SELECT * FROM buddy_sessions WHERE session_code = ?').get(code);
+    const session = db.prepare('SELECT * FROM buddy_sessions WHERE UPPER(session_code) = ?').get(code);
 
     if (!session) {
-      return res.status(404).json({ error: `Buddy session code "${code}" not found.` });
+      return res.status(404).json({ error: `Buddy session code "${code}" not found. Please ensure that you use only the specific code provided by the admin.` });
     }
 
-    if (session.student1_id === userId || session.student2_id === userId || session.tutor_id === userId) {
-      return res.json({
-        success: true,
-        message: 'You are already a participant in this Aviora Buddy session!',
-        session_id: session.id,
-        session_code: session.session_code
+    // Require that the session has been set up and scheduled by the admin
+    if (session.status === 'pending' || !session.scheduled_date || session.scheduled_date === 'Pending Admin Scheduling') {
+      return res.status(400).json({
+        error: 'This Aviora Buddy class is pending admin setup. Once the admin has set up the students in Aviora Buddy, a date and time for the session will be provided, along with a code to be used for accessing the Aviora Buddy class.'
       });
     }
 
-    // If slot 2 is open, attach current user as student 2
+    // Check if user is already one of the 2 enrolled participants
+    if (session.student1_id === userId || session.student2_id === userId || (session.tutor_id && session.tutor_id === userId)) {
+      return res.json({
+        success: true,
+        message: 'Access granted! Welcome to your scheduled Aviora Buddy class.',
+        session_id: session.id,
+        session_code: session.session_code,
+        scheduled_date: session.scheduled_date,
+        scheduled_time: session.scheduled_time
+      });
+    }
+
+    // If student 2 is not yet attached, connect user as student 2 (reaching 2-person limit)
     if (!session.student2_id) {
       db.prepare(`
         UPDATE buddy_sessions 
@@ -5932,25 +5942,30 @@ app.post('/api/buddy/join', authenticateToken, (req, res) => {
       sendNotification(
         session.student1_id,
         'Buddy Joined Your Session!',
-        `${req.user.name} joined your Aviora Buddy session (${session.session_code})! Cost: $6.`,
+        `${req.user.name} joined your Aviora Buddy session (${session.session_code})! Capacity of 2 students reached.`,
         'booking',
         '#aviora-buddy'
       );
 
-      // Post message
+      // Post system message in buddy chat
       db.prepare(`
         INSERT INTO buddy_messages (session_id, sender_id, sender_name, sender_role, message)
         VALUES (?, ?, ?, 'student', ?)
-      `).run(session.id, userId, req.user.name, `${req.user.name} has joined the Aviora Buddy session! Let the games begin! 🚀`);
+      `).run(session.id, userId, req.user.name, `${req.user.name} has entered the Aviora Buddy class using the admin access code! Capacity of 2 students reached.`);
 
       return res.json({
         success: true,
-        message: `Successfully joined Aviora Buddy session at $6! Welcome aboard.`,
+        message: `Access granted! Successfully entered Aviora Buddy class (${session.session_code}).`,
         session_id: session.id,
-        session_code: session.session_code
+        session_code: session.session_code,
+        scheduled_date: session.scheduled_date,
+        scheduled_time: session.scheduled_time
       });
     } else {
-      return res.status(400).json({ error: 'This Aviora Buddy session already has two students enrolled.' });
+      // 2 students already assigned/enrolled: strictly reject third party
+      return res.status(403).json({
+        error: 'Access denied: This code is limited to only 2 people, and the maximum capacity has already been filled. Please ensure that you use only the specific code provided by the admin for your own assigned session.'
+      });
     }
   } catch (error) {
     console.error('Join buddy session error:', error);
@@ -5958,7 +5973,7 @@ app.post('/api/buddy/join', authenticateToken, (req, res) => {
   }
 });
 
-// Get Single Buddy Session Details & Live State
+// Get Single Buddy Session Details & Live State (Enforcing Authorized 2-Student Limit)
 app.get('/api/buddy/session/:id', authenticateToken, (req, res) => {
   try {
     const sessionId = req.params.id;
@@ -5979,15 +5994,27 @@ app.get('/api/buddy/session/:id', authenticateToken, (req, res) => {
       return res.status(404).json({ error: 'Buddy session not found.' });
     }
 
+    const isAdmin = req.user.role === 'admin';
+    const isParticipant = (req.user.id === session.student1_id || req.user.id === session.student2_id || (session.tutor_id && req.user.id === session.tutor_id));
+
+    if (!isAdmin && !isParticipant) {
+      return res.status(403).json({
+        error: 'Access denied: This Aviora Buddy class and code are limited to only 2 people set up by the admin.'
+      });
+    }
+
     const messages = db.prepare(`
       SELECT * FROM buddy_messages 
       WHERE session_id = ? 
       ORDER BY id ASC
     `).all(sessionId);
 
+    const isPending = (session.status === 'pending' || !session.scheduled_date || session.scheduled_date === 'Pending Admin Scheduling');
+
     res.json({
       success: true,
       session,
+      is_pending_setup: isPending,
       messages
     });
   } catch (error) {
@@ -6869,11 +6896,11 @@ app.get('/api/admin/buddy-sessions', authenticateToken, requireRole('admin'), (r
   }
 });
 
-// Admin Sets Confirmed Schedule & Student 2 Assignment
+// Admin Sets Confirmed Schedule & Student 2 Assignment (Providing Date, Time & 2-Person Code)
 app.post('/api/admin/buddy-sessions/:id/schedule', authenticateToken, requireRole('admin'), (req, res) => {
   try {
     const sessionId = req.params.id;
-    const { student2_id, scheduled_date, scheduled_time, notes } = req.body;
+    const { student2_id, scheduled_date, scheduled_time, session_code, notes } = req.body;
 
     if (!scheduled_date || !scheduled_time || !scheduled_date.trim() || !scheduled_time.trim()) {
       return res.status(400).json({ error: 'Both scheduled date and scheduled time are required.' });
@@ -6885,6 +6912,16 @@ app.post('/api/admin/buddy-sessions/:id/schedule', authenticateToken, requireRol
     }
 
     const s2Id = student2_id ? parseInt(student2_id, 10) : session.student2_id;
+    let finalCode = (session_code && session_code.trim().toUpperCase()) || session.session_code;
+    
+    // Check if new code conflicts with another session
+    if (finalCode !== session.session_code) {
+      const existing = db.prepare('SELECT id FROM buddy_sessions WHERE session_code = ? AND id != ?').get(finalCode, sessionId);
+      if (existing) {
+        return res.status(400).json({ error: `Session code "${finalCode}" is already in use. Please generate another.` });
+      }
+    }
+
     let finalTopic = session.topic || '';
     if (notes && notes.trim()) {
       finalTopic = finalTopic ? `${finalTopic} • Note: ${notes.trim()}` : notes.trim();
@@ -6896,23 +6933,24 @@ app.post('/api/admin/buddy-sessions/:id/schedule', authenticateToken, requireRol
         student2_id = ?,
         scheduled_date = ?,
         scheduled_time = ?,
+        session_code = ?,
         topic = ?,
         status = 'active',
         room_status = 'open',
         updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
-    `).run(s2Id, scheduled_date.trim(), scheduled_time.trim(), finalTopic, sessionId);
+    `).run(s2Id, scheduled_date.trim(), scheduled_time.trim(), finalCode, finalTopic, sessionId);
 
     // Retrieve students for notification
     const s1 = db.prepare('SELECT id, name, email FROM users WHERE id = ?').get(session.student1_id);
     const s2 = s2Id ? db.prepare('SELECT id, name, email FROM users WHERE id = ?').get(s2Id) : null;
 
-    // Send notifications to students
+    // Send notifications to both students with confirmed date, time, and specific 2-person code
     if (s1) {
       sendNotification(
         s1.id,
-        'Aviora Buddy Session Scheduled!',
-        `Your Aviora Buddy co-learning session for "${session.subject}" has been scheduled by Admin for ${scheduled_date} at ${scheduled_time}${s2 ? ' with ' + s2.name : ''}. Code: ${session.session_code}`,
+        'Aviora Buddy Session Confirmed by Admin',
+        `Your Aviora Buddy session for "${session.subject}" has been set up by the Admin! Date: ${scheduled_date.trim()} at ${scheduled_time.trim()}${s2 ? ' with ' + s2.name : ''}. Access Code: ${finalCode}. (Note: This code is limited to only 2 people. Please ensure that you use only the specific code provided by the admin.)`,
         'booking',
         '#aviora-buddy'
       );
@@ -6921,8 +6959,8 @@ app.post('/api/admin/buddy-sessions/:id/schedule', authenticateToken, requireRol
     if (s2 && s2.id !== session.student1_id) {
       sendNotification(
         s2.id,
-        'New Aviora Buddy Co-Learning Session Scheduled!',
-        `You have been paired with ${s1 ? s1.name : 'a peer'} for an Aviora Buddy session on ${scheduled_date} at ${scheduled_time}. Subject: "${session.subject}". Code: ${session.session_code}`,
+        'Aviora Buddy Session Confirmed by Admin',
+        `You have been paired with ${s1 ? s1.name : 'a peer'} for an Aviora Buddy session on ${scheduled_date.trim()} at ${scheduled_time.trim()} ("${session.subject}"). Access Code: ${finalCode}. (Note: This code is limited to only 2 people. Please ensure that you use only the specific code provided by the admin.)`,
         'booking',
         '#aviora-buddy'
       );
@@ -6935,16 +6973,86 @@ app.post('/api/admin/buddy-sessions/:id/schedule', authenticateToken, requireRol
     `).run(
       sessionId,
       req.user.id,
-      `Schedule Confirmed by Admin: Date: ${scheduled_date} • Time: ${scheduled_time}. Both students are now ready to begin in the Activity Arena!`
+      `Schedule Confirmed by Admin: Date: ${scheduled_date.trim()} • Time: ${scheduled_time.trim()}. Access Code: ${finalCode}. This code is limited to only 2 people. Please ensure that you use only the specific code provided by the admin.`
     );
 
     res.json({
       success: true,
-      message: 'Aviora Buddy session successfully scheduled! Both students have been notified.'
+      message: 'Aviora Buddy session successfully set up! Confirmed date, time, and 2-person code provided to both students.'
     });
   } catch (error) {
     console.error('Admin schedule buddy session error:', error);
-    res.status(500).json({ error: 'Failed to schedule Aviora Buddy session.' });
+    res.status(500).json({ error: 'Failed to schedule Aviora Buddy session: ' + error.message });
+  }
+});
+
+// Admin Direct Creation of Aviora Buddy Session for 2 Students
+app.post('/api/admin/buddy-sessions/create', authenticateToken, requireRole('admin'), (req, res) => {
+  try {
+    const { student1_id, student2_id, subject, topic, scheduled_date, scheduled_time, session_code } = req.body;
+    if (!student1_id || !scheduled_date || !scheduled_time) {
+      return res.status(400).json({ error: 'Student 1, scheduled date, and scheduled time are required.' });
+    }
+
+    let code = (session_code && session_code.trim().toUpperCase()) || `BUDDY-${Math.floor(1000 + Math.random() * 9000)}`;
+    while (db.prepare('SELECT id FROM buddy_sessions WHERE session_code = ?').get(code)) {
+      code = `BUDDY-${Math.floor(1000 + Math.random() * 9000)}`;
+    }
+
+    const finalSubject = (subject && subject.trim()) || 'Peer Co-Learning Studio';
+    const finalTopic = (topic && topic.trim()) || 'Quiz Bee, Math Duel & Collaborative Whiteboard';
+
+    const insert = db.prepare(`
+      INSERT INTO buddy_sessions (
+        session_code, session_type, tutor_id, student1_id, student2_id,
+        subject, topic, scheduled_date, scheduled_time, fee_per_student, total_fee,
+        status, room_status, room_started_at
+      ) VALUES (
+        ?, 'peer_study', NULL, ?, ?,
+        ?, ?, ?, ?, 6.00, 12.00,
+        'active', 'open', CURRENT_TIMESTAMP
+      )
+    `).run(
+      code,
+      student1_id,
+      student2_id || null,
+      finalSubject,
+      finalTopic,
+      scheduled_date.trim(),
+      scheduled_time.trim()
+    );
+
+    const s1 = db.prepare('SELECT id, name, email FROM users WHERE id = ?').get(student1_id);
+    const s2 = student2_id ? db.prepare('SELECT id, name, email FROM users WHERE id = ?').get(student2_id) : null;
+
+    if (s1) {
+      sendNotification(
+        s1.id,
+        'Aviora Buddy Session Created by Admin',
+        `Your Aviora Buddy session for "${finalSubject}" has been set up by the Admin for ${scheduled_date.trim()} at ${scheduled_time.trim()}${s2 ? ' with ' + s2.name : ''}. Access Code: ${code}. (Note: This code is limited to only 2 people. Please ensure that you use only the specific code provided by the admin.)`,
+        'booking',
+        '#aviora-buddy'
+      );
+    }
+    if (s2 && s2.id !== student1_id) {
+      sendNotification(
+        s2.id,
+        'Aviora Buddy Session Created by Admin',
+        `You have been paired with ${s1 ? s1.name : 'a peer'} for an Aviora Buddy session on ${scheduled_date.trim()} at ${scheduled_time.trim()} ("${finalSubject}"). Access Code: ${code}. (Note: This code is limited to only 2 people. Please ensure that you use only the specific code provided by the admin.)`,
+        'booking',
+        '#aviora-buddy'
+      );
+    }
+
+    res.status(201).json({
+      success: true,
+      message: 'Aviora Buddy class created and scheduled by admin! Both students have been provided date, time, and 2-person code.',
+      session_id: insert.lastInsertRowid,
+      session_code: code
+    });
+  } catch (error) {
+    console.error('Admin create buddy error:', error);
+    res.status(500).json({ error: 'Failed to create buddy class: ' + error.message });
   }
 });
 

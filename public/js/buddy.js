@@ -271,9 +271,14 @@ const AvioraBuddy = {
 
       this.renderHub(data);
 
-      // If there is an active session, set as active
-      if (this.allSessions.length > 0 && !this.activeSession) {
-        this.selectSession(this.allSessions[0].id);
+      // Display first active scheduled session, or show pending admin setup state
+      const activeSession = this.allSessions.find(s => s.status === 'active');
+      if (activeSession) {
+        this.selectSession(activeSession.id);
+      } else if (this.allSessions.length > 0) {
+        this.renderPendingAdminSetup(this.allSessions[0]);
+      } else {
+        this.renderSandboxDemo();
       }
     } catch (err) {
       console.warn('Aviora Buddy load error:', err);
@@ -329,11 +334,11 @@ const AvioraBuddy = {
         <div class="buddy-card ${isSelected ? 'active' : ''}">
           <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem;">
             ${isPending 
-              ? '<span class="badge" style="background: rgba(198, 138, 40, 0.15); color: var(--gold-800); border: 1px solid rgba(198, 138, 40, 0.4); font-size: 0.7rem; font-weight: 800; padding: 0.2rem 0.55rem; border-radius: 999px;">⏳ Pending Admin Scheduling</span>'
-              : '<span class="badge-gold" style="font-size: 0.7rem; font-weight: 800;">✓ Scheduled &amp; Active Duo</span>'
+              ? '<span class="badge" style="background: rgba(198, 138, 40, 0.15); color: var(--gold-800); border: 1px solid rgba(198, 138, 40, 0.4); font-size: 0.7rem; font-weight: 800; padding: 0.2rem 0.55rem; border-radius: 999px;">⏳ Pending Admin Setup</span>'
+              : '<span class="badge-gold" style="font-size: 0.7rem; font-weight: 800;">✓ Confirmed &amp; Scheduled</span>'
             }
             <span style="font-family: monospace; font-size: 0.76rem; background: rgba(0,0,0,0.06); padding: 0.2rem 0.5rem; border-radius: 4px; font-weight: 700;">
-              Code: ${s.session_code}
+              Code: ${s.session_code} (Max 2)
             </span>
           </div>
 
@@ -345,12 +350,22 @@ const AvioraBuddy = {
           </p>
 
           ${isPending ? `
-            <div style="background: rgba(198, 138, 40, 0.08); border-left: 3px solid var(--gold-600); border-radius: 6px; padding: 0.65rem 0.85rem; font-size: 0.76rem; color: var(--charcoal-800); margin-bottom: 0.85rem; line-height: 1.45;">
-              <strong>Admin Coordination in Progress:</strong> The administrator is assigning your study partner and scheduling your session date and time. You will receive an immediate in-app notification once finalized.
+            <div style="background: rgba(198, 138, 40, 0.08); border-left: 3px solid var(--gold-600); border-radius: 6px; padding: 0.75rem 0.9rem; font-size: 0.78rem; color: var(--charcoal-800); margin-bottom: 0.85rem; line-height: 1.5;">
+              <strong>Awaiting Admin Setup:</strong> Once the admin has set up the students in Aviora Buddy, a date and time for the session will be provided, along with a code to be used for accessing the Aviora Buddy class.
+              <div style="margin-top: 0.35rem; font-size: 0.72rem; color: var(--text-secondary);">
+                🔒 This code is limited to only 2 people. Please ensure that you use only the specific code provided by the admin.
+              </div>
             </div>
           ` : `
-            <div style="background: rgba(16, 185, 129, 0.06); border-left: 3px solid #10B981; border-radius: 6px; padding: 0.5rem 0.75rem; font-size: 0.76rem; color: #065F46; margin-bottom: 0.85rem; line-height: 1.45;">
-              <strong>Confirmed Schedule:</strong> ${s.scheduled_date} (${s.scheduled_time})
+            <div style="background: rgba(16, 185, 129, 0.06); border-left: 3px solid #10B981; border-radius: 6px; padding: 0.75rem 0.9rem; font-size: 0.78rem; color: #065F46; margin-bottom: 0.85rem; line-height: 1.5;">
+              <div style="font-weight: 800; color: #065F46; margin-bottom: 0.2rem;">✓ Admin Setup Confirmed</div>
+              <div><strong>Confirmed Date &amp; Time:</strong> ${s.scheduled_date} (${s.scheduled_time})</div>
+              <div style="font-family: monospace; font-size: 0.85rem; font-weight: 800; color: var(--gold-800); margin-top: 0.3rem;">
+                Class Access Code: ${s.session_code}
+              </div>
+              <div style="font-size: 0.72rem; color: #065F46; margin-top: 0.35rem;">
+                🔒 This code is limited to only 2 people. Please ensure that you use only the specific code provided by the admin.
+              </div>
             </div>
           `}
 
@@ -374,15 +389,15 @@ const AvioraBuddy = {
           <div style="display: flex; gap: 0.65rem; align-items: center;">
             ${isPending ? `
               <button class="btn btn-secondary btn-sm" disabled style="flex: 1; opacity: 0.75; cursor: not-allowed; font-size: 0.8rem; justify-content: center;">
-                ⏳ Awaiting Admin Schedule
+                ⏳ Awaiting Admin Setup
               </button>
             ` : `
               <button class="btn btn-primary btn-sm" onclick="AvioraBuddy.selectSession(${s.id})" style="flex: 1; font-weight: 700; font-size: 0.8rem; justify-content: center;">
-                🎮 Enter Battle Arena
+                🎮 Access Aviora Buddy Class
               </button>
             `}
-            <button class="btn btn-outline-gold btn-sm" onclick="navigator.clipboard.writeText('${s.session_code}'); showToast('Buddy code ${s.session_code} copied to clipboard!', 'success');" title="Copy Session Code" style="padding: 0.35rem 0.6rem;">
-              📋 Code
+            <button class="btn btn-outline-gold btn-sm" onclick="navigator.clipboard.writeText('${s.session_code}'); showToast('Admin access code ${s.session_code} copied! Remember this code is limited to only 2 people.', 'success');" title="Copy Specific Admin Code" style="padding: 0.35rem 0.6rem;">
+              📋 Copy Code
             </button>
           </div>
         </div>
@@ -400,6 +415,13 @@ const AvioraBuddy = {
       if (!res.ok) throw new Error(data.error);
 
       this.activeSession = data.session;
+
+      // If pending admin setup, display awaiting setup card instead of active game duel
+      if (data.session.status === 'pending' || data.is_pending_setup) {
+        this.renderPendingAdminSetup(data.session);
+        return;
+      }
+
       this.renderArena(data.session, data.messages || []);
       
       // Start chat polling
@@ -411,8 +433,69 @@ const AvioraBuddy = {
       }
     } catch (e) {
       console.warn('Select session error:', e);
-      showToast('Could not load session details: ' + e.message, 'error');
+      showToast(e.message || 'Could not load session details.', 'error');
     }
+  },
+
+  renderPendingAdminSetup(session) {
+    const pendingContainer = document.getElementById('buddy-arena-pending-content');
+    const activeContainer = document.getElementById('buddy-arena-active-content');
+    const arenaSection = document.getElementById('buddy-arena-section');
+    if (arenaSection) arenaSection.style.display = 'block';
+    if (activeContainer) activeContainer.style.display = 'none';
+    if (!pendingContainer) return;
+
+    pendingContainer.style.display = 'block';
+    pendingContainer.innerHTML = `
+      <div style="padding: 2.75rem 2rem; text-align: center; color: #FFFFFF; background: linear-gradient(135deg, #18181B 0%, #27272A 100%); border-radius: 16px; border: 1.5px solid rgba(198, 138, 40, 0.4); box-shadow: var(--shadow-md);">
+        <div style="display: inline-flex; align-items: center; gap: 0.5rem; background: rgba(198, 138, 40, 0.18); border: 1px solid rgba(198, 138, 40, 0.45); color: #F59E0B; padding: 0.35rem 0.95rem; border-radius: 999px; font-size: 0.78rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 1.25rem;">
+          ⏳ Awaiting Admin Setup
+        </div>
+        
+        <h2 style="font-family: var(--font-heading); font-size: 1.75rem; font-weight: 900; color: #FAF7F2; margin-bottom: 0.5rem;">
+          ${this.escapeHtml(session.subject)}
+        </h2>
+        <div style="font-size: 0.9rem; color: #D1D5DB; margin-bottom: 1.5rem;">
+          ${this.escapeHtml(session.topic || 'Peer Study, Quiz Bee Duel & Discussion Topics')}
+        </div>
+
+        <div style="max-width: 620px; margin: 0 auto 1.75rem; background: rgba(0, 0, 0, 0.35); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 1.25rem 1.5rem; text-align: left; line-height: 1.6;">
+          <div style="display: flex; align-items: flex-start; gap: 0.75rem; margin-bottom: 0.85rem;">
+            <span style="font-size: 1.25rem;">ℹ️</span>
+            <div style="font-size: 0.88rem; color: #F3F4F6;">
+              Once the admin has set up the students in Aviora Buddy, a date and time for the session will be provided, along with a code to be used for accessing the Aviora Buddy class.
+            </div>
+          </div>
+          <div style="background: rgba(198, 138, 40, 0.12); border-left: 3px solid var(--gold-500); padding: 0.65rem 0.85rem; border-radius: 4px; font-size: 0.8rem; color: #FDE68A;">
+            🔒 <strong>Important Requirement:</strong> This code is limited to only 2 people. Please ensure that you use only the specific code provided by the admin.
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: center; gap: 1.5rem; flex-wrap: wrap; margin-bottom: 1.75rem;">
+          <div style="text-align: left; background: rgba(255, 255, 255, 0.05); padding: 0.85rem 1.25rem; border-radius: 10px; min-width: 190px;">
+            <div style="font-size: 0.72rem; color: #9CA3AF; text-transform: uppercase; font-weight: 700;">Student 1</div>
+            <div style="font-size: 0.92rem; font-weight: 700; color: #FFFFFF; margin-top: 0.15rem;">${this.escapeHtml(session.student1_name || 'Enrolled Student')}</div>
+          </div>
+          <div style="text-align: left; background: rgba(255, 255, 255, 0.05); padding: 0.85rem 1.25rem; border-radius: 10px; min-width: 190px;">
+            <div style="font-size: 0.72rem; color: #9CA3AF; text-transform: uppercase; font-weight: 700;">Student 2</div>
+            <div style="font-size: 0.92rem; font-weight: 700; color: #F59E0B; margin-top: 0.15rem;">${session.student2_name ? this.escapeHtml(session.student2_name) : 'Admin Pairing in Progress'}</div>
+          </div>
+          <div style="text-align: left; background: rgba(255, 255, 255, 0.05); padding: 0.85rem 1.25rem; border-radius: 10px; min-width: 190px;">
+            <div style="font-size: 0.72rem; color: #9CA3AF; text-transform: uppercase; font-weight: 700;">Date, Time &amp; Access Code</div>
+            <div style="font-size: 0.92rem; font-weight: 700; color: #F59E0B; margin-top: 0.15rem;">Pending Admin Setup</div>
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap;">
+          <button type="button" class="btn btn-secondary btn-sm" onclick="AvioraBuddy.loadBuddyHub()" style="background: rgba(255,255,255,0.15); color: #FFFFFF; border: none; font-weight: 700;">
+            ↻ Refresh Admin Status
+          </button>
+          <button type="button" class="btn btn-primary btn-sm" onclick="AvioraBuddy.openJoinCodeModal()" style="font-weight: 700;">
+            🔑 Enter Specific Admin Code
+          </button>
+        </div>
+      </div>
+    `;
   },
 
   renderSandboxDemo() {
@@ -440,19 +523,32 @@ const AvioraBuddy = {
     if (!arenaContainer) return;
     arenaContainer.style.display = 'block';
 
+    const pendingContainer = document.getElementById('buddy-arena-pending-content');
+    const activeContainer = document.getElementById('buddy-arena-active-content');
+    if (pendingContainer) pendingContainer.style.display = 'none';
+    if (activeContainer) activeContainer.style.display = 'block';
+
     // Update Topbar
     const titleEl = document.getElementById('buddy-arena-title');
     const codeEl = document.getElementById('buddy-arena-code-badge');
+    const schedEl = document.getElementById('buddy-arena-schedule-badge');
     const s1NameEl = document.getElementById('buddy-player1-name');
     const s1AvatarEl = document.getElementById('buddy-player1-avatar');
     const s2NameEl = document.getElementById('buddy-player2-name');
     const s2AvatarEl = document.getElementById('buddy-player2-avatar');
 
     if (titleEl) titleEl.textContent = session.subject;
-    if (codeEl) codeEl.textContent = `Code: ${session.session_code} • $6 Service`;
+    if (codeEl) codeEl.textContent = `Code: ${session.session_code} • Limited to 2 People`;
+    if (schedEl) {
+      if (session.scheduled_date && session.scheduled_date !== 'Pending Admin Scheduling') {
+        schedEl.textContent = `📅 ${session.scheduled_date} • ⏰ ${session.scheduled_time}`;
+      } else {
+        schedEl.textContent = '📅 Admin Confirmed Schedule';
+      }
+    }
     if (s1NameEl) s1NameEl.textContent = session.student1_name || 'Student 1';
     if (s1AvatarEl && session.student1_avatar) s1AvatarEl.src = session.student1_avatar;
-    if (s2NameEl) s2NameEl.textContent = session.student2_name || 'Awaiting Student 2';
+    if (s2NameEl) s2NameEl.textContent = session.student2_name || 'Student 2';
     if (s2AvatarEl && session.student2_avatar) s2AvatarEl.src = session.student2_avatar;
 
     // Render Chat
@@ -1107,14 +1203,14 @@ const AvioraBuddy = {
   async submitJoinCode() {
     const input = document.getElementById('input-buddy-join-code');
     if (!input || !input.value.trim()) {
-      showToast('Please enter your 10-character Buddy Code (e.g. BUDDY-7482)', 'warning');
+      showToast('Please enter the specific code provided by the admin (e.g. BUDDY-7482)', 'warning');
       return;
     }
 
     try {
       const token = Storage.getToken();
       if (!token) {
-        showToast('Please log in to join an Aviora Buddy session.', 'info');
+        showToast('Please log in to access your Aviora Buddy class.', 'info');
         window.location.hash = '#login';
         return;
       }
@@ -1125,12 +1221,12 @@ const AvioraBuddy = {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ session_code: input.value.trim() })
+        body: JSON.stringify({ session_code: input.value.trim().toUpperCase() })
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
 
-      showToast(data.message, 'success');
+      showToast(data.message || 'Access granted to your Aviora Buddy class!', 'success');
       this.closeModal('modal-join-buddy-code');
       await this.loadBuddyHub();
 
@@ -1138,7 +1234,7 @@ const AvioraBuddy = {
         this.selectSession(data.session_id);
       }
     } catch (e) {
-      showToast(e.message || 'Failed to join buddy session.', 'error');
+      showToast(e.message || 'Failed to access buddy class. Please ensure that you use only the specific code provided by the admin.', 'error');
     }
   }
 };

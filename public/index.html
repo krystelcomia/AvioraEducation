@@ -3151,15 +3151,15 @@
                 </div>
                 <div style="display: flex; align-items: center; gap: 0.65rem;">
                   <span style="width: 26px; height: 26px; border-radius: 50%; background: rgba(198, 138, 40, 0.15); color: var(--gold-700); display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 800;">✓</span>
-                  <span><strong>Admin Scheduled &amp; Assigned:</strong> Admin pairs students and coordinates session schedules</span>
+                  <span><strong>Admin Setup &amp; Scheduling:</strong> Once the admin sets up the students, a session date and time is provided along with the access code</span>
                 </div>
                 <div style="display: flex; align-items: center; gap: 0.65rem;">
                   <span style="width: 26px; height: 26px; border-radius: 50%; background: rgba(198, 138, 40, 0.15); color: var(--gold-700); display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 800;">✓</span>
-                  <span><strong>Variety of Activities:</strong> Quiz Bee, Math Duel, Discussion Topics</span>
+                  <span><strong>Strict 2-Person Limit:</strong> Class codes are limited to only 2 people; students must use only the specific code provided by the admin</span>
                 </div>
                 <div style="display: flex; align-items: center; gap: 0.65rem;">
                   <span style="width: 26px; height: 26px; border-radius: 50%; background: rgba(198, 138, 40, 0.15); color: var(--gold-700); display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 800;">✓</span>
-                  <span><strong>Real-time Chat &amp; Whiteboard:</strong> Collaborate on equations</span>
+                  <span><strong>Interactive Activities:</strong> Quiz Bee, Math Duel, Discussion Topics &amp; Collaborative Whiteboard</span>
                 </div>
               </div>
             </div>
@@ -3168,17 +3168,26 @@
 
         <!-- 2. INTERACTIVE LIVE BATTLE ARENA & STUDIO -->
         <div id="buddy-arena-section" class="buddy-arena-container">
-          <!-- Topbar -->
-          <div class="buddy-arena-topbar">
-            <div>
-              <div style="display: flex; align-items: center; gap: 0.65rem; margin-bottom: 0.25rem;">
-                <span class="badge-gold" id="buddy-arena-code-badge" style="font-size: 0.72rem; font-weight: 800;">Code: BUDDY-7482 • $6 Service</span>
-                <span style="font-size: 0.78rem; color: #10B981; font-weight: 700;">● Live 2-Student Arena</span>
+          <!-- Pending Admin Setup View (Shown when session is awaiting admin pairing and scheduling) -->
+          <div id="buddy-arena-pending-content" style="display: none;"></div>
+
+          <!-- Active Live Arena View (Accessible once admin has set up students, date, time & 2-person code) -->
+          <div id="buddy-arena-active-content">
+            <!-- Topbar -->
+            <div class="buddy-arena-topbar">
+              <div>
+                <div style="display: flex; align-items: center; gap: 0.65rem; margin-bottom: 0.25rem; flex-wrap: wrap;">
+                  <span class="badge-gold" id="buddy-arena-code-badge" style="font-size: 0.72rem; font-weight: 800;">Code: BUDDY-7482 • Limited to 2 People</span>
+                  <span id="buddy-arena-schedule-badge" style="font-size: 0.74rem; background: rgba(255,255,255,0.12); padding: 0.2rem 0.55rem; border-radius: 4px; color: #E5E7EB; font-weight: 600;">📅 Date &amp; Time Confirmed</span>
+                  <span style="font-size: 0.78rem; color: #10B981; font-weight: 700;">● Live 2-Student Arena</span>
+                </div>
+                <h3 id="buddy-arena-title" style="font-family: var(--font-heading); font-size: 1.35rem; font-weight: 800; color: #FFFFFF; margin: 0;">
+                  AP Calculus BC &amp; Quiz Bee Duel
+                </h3>
+                <div id="buddy-arena-notice" style="font-size: 0.73rem; color: rgba(255, 255, 255, 0.75); margin-top: 0.2rem;">
+                  Admin-scheduled session • Code limited to only 2 people. Please ensure that you use only the specific code provided by the admin.
+                </div>
               </div>
-              <h3 id="buddy-arena-title" style="font-family: var(--font-heading); font-size: 1.35rem; font-weight: 800; color: #FFFFFF; margin: 0;">
-                AP Calculus BC &amp; Quiz Bee Duel
-              </h3>
-            </div>
 
             <!-- Scoreboard -->
             <div class="buddy-scoreboard">
@@ -3267,7 +3276,8 @@
               </form>
             </div>
           </div>
-        </div>
+          </div><!-- END #buddy-arena-active-content -->
+        </div><!-- END #buddy-arena-section -->
 
         <!-- 3. ACTIVE & SCHEDULED SESSIONS LIST -->
         <div style="margin-bottom: 2rem;">
@@ -6559,13 +6569,26 @@
             </div>
           </div>
 
+          <div class="form-group" style="margin-bottom: 1.25rem;">
+            <label class="form-label" style="font-weight: 700;">Class Access Code (Limited to 2 People)</label>
+            <div style="display: flex; gap: 0.5rem; align-items: center;">
+              <input type="text" id="admin-buddy-modal-code" class="form-control" style="font-family: monospace; font-size: 1.15rem; font-weight: 900; letter-spacing: 0.08em; text-transform: uppercase; color: var(--gold-800); background: rgba(198, 138, 40, 0.08); border: 1.5px solid var(--gold-400);" readonly required />
+              <button type="button" class="btn btn-outline-gold btn-sm" onclick="Admin.regenerateBuddyCode()" title="Generate new code" style="white-space: nowrap; font-weight: 700;">
+                New Code
+              </button>
+            </div>
+            <div style="font-size: 0.74rem; color: var(--text-secondary); margin-top: 0.35rem;">
+              🔒 This specific code is strictly limited to only 2 people. Both students will use this code to access the class once scheduled.
+            </div>
+          </div>
+
           <div class="form-group" style="margin-bottom: 1.5rem;">
             <label class="form-label" style="font-weight: 700;">Curriculum Notes / Focus (Optional)</label>
             <input type="text" id="admin-buddy-notes" class="form-control" placeholder="e.g. AP Exam Prep, Quiz Bee Duel &amp; Discussion Topics" />
           </div>
 
           <div style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 8px; padding: 0.85rem 1rem; margin-bottom: 1.5rem; font-size: 0.8rem; color: #065F46; line-height: 1.45;">
-            <strong>Real-time Notification:</strong> Both students will receive instant in-app notifications with confirmed date, time slot, and code. Session status updates to Active immediately.
+            <strong>Setup &amp; Notification:</strong> Once you set up the students, a confirmed date and time will be provided to both students along with this specific access code (strictly limited to 2 people). Students are instructed to use only this specific code provided by the admin.
           </div>
 
           <div style="display: flex; gap: 0.75rem; justify-content: flex-end;">
@@ -6581,25 +6604,31 @@
 
   <!-- Modal 3: Join Session via Buddy Code -->
   <div class="modal-overlay" id="modal-join-buddy-code">
-    <div class="modal-card" style="max-width: 480px;">
+    <div class="modal-card" style="max-width: 490px;">
       <div class="modal-header" style="background: linear-gradient(135deg, #FAF7F2 0%, #F5EFE6 100%); border-bottom: 1px solid rgba(198, 138, 40, 0.2); padding: 1.25rem 1.75rem;">
         <div>
-          <span class="badge-gold" style="font-size: 0.72rem; font-weight: 800;">Instant Passcode</span>
-          <h3 class="modal-title text-gold" style="font-size: 1.25rem; margin-top: 0.25rem;">Join with Buddy Code</h3>
+          <span class="badge-gold" style="font-size: 0.72rem; font-weight: 800;">Admin-Provided Code</span>
+          <h3 class="modal-title text-gold" style="font-size: 1.25rem; margin-top: 0.25rem;">Access Aviora Buddy Class</h3>
         </div>
         <button class="modal-close-btn" onclick="AvioraBuddy.closeModal('modal-join-buddy-code')">✕</button>
       </div>
       <div class="modal-body" style="padding: 1.5rem 1.75rem; text-align: center;">
         <div style="font-size: 2.2rem; margin-bottom: 0.5rem;">🔑</div>
-        <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 1.25rem; line-height: 1.5;">
-          Enter the unique 10-character code provided by your study buddy or tutor (e.g., <strong>BUDDY-7482</strong>). Cost is $6 to join.
+        <p style="color: var(--charcoal-900); font-weight: 700; font-size: 0.95rem; margin-bottom: 0.35rem;">
+          Enter Admin Access Code
         </p>
+        <p style="color: var(--text-secondary); font-size: 0.84rem; margin-bottom: 1rem; line-height: 1.5;">
+          Once the admin has set up the students in Aviora Buddy, a date and time for the session will be provided, along with a code to be used for accessing the Aviora Buddy class.
+        </p>
+        <div style="background: rgba(198, 138, 40, 0.08); border: 1px solid rgba(198, 138, 40, 0.3); border-radius: 8px; padding: 0.75rem 0.95rem; font-size: 0.78rem; color: var(--charcoal-800); margin-bottom: 1.25rem; text-align: left; line-height: 1.45;">
+          <strong>⚠️ 2-Person Limit:</strong> This code is limited to only 2 people. Please ensure that you use only the specific code provided by the admin.
+        </div>
 
         <form onsubmit="event.preventDefault(); AvioraBuddy.submitJoinCode();">
           <input type="text" id="input-buddy-join-code" class="form-control" placeholder="BUDDY-XXXX" maxlength="12" style="text-align: center; font-family: monospace; font-size: 1.35rem; font-weight: 900; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 1.25rem; border: 2px solid var(--gold-400);" required />
 
           <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center; font-weight: 700; padding: 0.85rem;">
-            Join Aviora Buddy Session ($6) →
+            Access Aviora Buddy Class →
           </button>
         </form>
       </div>

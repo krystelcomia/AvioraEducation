@@ -1638,7 +1638,7 @@ const Admin = {
           const isPending = s.status === 'pending';
           const hasStudent2 = !!s.student2_name;
           const statusBadge = isPending 
-            ? '<span class="badge" style="background: rgba(198, 138, 40, 0.15); color: var(--gold-800); border: 1px solid rgba(198, 138, 40, 0.4); font-weight: 800; font-size: 0.72rem; padding: 0.2rem 0.6rem; border-radius: 999px;">⏳ Pending Schedule &amp; Pair</span>'
+            ? '<span class="badge" style="background: rgba(198, 138, 40, 0.15); color: var(--gold-800); border: 1px solid rgba(198, 138, 40, 0.4); font-weight: 800; font-size: 0.72rem; padding: 0.2rem 0.6rem; border-radius: 999px;">⏳ Pending Admin Setup</span>'
             : '<span class="badge" style="background: rgba(16, 185, 129, 0.12); color: #047857; border: 1px solid rgba(16, 185, 129, 0.35); font-weight: 800; font-size: 0.72rem; padding: 0.2rem 0.6rem; border-radius: 999px;">✓ Scheduled &amp; Active</span>';
 
           return `
@@ -1647,7 +1647,7 @@ const Admin = {
                 <div style="display: flex; align-items: center; gap: 0.65rem;">
                   ${statusBadge}
                   <span style="font-family: monospace; font-size: 0.78rem; font-weight: 700; background: rgba(0,0,0,0.05); padding: 0.2rem 0.5rem; border-radius: 5px;">
-                    Code: ${s.session_code}
+                    Code: ${s.session_code} (Limited to 2)
                   </span>
                   <span style="font-size: 0.8rem; color: var(--text-secondary);">$6 Flat Duo Fee</span>
                 </div>
@@ -1710,7 +1710,7 @@ const Admin = {
                 <!-- Admin Action Button -->
                 <div>
                   <button type="button" class="btn btn-primary btn-sm" onclick="Admin.openBuddyScheduleModal(${s.id})" style="font-weight: 700; padding: 0.45rem 1rem; display: inline-flex; align-items: center; gap: 0.4rem;">
-                    <span>${isPending ? '⚙️ Schedule &amp; Assign Students' : '✏️ Reschedule / Edit'}</span>
+                    <span>${isPending ? '⚙️ Set Up Students &amp; Schedule' : '✏️ Edit Setup &amp; Code'}</span>
                     <span>→</span>
                   </button>
                 </div>
@@ -1742,6 +1742,11 @@ const Admin = {
     if (idInput) idInput.value = session.id;
     if (subjEl) subjEl.textContent = session.subject + ' (' + session.session_code + ')';
     if (s1El) s1El.textContent = 'Student 1: ' + (session.student1_name || 'Unknown') + ' (' + (session.student1_email || '') + ')';
+
+    const codeInput = document.getElementById('admin-buddy-modal-code');
+    if (codeInput) {
+      codeInput.value = session.session_code || ('BUDDY-' + Math.floor(1000 + Math.random() * 9000));
+    }
 
     // Populate students dropdown (excluding Student 1)
     if (s2Select) {
@@ -1806,20 +1811,33 @@ const Admin = {
       return;
     }
 
+    const codeInput = document.getElementById('admin-buddy-modal-code');
+    const session_code = codeInput ? codeInput.value.trim().toUpperCase() : '';
+
     try {
       const res = await API.scheduleBuddySession(sessionId, {
         student2_id,
         scheduled_date,
         scheduled_time,
+        session_code,
         notes
       });
 
-      showToast(res.message || 'Aviora Buddy session successfully scheduled and students notified!', 'success');
+      showToast(res.message || 'Aviora Buddy session set up! Confirmed date, time, and 2-person code provided to both students.', 'success');
       this.closeBuddyScheduleModal();
       await this.loadBuddySessions(this.currentBuddyFilter || 'all');
       await this.loadDashboardMetrics();
     } catch (err) {
       showToast(err.message || 'Failed to schedule buddy session.', 'error');
+    }
+  },
+
+  regenerateBuddyCode() {
+    const codeInput = document.getElementById('admin-buddy-modal-code');
+    if (codeInput) {
+      const newCode = 'BUDDY-' + Math.floor(1000 + Math.random() * 9000);
+      codeInput.value = newCode;
+      showToast('Generated fresh code: ' + newCode + ' (strictly limited to 2 people)', 'info');
     }
   },
 

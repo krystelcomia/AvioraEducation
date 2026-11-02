@@ -1051,12 +1051,12 @@ const Student = {
             ${r.notes ? `<p style="font-size: 0.8rem; color: var(--text-secondary); margin: 0;">Topic: ${escapeHtmlStr(r.notes)}</p>` : ''}
           </div>
 
-          <div style="font-size: 0.88rem; color: var(--charcoal-900);">
-            <div style="font-weight: 700; display: flex; align-items: center; gap: 0.3rem;">${Icons.clock(14)} ${r.requested_time}${window.getTimezoneAbbr ? ' ' + window.getTimezoneAbbr() : ''}</div>
+          <div style="font-size: 0.88rem; color: var(--charcoal-900); width: 185px; min-width: 185px;">
+            <div style="font-weight: 700; display: flex; align-items: center; gap: 0.3rem;">${Icons.clock(14)} ${r.requested_time}${(window.getTimezoneAbbr && !r.requested_time.includes('EST') && !r.requested_time.includes('CST') && !r.requested_time.includes('PST') && !r.requested_time.includes('MST')) ? ' ' + window.getTimezoneAbbr() : ''}</div>
             <div style="font-size: 0.78rem; color: var(--gold-800); font-weight: 600;">${(r.duration_hours === 0.5 || r.payment_method === 'free_trial') ? '30-Minute Trial Class' : '50-Minute Class'}</div>
           </div>
 
-          <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+          <div class="schedule-actions-col">
             ${r.status === 'accepted' ? (r.room_status === 'open' ? `
               <button class="btn btn-primary btn-sm btn-vroom-live" onclick="VirtualRoom.joinRoom(${r.id}, 'student')" style="background: #10B981; border-color: #10B981;">${Icons.video(14)} Join Class</button>
             ` : `
@@ -1119,7 +1119,7 @@ const Student = {
 
           <div class="request-datetime-info">
             <strong style="display: flex; align-items: center; gap: 0.3rem;">${Icons.calendar(14)} ${r.requested_date}</strong>
-            <span style="display: flex; align-items: center; gap: 0.3rem;">${Icons.clock(14)} ${r.requested_time}${window.getTimezoneAbbr ? ' ' + window.getTimezoneAbbr() : ''} (${isFreeTrial ? '30 mins' : '50 mins'})</span>
+            <span style="display: flex; align-items: center; gap: 0.3rem;">${Icons.clock(14)} ${r.requested_time}${(window.getTimezoneAbbr && !r.requested_time.includes('EST') && !r.requested_time.includes('CST') && !r.requested_time.includes('PST') && !r.requested_time.includes('MST')) ? ' ' + window.getTimezoneAbbr() : ''} (${isFreeTrial ? '30 mins' : '50 mins'})</span>
           </div>
 
           <div class="request-pricing-info">
@@ -1197,12 +1197,12 @@ const Student = {
           ${r.tutor_response_note ? `<p style="font-size: 0.78rem; color: var(--gold-700); margin: 0; font-style: italic;">Instructor Feedback: "${escapeHtmlStr(r.tutor_response_note)}"</p>` : ''}
         </div>
 
-        <div style="font-size: 0.82rem; color: var(--charcoal-900);">
+        <div style="font-size: 0.82rem; color: var(--charcoal-900); width: 185px; min-width: 185px;">
           <div style="font-weight: 700; display: flex; align-items: center; gap: 0.3rem;">${Icons.calendar(13)} ${r.requested_date}</div>
           <div style="font-size: 0.75rem; color: var(--text-muted);">50 min class completed</div>
         </div>
 
-        <div>
+        <div style="width: 265px; min-width: 265px; display: flex; justify-content: flex-end; align-items: center;">
           ${r.review_rating ? `
             <div style="text-align: right;">
               <div style="color: #F59E0B; display: inline-flex; align-items: center; gap: 2px;">

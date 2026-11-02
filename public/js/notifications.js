@@ -136,7 +136,6 @@ const NotificationsUI = {
     }
 
     const html = notifications.map(notif => {
-      const iconSvg = this.getIconForType(notif.type);
       const isUnread = Number(notif.is_read) === 0;
       const timeStr = this.formatRelativeTime(notif.created_at);
       const safeLink = notif.link ? notif.link : '#';
@@ -144,7 +143,6 @@ const NotificationsUI = {
       return `
         <a href="${safeLink}" class="notif-item ${isUnread ? 'unread' : ''}" data-id="${notif.id}" onclick="NotificationsUI.handleItemClick(event, ${notif.id}, '${safeLink}')">
           ${isUnread ? '<span class="notif-unread-dot" aria-hidden="true"></span>' : ''}
-          <div class="notif-item-icon">${iconSvg}</div>
           <div class="notif-item-details">
             <div class="notif-item-title">${this.escapeHtml(notif.title || 'Notification')}</div>
             <div class="notif-item-msg">${this.escapeHtml(notif.message || '')}</div>

@@ -137,6 +137,9 @@ const API = {
   createRequest: (body) => apiRequest('/student/requests', { method: 'POST', body }),
   cancelRequest: (id) => apiRequest(`/student/requests/${id}/cancel`, { method: 'POST' }),
   submitReview: (id, body) => apiRequest(`/student/requests/${id}/review`, { method: 'POST', body }),
+  getStudentScheduleCalendar: () => apiRequest('/student/schedule/calendar'),
+  setStudentDayAvailability: (body) => apiRequest('/student/schedule/set-day-availability', { method: 'POST', body }),
+  toggleStudentSlot: (body) => apiRequest('/student/schedule/toggle-slot', { method: 'POST', body }),
 
   // Teacher & Tutor Portal
   getTeacherStatus: () => apiRequest('/teacher/application-status'),

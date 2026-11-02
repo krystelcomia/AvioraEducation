@@ -19,6 +19,11 @@ const Student = {
   subscription: null,
   activeTab: 'all',
   currentReviewRequestId: null,
+  scheduleData: { appointments: [], occupiedSlots: [], availabilitySchedule: {}, unavailableDates: [] },
+  calYear: new Date().getFullYear(),
+  calMonth: new Date().getMonth(),
+  selectedDate: null,
+  hasBoundCalendarNav: false,
 
   async init() {
     this.setupEventListeners();
@@ -540,14 +545,378 @@ const Student = {
     `;
   },
 
-  renderSchedule() {
+  setupScheduleCalendarListeners() {
+    if (this.hasBoundCalendarNav) return;
+    this.hasBoundCalendarNav = true;
+
+    const prevBtn = document.getElementById('student-cal-prev-btn');
+    const nextBtn = document.getElementById('student-cal-next-btn');
+    const todayBtn = document.getElementById('student-cal-today-btn');
+
+    if (prevBtn) {
+      prevBtn.addEventListener('click', () => {
+        this.calMonth--;
+        if (this.calMonth < 0) {
+          this.calMonth = 11;
+          this.calYear--;
+        }
+        this.renderCalendar();
+      });
+    }
+
+    if (nextBtn) {
+      nextBtn.addEventListener('click', () => {
+        this.calMonth++;
+        if (this.calMonth > 11) {
+          this.calMonth = 0;
+          this.calYear++;
+        }
+        this.renderCalendar();
+      });
+    }
+
+    if (todayBtn) {
+      todayBtn.addEventListener('click', () => {
+        const now = new Date();
+        this.calYear = now.getFullYear();
+        this.calMonth = now.getMonth();
+        const dateStr = `${this.calYear}-${String(this.calMonth + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+        this.selectedDate = dateStr;
+        this.renderCalendar();
+        this.renderDateSchedulePanel();
+      });
+    }
+  },
+
+  async renderSchedule() {
+    this.setupScheduleCalendarListeners();
+
+    // Fetch latest student calendar availability schedule
+    try {
+      if (typeof API !== 'undefined' && API.getStudentScheduleCalendar) {
+        const res = await API.getStudentScheduleCalendar();
+        if (res) {
+          this.scheduleData = res;
+        }
+      }
+    } catch (e) {
+      console.warn('Could not fetch student calendar schedule:', e);
+    }
+
+    this.renderCalendar();
+    this.renderDateSchedulePanel();
+    this.renderScheduleList();
+  },
+
+  renderCalendar() {
+    const grid = document.getElementById('student-calendar-grid');
+    const monthTitle = document.getElementById('student-cal-month-title');
+    if (!grid) return;
+
+    const monthDate = new Date(this.calYear, this.calMonth, 1);
+    if (monthTitle) {
+      monthTitle.textContent = monthDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    }
+
+    grid.innerHTML = '';
+    const firstDayIndex = monthDate.getDay();
+    const daysInMonth = new Date(this.calYear, this.calMonth + 1, 0).getDate();
+
+    const appointments = this.scheduleData?.appointments || [];
+    const occupiedSlots = this.scheduleData?.occupiedSlots || [];
+    const availSched = this.scheduleData?.availabilitySchedule || {};
+    const unavailDates = this.scheduleData?.unavailableDates || [];
+
+    const now = new Date();
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
+    // Blank cells before month starts
+    const prevMonthDays = new Date(this.calYear, this.calMonth, 0).getDate();
+    for (let i = 0; i < firstDayIndex; i++) {
+      const pDay = prevMonthDays - firstDayIndex + i + 1;
+      const blank = document.createElement('div');
+      blank.className = 'student-cal-day-cell is-other-month';
+      blank.innerHTML = `<span class="student-cal-day-num" style="opacity: 0.4;">${pDay}</span>`;
+      grid.appendChild(blank);
+    }
+
+    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+    // Days in current month
+    for (let day = 1; day <= daysInMonth; day++) {
+      const dateStr = `${this.calYear}-${String(this.calMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      const cellDate = new Date(this.calYear, this.calMonth, day);
+      const dayName = dayNames[cellDate.getDay()];
+
+      const isToday = (dateStr === todayStr);
+      const isSelected = (this.selectedDate === dateStr);
+
+      // Check if student marked date as unavailable
+      const isDateOccupied = unavailDates.includes(dateStr) || (availSched.date_modes && availSched.date_modes[dateStr] === 'unavailable');
+      const dayApts = appointments.filter(a => a.date === dateStr || a.requested_date === dateStr);
+      const dayNotes = (availSched.date_notes && availSched.date_notes[dateStr]) || null;
+
+      const cell = document.createElement('div');
+      cell.className = 'student-cal-day-cell';
+      if (isToday) cell.classList.add('is-today');
+      if (isSelected) cell.classList.add('selected');
+      if (isDateOccupied) cell.classList.add('is-occupied');
+
+      let badgesHtml = '';
+      if (dayApts.length > 0) {
+        badgesHtml += `<span class="student-cal-badge badge-class">${Icons.calendar(9)} ${dayApts.length} ${dayApts.length > 1 ? 'Classes' : 'Class'}</span>`;
+      }
+      if (isDateOccupied) {
+        badgesHtml += `<span class="student-cal-badge badge-occupied">${Icons.ban(8)} Unavailable</span>`;
+      }
+      if (dayNotes) {
+        badgesHtml += `<span class="student-cal-badge badge-note" title="${escapeHtmlStr(dayNotes)}">📝 Note</span>`;
+      }
+
+      cell.innerHTML = `
+        <div style="display: flex; justify-content: space-between; align-items: baseline;">
+          <span class="student-cal-day-num">${day}</span>
+          ${isToday ? '<span style="font-size: 0.65rem; color: var(--gold-700); font-weight: 800;">Today</span>' : ''}
+        </div>
+        <div class="student-cal-badges-wrap">${badgesHtml}</div>
+      `;
+
+      cell.addEventListener('click', () => {
+        this.selectCalendarDate(dateStr);
+      });
+
+      grid.appendChild(cell);
+    }
+  },
+
+  selectCalendarDate(dateStr) {
+    this.selectedDate = dateStr;
+    this.renderCalendar();
+    this.renderDateSchedulePanel();
+
+    const panel = document.getElementById('student-date-schedule-panel');
+    if (panel) {
+      panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  },
+
+  renderDateSchedulePanel() {
+    const panel = document.getElementById('student-date-schedule-panel');
+    if (!panel) return;
+
+    if (!this.selectedDate) {
+      panel.innerHTML = `
+        <div style="padding: 2.25rem 1.5rem; text-align: center; background: rgba(198, 138, 40, 0.03); border: 1px dashed rgba(198, 138, 40, 0.35); border-radius: var(--radius-lg);">
+          <div style="margin-bottom: 0.5rem; color: var(--gold-600);">${Icons.calendar(32)}</div>
+          <h4 style="margin: 0 0 0.35rem 0; font-size: 1.05rem; font-weight: 800; color: var(--charcoal-900);">No Date Selected</h4>
+          <p style="margin: 0 auto; color: var(--text-secondary); font-size: 0.85rem; max-width: 480px;">
+            Click any date on the calendar above to view your booked classes, set your unavailable hours, or add personal schedule reminders to prevent conflicts.
+          </p>
+        </div>
+      `;
+      return;
+    }
+
+    const dateStr = this.selectedDate;
+    const parts = dateStr.split('-');
+    const dObj = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const dayOfWeekName = dayNames[dObj.getDay()];
+    const formattedDate = dObj.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+
+    const appointments = this.scheduleData?.appointments || [];
+    const occupiedSlots = this.scheduleData?.occupiedSlots || [];
+    const availSched = this.scheduleData?.availabilitySchedule || {};
+    const unavailDates = this.scheduleData?.unavailableDates || [];
+
+    const isDateOccupied = unavailDates.includes(dateStr) || (availSched.date_modes && availSched.date_modes[dateStr] === 'unavailable');
+    const dayApts = appointments.filter(a => a.date === dateStr || a.requested_date === dateStr);
+    const dayNote = (availSched.date_notes && availSched.date_notes[dateStr]) || '';
+
+    // Standard hourly blocks 08:00 AM - 08:00 PM
+    const hours = [];
+    for (let h = 8; h <= 20; h++) {
+      const hStr = String(h).padStart(2, '0') + ':00';
+      const endHStr = String(h + 1).padStart(2, '0') + ':00';
+      const slotKey = `${hStr} - ${endHStr}`;
+      const ampm = h >= 12 ? 'PM' : 'AM';
+      const h12 = h % 12 === 0 ? 12 : h % 12;
+      const label = `${String(h12).padStart(2, '0')}:00 ${ampm}`;
+      hours.push({ hour: h, key: slotKey, label, start: hStr });
+    }
+
+    panel.innerHTML = `
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 1.25rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border-light, rgba(0,0,0,0.08));">
+        <div>
+          <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.2rem;">
+            <span class="badge-gold" style="font-size: 0.72rem;">Student Calendar Manager</span>
+            ${isDateOccupied ? '<span class="status-pill declined" style="font-size: 0.72rem;">Marked Unavailable</span>' : '<span class="status-pill accepted" style="font-size: 0.72rem;">Available</span>'}
+          </div>
+          <h3 style="font-family: var(--font-heading); font-size: 1.3rem; font-weight: 800; color: var(--charcoal-900); margin: 0;">
+            ${Icons.calendar(18)} ${formattedDate}
+          </h3>
+        </div>
+        <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+          ${isDateOccupied ? `
+            <button type="button" class="btn btn-outline-gold btn-sm" onclick="Student.setDayAvailability('normal')">
+              ${Icons.check(14)} Mark Date as Available
+            </button>
+          ` : `
+            <button type="button" class="btn btn-secondary btn-sm" onclick="Student.setDayAvailability('date_occupied')" style="color: #DC2626; border-color: rgba(239, 68, 68, 0.4);">
+              ${Icons.ban(14)} Mark Date as Unavailable / Occupied
+            </button>
+          `}
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1.1fr 1fr; gap: 1.5rem;">
+        <!-- Left: Hourly Slots Availability -->
+        <div>
+          <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.6rem;">
+            <strong style="font-size: 0.9rem; color: var(--charcoal-900);">Hourly Time Slots for this Date:</strong>
+            <span style="font-size: 0.72rem; color: var(--text-secondary);">Click slot to toggle Unavailable / Available</span>
+          </div>
+
+          <div style="max-height: 280px; overflow-y: auto; padding-right: 0.35rem;">
+            ${hours.map(slot => {
+              const bookedClass = dayApts.find(a => {
+                const t = a.time || a.requested_time || '';
+                return t.includes(slot.start) || t.startsWith(String(slot.hour).padStart(2, '0'));
+              });
+
+              const isSlotOccupied = occupiedSlots.some(o => {
+                if (o.time_slot === 'ALL_DAY' && (o.date === dateStr || (!o.date && o.day_of_week === dayOfWeekName))) return true;
+                const matchesDate = o.date === dateStr || (!o.date && o.day_of_week === dayOfWeekName);
+                if (!matchesDate) return false;
+                const occH = parseInt(o.time_slot.split(':')[0], 10);
+                return occH === slot.hour;
+              });
+
+              if (bookedClass) {
+                return `
+                  <button type="button" class="student-slot-btn is-booked" disabled title="Scheduled Class: ${bookedClass.subject} with ${bookedClass.tutor_name}">
+                    <span>${slot.label} (50 min)</span>
+                    <span style="font-size: 0.72rem; font-weight: 700;">${Icons.calendar(11)} ${bookedClass.subject} (${bookedClass.tutor_name || 'Tutor'})</span>
+                  </button>
+                `;
+              } else if (isSlotOccupied || isDateOccupied) {
+                return `
+                  <button type="button" class="student-slot-btn is-occupied" onclick="Student.toggleSlot('${dateStr}', '${slot.key}')" title="Click to mark this slot as Available">
+                    <span>${slot.label}</span>
+                    <span style="display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.72rem; font-weight: 700;">${Icons.ban(11)} Unavailable / Occupied</span>
+                  </button>
+                `;
+              } else {
+                return `
+                  <button type="button" class="student-slot-btn" onclick="Student.toggleSlot('${dateStr}', '${slot.key}')" title="Click to mark this slot as Unavailable / Occupied">
+                    <span>${slot.label}</span>
+                    <span style="font-size: 0.72rem; color: #047857; font-weight: 700;">${Icons.check(11)} Available</span>
+                  </button>
+                `;
+              }
+            }).join('')}
+          </div>
+        </div>
+
+        <!-- Right: Schedule Note & Booked Sessions for this Date -->
+        <div>
+          <!-- Personal Schedule Note -->
+          <div style="background: rgba(198, 138, 40, 0.04); border: 1px solid rgba(198, 138, 40, 0.25); border-radius: var(--radius-md); padding: 1rem; margin-bottom: 1.25rem;">
+            <label style="font-size: 0.85rem; font-weight: 700; color: var(--charcoal-900); display: flex; align-items: center; gap: 0.35rem; margin-bottom: 0.35rem;">
+              <span>📝 Personal Date Note / Unavailability Reason:</span>
+            </label>
+            <p style="font-size: 0.75rem; color: var(--text-secondary); margin: 0 0 0.5rem 0;">
+              Add private reminders (e.g. school exams, family event, work shift).
+            </p>
+            <div style="display: flex; gap: 0.5rem;">
+              <input type="text" id="student-date-note-input" class="form-control" style="font-size: 0.84rem; padding: 0.45rem 0.65rem;" placeholder="e.g., High school midterm exam, family dinner..." value="${escapeHtmlStr(dayNote)}" />
+              <button type="button" class="btn btn-outline-gold btn-sm" onclick="Student.saveDateNote('${dateStr}')" style="white-space: nowrap;">Save Note</button>
+            </div>
+          </div>
+
+          <!-- Booked Classes on this date -->
+          <div>
+            <strong style="font-size: 0.9rem; color: var(--charcoal-900); display: block; margin-bottom: 0.5rem;">
+              Scheduled Classes on ${dObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}:
+            </strong>
+            ${dayApts.length === 0 ? `
+              <div style="font-size: 0.82rem; color: var(--text-secondary); padding: 0.75rem; background: var(--bg-surface-alt, #FAF7F2); border-radius: var(--radius-sm); text-align: center;">
+                No classes scheduled on this day.
+              </div>
+            ` : `
+              <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                ${dayApts.map(a => `
+                  <div style="background: #FFFFFF; border: 1px solid var(--border-light); border-radius: var(--radius-sm); padding: 0.65rem 0.85rem; display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                      <strong style="font-size: 0.86rem; color: var(--charcoal-900);">${a.subject}</strong>
+                      <div style="font-size: 0.76rem; color: var(--text-secondary);">with ${a.tutor_name || 'Educator'}</div>
+                    </div>
+                    <span class="badge-gold" style="font-size: 0.75rem;">${a.time || a.requested_time}</span>
+                  </div>
+                `).join('')}
+              </div>
+            `}
+          </div>
+        </div>
+      </div>
+    `;
+  },
+
+  async setDayAvailability(mode) {
+    if (!this.selectedDate) return;
+    try {
+      const res = await API.setStudentDayAvailability({
+        date: this.selectedDate,
+        mode: mode
+      });
+      showToast(res.message, 'success');
+      await this.renderSchedule();
+    } catch (err) {
+      showToast(err.message || 'Failed to update date availability.', 'error');
+    }
+  },
+
+  async toggleSlot(date, time_slot) {
+    try {
+      const res = await API.toggleStudentSlot({
+        date: date,
+        time_slot: time_slot
+      });
+      showToast(res.message, 'success');
+      await this.renderSchedule();
+    } catch (err) {
+      showToast(err.message || 'Failed to toggle time slot.', 'error');
+    }
+  },
+
+  async saveDateNote(date) {
+    const input = document.getElementById('student-date-note-input');
+    const note = input ? input.value : '';
+    try {
+      const res = await API.setStudentDayAvailability({
+        date: date,
+        note: note
+      });
+      showToast('Date note saved successfully.', 'success');
+      await this.renderSchedule();
+    } catch (err) {
+      showToast(err.message || 'Failed to save date note.', 'error');
+    }
+  },
+
+  renderScheduleList() {
     const container = document.getElementById('student-schedule-container');
+    const badge = document.getElementById('student-schedule-count-badge');
     if (!container) return;
 
     // Filter confirmed and pending upcoming appointments
     const scheduled = this.requests
       .filter(r => r.status === 'accepted' || r.status === 'pending')
       .sort((a, b) => (a.requested_date + ' ' + a.requested_time).localeCompare(b.requested_date + ' ' + b.requested_time));
+
+    if (badge) {
+      badge.textContent = `${scheduled.length} ${scheduled.length === 1 ? 'Class' : 'Classes'}`;
+    }
 
     if (scheduled.length === 0) {
       container.innerHTML = `

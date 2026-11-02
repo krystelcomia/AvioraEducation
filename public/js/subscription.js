@@ -11,6 +11,7 @@ const StudentSub = {
   calMonth: new Date().getMonth(),
   selectedDate: null,
   selectedTime: null,
+  studentScheduleData: null,
 
 
   highlightBookingWithTutor(tutorId) {
@@ -300,6 +301,10 @@ const StudentSub = {
       this.renderHub(res);
       const storedTutor = sessionStorage.getItem('preferred_booking_tutor_id');
       if (storedTutor) this.highlightBookingWithTutor(storedTutor);
+
+      if (typeof API !== 'undefined' && API.getStudentScheduleCalendar) {
+        this.studentScheduleData = await API.getStudentScheduleCalendar();
+      }
     } catch (err) {
       console.error('Failed to load student subscription:', err);
       showToast('Could not load subscription details: ' + (err.message || 'Server error'), 'error');
@@ -345,6 +350,43 @@ const StudentSub = {
       if (progressFill) progressFill.style.width = '0%';
       if (expiryDateEl) expiryDateEl.textContent = 'N/A';
       if (daysLeftEl) daysLeftEl.textContent = '0 Days';
+    }
+
+    // Render concurrent active subscriptions if > 1
+    const multiPlansWrap = document.getElementById('sub-all-active-plans-wrap');
+    const multiPlansContainer = document.getElementById('sub-all-active-plans-container');
+    const activeSubs = Array.isArray(data.activeSubscriptions) ? data.activeSubscriptions : (activeSub ? [activeSub] : []);
+
+    if (multiPlansWrap && multiPlansContainer) {
+      if (activeSubs.length > 1) {
+        multiPlansWrap.style.display = 'block';
+        multiPlansContainer.innerHTML = activeSubs.map((sub, idx) => {
+          const pct = Math.min(100, Math.round((sub.lessons_remaining / sub.lessons_total) * 100));
+          return `
+            <div style="background: var(--bg-surface, #FFFFFF); border: 1.5px solid var(--gold-300, #E5C378); border-radius: var(--radius-md); padding: 1.15rem; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                <span class="badge-gold" style="font-size: 0.72rem; font-weight: 800;">Plan #${idx + 1}</span>
+                <span class="status-pill accepted" style="font-size: 0.72rem;">Active</span>
+              </div>
+              <h5 style="font-size: 1.05rem; font-weight: 800; color: var(--charcoal-900); margin: 0 0 0.4rem 0;">${sub.plan_name}</h5>
+              <div style="display: flex; justify-content: space-between; font-size: 0.82rem; color: var(--text-secondary); margin-bottom: 0.35rem;">
+                <span>Lessons remaining:</span>
+                <strong style="color: var(--charcoal-900);">${sub.lessons_remaining} / ${sub.lessons_total}</strong>
+              </div>
+              <div style="height: 6px; background: rgba(0,0,0,0.06); border-radius: 3px; overflow: hidden; margin-bottom: 0.65rem;">
+                <div style="height: 100%; width: ${pct}%; background: var(--gradient-gold); border-radius: 3px;"></div>
+              </div>
+              <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.78rem; color: var(--charcoal-600); border-top: 1px dashed var(--border-light); padding-top: 0.5rem;">
+                <span>Expires: ${sub.formatted_expires_at || '1 month'}</span>
+                <span class="badge-gold" style="font-size: 0.7rem;">${sub.days_remaining}d left</span>
+              </div>
+            </div>
+          `;
+        }).join('');
+      } else {
+        multiPlansWrap.style.display = 'none';
+        multiPlansContainer.innerHTML = '';
+      }
     }
 
     // Total Spending
@@ -600,6 +642,15 @@ const StudentSub = {
 
     const modal = document.getElementById('sub-enrollment-modal');
     if (!modal) return;
+
+    // Fetch latest student calendar schedule to enforce strict conflict prevention
+    try {
+      if (typeof API !== 'undefined' && API.getStudentScheduleCalendar) {
+        this.studentScheduleData = await API.getStudentScheduleCalendar();
+      }
+    } catch (e) {
+      console.warn('Could not fetch student schedule data:', e);
+    }
 
     // Always fetch latest tutors list so tutor calendar/time-slot changes are reflected live
     try {
@@ -1048,7 +1099,13 @@ const StudentSub = {
 
       const dateStr = `${this.calYear}-${String(this.calMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
       const isSelected = this.selectedDate === dateStr;
-      const isDateOccupied = !isPast && typeof Tutors !== 'undefined' && Tutors.isTutorDateOccupied(this.selectedTutor, dateStr, dayOfWeekName);
+      const isTutorOccupied = !isPast && typeof Tutors !== 'undefined' && Tutors.isTutorDateOccupied(this.selectedTutor, dateStr, dayOfWeekName);
+      
+      const studentUnavailDates = this.studentScheduleData?.unavailableDates || [];
+      const studentAvailSched = this.studentScheduleData?.availabilitySchedule || {};
+      const isStudentOccupied = !isPast && (studentUnavailDates.includes(dateStr) || (studentAvailSched.date_modes && studentAvailSched.date_modes[dateStr] === 'unavailable'));
+      const isDateOccupied = isTutorOccupied || isStudentOccupied;
+
       const blocks = typeof Tutors !== 'undefined'
         ? Tutors.getTutorDateBlocks(this.selectedTutor, dateStr, dayOfWeekName)
         : ((this.selectedTutor?.availability_schedule || {})[dayOfWeekName] || []);
@@ -1064,8 +1121,10 @@ const StudentSub = {
       if (isDateOccupied) {
         cell.classList.add('date-occupied');
         if (isSelected) cell.classList.add('selected');
-        cell.title = 'Not Available / Date Occupied — Tutor marked this date as unavailable';
-        cell.innerHTML = `<span>${day}</span><span class="cal-occupied-tag">Unavail</span>`;
+        cell.title = isStudentOccupied 
+          ? 'Not Available — You marked this date as unavailable on your student calendar'
+          : 'Not Available / Date Occupied — Tutor marked this date as unavailable';
+        cell.innerHTML = `<span>${day}</span><span class="cal-occupied-tag">${isStudentOccupied ? 'Busy' : 'Unavail'}</span>`;
         cell.addEventListener('click', () => {
           this.selectCalendarDate(dateStr);
         });
@@ -1102,15 +1161,23 @@ const StudentSub = {
     const label = document.getElementById('sub-enroll-selected-date-label');
     const slotsContainer = document.getElementById('sub-enroll-slots-container');
 
-    const isDateOccupied = typeof Tutors !== 'undefined' && Tutors.isTutorDateOccupied(this.selectedTutor, dateStr, dayName);
+    const isTutorOccupied = typeof Tutors !== 'undefined' && Tutors.isTutorDateOccupied(this.selectedTutor, dateStr, dayName);
+    const studentUnavailDates = this.studentScheduleData?.unavailableDates || [];
+    const studentAvailSched = this.studentScheduleData?.availabilitySchedule || {};
+    const isStudentDateOccupied = studentUnavailDates.includes(dateStr) || (studentAvailSched.date_modes && studentAvailSched.date_modes[dateStr] === 'unavailable');
+    const isDateOccupied = isTutorOccupied || isStudentDateOccupied;
+
     if (isDateOccupied) {
       if (label) label.innerHTML = `<span style="color: #DC2626; font-weight: 700; display: inline-flex; align-items: center; gap: 0.35rem;">${Icons.ban(13)} ${dateFormatted} — Not Available / Date Occupied</span>`;
       if (slotsContainer) {
+        const reasonMsg = isStudentDateOccupied
+          ? `You have marked <strong>${dateFormatted}</strong> as unavailable on your student calendar.`
+          : `${this.selectedTutor?.name || 'This tutor'} has marked <strong>${dateFormatted}</strong> as unavailable.`;
         slotsContainer.innerHTML = `
           <div class="student-date-occupied-notice" style="grid-column: 1 / -1; background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: var(--radius-md); padding: 0.9rem 1rem; color: #B91C1C; font-size: 0.84rem; display: flex; align-items: center; gap: 0.6rem;">
             <span style="display: flex; align-items: center; color: #DC2626;">${Icons.ban(18)}</span>
             <div>
-              <strong>Not Available / Date Occupied:</strong> ${this.selectedTutor?.name || 'This tutor'} has marked <strong>${dateFormatted}</strong> as unavailable. Please select another available date on the calendar.
+              <strong>Not Available / Date Occupied:</strong> ${reasonMsg} Please select another available date on the calendar.
             </div>
           </div>
         `;
@@ -1160,6 +1227,33 @@ const StudentSub = {
         ? Tutors.getTutorSlotOccupancyState(this.selectedTutor, dateStr, dayName, slot.hour)
         : { occupied: false };
 
+      // Student occupied slot check
+      const studentOccupiedSlots = this.studentScheduleData?.occupiedSlots || [];
+      const isStudentSlotOccupied = studentOccupiedSlots.some(o => {
+        if (o.time_slot === 'ALL_DAY' && (o.date === dateStr || (!o.date && o.day_of_week === dayName))) return true;
+        const matchesDate = o.date === dateStr || (!o.date && o.day_of_week === dayName);
+        if (!matchesDate) return false;
+        const occH = parseInt(o.time_slot.split(':')[0], 10);
+        return occH === slot.hour;
+      });
+
+      // Student existing appointment conflict check
+      const studentAppointments = this.studentScheduleData?.appointments || [];
+      const studentBookedClass = studentAppointments.find(a => {
+        if (a.status !== 'accepted' && a.status !== 'pending') return false;
+        const aDate = a.date || a.requested_date;
+        if (aDate !== dateStr) return false;
+        const aTime = a.time || a.requested_time || '';
+        return aTime.includes(slot.start) || aTime.startsWith(String(slot.hour).padStart(2, '0'));
+      });
+
+      // Intra-batch lesson conflict (another lesson in this current plan)
+      const anotherLessonConflict = this.selectedLessons.some((l, idx) => {
+        return idx !== this.activeLessonIndex && l.scheduled_date === dateStr && (l.scheduled_time === slot.key || (l.scheduled_time && l.scheduled_time.startsWith(slot.start)));
+      });
+
+      const isConflict = occState.occupied || isStudentSlotOccupied || !!studentBookedClass || anotherLessonConflict;
+
       const h = slot.hour;
       const ampm = h >= 12 ? 'PM' : 'AM';
       const h12 = h % 12 === 0 ? 12 : h % 12;
@@ -1170,7 +1264,7 @@ const StudentSub = {
       btn.className = 'booking-slot-btn';
 
       const isCurrentSelected = (this.selectedTime === slot.key);
-      if (isCurrentSelected && !occState.occupied) {
+      if (isCurrentSelected && !isConflict) {
         btn.classList.add('selected');
       }
 
@@ -1178,7 +1272,22 @@ const StudentSub = {
         btn.disabled = true;
         btn.classList.add('disabled', 'slot-occupied');
         btn.title = `${occState.reason || 'Unavailable'} — Tutor is unavailable at this time`;
-        btn.innerHTML = `<span>${displayLabel}</span><span style="display:inline-flex;align-items:center;gap:0.2rem;font-size:0.65rem;color:#EF4444;font-weight:700;">${Icons.ban(10)} ${occState.reason || 'Unavailable'}</span>`;
+        btn.innerHTML = `<span>${displayLabel}</span><span style="display:inline-flex;align-items:center;gap:0.2rem;font-size:0.65rem;color:#EF4444;font-weight:700;">${Icons.ban(10)} ${occState.reason || 'Tutor Busy'}</span>`;
+      } else if (isStudentSlotOccupied) {
+        btn.disabled = true;
+        btn.classList.add('disabled', 'slot-occupied');
+        btn.title = 'You marked this time slot as unavailable on your student calendar';
+        btn.innerHTML = `<span>${displayLabel}</span><span style="display:inline-flex;align-items:center;gap:0.2rem;font-size:0.65rem;color:#DC2626;font-weight:700;">${Icons.ban(10)} My Schedule Busy</span>`;
+      } else if (studentBookedClass) {
+        btn.disabled = true;
+        btn.classList.add('disabled', 'slot-occupied');
+        btn.title = `You already have a class scheduled (${studentBookedClass.subject} with ${studentBookedClass.tutor_name || 'Educator'}) at this time`;
+        btn.innerHTML = `<span>${displayLabel}</span><span style="display:inline-flex;align-items:center;gap:0.2rem;font-size:0.65rem;color:#DC2626;font-weight:700;">${Icons.calendar(10)} Booked Class</span>`;
+      } else if (anotherLessonConflict) {
+        btn.disabled = true;
+        btn.classList.add('disabled', 'slot-occupied');
+        btn.title = 'Another lesson in this package is already scheduled for this date and time';
+        btn.innerHTML = `<span>${displayLabel}</span><span style="display:inline-flex;align-items:center;gap:0.2rem;font-size:0.65rem;color:#D97706;font-weight:700;">${Icons.hourglass(10)} Selected in Plan</span>`;
       } else if (isUnder3Hours) {
         btn.disabled = true;
         btn.classList.add('disabled');

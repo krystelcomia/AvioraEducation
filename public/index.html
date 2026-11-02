@@ -2363,12 +2363,69 @@
         <div class="dash-section-box" id="student-schedule-section">
           <div class="dash-section-header">
             <div>
-              <h3><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: -2px; margin-right: 6px;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>Class Schedule &amp; Calendar</h3>
-              <p>Your chronological agenda of confirmed upcoming classes and pending appointments. Note: All classes are maximum 50 minutes of focused instruction.</p>
+              <h3><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: -2px; margin-right: 6px;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>Class Schedule &amp; Calendar Availability</h3>
+              <p>Manage your academic calendar, view booked sessions, and mark your unavailable dates and times so no schedule conflicts occur with educators or other subscriptions.</p>
+            </div>
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+              <span class="badge-gold">Strict Schedule Adherence Enabled</span>
             </div>
           </div>
-          <div class="schedule-list" id="student-schedule-container">
-            <!-- Populated dynamically via student.js -->
+
+          <!-- Student Interactive Calendar Card -->
+          <div class="student-calendar-card" style="margin-bottom: 1.5rem;">
+            <div class="student-calendar-header">
+              <div class="student-cal-nav-group">
+                <button type="button" class="btn btn-secondary btn-sm student-cal-nav-btn" id="student-cal-prev-btn" title="Previous Month">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                </button>
+                <h3 id="student-cal-month-title" class="student-cal-title">October 2026</h3>
+                <button type="button" class="btn btn-secondary btn-sm student-cal-nav-btn" id="student-cal-next-btn" title="Next Month">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                </button>
+                <button type="button" class="btn btn-outline-gold btn-sm" id="student-cal-today-btn" style="padding: 0.3rem 0.75rem; font-size: 0.8rem;">Today</button>
+              </div>
+              <div class="student-cal-hint">
+                <span style="font-size: 0.82rem; color: var(--gold-700); font-weight: 600; display: inline-flex; align-items: center; gap: 0.35rem;">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--gold-600);"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                  Click any date to mark unavailable hours or view scheduled lessons
+                </span>
+              </div>
+            </div>
+
+            <!-- Weekdays Header -->
+            <div class="student-cal-weekdays">
+              <div>Sun</div>
+              <div>Mon</div>
+              <div>Tue</div>
+              <div>Wed</div>
+              <div>Thu</div>
+              <div>Fri</div>
+              <div>Sat</div>
+            </div>
+
+            <!-- Days Grid -->
+            <div id="student-calendar-grid" class="student-cal-days-grid">
+              <!-- Populated via student.js -->
+            </div>
+          </div>
+
+          <!-- Selected Date Schedule & Availability Panel -->
+          <div id="student-date-schedule-panel" class="student-date-schedule-card" style="margin-bottom: 2rem;">
+            <!-- Populated via student.js -->
+          </div>
+
+          <!-- Agenda List of Upcoming Classes -->
+          <div style="margin-top: 2rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.85rem;">
+              <h4 style="font-size: 1.05rem; font-weight: 800; color: var(--charcoal-900); margin: 0; display: flex; align-items: center; gap: 0.45rem;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--gold-600);"><polyline points="9 11 12 14 22 4"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+                Upcoming Confirmed Lessons &amp; Agenda
+              </h4>
+              <span class="badge-gold" id="student-schedule-count-badge">0 Classes</span>
+            </div>
+            <div class="schedule-list" id="student-schedule-container">
+              <!-- Populated dynamically via student.js -->
+            </div>
           </div>
         </div>
 
@@ -2826,11 +2883,20 @@
             <div style="display: flex; align-items: center; gap: 0.35rem;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--gold-700);"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg> <strong>Payment:</strong> Upfront Verified</div>
           </div>
 
-          <div style="margin-top: 1.15rem; padding: 0.85rem 1.1rem; background: rgba(198, 138, 40, 0.08); border-left: 3px solid var(--gold-600); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; font-size: 0.84rem; color: var(--gold-900); line-height: 1.5; display: flex; align-items: flex-start; gap: 0.5rem;">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0; margin-top: 2px;"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+          <div style="margin-top: 1.15rem; padding: 0.85rem 1.1rem; background: rgba(16, 185, 129, 0.08); border-left: 3px solid #10B981; border-radius: 0 var(--radius-sm) var(--radius-sm) 0; font-size: 0.84rem; color: #065F46; line-height: 1.5; display: flex; align-items: flex-start; gap: 0.5rem;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0; margin-top: 2px; color: #10B981;"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
             <div>
-              <strong>Subscription Setup Notice:</strong> Individual lesson booking is temporarily paused while subscription setups are being adjusted. Once your current subscription cycle concludes, you can re-subscribe and select your preferred lessons.
+              <strong>Multiple Active Subscriptions Supported:</strong> You may subscribe to an additional plan at any time even while currently taking lessons. All classes are managed concurrently on your calendar, provided schedules adhere strictly to dates and times without conflict.
             </div>
+          </div>
+          
+          <!-- Container for multiple active concurrent subscriptions -->
+          <div id="sub-all-active-plans-wrap" style="display: none; margin-top: 1.25rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+              <span class="badge-gold" id="sub-active-plans-count-badge" style="font-weight: 800;">Concurrent Active Plans</span>
+              <span style="font-size: 0.8rem; color: var(--text-secondary);">All enrolled plans are active concurrently</span>
+            </div>
+            <div id="sub-all-active-plans-container" style="display: flex; flex-direction: column; gap: 0.85rem;"></div>
           </div>
         </div>
 

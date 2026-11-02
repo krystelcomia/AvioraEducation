@@ -286,6 +286,17 @@ function initSchema() {
       UNIQUE(tutor_id, date, day_of_week, time_slot)
     );
 
+    CREATE TABLE IF NOT EXISTS student_occupied_slots (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      student_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      day_of_week TEXT,
+      time_slot TEXT NOT NULL,
+      date TEXT,
+      reason TEXT DEFAULT 'Unavailable / Occupied',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(student_id, date, day_of_week, time_slot)
+    );
+
     -- Enforce case-insensitive uniqueness and relational indexes across the entire system
     CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email_nocase ON users(email COLLATE NOCASE);
     CREATE INDEX IF NOT EXISTS idx_student_profiles_user_id ON student_profiles(user_id);
@@ -296,6 +307,7 @@ function initSchema() {
     CREATE INDEX IF NOT EXISTS idx_tutor_tasks_tutor ON tutor_tasks(tutor_id);
     CREATE INDEX IF NOT EXISTS idx_tutor_tasks_student ON tutor_tasks(student_id);
     CREATE INDEX IF NOT EXISTS idx_tutor_occupied_tutor ON tutor_occupied_slots(tutor_id);
+    CREATE INDEX IF NOT EXISTS idx_student_occupied_student ON student_occupied_slots(student_id);
     CREATE INDEX IF NOT EXISTS idx_reviews_tutor ON reviews(tutor_id);
     CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id);
     CREATE INDEX IF NOT EXISTS idx_subscriptions_user ON student_subscriptions(user_id);
@@ -331,6 +343,12 @@ function initSchema() {
     const prefCols = db.prepare("PRAGMA table_info(user_preferences)").all();
     if (prefCols.length > 0 && !prefCols.some(c => c.name === 'font_size')) {
       db.prepare("ALTER TABLE user_preferences ADD COLUMN font_size TEXT DEFAULT 'normal'").run();
+    }
+  } catch (e) {}
+  try {
+    const studentCols = db.prepare("PRAGMA table_info(student_profiles)").all();
+    if (studentCols.length > 0 && !studentCols.some(c => c.name === 'availability_schedule')) {
+      db.prepare("ALTER TABLE student_profiles ADD COLUMN availability_schedule TEXT").run();
     }
   } catch (e) {}
   try {

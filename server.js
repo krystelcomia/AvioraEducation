@@ -409,43 +409,182 @@ function getTutorLiveAvailability(tutorUserId, rawSchedule) {
   };
 }
 
-function checkTutorSlotBookable(tutorUserId, requestedDate, requestedTime) {
-  if (!tutorUserId || !requestedDate) return { bookable: true };
-  const tp = db.prepare('SELECT availability_schedule FROM tutor_profiles WHERE user_id = ?').get(tutorUserId);
-  const ta = db.prepare('SELECT availability_schedule FROM teacher_applications WHERE user_id = ?').get(tutorUserId);
-  const live = getTutorLiveAvailability(tutorUserId, tp?.availability_schedule || ta?.availability_schedule);
-
-  const cleanDate = String(requestedDate).split('T')[0].trim();
-  if (live.unavailable_dates.includes(cleanDate)) {
+function getStudentLiveAvailability(studentId) {
+  if (!studentId) {
     return {
-      bookable: false,
-      error: `The selected date (${cleanDate}) is marked as Not Available / Date Occupied by the tutor. Please choose another date.`
+      availability_schedule: normalizeAvailabilitySchedule({}),
+      occupied_slots: [],
+      unavailable_dates: [],
+      booked_slots: []
     };
   }
 
-  if (requestedTime) {
-    const reqHour = parseHour24(requestedTime);
-    const dObj = new Date(cleanDate + 'T00:00:00');
-    const dayName = !isNaN(dObj.getTime()) ? WEEKDAY_NAMES[dObj.getDay()] : null;
+  let profile = null;
+  try {
+    profile = db.prepare('SELECT availability_schedule FROM student_profiles WHERE user_id = ?').get(studentId);
+  } catch (e) {
+    profile = null;
+  }
 
-    const isSlotOccupied = live.occupied_slots.some(o => {
+  const schedule = normalizeAvailabilitySchedule(profile?.availability_schedule);
+
+  let occupiedSlots = [];
+  try {
+    occupiedSlots = db.prepare(`
+      SELECT id, student_id, day_of_week, time_slot, date, reason
+      FROM student_occupied_slots
+      WHERE student_id = ?
+      ORDER BY date ASC, day_of_week ASC, time_slot ASC
+    `).all(studentId);
+  } catch (e) {
+    occupiedSlots = [];
+  }
+
+  let bookedSlots = [];
+  try {
+    bookedSlots = db.prepare(`
+      SELECT tr.id, tr.requested_date as date, tr.requested_time as time, tr.status, tr.subject, tr.tutor_id, u.name as tutor_name
+      FROM tutoring_requests tr
+      JOIN users u ON tr.tutor_id = u.id
+      WHERE tr.student_id = ? AND tr.status IN ('accepted', 'pending')
+      ORDER BY tr.requested_date ASC, tr.requested_time ASC
+    `).all(studentId);
+  } catch (e) {
+    bookedSlots = [];
+  }
+
+  const unavailableSet = new Set(schedule.unavailable_dates || []);
+  for (const [dKey, modeVal] of Object.entries(schedule.date_modes || {})) {
+    if (modeVal === 'unavailable') unavailableSet.add(dKey);
+  }
+
+  for (const o of occupiedSlots) {
+    if (o.date && o.time_slot === 'ALL_DAY') {
+      unavailableSet.add(o.date);
+    }
+  }
+
+  const unavailableDates = Array.from(unavailableSet).sort();
+  schedule.unavailable_dates = unavailableDates;
+
+  return {
+    availability_schedule: schedule,
+    occupied_slots: occupiedSlots,
+    unavailable_dates: unavailableDates,
+    booked_slots: bookedSlots
+  };
+}
+
+function checkScheduleConflict({ studentId = null, tutorUserId = null, requestedDate, requestedTime, excludeRequestId = null }) {
+  if (!requestedDate || !requestedTime) return { bookable: true, hasConflict: false };
+
+  const cleanDate = String(requestedDate).split('T')[0].trim();
+  const reqTimeClean = String(requestedTime).trim();
+  const reqHour = parseHour24(reqTimeClean);
+  const dObj = new Date(cleanDate + 'T00:00:00');
+  const dayName = !isNaN(dObj.getTime()) ? WEEKDAY_NAMES[dObj.getDay()] : null;
+
+  // 1. TEACHER CONFLICT CHECKS
+  if (tutorUserId) {
+    const tp = db.prepare('SELECT availability_schedule FROM tutor_profiles WHERE user_id = ?').get(tutorUserId);
+    const ta = db.prepare('SELECT availability_schedule FROM teacher_applications WHERE user_id = ?').get(tutorUserId);
+    const tutorUser = db.prepare('SELECT name FROM users WHERE id = ?').get(tutorUserId);
+    const tutorName = tutorUser?.name || 'Educator';
+    const live = getTutorLiveAvailability(tutorUserId, tp?.availability_schedule || ta?.availability_schedule);
+
+    if (live.unavailable_dates.includes(cleanDate)) {
+      return {
+        bookable: false,
+        hasConflict: true,
+        error: `Schedule Conflict: ${tutorName} has marked ${cleanDate} as unavailable / occupied on their calendar. Please choose another date.`
+      };
+    }
+
+    const isTutorSlotOccupied = live.occupied_slots.some(o => {
       const matchesDate = o.date === cleanDate || (!o.date && dayName && o.day_of_week === dayName);
       if (!matchesDate) return false;
       if (o.time_slot === 'ALL_DAY') return true;
       const occHour = parseHour24(o.time_slot);
       if (reqHour !== null && occHour !== null) return reqHour === occHour;
-      return String(o.time_slot).trim().toLowerCase() === String(requestedTime).trim().toLowerCase();
+      return String(o.time_slot).trim().toLowerCase() === reqTimeClean.toLowerCase();
     });
 
-    if (isSlotOccupied) {
+    if (isTutorSlotOccupied) {
       return {
         bookable: false,
-        error: `The time slot (${requestedTime}) on ${cleanDate} is marked as unavailable/occupied by the tutor. Please choose an available time slot.`
+        hasConflict: true,
+        error: `Schedule Conflict: ${tutorName} is unavailable at ${reqTimeClean} on ${cleanDate}. Please choose an open time slot.`
+      };
+    }
+
+    const tutorClassConflict = live.booked_slots.find(b => {
+      if (excludeRequestId && b.id == excludeRequestId) return false;
+      if (b.date !== cleanDate) return false;
+      const bHour = parseHour24(b.time);
+      if (reqHour !== null && bHour !== null) return reqHour === bHour;
+      return String(b.time).trim().toLowerCase() === reqTimeClean.toLowerCase();
+    });
+
+    if (tutorClassConflict) {
+      return {
+        bookable: false,
+        hasConflict: true,
+        error: `Schedule Conflict: ${tutorName} already has another class scheduled on ${cleanDate} at ${reqTimeClean}. Please choose a different time.`
       };
     }
   }
 
-  return { bookable: true };
+  // 2. STUDENT CONFLICT CHECKS
+  if (studentId) {
+    const sLive = getStudentLiveAvailability(studentId);
+
+    if (sLive.unavailable_dates.includes(cleanDate)) {
+      return {
+        bookable: false,
+        hasConflict: true,
+        error: `Schedule Conflict: You marked ${cleanDate} as unavailable on your calendar. Please choose an open date or adjust your calendar availability.`
+      };
+    }
+
+    const isStudentSlotOccupied = sLive.occupied_slots.some(o => {
+      const matchesDate = o.date === cleanDate || (!o.date && dayName && o.day_of_week === dayName);
+      if (!matchesDate) return false;
+      if (o.time_slot === 'ALL_DAY') return true;
+      const occHour = parseHour24(o.time_slot);
+      if (reqHour !== null && occHour !== null) return reqHour === occHour;
+      return String(o.time_slot).trim().toLowerCase() === reqTimeClean.toLowerCase();
+    });
+
+    if (isStudentSlotOccupied) {
+      return {
+        bookable: false,
+        hasConflict: true,
+        error: `Schedule Conflict: You marked ${reqTimeClean} on ${cleanDate} as unavailable on your student calendar. Please choose another time slot.`
+      };
+    }
+
+    const studentClassConflict = sLive.booked_slots.find(b => {
+      if (excludeRequestId && b.id == excludeRequestId) return false;
+      if (b.date !== cleanDate) return false;
+      const bHour = parseHour24(b.time);
+      if (reqHour !== null && bHour !== null) return reqHour === bHour;
+      return String(b.time).trim().toLowerCase() === reqTimeClean.toLowerCase();
+    });
+
+    if (studentClassConflict) {
+      return {
+        bookable: false,
+        hasConflict: true,
+        error: `Schedule Conflict: You already have a scheduled class (${studentClassConflict.subject || "Lesson"} with ${studentClassConflict.tutor_name || "an educator"}) on ${cleanDate} at ${reqTimeClean}.`
+      };
+    }
+  }
+
+  return { bookable: true, hasConflict: false };
+}
+
+function checkTutorSlotBookable(tutorUserId, requestedDate, requestedTime, studentId = null) {
+  return checkScheduleConflict({ studentId, tutorUserId, requestedDate, requestedTime });
 }
 
 // NOTIFICATION PREFERENCE FILTERS & DELIVERY
@@ -2724,12 +2863,13 @@ app.get('/api/student/subscription', authenticateToken, requireRole('student'), 
   try {
     const studentId = req.user.id;
 
-    // Check active subscription
-    const activeSub = db.prepare(`
+    // Check all active subscriptions (supports multiple concurrent plans)
+    const activeSubs = db.prepare(`
       SELECT * FROM student_subscriptions
       WHERE user_id = ? AND status = 'active'
-      ORDER BY id DESC LIMIT 1
-    `).get(studentId);
+      ORDER BY id DESC
+    `).all(studentId);
+    const activeSub = activeSubs[0] || null;
 
     // Check if trial was ever used
     const trialRow = db.prepare(`
@@ -2780,21 +2920,22 @@ app.get('/api/student/subscription', authenticateToken, requireRole('student'), 
       ORDER BY session_count DESC
     `).all(studentId);
 
-    // Formatted active sub details
-    let subscriptionData = null;
-    if (activeSub) {
+    // Formatted active sub details (supporting multi-plan concurrent subscriptions)
+    const formattedActiveSubs = activeSubs.map(sub => {
       const now = new Date();
-      const expDate = new Date(activeSub.expires_at);
+      const expDate = new Date(sub.expires_at);
       const diffMs = expDate - now;
       const daysRemaining = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
 
-      subscriptionData = {
-        ...activeSub,
+      return {
+        ...sub,
         days_remaining: daysRemaining,
         formatted_expires_at: expDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
-        formatted_purchase_date: new Date(activeSub.purchase_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+        formatted_purchase_date: new Date(sub.purchase_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
       };
-    }
+    });
+
+    const subscriptionData = formattedActiveSubs[0] || null;
 
     // Default subjects fallback if student has few sessions
     let mostStudiedSubjects = subjectRows;
@@ -2893,6 +3034,7 @@ app.get('/api/student/subscription', authenticateToken, requireRole('student'), 
 
     res.json({
       activeSubscription: subscriptionData,
+      activeSubscriptions: formattedActiveSubs,
       totalSpending: Math.max(totalSpending, 0.00),
       trialUsed,
       mostStudiedSubjects,
@@ -2960,6 +3102,22 @@ app.post('/api/student/subscription/purchase', authenticateToken, requireRole('s
       let totalCalculatedPrice = 0;
       const validatedLessons = [];
 
+      // Validate no intra-batch duplicate time slot conflicts within this purchase
+      const batchSlotsMap = new Map();
+      for (let i = 0; i < lessons.length; i++) {
+        const item = lessons[i];
+        if (item.scheduled_date && item.scheduled_time) {
+          const key = `${item.scheduled_date}_${item.scheduled_time}`;
+          if (batchSlotsMap.has(key)) {
+            const firstIdx = batchSlotsMap.get(key);
+            return res.status(400).json({
+              error: `Schedule Conflict: Lesson ${i + 1} and Lesson ${firstIdx + 1} are set to the exact same date and time (${item.scheduled_date} at ${item.scheduled_time}). Please assign each lesson a distinct time slot.`
+            });
+          }
+          batchSlotsMap.set(key, i);
+        }
+      }
+
       for (let i = 0; i < lessons.length; i++) {
         const item = lessons[i];
         if (!item.tutor_id) {
@@ -2982,9 +3140,14 @@ app.post('/api/student/subscription/purchase', authenticateToken, requireRole('s
           return res.status(400).json({ error: `Educator for Lesson ${i + 1} is not active.` });
         }
 
-        const slotCheck = checkTutorSlotBookable(tProf.user_id, item.scheduled_date, item.scheduled_time);
-        if (!slotCheck.bookable) {
-          return res.status(400).json({ error: `Lesson ${i + 1}: ${slotCheck.error}` });
+        const conflictCheck = checkScheduleConflict({
+          studentId,
+          tutorUserId: tProf.user_id,
+          requestedDate: item.scheduled_date,
+          requestedTime: item.scheduled_time
+        });
+        if (conflictCheck.hasConflict) {
+          return res.status(400).json({ error: `Lesson ${i + 1}: ${conflictCheck.error}` });
         }
 
         // 3-hour notice check
@@ -3064,8 +3227,7 @@ app.post('/api/student/subscription/purchase', authenticateToken, requireRole('s
         );
       }
 
-      // Deactivate previous active subscription if exists
-      db.prepare("UPDATE student_subscriptions SET status = 'exhausted' WHERE user_id = ? AND status = 'active'").run(studentId);
+      // Multi-Plan Support: Active subscriptions remain concurrent and active! Previous plans are NOT deactivated.
 
       // Insert new subscription
       const insertSub = db.prepare(`
@@ -3200,8 +3362,7 @@ app.post('/api/student/subscription/purchase', authenticateToken, requireRole('s
       );
     }
 
-    // Deactivate previous active subscription if exists
-    db.prepare("UPDATE student_subscriptions SET status = 'exhausted' WHERE user_id = ? AND status = 'active'").run(studentId);
+    // Multi-Plan Support: Active subscriptions remain concurrent and active! Previous plans are NOT deactivated.
 
     // Dynamic price calculation if tutor chosen
     const calculatedPrice = (!selectedPkg.is_trial && tutorProfile?.hourly_rate) 
@@ -3277,8 +3438,13 @@ app.post('/api/student/requests', authenticateToken, requireRole('student'), (re
       return res.status(400).json({ error: 'Selected tutor is not currently accepting requests.' });
     }
 
-    const slotCheck = checkTutorSlotBookable(tutor_user_id, requested_date, requested_time);
-    if (!slotCheck.bookable) {
+    const slotCheck = checkScheduleConflict({
+      studentId,
+      tutorUserId: tutor_user_id,
+      requestedDate: requested_date,
+      requestedTime: requested_time
+    });
+    if (slotCheck.hasConflict) {
       return res.status(400).json({ error: slotCheck.error });
     }
 
@@ -4953,6 +5119,16 @@ app.post('/api/teacher/requests/:id/status', authenticateToken, requireRole('tea
     if (rawAction === 'start_class') {
       defaultActionNote = `Action: Start Virtual Class (${finalDate} at ${finalTime})`;
     } else if (scheduleChanged && finalStatus === 'accepted') {
+      const conflictCheck = checkScheduleConflict({
+        studentId: request.student_id,
+        tutorUserId: teacherId,
+        requestedDate: finalDate,
+        requestedTime: finalTime,
+        excludeRequestId: requestId
+      });
+      if (conflictCheck.hasConflict) {
+        return res.status(400).json({ error: conflictCheck.error });
+      }
       defaultActionNote = `Action: Rescheduled to ${finalDate} at ${finalTime}`;
     } else if (finalStatus === 'accepted') {
       defaultActionNote = `Action: Accepted — Scheduled for ${finalDate} at ${finalTime}`;
@@ -6587,7 +6763,136 @@ app.post('/api/admin/buddy-sessions/:id/schedule', authenticateToken, requireRol
 });
 
 // ==========================================
-// NOTIFICATIONS
+// STUDENT CALENDAR & SCHEDULE AVAILABILITY API
+// ==========================================
+
+// Get student's live availability, appointments, and occupied slots
+app.get('/api/student/schedule/calendar', authenticateToken, requireRole('student'), (req, res) => {
+  try {
+    const studentId = req.user.id;
+    const live = getStudentLiveAvailability(studentId);
+    res.json({
+      availabilitySchedule: live.availability_schedule,
+      occupiedSlots: live.occupied_slots,
+      unavailableDates: live.unavailable_dates,
+      appointments: live.booked_slots
+    });
+  } catch (error) {
+    console.error('Student schedule calendar error:', error);
+    res.status(500).json({ error: 'Failed to load student calendar schedule.' });
+  }
+});
+
+// Student marks full date availability (normal vs date_occupied) or adds personal date notes
+app.post('/api/student/schedule/set-day-availability', authenticateToken, requireRole('student'), (req, res) => {
+  try {
+    const studentId = req.user.id;
+    const { date, mode, note, hours } = req.body;
+    if (!date) return res.status(400).json({ error: 'Date is required.' });
+
+    let profile = db.prepare('SELECT id, availability_schedule FROM student_profiles WHERE user_id = ?').get(studentId);
+    if (!profile) {
+      db.prepare('INSERT INTO student_profiles (user_id) VALUES (?)').run(studentId);
+      profile = db.prepare('SELECT id, availability_schedule FROM student_profiles WHERE user_id = ?').get(studentId);
+    }
+
+    const schedule = normalizeAvailabilitySchedule(profile?.availability_schedule);
+    if (!Array.isArray(schedule.unavailable_dates)) schedule.unavailable_dates = [];
+    if (!schedule.date_modes) schedule.date_modes = {};
+    if (!schedule.date_notes) schedule.date_notes = {};
+    if (!schedule.date_hours) schedule.date_hours = {};
+
+    if (note !== undefined) {
+      if (String(note).trim()) {
+        schedule.date_notes[date] = String(note).trim();
+      } else {
+        delete schedule.date_notes[date];
+      }
+    }
+
+    if (mode === 'normal' || mode === 'available') {
+      schedule.unavailable_dates = schedule.unavailable_dates.filter(d => d !== date);
+      delete schedule.date_modes[date];
+      db.prepare("DELETE FROM student_occupied_slots WHERE student_id = ? AND date = ? AND time_slot = 'ALL_DAY'").run(studentId, date);
+    } else if (mode === 'date_occupied' || mode === 'unavailable') {
+      if (!schedule.unavailable_dates.includes(date)) {
+        schedule.unavailable_dates.push(date);
+      }
+      schedule.date_modes[date] = 'unavailable';
+      const dObj = new Date(date + 'T00:00:00');
+      const dayName = !isNaN(dObj.getTime()) ? WEEKDAY_NAMES[dObj.getDay()] : 'Monday';
+      db.prepare(`
+        INSERT OR IGNORE INTO student_occupied_slots (student_id, day_of_week, time_slot, date, reason)
+        VALUES (?, ?, 'ALL_DAY', ?, 'Unavailable / Occupied')
+      `).run(studentId, dayName, date);
+    }
+
+    if (Array.isArray(hours)) {
+      schedule.date_hours[date] = hours;
+    }
+
+    const jsonStr = JSON.stringify(schedule);
+    db.prepare('UPDATE student_profiles SET availability_schedule = ?, updated_at = CURRENT_TIMESTAMP WHERE user_id = ?').run(jsonStr, studentId);
+
+    const live = getStudentLiveAvailability(studentId);
+    res.json({
+      message: mode === 'date_occupied' || mode === 'unavailable' 
+        ? `${date} is now marked as Unavailable on your calendar.`
+        : `${date} is now marked as Available on your calendar.`,
+      availabilitySchedule: live.availability_schedule,
+      unavailableDates: live.unavailable_dates,
+      occupiedSlots: live.occupied_slots
+    });
+  } catch (error) {
+    console.error('Student set day availability error:', error);
+    res.status(500).json({ error: 'Failed to update student day availability: ' + error.message });
+  }
+});
+
+// Student toggles an individual time slot as occupied/unavailable vs available
+app.post('/api/student/schedule/toggle-slot', authenticateToken, requireRole('student'), (req, res) => {
+  try {
+    const studentId = req.user.id;
+    const { date, time_slot, reason } = req.body;
+    if (!time_slot) return res.status(400).json({ error: 'Time slot is required.' });
+
+    const cleanDate = date ? String(date).split('T')[0].trim() : null;
+    const dObj = cleanDate ? new Date(cleanDate + 'T00:00:00') : null;
+    const dayName = dObj && !isNaN(dObj.getTime()) ? WEEKDAY_NAMES[dObj.getDay()] : null;
+
+    const existing = db.prepare(`
+      SELECT id FROM student_occupied_slots
+      WHERE student_id = ? AND time_slot = ? AND date IS ?
+    `).get(studentId, time_slot, cleanDate);
+
+    if (existing) {
+      db.prepare('DELETE FROM student_occupied_slots WHERE id = ?').run(existing.id);
+      const live = getStudentLiveAvailability(studentId);
+      return res.json({
+        message: `Time slot ${time_slot} is now marked Available.`,
+        isOccupied: false,
+        occupiedSlots: live.occupied_slots
+      });
+    } else {
+      db.prepare(`
+        INSERT INTO student_occupied_slots (student_id, day_of_week, time_slot, date, reason)
+        VALUES (?, ?, ?, ?, ?)
+      `).run(studentId, dayName, time_slot, cleanDate, reason || 'Unavailable / Occupied');
+      const live = getStudentLiveAvailability(studentId);
+      return res.json({
+        message: `Time slot ${time_slot} is now marked Unavailable on your calendar.`,
+        isOccupied: true,
+        occupiedSlots: live.occupied_slots
+      });
+    }
+  } catch (error) {
+    console.error('Student toggle slot error:', error);
+    res.status(500).json({ error: 'Failed to toggle time slot: ' + error.message });
+  }
+});
+
+// ==========================================
+// NOTIFICATIONS API
 // ==========================================
 
 app.get('/api/notifications', authenticateToken, (req, res) => {

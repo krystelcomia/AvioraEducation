@@ -37,6 +37,7 @@ function initSchema() {
       phone TEXT,
       avatar_url TEXT,
       wallet_balance REAL DEFAULT 0.00,
+      wallet_tutor_id INTEGER REFERENCES users(id),
       status TEXT DEFAULT 'active' CHECK(status IN ('active', 'inactive', 'suspended')),
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
@@ -307,6 +308,9 @@ function initSchema() {
       db.prepare("ALTER TABLE users ADD COLUMN wallet_balance REAL DEFAULT 0.00").run();
     }
     db.prepare("UPDATE users SET wallet_balance = 0.00 WHERE wallet_balance IS NULL").run();
+    if (!userCols.some(c => c.name === 'wallet_tutor_id')) {
+      db.prepare("ALTER TABLE users ADD COLUMN wallet_tutor_id INTEGER REFERENCES users(id)").run();
+    }
   } catch (e) {}
   try {
     db.prepare("ALTER TABLE users ADD COLUMN auth_provider TEXT DEFAULT 'local'").run();

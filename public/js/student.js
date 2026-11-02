@@ -852,8 +852,9 @@ const Student = {
     }
 
     const sessionCost = session ? (parseFloat(session.total_amount) || (parseFloat(session.hourly_rate) * (parseFloat(session.duration_hours) || 1.0))) : 0;
+    const tutorName = session ? (session.tutor_name || 'this tutor') : 'this tutor';
     const refundNote = sessionCost > 0
-      ? ` The session fee of ${sessionCost.toFixed(2)} will be credited back to your Aviora wallet for future bookings (non-withdrawable).`
+      ? ` The session fee of ${sessionCost.toFixed(2)} will be credited back to your Aviora wallet to rebook a new lesson with ${tutorName}.`
       : '';
 
     showConfirm(
@@ -863,8 +864,9 @@ const Student = {
         try {
           const res = await API.cancelRequest(requestId);
           showToast(res.message, 'success');
+          const walletTutor = res.wallet_tutor || (session ? { id: session.tutor_id, name: session.tutor_name } : null);
           if (typeof res.new_wallet_balance !== 'undefined' && typeof Auth !== 'undefined' && Auth.updateWalletBalance) {
-            Auth.updateWalletBalance(res.new_wallet_balance);
+            Auth.updateWalletBalance(res.new_wallet_balance, walletTutor);
           } else if (typeof Auth !== 'undefined' && Auth.refreshWallet) {
             await Auth.refreshWallet();
           }

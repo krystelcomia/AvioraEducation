@@ -124,14 +124,26 @@
                   <span class="wallet-balance-label">Lesson Credit:</span>
                   <span class="wallet-balance-val" id="wallet-dropdown-balance">$0.00</span>
                 </div>
-                <p class="wallet-dropdown-note">
-                  If you cancel a lesson (at least 3 hours before start time), the cost is refunded to your wallet. While the refunded amount is visible here, it cannot be withdrawn; instead, it can be used to book another lesson of the same value.
+                <div id="wallet-tutor-banner" style="display: none; background: rgba(198, 138, 40, 0.1); border: 1.5px solid var(--gold-500); border-radius: 8px; padding: 0.65rem 0.85rem; margin-bottom: 0.75rem;">
+                  <div style="font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--gold-800); font-weight: 800;">
+                    Eligible Rebooking Tutor
+                  </div>
+                  <div style="display: flex; align-items: center; gap: 0.45rem; margin-top: 0.3rem;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--gold-600);"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                    <strong style="color: var(--charcoal-900); font-size: 0.86rem;" id="wallet-tutor-name">-</strong>
+                  </div>
+                  <div style="font-size: 0.73rem; color: var(--charcoal-700); margin-top: 0.2rem; line-height: 1.4;">
+                    This credited amount can only be used to book a new lesson with this same tutor.
+                  </div>
+                </div>
+                <p class="wallet-dropdown-note" id="wallet-dropdown-note">
+                  If you cancel a lesson (at least 3 hours before start time), the cost is refunded to your wallet. While the refunded amount is visible here, it cannot be withdrawn; instead, it can be used to book another lesson with the same tutor.
                 </p>
               </div>
               <div class="wallet-dropdown-footer">
-                <a href="#tutors" class="btn btn-outline-gold btn-sm" style="width: 100%; text-align: center; justify-content: center; font-weight: 700; text-decoration: none;" onclick="const d = document.getElementById('nav-wallet-dropdown'); if (d) d.style.display='none';">
-                  Book Another Lesson
-                </a>
+                <button type="button" class="btn btn-outline-gold btn-sm" id="wallet-book-btn" style="width: 100%; text-align: center; justify-content: center; font-weight: 700; opacity: 0.55; cursor: not-allowed;" disabled onclick="Auth.bookWithWalletTutor()">
+                  Book Another Lesson (Requires Balance)
+                </button>
               </div>
             </div>
           </div>

@@ -526,9 +526,9 @@ function authenticateToken(req, res, next) {
       return res.status(403).json({ error: 'Session expired or invalid token. Please log in again.' });
     }
 
-    let user = db.prepare('SELECT id, name, email, role, phone, avatar_url, status, wallet_balance FROM users WHERE id = ?').get(decoded.id);
+    let user = db.prepare('SELECT id, name, email, role, phone, avatar_url, status, wallet_balance, wallet_tutor_id FROM users WHERE id = ?').get(decoded.id);
     if (!user && decoded.email) {
-      user = db.prepare('SELECT id, name, email, role, phone, avatar_url, status, wallet_balance FROM users WHERE LOWER(email) = LOWER(?)').get(decoded.email);
+      user = db.prepare('SELECT id, name, email, role, phone, avatar_url, status, wallet_balance, wallet_tutor_id FROM users WHERE LOWER(email) = LOWER(?)').get(decoded.email);
     }
     if (!user) {
       return res.status(404).json({ error: 'User account not found.' });
@@ -681,6 +681,13 @@ app.post('/api/auth/register', (req, res) => {
       avatar_url: defaultAvatar,
       status: 'active'
     };
+
+    let remainingTutorInfo = null;
+    const finalUser = db.prepare('SELECT wallet_balance, wallet_tutor_id FROM users WHERE id = ?').get(studentId);
+    if (finalUser && finalUser.wallet_tutor_id && (parseFloat(finalUser.wallet_balance) || 0) > 0) {
+      const rt = db.prepare('SELECT id, name, avatar_url FROM users WHERE id = ?').get(finalUser.wallet_tutor_id);
+      if (rt) remainingTutorInfo = { id: rt.id, name: rt.name, avatar_url: rt.avatar_url };
+    }
 
     return res.status(201).json({
       message: 'Account successfully registered.',
@@ -2671,12 +2678,39 @@ app.get('/api/student/dashboard', authenticateToken, requireRole('student'), (re
 // Student Wallet Balance (non-withdrawable lesson credits)
 app.get('/api/student/wallet', authenticateToken, requireRole('student'), (req, res) => {
   try {
-    const student = db.prepare('SELECT wallet_balance FROM users WHERE id = ?').get(req.user.id);
+    const student = db.prepare('SELECT wallet_balance, wallet_tutor_id FROM users WHERE id = ?').get(req.user.id);
     const balance = student ? (parseFloat(student.wallet_balance) || 0) : 0;
+    let tutorInfo = null;
+    let tutorId = student ? student.wallet_tutor_id : null;
+
+    if (!tutorId && balance > 0) {
+      const lastCancelled = db.prepare(`
+        SELECT tutor_id FROM tutoring_requests 
+        WHERE student_id = ? AND status = 'cancelled'
+        ORDER BY updated_at DESC, id DESC LIMIT 1
+      `).get(req.user.id);
+      if (lastCancelled) {
+        tutorId = lastCancelled.tutor_id;
+        db.prepare('UPDATE users SET wallet_tutor_id = ? WHERE id = ?').run(tutorId, req.user.id);
+      }
+    }
+
+    if (tutorId) {
+      const tUser = db.prepare('SELECT id, name, avatar_url FROM users WHERE id = ?').get(tutorId);
+      if (tUser) {
+        tutorInfo = {
+          id: tUser.id,
+          name: tUser.name,
+          avatar_url: tUser.avatar_url
+        };
+      }
+    }
+
     res.json({
       wallet_balance: balance,
       formatted_balance: `${balance.toFixed(2)}`,
       withdrawable: false,
+      wallet_tutor: tutorInfo,
       currency: 'USD'
     });
   } catch (error) {
@@ -3274,16 +3308,48 @@ app.post('/api/student/requests', authenticateToken, requireRole('student'), (re
 
       remainingCreditsAfter = newRemaining;
     } else if (finalPaymentMethod === 'wallet') {
-      const studentUser = db.prepare('SELECT wallet_balance FROM users WHERE id = ?').get(studentId);
+      const studentUser = db.prepare('SELECT wallet_balance, wallet_tutor_id FROM users WHERE id = ?').get(studentId);
       const currentWallet = studentUser ? (parseFloat(studentUser.wallet_balance) || 0) : 0;
+
+      if (currentWallet <= 0) {
+        return res.status(400).json({
+          error: 'A new lesson can only be booked if there is a balance available in your wallet.'
+        });
+      }
+
+      // The new lesson must be with the same tutor whose previous session was cancelled
+      let eligibleTutorId = studentUser ? studentUser.wallet_tutor_id : null;
+      if (!eligibleTutorId) {
+        const lastCancelled = db.prepare(`
+          SELECT tutor_id FROM tutoring_requests 
+          WHERE student_id = ? AND status = 'cancelled'
+          ORDER BY updated_at DESC, id DESC LIMIT 1
+        `).get(studentId);
+        if (lastCancelled) {
+          eligibleTutorId = lastCancelled.tutor_id;
+        }
+      }
+
+      if (eligibleTutorId && parseInt(tutor_user_id) !== parseInt(eligibleTutorId)) {
+        const lockedTutor = db.prepare('SELECT name FROM users WHERE id = ?').get(eligibleTutorId);
+        const lockedName = lockedTutor ? lockedTutor.name : 'the original tutor';
+        return res.status(400).json({
+          error: `Your wallet credit can only be used to rebook with ${lockedName}, whose previous session was cancelled.`
+        });
+      }
+
       if (currentWallet < calculatedAmount) {
         return res.status(400).json({
-          error: `Insufficient wallet balance (${currentWallet.toFixed(2)} available). This lesson costs ${calculatedAmount.toFixed(2)}. Please choose another payment method.`
+          error: `Insufficient wallet balance ($${currentWallet.toFixed(2)} available). This lesson costs $${calculatedAmount.toFixed(2)}. Please choose another payment method.`
         });
       }
 
       const newBalance = Math.round((currentWallet - calculatedAmount) * 100) / 100;
-      db.prepare('UPDATE users SET wallet_balance = ? WHERE id = ?').run(newBalance, studentId);
+      if (newBalance <= 0) {
+        db.prepare('UPDATE users SET wallet_balance = 0.00, wallet_tutor_id = NULL WHERE id = ?').run(studentId);
+      } else {
+        db.prepare('UPDATE users SET wallet_balance = ?, wallet_tutor_id = ? WHERE id = ?').run(newBalance, eligibleTutorId || tutor_user_id, studentId);
+      }
     }
 
     const insert = db.prepare(`
@@ -3340,7 +3406,8 @@ app.post('/api/student/requests', authenticateToken, requireRole('student'), (re
       requestId: result.lastInsertRowid,
       paymentMethod: finalPaymentMethod,
       remainingLessons: remainingCreditsAfter,
-      new_wallet_balance: updatedWalletBal
+      new_wallet_balance: updatedWalletBal,
+      wallet_tutor: remainingTutorInfo
     });
   } catch (error) {
     console.error('Create tutoring request error:', error);
@@ -3402,9 +3469,10 @@ app.post('/api/student/requests/:id/cancel', authenticateToken, requireRole('stu
       if (refundAmount > 0) {
         db.prepare(`
           UPDATE users 
-          SET wallet_balance = ROUND(COALESCE(wallet_balance, 0) + ?, 2)
+          SET wallet_balance = ROUND(COALESCE(wallet_balance, 0) + ?, 2),
+              wallet_tutor_id = ?
           WHERE id = ?
-        `).run(refundAmount, studentId);
+        `).run(refundAmount, request.tutor_id, studentId);
       }
     }
 
@@ -3439,12 +3507,19 @@ app.post('/api/student/requests/:id/cancel', authenticateToken, requireRole('stu
       );
     }
 
+    let tutorInfo = null;
+    const tUser = db.prepare('SELECT id, name, avatar_url FROM users WHERE id = ?').get(request.tutor_id);
+    if (tUser) {
+      tutorInfo = { id: tUser.id, name: tUser.name, avatar_url: tUser.avatar_url };
+    }
+
     res.json({
       message: refundAmount > 0
         ? `Booking cancelled successfully. ${refundAmount.toFixed(2)} has been credited back to your Aviora wallet (non-withdrawable lesson credit).`
         : 'Booking cancelled successfully and your lesson credit has been restored.',
       refunded_amount: refundAmount,
-      new_wallet_balance: newBalance
+      new_wallet_balance: newBalance,
+      wallet_tutor: tutorInfo
     });
   } catch (error) {
     console.error('Cancel request error:', error);

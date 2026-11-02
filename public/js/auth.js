@@ -1194,13 +1194,27 @@ const Auth = {
   },
 
 
-  updateWalletBalance(balance) {
+  walletTutor: null,
+
+  updateWalletBalance(balance, tutorInfo) {
     const num = parseFloat(balance) || 0;
     const formatted = `${num.toFixed(2)}`;
     if (this.currentUser) {
       this.currentUser.wallet_balance = num;
+      if (tutorInfo && tutorInfo.id) {
+        this.currentUser.wallet_tutor_id = tutorInfo.id;
+      } else if (num <= 0) {
+        this.currentUser.wallet_tutor_id = null;
+      }
       Storage.setUser(this.currentUser);
     }
+
+    if (tutorInfo) {
+      this.walletTutor = tutorInfo;
+    } else if (num <= 0) {
+      this.walletTutor = null;
+    }
+
     const navBal = document.getElementById('nav-wallet-balance');
     if (navBal) navBal.textContent = formatted;
     const dropBal = document.getElementById('wallet-dropdown-balance');
@@ -1209,6 +1223,56 @@ const Auth = {
     if (payBal) payBal.textContent = formatted;
     const pagePayBal = document.getElementById('page-pay-wallet-balance');
     if (pagePayBal) pagePayBal.textContent = formatted;
+
+    const bookBtn = document.getElementById('wallet-book-btn');
+    const tutorBanner = document.getElementById('wallet-tutor-banner');
+    const tutorNameEl = document.getElementById('wallet-tutor-name');
+
+    if (bookBtn) {
+      if (num <= 0) {
+        bookBtn.disabled = true;
+        bookBtn.style.opacity = '0.55';
+        bookBtn.style.cursor = 'not-allowed';
+        bookBtn.textContent = 'Book Another Lesson (Requires Balance)';
+      } else {
+        bookBtn.disabled = false;
+        bookBtn.style.opacity = '1';
+        bookBtn.style.cursor = 'pointer';
+        const tName = this.walletTutor ? this.walletTutor.name : '';
+        bookBtn.textContent = tName ? `Book Lesson with ${tName}` : 'Book Another Lesson';
+      }
+    }
+
+    if (tutorBanner && tutorNameEl) {
+      if (num > 0 && this.walletTutor && this.walletTutor.name) {
+        tutorBanner.style.display = 'block';
+        tutorNameEl.textContent = this.walletTutor.name;
+      } else {
+        tutorBanner.style.display = 'none';
+      }
+    }
+  },
+
+  bookWithWalletTutor() {
+    const user = this.currentUser;
+    const balance = user ? (parseFloat(user.wallet_balance) || 0) : 0;
+    if (balance <= 0) {
+      showToast('A new lesson can only be booked if there is a balance available.', 'warning');
+      return;
+    }
+    const tutorId = this.walletTutor?.id || user?.wallet_tutor_id;
+    if (!tutorId) {
+      showToast('A new lesson can only be booked with the same tutor whose previous session was cancelled.', 'warning');
+      return;
+    }
+    const dropdown = document.getElementById('nav-wallet-dropdown');
+    if (dropdown) dropdown.style.display = 'none';
+
+    if (typeof Tutors !== 'undefined' && Tutors.openBookingModal) {
+      Tutors.openBookingModal(tutorId);
+    } else {
+      window.location.hash = '#tutors';
+    }
   },
 
   async refreshWallet() {
@@ -1217,7 +1281,7 @@ const Auth = {
       if (typeof API !== 'undefined' && API.getStudentWallet) {
         const data = await API.getStudentWallet();
         if (data && typeof data.wallet_balance !== 'undefined') {
-          this.updateWalletBalance(data.wallet_balance);
+          this.updateWalletBalance(data.wallet_balance, data.wallet_tutor || null);
         }
       }
     } catch (e) {
@@ -1298,14 +1362,26 @@ const Auth = {
                   <span class="wallet-balance-label">Lesson Credit:</span>
                   <span class="wallet-balance-val" id="wallet-dropdown-balance">${walletBalance}</span>
                 </div>
+                <div id="wallet-tutor-banner" style="display: none; background: rgba(198, 138, 40, 0.1); border: 1.5px solid var(--gold-500); border-radius: 8px; padding: 0.65rem 0.85rem; margin-bottom: 0.75rem;">
+                  <div style="font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--gold-800); font-weight: 800;">
+                    Eligible Rebooking Tutor
+                  </div>
+                  <div style="display: flex; align-items: center; gap: 0.45rem; margin-top: 0.3rem;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--gold-600);"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                    <strong style="color: var(--charcoal-900); font-size: 0.86rem;" id="wallet-tutor-name">-</strong>
+                  </div>
+                  <div style="font-size: 0.73rem; color: var(--charcoal-700); margin-top: 0.2rem; line-height: 1.4;">
+                    This credited amount can only be used to book a new lesson with this same tutor.
+                  </div>
+                </div>
                 <p class="wallet-dropdown-note">
-                  If you cancel a lesson (at least 3 hours before start time), the cost is refunded to your wallet. While the refunded amount is visible here, it cannot be withdrawn; instead, it can be used to book another lesson of the same value.
+                  If you cancel a lesson (at least 3 hours before start time), the cost is refunded to your wallet. While the refunded amount is visible here, it cannot be withdrawn; instead, it can be used to book another lesson with the same tutor.
                 </p>
               </div>
               <div class="wallet-dropdown-footer">
-                <a href="#tutors" class="btn btn-outline-gold btn-sm" style="width: 100%; text-align: center; justify-content: center; font-weight: 700; text-decoration: none;" onclick="const d = document.getElementById('nav-wallet-dropdown'); if (d) d.style.display='none';">
-                  Book Another Lesson
-                </a>
+                <button type="button" class="btn btn-outline-gold btn-sm" id="wallet-book-btn" style="width: 100%; text-align: center; justify-content: center; font-weight: 700; opacity: 0.55; cursor: not-allowed;" disabled onclick="Auth.bookWithWalletTutor()">
+                  Book Another Lesson (Requires Balance)
+                </button>
               </div>
             </div>
           </div>

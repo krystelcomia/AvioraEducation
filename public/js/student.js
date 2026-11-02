@@ -1051,7 +1051,7 @@ const Student = {
             ${r.notes ? `<p style="font-size: 0.8rem; color: var(--text-secondary); margin: 0;">Topic: ${escapeHtmlStr(r.notes)}</p>` : ''}
           </div>
 
-          <div style="font-size: 0.88rem; color: var(--charcoal-900); width: 185px; min-width: 185px;">
+          <div style="font-size: 0.88rem; color: var(--charcoal-900); width: 180px; min-width: 180px;">
             <div style="font-weight: 700; display: flex; align-items: center; gap: 0.3rem;">${Icons.clock(14)} ${r.requested_time}${(window.getTimezoneAbbr && !r.requested_time.includes('EST') && !r.requested_time.includes('CST') && !r.requested_time.includes('PST') && !r.requested_time.includes('MST')) ? ' ' + window.getTimezoneAbbr() : ''}</div>
             <div style="font-size: 0.78rem; color: var(--gold-800); font-weight: 600;">${(r.duration_hours === 0.5 || r.payment_method === 'free_trial') ? '30-Minute Trial Class' : '50-Minute Class'}</div>
           </div>
@@ -1197,12 +1197,12 @@ const Student = {
           ${r.tutor_response_note ? `<p style="font-size: 0.78rem; color: var(--gold-700); margin: 0; font-style: italic;">Instructor Feedback: "${escapeHtmlStr(r.tutor_response_note)}"</p>` : ''}
         </div>
 
-        <div style="font-size: 0.82rem; color: var(--charcoal-900); width: 185px; min-width: 185px;">
+        <div style="font-size: 0.82rem; color: var(--charcoal-900); width: 180px; min-width: 180px;">
           <div style="font-weight: 700; display: flex; align-items: center; gap: 0.3rem;">${Icons.calendar(13)} ${r.requested_date}</div>
           <div style="font-size: 0.75rem; color: var(--text-muted);">50 min class completed</div>
         </div>
 
-        <div style="width: 265px; min-width: 265px; display: flex; justify-content: flex-end; align-items: center;">
+        <div style="display: flex; justify-content: flex-end; align-items: center; min-width: 0;">
           ${r.review_rating ? `
             <div style="text-align: right;">
               <div style="color: #F59E0B; display: inline-flex; align-items: center; gap: 2px;">

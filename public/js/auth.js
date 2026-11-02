@@ -171,6 +171,16 @@ const Auth = {
           document.documentElement.removeAttribute('data-theme');
         }
       }
+      if (data.user && data.user.role === 'student') {
+        const storedWallet = this.getStoredWallet(data.user.id);
+        if (storedWallet && (parseFloat(data.user.wallet_balance) || 0) < storedWallet.balance) {
+          data.user.wallet_balance = storedWallet.balance;
+          if (storedWallet.tutor) {
+            data.user.wallet_tutor_id = storedWallet.tutor.id;
+            this.walletTutor = storedWallet.tutor;
+          }
+        }
+      }
       this.updateNavUI(data.user, data.unreadNotifications);
       if (data.user && data.user.role === 'student') {
         this.refreshWallet();
@@ -1249,6 +1259,37 @@ const Auth = {
 
   walletTutor: null,
 
+  getStoredWallet(userId) {
+    if (!userId) return null;
+    try {
+      const bal = localStorage.getItem(`aviora_wallet_balance_${userId}`);
+      const tutor = localStorage.getItem(`aviora_wallet_tutor_${userId}`);
+      if (bal !== null && bal !== undefined) {
+        return {
+          balance: parseFloat(bal) || 0,
+          tutor: tutor ? JSON.parse(tutor) : null
+        };
+      }
+    } catch (e) {}
+    return null;
+  },
+
+  setStoredWallet(userId, balance, tutorInfo) {
+    if (!userId) return;
+    try {
+      const num = parseFloat(balance) || 0;
+      if (num > 0) {
+        localStorage.setItem(`aviora_wallet_balance_${userId}`, String(num));
+        if (tutorInfo) {
+          localStorage.setItem(`aviora_wallet_tutor_${userId}`, JSON.stringify(tutorInfo));
+        }
+      } else {
+        localStorage.removeItem(`aviora_wallet_balance_${userId}`);
+        localStorage.removeItem(`aviora_wallet_tutor_${userId}`);
+      }
+    } catch (e) {}
+  },
+
   updateWalletBalance(balance, tutorInfo) {
     const num = parseFloat(balance) || 0;
     const formatted = `${num.toFixed(2)}`;
@@ -1260,6 +1301,7 @@ const Auth = {
         this.currentUser.wallet_tutor_id = null;
       }
       Storage.setUser(this.currentUser);
+      this.setStoredWallet(this.currentUser.id, num, tutorInfo || this.walletTutor);
     }
 
     if (tutorInfo) {
@@ -1381,8 +1423,14 @@ const Auth = {
 
     if (user) {
       this.startHeartbeat();
+      if (typeof NotificationsUI !== 'undefined' && NotificationsUI.startRealtimePolling) {
+        NotificationsUI.startRealtimePolling();
+      }
     } else {
       this.stopHeartbeat();
+      if (typeof NotificationsUI !== 'undefined' && NotificationsUI.stopRealtimePolling) {
+        NotificationsUI.stopRealtimePolling();
+      }
     }
 
     if (user) {

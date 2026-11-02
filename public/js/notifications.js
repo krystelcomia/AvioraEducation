@@ -9,6 +9,83 @@ const NotificationsUI = {
   notifications: [],
   unreadCount: 0,
   preferences: null,
+  realtimeTimer: null,
+
+  getStoredReadIds(userId) {
+    if (!userId) return new Set();
+    try {
+      const raw = localStorage.getItem(`aviora_read_notifs_${userId}`);
+      return raw ? new Set(JSON.parse(raw)) : new Set();
+    } catch (e) {
+      return new Set();
+    }
+  },
+
+  saveReadNotificationId(id) {
+    const user = (typeof Auth !== 'undefined' && Auth.currentUser) || null;
+    if (!user || !id) return;
+    try {
+      const set = this.getStoredReadIds(user.id);
+      set.add(Number(id));
+      localStorage.setItem(`aviora_read_notifs_${user.id}`, JSON.stringify(Array.from(set)));
+    } catch (e) {}
+  },
+
+  startRealtimePolling() {
+    if (this.realtimeTimer) return;
+    this.realtimeTimer = setInterval(() => {
+      if (typeof Auth !== 'undefined' && Auth.currentUser && document.visibilityState !== 'hidden') {
+        this.fetchRealtimeUpdates();
+      }
+    }, 4000);
+  },
+
+  stopRealtimePolling() {
+    if (this.realtimeTimer) {
+      clearInterval(this.realtimeTimer);
+      this.realtimeTimer = null;
+    }
+  },
+
+  async fetchRealtimeUpdates() {
+    if (typeof API === 'undefined' || !API.getNotifications) return;
+    try {
+      const res = await API.getNotifications();
+      if (!res || !res.notifications) return;
+
+      const user = (typeof Auth !== 'undefined' && Auth.currentUser) || null;
+      const readSet = user ? this.getStoredReadIds(user.id) : new Set();
+
+      const newNotifs = res.notifications.map(n => {
+        if (readSet.has(Number(n.id))) n.is_read = 1;
+        return n;
+      });
+
+      const unreadCount = newNotifs.filter(n => Number(n.is_read) === 0).length;
+      const countChanged = unreadCount !== this.unreadCount;
+      const prevIds = (this.notifications || []).map(n => n.id).join(',');
+      const newIds = newNotifs.map(n => n.id).join(',');
+      const listChanged = prevIds !== newIds;
+
+      this.notifications = newNotifs;
+      this.updateBadge(unreadCount);
+
+      const dropdown = document.getElementById('nav-notif-dropdown');
+      const isDropdownOpen = dropdown && dropdown.style.display !== 'none';
+      if (isDropdownOpen && (listChanged || countChanged)) {
+        this.renderList(this.notifications, res.preferences);
+      }
+
+      // If any notification is about a refund, refresh wallet in real time
+      const hasRecentRefund = newNotifs.some(n => 
+        (n.title && n.title.includes('Refunded')) || 
+        (n.message && n.message.includes('credited to your Aviora wallet'))
+      );
+      if (hasRecentRefund && typeof Auth !== 'undefined' && Auth.refreshWallet) {
+        Auth.refreshWallet();
+      }
+    } catch (e) {}
+  },
 
   init() {
     this.bindEvents();
@@ -100,9 +177,14 @@ const NotificationsUI = {
     try {
       const res = await API.getNotifications();
       if (res && res.notifications) {
-        this.notifications = res.notifications;
+        const user = (typeof Auth !== 'undefined' && Auth.currentUser) || null;
+        const readSet = user ? this.getStoredReadIds(user.id) : new Set();
+        this.notifications = res.notifications.map(n => {
+          if (readSet.has(Number(n.id))) n.is_read = 1;
+          return n;
+        });
         this.preferences = res.preferences || null;
-        const unread = res.unreadCount !== undefined ? res.unreadCount : (this.notifications.filter(n => !n.is_read).length);
+        const unread = this.notifications.filter(n => Number(n.is_read) === 0).length;
         this.updateBadge(unread);
         this.renderList(this.notifications, res.preferences);
       }
@@ -212,6 +294,7 @@ const NotificationsUI = {
     if (!notif || Number(notif.is_read) === 1) return;
 
     notif.is_read = 1;
+    this.saveReadNotificationId(id);
 
     const item = document.querySelector(`.notif-item[data-id="${id}"]`);
     if (item) {
@@ -236,6 +319,98 @@ const NotificationsUI = {
     }
   },
 
+  routeNotification(notif, rawLink) {
+    const title = (notif?.title || '').toLowerCase();
+    const msg = (notif?.message || '').toLowerCase();
+    const link = rawLink || notif?.link || '';
+
+    // 1. Refund / Wallet credit notification
+    if (title.includes('refund') || title.includes('cancelled & credit') || msg.includes('credited to your aviora wallet') || msg.includes('wallet credit')) {
+      const targetHash = '#student-portal?action=wallet';
+      if (window.location.hash.startsWith('#student-portal')) {
+        if (typeof Student !== 'undefined' && Student.handleNotificationNavigation) {
+          Student.handleNotificationNavigation({ action: 'wallet', notifId: notif?.id });
+        }
+      } else {
+        window.location.hash = targetHash;
+      }
+      return;
+    }
+
+    // 2. Live virtual classroom
+    if (link.includes('virtual-room') || title.includes('virtual class launched') || title.includes('class is live')) {
+      const match = link.match(/session=(\d+)/);
+      const sessionId = match ? match[1] : null;
+      if (sessionId && typeof VirtualRoom !== 'undefined') {
+        const role = (typeof Auth !== 'undefined' && Auth.currentUser && (Auth.currentUser.role === 'teacher' || Auth.currentUser.role === 'tutor')) ? 'tutor' : 'student';
+        VirtualRoom.joinRoom(sessionId, role);
+        return;
+      }
+    }
+
+    // 3. Lesson reminder or session booking
+    if (link.includes('session=') || title.includes('reminder') || title.includes('session') || title.includes('booking')) {
+      const match = link.match(/session=(\d+)/);
+      const sessionId = match ? match[1] : null;
+      if (typeof Auth !== 'undefined' && Auth.currentUser && (Auth.currentUser.role === 'teacher' || Auth.currentUser.role === 'tutor')) {
+        const teacherTarget = sessionId ? `#teacher-classes?request=${sessionId}` : '#teacher-classes';
+        if (window.location.hash.startsWith('#teacher-classes') && sessionId && typeof Teacher !== 'undefined' && Teacher.highlightRequest) {
+          Teacher.highlightRequest(sessionId);
+        } else {
+          window.location.hash = teacherTarget;
+        }
+      } else {
+        const studentTarget = sessionId ? `#student-portal?session=${sessionId}` : '#student-portal';
+        if (window.location.hash.startsWith('#student-portal') && sessionId && typeof Student !== 'undefined' && Student.highlightSession) {
+          Student.highlightSession(sessionId);
+        } else {
+          window.location.hash = studentTarget;
+        }
+      }
+      return;
+    }
+
+    // 4. Academic task assigned / graded
+    if (title.includes('task') || notif?.type === 'assignment') {
+      const taskTarget = '#student-portal?action=tasks';
+      if (window.location.hash.startsWith('#student-portal') && typeof Student !== 'undefined' && Student.handleNotificationNavigation) {
+        Student.handleNotificationNavigation({ action: 'tasks' });
+      } else {
+        window.location.hash = taskTarget;
+      }
+      return;
+    }
+
+    // 5. Teacher application / interview
+    if (title.includes('interview') || title.includes('application')) {
+      window.location.hash = '#teacher-dashboard?action=interview';
+      return;
+    }
+
+    // 6. Direct Message / Chat
+    if (title.includes('message from')) {
+      window.location.hash = (typeof Auth !== 'undefined' && Auth.currentUser && Auth.currentUser.role === 'student') ? '#student-portal' : '#teacher-dashboard';
+      return;
+    }
+
+    // 7. Inquiry
+    if (title.includes('inquiry')) {
+      window.location.hash = '#profile';
+      return;
+    }
+
+    // 8. Buddy
+    if (title.includes('buddy')) {
+      window.location.hash = '#aviora-buddy';
+      return;
+    }
+
+    // Default: use link
+    if (link && link !== '#' && link !== '') {
+      window.location.hash = link.replace(/^\//, '');
+    }
+  },
+
   async handleItemClick(e, id, link) {
     if (e && e.preventDefault) {
       e.preventDefault();
@@ -248,6 +423,7 @@ const NotificationsUI = {
     if (notif) {
       notif.is_read = 1;
     }
+    this.saveReadNotificationId(id);
 
     const item = document.querySelector(`.notif-item[data-id="${id}"]`);
     if (item) {
@@ -273,9 +449,7 @@ const NotificationsUI = {
       }
     }
 
-    if (link && link !== '#' && link !== '') {
-      window.location.hash = link.replace(/^\//, '');
-    }
+    this.routeNotification(notif, link);
   },
 
   async markAllRead() {
@@ -283,7 +457,10 @@ const NotificationsUI = {
       if (typeof API !== 'undefined' && API.markNotificationsRead) {
         await API.markNotificationsRead();
       }
-      (this.notifications || []).forEach(n => { n.is_read = 1; });
+      (this.notifications || []).forEach(n => {
+        n.is_read = 1;
+        this.saveReadNotificationId(n.id);
+      });
       this.updateBadge(0);
       document.querySelectorAll('.notif-item.unread').forEach(el => {
         el.classList.remove('unread');

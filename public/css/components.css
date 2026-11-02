@@ -2861,3 +2861,27 @@
 [data-theme="dark"] .wallet-dropdown-note {
   color: #A0AEC0;
 }
+
+
+/* Real-time Notification Target Highlighting */
+.highlight-pulse {
+  animation: highlightPulseGlow 2.5s ease-out forwards;
+}
+
+@keyframes highlightPulseGlow {
+  0% {
+    box-shadow: 0 0 0 4px var(--gold-500, #C68A28), 0 4px 20px rgba(198, 138, 40, 0.35);
+    outline: 2px solid var(--gold-600, #B7791F);
+    transform: translateY(-2px);
+  }
+  50% {
+    box-shadow: 0 0 0 3px rgba(198, 138, 40, 0.4), 0 2px 12px rgba(198, 138, 40, 0.2);
+    outline: 1.5px solid var(--gold-500, #C68A28);
+    transform: translateY(-1px);
+  }
+  100% {
+    box-shadow: none;
+    outline: none;
+    transform: translateY(0);
+  }
+}

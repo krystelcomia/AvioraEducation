@@ -713,6 +713,57 @@ setInterval(() => {
   }
 }, 15000);
 
+// Auto-reconcile student wallet balance against unspent refunded payments
+function reconcileStudentWallet(studentId) {
+  try {
+    const student = db.prepare('SELECT wallet_balance, wallet_tutor_id FROM users WHERE id = ?').get(studentId);
+    let balance = student ? (parseFloat(student.wallet_balance) || 0) : 0;
+
+    const refundData = db.prepare(`
+      SELECT 
+        SUM(COALESCE(total_amount, hourly_rate * COALESCE(duration_hours, 1.0))) as total_refunded,
+        tutor_id
+      FROM tutoring_requests
+      WHERE student_id = ? 
+        AND status = 'cancelled'
+        AND (payment_method != 'subscription' OR (total_amount IS NOT NULL AND total_amount > 0))
+    `).get(studentId);
+
+    const spentData = db.prepare(`
+      SELECT SUM(COALESCE(total_amount, hourly_rate * COALESCE(duration_hours, 1.0))) as total_spent
+      FROM tutoring_requests
+      WHERE student_id = ? 
+        AND payment_method = 'wallet'
+        AND status != 'cancelled'
+    `).get(studentId);
+
+    const netRefundCredits = Math.max(0, Math.round(((refundData?.total_refunded || 0) - (spentData?.total_spent || 0)) * 100) / 100);
+
+    let tutorId = student ? student.wallet_tutor_id : null;
+    if (netRefundCredits > balance) {
+      balance = netRefundCredits;
+      tutorId = tutorId || refundData?.tutor_id;
+      db.prepare('UPDATE users SET wallet_balance = ?, wallet_tutor_id = ? WHERE id = ?').run(balance, tutorId, studentId);
+    } else if (balance > 0 && !tutorId && refundData?.tutor_id) {
+      tutorId = refundData.tutor_id;
+      db.prepare('UPDATE users SET wallet_tutor_id = ? WHERE id = ?').run(tutorId, studentId);
+    }
+
+    let tutorInfo = null;
+    if (tutorId) {
+      const tUser = db.prepare('SELECT id, name, avatar_url FROM users WHERE id = ?').get(tutorId);
+      if (tUser) {
+        tutorInfo = { id: tUser.id, name: tUser.name, avatar_url: tUser.avatar_url };
+      }
+    }
+
+    return { balance, tutorId, tutorInfo };
+  } catch (err) {
+    console.error('reconcileStudentWallet error:', err);
+    return { balance: 0, tutorId: null, tutorInfo: null };
+  }
+}
+
 // Authentication Middleware
 function authenticateToken(req, res, next) {
   const authHeader = req.headers['authorization'];
@@ -2041,6 +2092,10 @@ app.get('/api/auth/me', authenticateToken, (req, res) => {
     if (req.user.role === 'student') {
       const studentProfile = db.prepare('SELECT * FROM student_profiles WHERE user_id = ?').get(userId);
       extra.studentProfile = studentProfile;
+      const walletData = reconcileStudentWallet(userId);
+      req.user.wallet_balance = walletData.balance;
+      req.user.wallet_tutor_id = walletData.tutorId;
+      extra.wallet_tutor = walletData.tutorInfo;
     } else if ((req.user.role === 'teacher' || req.user.role === 'tutor')) {
       const teacherApp = db.prepare('SELECT * FROM teacher_applications WHERE user_id = ?').get(userId);
       const tutorProfile = db.prepare('SELECT * FROM tutor_profiles WHERE user_id = ?').get(userId);
@@ -2953,9 +3008,14 @@ app.get('/api/student/dashboard', authenticateToken, requireRole('student'), (re
       ORDER BY id DESC LIMIT 1
     `).get(studentId);
 
-    const studentUser = db.prepare('SELECT wallet_balance FROM users WHERE id = ?').get(studentId);
-    const walletBalance = studentUser ? (parseFloat(studentUser.wallet_balance) || 0) : 0;
-    res.json({ stats, requests, subscription: activeSub || null, wallet_balance: walletBalance });
+    const walletData = reconcileStudentWallet(studentId);
+    res.json({
+      stats,
+      requests,
+      subscription: activeSub || null,
+      wallet_balance: walletData.balance,
+      wallet_tutor: walletData.tutorInfo
+    });
   } catch (error) {
     console.error('Student dashboard error:', error);
     res.status(500).json({ error: 'Failed to load student dashboard.' });
@@ -2969,39 +3029,12 @@ app.get('/api/student/dashboard', authenticateToken, requireRole('student'), (re
 // Student Wallet Balance (non-withdrawable lesson credits)
 app.get('/api/student/wallet', authenticateToken, requireRole('student'), (req, res) => {
   try {
-    const student = db.prepare('SELECT wallet_balance, wallet_tutor_id FROM users WHERE id = ?').get(req.user.id);
-    const balance = student ? (parseFloat(student.wallet_balance) || 0) : 0;
-    let tutorInfo = null;
-    let tutorId = student ? student.wallet_tutor_id : null;
-
-    if (!tutorId && balance > 0) {
-      const lastCancelled = db.prepare(`
-        SELECT tutor_id FROM tutoring_requests 
-        WHERE student_id = ? AND status = 'cancelled'
-        ORDER BY updated_at DESC, id DESC LIMIT 1
-      `).get(req.user.id);
-      if (lastCancelled) {
-        tutorId = lastCancelled.tutor_id;
-        db.prepare('UPDATE users SET wallet_tutor_id = ? WHERE id = ?').run(tutorId, req.user.id);
-      }
-    }
-
-    if (tutorId) {
-      const tUser = db.prepare('SELECT id, name, avatar_url FROM users WHERE id = ?').get(tutorId);
-      if (tUser) {
-        tutorInfo = {
-          id: tUser.id,
-          name: tUser.name,
-          avatar_url: tUser.avatar_url
-        };
-      }
-    }
-
+    const walletData = reconcileStudentWallet(req.user.id);
     res.json({
-      wallet_balance: balance,
-      formatted_balance: `${balance.toFixed(2)}`,
+      wallet_balance: walletData.balance,
+      formatted_balance: `${walletData.balance.toFixed(2)}`,
       withdrawable: false,
-      wallet_tutor: tutorInfo,
+      wallet_tutor: walletData.tutorInfo,
       currency: 'USD'
     });
   } catch (error) {
@@ -3787,7 +3820,17 @@ app.post('/api/student/requests/:id/cancel', authenticateToken, requireRole('stu
       }
     }
 
-    db.prepare("UPDATE tutoring_requests SET status = 'cancelled', updated_at = CURRENT_TIMESTAMP WHERE id = ?").run(requestId);
+    db.prepare("UPDATE tutoring_requests SET status = 'cancelled', room_status = 'ended', updated_at = CURRENT_TIMESTAMP WHERE id = ?").run(requestId);
+
+    // Resolve any class reminder notifications for this cancelled session
+    try {
+      db.prepare(`
+        UPDATE notifications 
+        SET is_read = 1 
+        WHERE user_id = ? 
+          AND link LIKE ?
+      `).run(studentId, `%session=${requestId}%`);
+    } catch (e) {}
 
     // Refund handling:
     let refundAmount = 0;
@@ -7303,6 +7346,7 @@ function dispatchClassAboutToBeginReminders(targetUserId = null) {
       FROM tutoring_requests tr
       JOIN users u ON tr.tutor_id = u.id
       WHERE tr.status = 'accepted'
+        AND tr.status != 'cancelled'
         AND tr.room_status != 'ended'
     `;
     const params = [];
@@ -7343,10 +7387,8 @@ function dispatchClassAboutToBeginReminders(targetUserId = null) {
         const alreadyNotified = db.prepare(`
           SELECT id FROM notifications 
           WHERE user_id = ? 
-            AND type = 'lesson_reminder' 
-            AND (title LIKE '%About to Begin%' OR title LIKE '%Starting Soon%')
-            AND link = ?
-        `).get(session.student_id, `#student-portal?session=${session.id}`);
+            AND link LIKE ?
+        `).get(session.student_id, `%session=${session.id}%`);
 
         if (!alreadyNotified) {
           sendNotification(

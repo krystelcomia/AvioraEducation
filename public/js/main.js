@@ -121,7 +121,8 @@ const Router = {
   },
 
   updateActiveNav() {
-    const hash = window.location.hash || '#home';
+    const rawHash = window.location.hash || '#home';
+    const hash = rawHash.split('?')[0];
     document.querySelectorAll('.nav-link').forEach(link => {
       const href = link.getAttribute('href');
       let isActive = (href === hash);
@@ -163,7 +164,10 @@ const Router = {
   },
 
   async handleRoute() {
-    const hash = window.location.hash || '#home';
+    const rawHash = window.location.hash || '#home';
+    const [routePart, queryPart] = rawHash.split('?');
+    const hash = routePart || '#home';
+    const params = new URLSearchParams(queryPart || '');
 
     // Route Guards for Portals & Lesson Booking
     if (hash === '#student-portal' || hash === '#book-lesson' || hash.startsWith('#book-lesson') || hash.startsWith('#student-')) {
@@ -410,11 +414,23 @@ const Router = {
       } else {
         await Student.loadDashboard();
       }
+      if (params.toString() && typeof Student !== 'undefined' && Student.handleNotificationNavigation) {
+        Student.handleNotificationNavigation(params);
+      }
+    } else if (hash === '#virtual-room') {
+      const sessionId = params.get('session');
+      if (sessionId && typeof VirtualRoom !== 'undefined') {
+        const role = (Auth.currentUser && (Auth.currentUser.role === 'teacher' || Auth.currentUser.role === 'tutor')) ? 'tutor' : 'student';
+        VirtualRoom.joinRoom(sessionId, role);
+      }
     } else if (hash === '#teacher-classes' || hash === '#teacher-class') {
       const view = document.getElementById('view-teacher-classes');
       if (view) view.style.display = 'block';
       window.scrollTo(0, 0);
       await Teacher.loadClassesPage();
+      if (params.get('request') && typeof Teacher !== 'undefined' && Teacher.highlightRequest) {
+        Teacher.highlightRequest(params.get('request'));
+      }
     } else if (hash === '#teacher-students') {
       const view = document.getElementById('view-teacher-students');
       if (view) view.style.display = 'block';
@@ -440,6 +456,9 @@ const Router = {
       if (view) view.style.display = 'block';
       window.scrollTo(0, 0);
       await Teacher.loadDashboardPage();
+      if (params.get('action') === 'interview' && typeof Teacher !== 'undefined' && Teacher.highlightInterviewBanner) {
+        Teacher.highlightInterviewBanner();
+      }
     } else if (hash.startsWith('#teacher-')) {
       const view = document.getElementById('view-teacher-dashboard');
       if (view) view.style.display = 'block';

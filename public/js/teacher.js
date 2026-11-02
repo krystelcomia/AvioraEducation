@@ -3940,6 +3940,29 @@ const Teacher = {
         submitBtn.textContent = 'Send Reply';
       }
     }
+  },
+
+  highlightRequest(requestId) {
+    if (!requestId) return;
+    setTimeout(() => {
+      const card = document.getElementById('teacher-class-card-' + requestId);
+      if (card) {
+        card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        card.classList.add('highlight-pulse');
+        setTimeout(() => card.classList.remove('highlight-pulse'), 3000);
+      }
+    }, 250);
+  },
+
+  highlightInterviewBanner() {
+    setTimeout(() => {
+      const banner = document.getElementById('teacher-interview-banner') || document.querySelector('.teacher-interview-notice');
+      if (banner) {
+        banner.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        banner.classList.add('highlight-pulse');
+        setTimeout(() => banner.classList.remove('highlight-pulse'), 3000);
+      }
+    }, 250);
   }
 };
 

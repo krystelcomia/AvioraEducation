@@ -83,6 +83,69 @@ const Student = {
     }
   },
 
+  getStoredCancelledRequests(userId) {
+    if (!userId) return new Set();
+    try {
+      const raw = localStorage.getItem(`aviora_cancelled_requests_${userId}`);
+      return raw ? new Set(JSON.parse(raw)) : new Set();
+    } catch (e) {
+      return new Set();
+    }
+  },
+
+  saveCancelledRequest(requestId) {
+    const user = (typeof Auth !== 'undefined' && Auth.currentUser) || null;
+    if (!user || !requestId) return;
+    try {
+      const set = this.getStoredCancelledRequests(user.id);
+      set.add(Number(requestId));
+      localStorage.setItem(`aviora_cancelled_requests_${user.id}`, JSON.stringify(Array.from(set)));
+    } catch (e) {}
+  },
+
+  handleNotificationNavigation(params) {
+    if (!params) return;
+    const action = params.get ? params.get('action') : params.action;
+    const sessionId = params.get ? params.get('session') : params.sessionId;
+
+    if (action === 'wallet') {
+      const dropdown = document.getElementById('nav-wallet-dropdown');
+      if (dropdown) dropdown.style.display = 'block';
+      this.scrollToSection('lessons');
+      setTimeout(() => {
+        const cancelledCard = document.querySelector('.request-item-card .status-pill.cancelled')?.closest('.request-item-card');
+        if (cancelledCard) {
+          cancelledCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          cancelledCard.classList.add('highlight-pulse');
+          setTimeout(() => cancelledCard.classList.remove('highlight-pulse'), 3000);
+        }
+      }, 250);
+    } else if (sessionId) {
+      this.highlightSession(sessionId);
+    } else if (action === 'tasks') {
+      const taskSec = document.getElementById('student-tasks-section');
+      if (taskSec) {
+        taskSec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        taskSec.classList.add('highlight-pulse');
+        setTimeout(() => taskSec.classList.remove('highlight-pulse'), 3000);
+      }
+    }
+  },
+
+  highlightSession(sessionId) {
+    if (!sessionId) return;
+    setTimeout(() => {
+      let target = document.getElementById('schedule-item-' + sessionId) ||
+                   document.getElementById('request-item-' + sessionId) ||
+                   document.querySelector(`.request-item-card[data-id="${sessionId}"]`);
+      if (target) {
+        target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        target.classList.add('highlight-pulse');
+        setTimeout(() => target.classList.remove('highlight-pulse'), 3000);
+      }
+    }, 250);
+  },
+
   scrollToSection(section, e) {
     if (e && e.preventDefault) e.preventDefault();
     if (section === 'profile') {
@@ -114,9 +177,16 @@ const Student = {
     try {
       const data = await API.getStudentDashboard();
       this.requests = data.requests || [];
+      const cancelledSet = user ? this.getStoredCancelledRequests(user.id) : new Set();
+      this.requests.forEach(r => {
+        if (cancelledSet.has(Number(r.id))) {
+          r.status = 'cancelled';
+          r.room_status = 'ended';
+        }
+      });
       this.subscription = data.subscription || null;
       if (typeof data.wallet_balance !== 'undefined' && typeof Auth !== 'undefined' && Auth.updateWalletBalance) {
-        Auth.updateWalletBalance(data.wallet_balance);
+        Auth.updateWalletBalance(data.wallet_balance, data.wallet_tutor || null);
       }
 
       // Update Header info
@@ -165,6 +235,14 @@ const Student = {
       this.setupRealTimeRoomPolling();
       if (typeof Auth !== 'undefined' && Auth.loadNotifications) {
         Auth.loadNotifications();
+      }
+
+      // Check if hash has session or action query params to focus immediately
+      const rawHash = window.location.hash || '';
+      if (rawHash.includes('?')) {
+        const query = rawHash.split('?')[1];
+        const params = new URLSearchParams(query);
+        this.handleNotificationNavigation(params);
       }
     } catch (err) {
       console.error('Failed to load student dashboard:', err);
@@ -1132,7 +1210,7 @@ const Student = {
       }
 
       return `
-        <div class="schedule-card">
+        <div class="schedule-card" id="schedule-item-${r.id}" data-id="${r.id}">
           <div class="schedule-date-badge">
             <div class="day-num">${dayStr || Icons.calendar(16)}</div>
             <div class="day-name">${monthStr}</div>
@@ -1203,7 +1281,7 @@ const Student = {
       const totalPaid = isFreeTrial ? 0 : (r.total_amount && r.total_amount > 0 ? r.total_amount : (lessonRate * lessonDuration));
 
       return `
-        <div class="request-item-card">
+        <div class="request-item-card" id="request-item-${r.id}" data-id="${r.id}">
           <a href="${r.tutor_profile_id ? `#tutor-profile?id=${r.tutor_profile_id}` : '#tutors'}" title="View Tutor Profile">
             <img src="${r.tutor_avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80'}" class="request-tutor-avatar" />
           </a>
@@ -1434,6 +1512,7 @@ const Student = {
         try {
           const res = await API.cancelRequest(requestId);
           showToast(res.message, 'success');
+          this.saveCancelledRequest(requestId);
           const walletTutor = res.wallet_tutor || (session ? { id: session.tutor_id, name: session.tutor_name } : null);
           if (typeof res.new_wallet_balance !== 'undefined' && typeof Auth !== 'undefined' && Auth.updateWalletBalance) {
             Auth.updateWalletBalance(res.new_wallet_balance, walletTutor);

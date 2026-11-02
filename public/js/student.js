@@ -1097,54 +1097,66 @@ const Student = {
       return;
     }
 
-    container.innerHTML = filtered.map(r => `
-      <div class="request-item-card">
-        <a href="${r.tutor_profile_id ? `#tutor-profile?id=${r.tutor_profile_id}` : '#tutors'}" title="View Tutor Profile">
-          <img src="${r.tutor_avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80'}" class="request-tutor-avatar" />
-        </a>
-        
-        <div class="request-subject-info">
-          <h4>${r.subject}</h4>
-          <p>Tutor: ${r.tutor_profile_id ? `<a href="#tutor-profile?id=${r.tutor_profile_id}" style="color: var(--gold-800); font-weight: 700; text-decoration: underline;">${r.tutor_name}</a>` : `<strong>${r.tutor_name}</strong>`}</p>
-          ${r.notes ? `<p style="font-size: 0.8rem; color: var(--charcoal-400); margin-top: 0.2rem;">Topic: ${escapeHtmlStr(r.notes)}</p>` : ''}
-          ${r.tutor_response_note ? `<p style="font-size: 0.8rem; color: var(--gold-700); margin-top: 0.2rem;">Tutor note: "${escapeHtmlStr(r.tutor_response_note)}"</p>` : ''}
-        </div>
+    container.innerHTML = filtered.map(r => {
+      const lessonRate = r.hourly_rate || 50;
+      const lessonDuration = r.duration_hours || 1;
+      const isFreeTrial = (r.payment_method === 'free_trial' || (r.duration_hours === 0.5 && (!r.total_amount || r.total_amount === 0)));
+      // Total amount paid based on the tutor's rate per lesson (even when booked via subscription)
+      const totalPaid = isFreeTrial ? 0 : (r.total_amount && r.total_amount > 0 ? r.total_amount : (lessonRate * lessonDuration));
 
-        <div class="request-datetime-info">
-          <strong style="display: flex; align-items: center; gap: 0.3rem;">${Icons.calendar(14)} ${r.requested_date}</strong>
-          <span style="display: flex; align-items: center; gap: 0.3rem;">${Icons.clock(14)} ${r.requested_time}${window.getTimezoneAbbr ? ' ' + window.getTimezoneAbbr() : ''} (50 mins)</span>
-        </div>
+      return `
+        <div class="request-item-card">
+          <a href="${r.tutor_profile_id ? `#tutor-profile?id=${r.tutor_profile_id}` : '#tutors'}" title="View Tutor Profile">
+            <img src="${r.tutor_avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80'}" class="request-tutor-avatar" />
+          </a>
+          
+          <div class="request-subject-info">
+            <h4>${escapeHtmlStr(r.subject)}</h4>
+            <p>Tutor: ${r.tutor_profile_id ? `<a href="#tutor-profile?id=${r.tutor_profile_id}" style="color: var(--gold-800); font-weight: 700; text-decoration: underline;">${escapeHtmlStr(r.tutor_name)}</a>` : `<strong>${escapeHtmlStr(r.tutor_name)}</strong>`}</p>
+            ${r.notes ? `<p style="font-size: 0.8rem; color: var(--charcoal-400); margin-top: 0.2rem;">Topic: ${escapeHtmlStr(r.notes)}</p>` : ''}
+            ${r.tutor_response_note ? `<p style="font-size: 0.8rem; color: var(--gold-700); margin-top: 0.2rem;">Tutor note: "${escapeHtmlStr(r.tutor_response_note)}"</p>` : ''}
+          </div>
 
-        <div class="request-pricing-info">
-          $${r.total_amount ? r.total_amount.toFixed(2) : '0.00'}
-          <span>Rate: $${r.hourly_rate}/hr</span>
-        </div>
+          <div class="request-datetime-info">
+            <strong style="display: flex; align-items: center; gap: 0.3rem;">${Icons.calendar(14)} ${r.requested_date}</strong>
+            <span style="display: flex; align-items: center; gap: 0.3rem;">${Icons.clock(14)} ${r.requested_time}${window.getTimezoneAbbr ? ' ' + window.getTimezoneAbbr() : ''} (${isFreeTrial ? '30 mins' : '50 mins'})</span>
+          </div>
 
-        <div class="request-actions-col">
-          <span class="status-pill ${r.status}">${r.status === 'completed' ? 'done' : r.status}</span>
-          ${(r.status === 'accepted' && r.room_status !== 'ended') ? (r.room_status === 'open' ? `
-            <button class="btn btn-primary btn-sm btn-vroom-live" onclick="VirtualRoom.joinRoom(${r.id}, 'student')" style="background: #10B981; border-color: #10B981;">${Icons.video(14)} Join Class</button>
-          ` : `
-            <button class="btn btn-secondary btn-sm" style="opacity: 0.7; cursor: not-allowed;" onclick="showToast('Class is currently closed. Your tutor will open the virtual classroom from their account when the session begins.', 'info')">${Icons.lock(14)} Closed</button>
-          `) : ''}
-          ${(r.status === 'pending' || (r.status === 'accepted' && r.room_status !== 'ended')) ? `
-            <button class="btn btn-outline-gold btn-sm" onclick="Tutors.openMessageModal(${r.tutor_id})">${Icons.message(14)} Message</button>
-            ${this.canCancelSession(r) ? `
-              <button class="btn btn-secondary btn-sm" onclick="Student.cancelRequest(${r.id})" title="Cancel booking (Allowed up to 3 hours before class)">Cancel</button>
+          <div class="request-pricing-info">
+            <div class="pricing-total-label">Total Paid</div>
+            <div class="pricing-total-amount">${totalPaid.toFixed(2)}</div>
+            <div class="pricing-rate-sub">${isFreeTrial ? 'Free Trial' : `Rate: ${lessonRate}/hr`}</div>
+          </div>
+
+          <div class="request-status-col">
+            <span class="status-pill ${r.status}">${r.status === 'completed' ? 'done' : r.status.toUpperCase()}</span>
+          </div>
+
+          <div class="request-actions-col">
+            ${(r.status === 'accepted' && r.room_status !== 'ended') ? (r.room_status === 'open' ? `
+              <button class="btn btn-primary btn-sm btn-vroom-live" onclick="VirtualRoom.joinRoom(${r.id}, 'student')" style="background: #10B981; border-color: #10B981;">${Icons.video(14)} Join Class</button>
             ` : `
-              <button class="btn btn-secondary btn-sm" style="opacity: 0.55; cursor: not-allowed;" onclick="showToast('Cancel booking is only applicable at least 3 hours before the class.', 'warning')" title="Cancel booking is only applicable at least 3 hours before class">Cancel (&lt;3h)</button>
-            `}
-          ` : ''}
-          ${(r.status === 'completed' || r.room_status === 'ended') ? `
-            ${r.review_rating ? `
-              <span style="font-size: 0.82rem; color: #F59E0B; font-weight: 700; display: inline-flex; align-items: center; gap: 0.25rem;">${Icons.star(13)} ${r.review_rating}/5</span>
-            ` : `
-              <button class="btn btn-outline-gold btn-sm" onclick="Student.openReviewModal(${r.id}, '${escapeQuotes(r.tutor_name)}', '${escapeQuotes(r.subject)}')">${Icons.star(12)} Rate Tutor (★ 1-5)</button>
-            `}
-          ` : ''}
+              <button class="btn btn-secondary btn-sm" style="opacity: 0.7; cursor: not-allowed;" onclick="showToast('Class is currently closed. Your tutor will open the virtual classroom from their account when the session begins.', 'info')">${Icons.lock(14)} Closed</button>
+            `) : ''}
+            ${(r.status === 'pending' || (r.status === 'accepted' && r.room_status !== 'ended')) ? `
+              <button class="btn btn-outline-gold btn-sm" onclick="Tutors.openMessageModal(${r.tutor_id})">${Icons.message(14)} Message</button>
+              ${this.canCancelSession(r) ? `
+                <button class="btn btn-secondary btn-sm" onclick="Student.cancelRequest(${r.id})" title="Cancel booking (Allowed up to 3 hours before class)">Cancel</button>
+              ` : `
+                <button class="btn btn-secondary btn-sm" style="opacity: 0.55; cursor: not-allowed;" onclick="showToast('Cancel booking is only applicable at least 3 hours before the class.', 'warning')" title="Cancel booking is only applicable at least 3 hours before class">Cancel (&lt;3h)</button>
+              `}
+            ` : ''}
+            ${(r.status === 'completed' || r.room_status === 'ended') ? `
+              ${r.review_rating ? `
+                <span style="font-size: 0.82rem; color: #F59E0B; font-weight: 700; display: inline-flex; align-items: center; gap: 0.25rem;">${Icons.star(13)} ${r.review_rating}/5</span>
+              ` : `
+                <button class="btn btn-outline-gold btn-sm" onclick="Student.openReviewModal(${r.id}, '${escapeQuotes(r.tutor_name)}', '${escapeQuotes(r.subject)}')">${Icons.star(12)} Rate Tutor (★ 1-5)</button>
+              `}
+            ` : ''}
+          </div>
         </div>
-      </div>
-    `).join('');
+      `;
+    }).join('');
   },
 
   renderHistory() {

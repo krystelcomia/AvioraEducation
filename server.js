@@ -3479,7 +3479,7 @@ app.post('/api/student/subscription/purchase', authenticateToken, requireRole('s
         INSERT INTO tutoring_requests (
           student_id, tutor_id, subject, grade_level, requested_date,
           requested_time, duration_hours, hourly_rate, total_amount, status, notes, payment_method
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0.00, 'accepted', ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'accepted', ?, ?)
       `);
 
       const sessionNotes = notes 
@@ -3488,6 +3488,7 @@ app.post('/api/student/subscription/purchase', authenticateToken, requireRole('s
             ? 'One-Time Free Trial Lesson (30 Minutes)' 
             : `Enrolled via ${selectedPkg.name} (${allocatedLessons} lesson${allocatedLessons > 1 ? 's' : ''} allocated with ${tutorUser.name})`);
 
+      const sessionTotalAmt = selectedPkg.is_trial ? 0.00 : (tutorProfile.hourly_rate * lessonDurationHours);
       insertSession.run(
         studentId,
         tutor_id,
@@ -3497,6 +3498,7 @@ app.post('/api/student/subscription/purchase', authenticateToken, requireRole('s
         scheduled_time,
         lessonDurationHours,
         tutorProfile.hourly_rate,
+        sessionTotalAmt,
         sessionNotes,
         selectedPkg.is_trial ? 'free_trial' : 'subscription'
       );
@@ -3703,7 +3705,7 @@ app.post('/api/student/requests', authenticateToken, requireRole('student'), (re
       requested_time,
       duration,
       subjectRate,
-      finalPaymentMethod === 'subscription' ? 0.00 : calculatedAmount,
+      finalPaymentMethod === 'free_trial' ? 0.00 : calculatedAmount,
       notes || '',
       finalPaymentMethod
     );

@@ -2472,15 +2472,23 @@
 }
 
 .notif-item.unread::before {
-  content: '';
+  display: none !important;
+}
+
+.notif-unread-dot {
   position: absolute;
-  left: 4px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 5px;
-  height: 5px;
+  left: 6px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
   background: var(--gold-600, #C68A28);
+  pointer-events: none;
+  transform: translateY(-50%);
+  transition: opacity 0.2s ease;
+}
+
+[data-theme="dark"] .notif-unread-dot {
+  background: #FBBF24;
 }
 
 .notif-item-icon {

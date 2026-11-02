@@ -68,6 +68,7 @@ const NotificationsUI = {
     dropdown.style.display = 'flex';
     this.isOpen = true;
     this.fetchAndRender();
+    setTimeout(() => this.alignUnreadDots(), 60);
   },
 
   closeDropdown() {
@@ -136,12 +137,13 @@ const NotificationsUI = {
 
     const html = notifications.map(notif => {
       const iconSvg = this.getIconForType(notif.type);
-      const isUnread = !notif.is_read;
+      const isUnread = Number(notif.is_read) === 0;
       const timeStr = this.formatRelativeTime(notif.created_at);
       const safeLink = notif.link ? notif.link : '#';
 
       return `
         <a href="${safeLink}" class="notif-item ${isUnread ? 'unread' : ''}" data-id="${notif.id}" onclick="NotificationsUI.handleItemClick(event, ${notif.id}, '${safeLink}')">
+          ${isUnread ? '<span class="notif-unread-dot" aria-hidden="true"></span>' : ''}
           <div class="notif-item-icon">${iconSvg}</div>
           <div class="notif-item-details">
             <div class="notif-item-title">${this.escapeHtml(notif.title || 'Notification')}</div>
@@ -158,6 +160,26 @@ const NotificationsUI = {
     }).join('');
 
     listBody.innerHTML = html;
+    this.alignUnreadDots();
+    requestAnimationFrame(() => this.alignUnreadDots());
+    setTimeout(() => this.alignUnreadDots(), 60);
+  },
+
+  alignUnreadDots() {
+    const items = document.querySelectorAll('.notif-item.unread');
+    items.forEach(item => {
+      const msg = item.querySelector('.notif-item-msg');
+      const dot = item.querySelector('.notif-unread-dot');
+      if (msg && dot) {
+        const itemRect = item.getBoundingClientRect();
+        const msgRect = msg.getBoundingClientRect();
+        if (itemRect.height > 0 && msgRect.height > 0) {
+          const msgCenterY = (msgRect.top + msgRect.bottom) / 2;
+          const topOffset = Math.round(msgCenterY - itemRect.top);
+          dot.style.top = `${topOffset}px`;
+        }
+      }
+    });
   },
 
   getIconForType(type) {
@@ -189,18 +211,20 @@ const NotificationsUI = {
 
   async markSingleRead(id) {
     const notif = (this.notifications || []).find(n => n.id == id);
-    if (!notif || notif.is_read) return;
+    if (!notif || Number(notif.is_read) === 1) return;
 
     notif.is_read = 1;
 
     const item = document.querySelector(`.notif-item[data-id="${id}"]`);
     if (item) {
       item.classList.remove('unread');
+      const dot = item.querySelector('.notif-unread-dot');
+      if (dot) dot.remove();
       const readBtn = item.querySelector('.notif-item-read-btn');
       if (readBtn) readBtn.remove();
     }
 
-    const unread = (this.notifications || []).filter(n => !n.is_read).length;
+    const unread = (this.notifications || []).filter(n => Number(n.is_read) === 0).length;
     this.updateBadge(unread);
 
     try {
@@ -215,13 +239,13 @@ const NotificationsUI = {
   },
 
   async handleItemClick(e, id, link) {
-    if (e && e.preventDefault && (!link || link === '#')) {
+    if (e && e.preventDefault) {
       e.preventDefault();
     }
     this.closeDropdown();
 
     const notif = (this.notifications || []).find(n => n.id == id);
-    const wasUnread = notif ? !notif.is_read : true;
+    const wasUnread = notif ? Number(notif.is_read) === 0 : true;
 
     if (notif) {
       notif.is_read = 1;
@@ -230,12 +254,14 @@ const NotificationsUI = {
     const item = document.querySelector(`.notif-item[data-id="${id}"]`);
     if (item) {
       item.classList.remove('unread');
+      const dot = item.querySelector('.notif-unread-dot');
+      if (dot) dot.remove();
       const readBtn = item.querySelector('.notif-item-read-btn');
       if (readBtn) readBtn.remove();
     }
 
     if (wasUnread) {
-      const unread = (this.notifications || []).filter(n => !n.is_read).length;
+      const unread = (this.notifications || []).filter(n => Number(n.is_read) === 0).length;
       this.updateBadge(unread);
 
       try {
@@ -263,6 +289,8 @@ const NotificationsUI = {
       this.updateBadge(0);
       document.querySelectorAll('.notif-item.unread').forEach(el => {
         el.classList.remove('unread');
+        const dot = el.querySelector('.notif-unread-dot');
+        if (dot) dot.remove();
         const readBtn = el.querySelector('.notif-item-read-btn');
         if (readBtn) readBtn.remove();
       });

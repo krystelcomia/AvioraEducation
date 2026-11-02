@@ -1466,31 +1466,88 @@ const Tutors = {
 
       if (subDesc) subDesc.textContent = 'No subscription lesson credits remaining on your account.';
       if (cardInputs) cardInputs.style.display = 'block';
-      if (payText) payText.textContent = `Pay $${activeRate.toFixed(2)} & Confirm Lesson`;
+      if (payText) payText.textContent = `Pay ${activeRate.toFixed(2)} & Confirm Lesson`;
+    }
+
+    // Configure Wallet Option
+    const walletOption = document.getElementById('pay-opt-wallet');
+    const walletCardBox = document.getElementById('pay-method-wallet-card');
+    const walletBalLabel = document.getElementById('pay-wallet-balance-label');
+    const walletDesc = document.getElementById('pay-wallet-credit-desc');
+    const walletStatusSub = document.getElementById('pay-wallet-status-sub');
+    const userWallet = (Auth.currentUser && parseFloat(Auth.currentUser.wallet_balance)) || 0;
+
+    if (walletBalLabel) walletBalLabel.textContent = `${userWallet.toFixed(2)}`;
+
+    if (userWallet >= activeRate) {
+      if (walletCardBox) {
+        walletCardBox.classList.remove('disabled');
+        walletCardBox.style.opacity = '1';
+        walletCardBox.style.cursor = 'pointer';
+      }
+      if (walletOption) walletOption.disabled = false;
+      if (walletDesc) walletDesc.textContent = `Use ${activeRate.toFixed(2)} from your ${userWallet.toFixed(2)} wallet credit to book this lesson.`;
+      if (walletStatusSub) {
+        walletStatusSub.textContent = 'Ready to Apply';
+        walletStatusSub.style.color = 'var(--success)';
+      }
+    } else {
+      if (walletCardBox) {
+        walletCardBox.style.opacity = '0.65';
+      }
+      if (walletOption) walletOption.disabled = true;
+      if (walletDesc) walletDesc.textContent = userWallet > 0
+        ? `Balance: ${userWallet.toFixed(2)} (Insufficient for this ${activeRate.toFixed(2)} lesson)`
+        : 'Balance: $0.00 (No refunded lesson credits currently available)';
+      if (walletStatusSub) {
+        walletStatusSub.textContent = `${userWallet.toFixed(2)} Available`;
+        walletStatusSub.style.color = 'var(--charcoal-500)';
+      }
     }
 
     this.showStep(2);
   },
 
   selectPaymentMethod(method) {
+    const subject = document.getElementById('booking-subject-select')?.value;
+    const activeRate = this.getTutorSubjectRate(this.selectedTutor, subject);
+    const user = Auth.currentUser;
+    const userWallet = user ? (parseFloat(user.wallet_balance) || 0) : 0;
+
+    if (method === 'wallet' && userWallet < activeRate) {
+      showToast(`Insufficient wallet credit (${userWallet.toFixed(2)} available, ${activeRate.toFixed(2)} required).`, 'warning');
+      return;
+    }
+
     this.paymentMethod = method;
     const subCardBox = document.getElementById('pay-method-sub-card');
     const cardCardBox = document.getElementById('pay-method-card-card');
+    const walletCardBox = document.getElementById('pay-method-wallet-card');
     const cardInputs = document.getElementById('payment-card-inputs');
     const payText = document.getElementById('btn-pay-text');
-    const subject = document.getElementById('booking-subject-select')?.value;
-    const activeRate = this.getTutorSubjectRate(this.selectedTutor, subject);
 
-    if (method === 'subscription') {
-      if (subCardBox) subCardBox.classList.add('selected');
-      if (cardCardBox) cardCardBox.classList.remove('selected');
-      if (cardInputs) cardInputs.style.display = 'none';
-      if (payText) payText.textContent = 'Confirm Booking (Use 1 Lesson Credit)';
-    } else {
-      if (subCardBox) subCardBox.classList.remove('selected');
-      if (cardCardBox) cardCardBox.classList.add('selected');
-      if (cardInputs) cardInputs.style.display = 'block';
-      if (payText) payText.textContent = `Pay $${activeRate.toFixed(2)} & Confirm Lesson`;
+    const subRadio = document.getElementById('pay-opt-subscription');
+    const cardRadio = document.getElementById('pay-opt-card');
+    const walletRadio = document.getElementById('pay-opt-wallet');
+
+    if (subRadio) subRadio.checked = (method === 'subscription');
+    if (cardRadio) cardRadio.checked = (method === 'card');
+    if (walletRadio) walletRadio.checked = (method === 'wallet');
+
+    if (subCardBox) subCardBox.classList.toggle('selected', method === 'subscription');
+    if (cardCardBox) cardCardBox.classList.toggle('selected', method === 'card');
+    if (walletCardBox) walletCardBox.classList.toggle('selected', method === 'wallet');
+
+    if (cardInputs) cardInputs.style.display = (method === 'card') ? 'block' : 'none';
+
+    if (payText) {
+      if (method === 'subscription') {
+        payText.textContent = 'Confirm Booking (Use 1 Lesson Credit)';
+      } else if (method === 'wallet') {
+        payText.textContent = `Pay ${activeRate.toFixed(2)} with Wallet Credit & Confirm`;
+      } else {
+        payText.textContent = `Pay ${activeRate.toFixed(2)} & Confirm Lesson`;
+      }
     }
   },
 
@@ -1532,6 +1589,9 @@ const Tutors = {
       const res = await API.createRequest(payload);
       this.closeBookingModal();
       showToast(res.message, 'success');
+      if (typeof res.new_wallet_balance !== 'undefined' && typeof Auth !== 'undefined' && Auth.updateWalletBalance) {
+        Auth.updateWalletBalance(res.new_wallet_balance);
+      }
 
       // Refresh student dashboard if on dashboard
       if (typeof Student !== 'undefined' && Student.loadDashboard) {

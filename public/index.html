@@ -97,6 +97,44 @@
 
         <!-- Authenticated User Actions: Unboxed Profile & Log Out links -->
         <div id="nav-user-actions" style="display: none; align-items: center; gap: 1.4rem;">
+          <!-- Student Wallet Balance Container -->
+          <div class="nav-wallet-container" id="nav-wallet-container" style="display: none;">
+            <button type="button" class="nav-wallet-btn" id="nav-wallet-btn" aria-label="Student Wallet Balance" title="Aviora Wallet (Lesson Credits)">
+              <svg class="nav-wallet-icon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20 7H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"></path>
+                <path d="M16 3H8a2 2 0 0 0-2 2v2h12V5a2 2 0 0 0-2-2z"></path>
+                <circle cx="16" cy="14" r="1.5" fill="currentColor"></circle>
+              </svg>
+              <span class="nav-wallet-balance" id="nav-wallet-balance">$0.00</span>
+            </button>
+            <div class="nav-wallet-dropdown" id="nav-wallet-dropdown" style="display: none;">
+              <div class="wallet-dropdown-header">
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--gold-600)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M20 7H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"></path>
+                    <path d="M16 3H8a2 2 0 0 0-2 2v2h12V5a2 2 0 0 0-2-2z"></path>
+                    <circle cx="16" cy="14" r="1.5" fill="currentColor"></circle>
+                  </svg>
+                  <span class="wallet-dropdown-heading">Student Wallet</span>
+                </div>
+                <span class="wallet-status-pill">Non-Withdrawable</span>
+              </div>
+              <div class="wallet-dropdown-body">
+                <div class="wallet-balance-row">
+                  <span class="wallet-balance-label">Lesson Credit:</span>
+                  <span class="wallet-balance-val" id="wallet-dropdown-balance">$0.00</span>
+                </div>
+                <p class="wallet-dropdown-note">
+                  If you cancel a lesson (at least 3 hours before start time), the cost is refunded to your wallet. While the refunded amount is visible here, it cannot be withdrawn; instead, it can be used to book another lesson of the same value.
+                </p>
+              </div>
+              <div class="wallet-dropdown-footer">
+                <a href="#tutors" class="btn btn-outline-gold btn-sm" style="width: 100%; text-align: center; justify-content: center; font-weight: 700; text-decoration: none;" onclick="const d = document.getElementById('nav-wallet-dropdown'); if (d) d.style.display='none';">
+                  Book Another Lesson
+                </a>
+              </div>
+            </div>
+          </div>
           <!-- Notification Bell & Dropdown -->
           <div class="nav-notif-container" id="nav-notif-container">
             <button type="button" class="nav-notif-btn" id="nav-notif-btn" aria-label="Notifications" title="Notifications">
@@ -2064,6 +2102,23 @@
                 </div>
               </div>
 
+              <!-- Aviora Wallet Credit Option -->
+              <div class="payment-method-card" id="page-pay-method-wallet" style="padding: 0.65rem 0.85rem;">
+                <div class="payment-method-left">
+                  <input type="radio" name="page_payment_choice" id="page-pay-opt-wallet" value="wallet" />
+                  <div>
+                    <div class="payment-method-title" style="font-size: 0.85rem; display: flex; align-items: center; gap: 0.35rem;">
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--gold-600);"><path d="M20 7H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"></path><path d="M16 3H8a2 2 0 0 0-2 2v2h12V5a2 2 0 0 0-2-2z"></path><circle cx="16" cy="14" r="1.5" fill="currentColor"></circle></svg>
+                      <span>Aviora Wallet Credit</span>
+                    </div>
+                    <div class="payment-method-sub" id="page-pay-wallet-desc" style="font-size: 0.72rem;">Apply non-withdrawable credits from cancelled lessons</div>
+                  </div>
+                </div>
+                <div style="text-align: right;">
+                  <span id="page-pay-wallet-balance" class="text-gold" style="font-weight: 800; font-size: 0.95rem;">$0.00</span>
+                  <div id="page-pay-wallet-status" style="font-size: 0.68rem; color: var(--charcoal-500);">Available Balance</div>
+                </div>
+              </div>
               <!-- Card Option -->
               <div class="payment-method-card" id="page-pay-method-card" style="padding: 0.65rem 0.85rem;">
                 <div class="payment-method-left">
@@ -5385,6 +5440,23 @@
                 </div>
               </div>
 
+              <!-- Aviora Wallet Credit Option -->
+              <div class="payment-method-card" id="pay-method-wallet-card" onclick="Tutors.selectPaymentMethod('wallet')">
+                <div class="payment-method-left">
+                  <input type="radio" name="payment_choice" id="pay-opt-wallet" value="wallet" />
+                  <div>
+                    <div class="payment-method-title" style="display: flex; align-items: center; gap: 0.35rem;">
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--gold-600);"><path d="M20 7H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"></path><path d="M16 3H8a2 2 0 0 0-2 2v2h12V5a2 2 0 0 0-2-2z"></path><circle cx="16" cy="14" r="1.5" fill="currentColor"></circle></svg>
+                      <span>Aviora Wallet Credit</span>
+                    </div>
+                    <div class="payment-method-sub" id="pay-wallet-credit-desc">Use non-withdrawable lesson credits from cancelled sessions</div>
+                  </div>
+                </div>
+                <div style="text-align: right;">
+                  <span id="pay-wallet-balance-label" class="text-gold" style="font-weight: 800; font-size: 1.1rem;">$0.00</span>
+                  <div id="pay-wallet-status-sub" style="font-size: 0.72rem; color: var(--charcoal-500);">Available Balance</div>
+                </div>
+              </div>
               <!-- Credit / Debit Card Option -->
               <div class="payment-method-card" id="pay-method-card-card">
                 <div class="payment-method-left">

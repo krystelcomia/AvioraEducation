@@ -91,6 +91,7 @@ const Auth = {
     this.setupPasswordStrengthCheckers();
     this.setupSocialAuth();
     this.ensurePersistentAccounts();
+    this.bindWalletEvents();
     if (window.location.hash.startsWith('#auth-success')) {
       await this.handleOAuthCallbackHash();
       return;
@@ -123,6 +124,9 @@ const Auth = {
         }
       }
       this.updateNavUI(data.user, data.unreadNotifications);
+      if (data.user && data.user.role === 'student') {
+        this.refreshWallet();
+      }
     } catch (err) {
       console.warn('Session restore failed:', err.message);
       Storage.clearSession();
@@ -739,6 +743,9 @@ const Auth = {
       this.currentUser = res.user;
 
       this.updateNavUI(res.user);
+      if (res.user && res.user.role === 'student') {
+        this.refreshWallet();
+      }
 
       if (isInstant) {
         showToast(`Welcome back, ${res.user.name}! (Signed in via linked ${provider === 'google' ? 'Google' : 'Facebook'})`, 'success');
@@ -1186,6 +1193,70 @@ const Auth = {
     this.confirmLogout();
   },
 
+
+  updateWalletBalance(balance) {
+    const num = parseFloat(balance) || 0;
+    const formatted = `${num.toFixed(2)}`;
+    if (this.currentUser) {
+      this.currentUser.wallet_balance = num;
+      Storage.setUser(this.currentUser);
+    }
+    const navBal = document.getElementById('nav-wallet-balance');
+    if (navBal) navBal.textContent = formatted;
+    const dropBal = document.getElementById('wallet-dropdown-balance');
+    if (dropBal) dropBal.textContent = formatted;
+    const payBal = document.getElementById('pay-wallet-balance-label');
+    if (payBal) payBal.textContent = formatted;
+    const pagePayBal = document.getElementById('page-pay-wallet-balance');
+    if (pagePayBal) pagePayBal.textContent = formatted;
+  },
+
+  async refreshWallet() {
+    if (!this.currentUser || this.currentUser.role !== 'student') return;
+    try {
+      if (typeof API !== 'undefined' && API.getStudentWallet) {
+        const data = await API.getStudentWallet();
+        if (data && typeof data.wallet_balance !== 'undefined') {
+          this.updateWalletBalance(data.wallet_balance);
+        }
+      }
+    } catch (e) {
+      // silently ignore
+    }
+  },
+
+  bindWalletEvents() {
+    if (this._walletEventsBound) return;
+    this._walletEventsBound = true;
+
+    document.addEventListener('click', (e) => {
+      const walletBtn = e.target.closest('#nav-wallet-btn');
+      const dropdown = document.getElementById('nav-wallet-dropdown');
+      if (walletBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (dropdown) {
+          const isShown = dropdown.style.display === 'block';
+          dropdown.style.display = isShown ? 'none' : 'block';
+        }
+        return;
+      }
+
+      if (dropdown && dropdown.style.display === 'block') {
+        if (!e.target.closest('#nav-wallet-container')) {
+          dropdown.style.display = 'none';
+        }
+      }
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        const dropdown = document.getElementById('nav-wallet-dropdown');
+        if (dropdown) dropdown.style.display = 'none';
+      }
+    });
+  },
+
   updateNavUI(user, unreadCount = 0) {
     const guestActions = document.getElementById('nav-guest-actions');
     const userActions = document.getElementById('nav-user-actions');
@@ -1196,7 +1267,49 @@ const Auth = {
       if (userActions) {
         userActions.style.display = 'flex';
         const profileHash = (user.role === 'teacher' || user.role === 'tutor') ? '#teacher-profile' : (user.role === 'admin' ? '#admin-profile' : '#student-profile');
+        const isStudent = user.role === 'student';
+        const walletBalance = parseFloat(user.wallet_balance || 0).toFixed(2);
         userActions.innerHTML = `
+          ${isStudent ? `
+          <!-- Student Wallet Balance Container -->
+          <div class="nav-wallet-container" id="nav-wallet-container">
+            <button type="button" class="nav-wallet-btn" id="nav-wallet-btn" aria-label="Student Wallet Balance" title="Aviora Wallet (Lesson Credits)">
+              <svg class="nav-wallet-icon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20 7H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"></path>
+                <path d="M16 3H8a2 2 0 0 0-2 2v2h12V5a2 2 0 0 0-2-2z"></path>
+                <circle cx="16" cy="14" r="1.5" fill="currentColor"></circle>
+              </svg>
+              <span class="nav-wallet-balance" id="nav-wallet-balance">${walletBalance}</span>
+            </button>
+            <div class="nav-wallet-dropdown" id="nav-wallet-dropdown" style="display: none;">
+              <div class="wallet-dropdown-header">
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--gold-600)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M20 7H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"></path>
+                    <path d="M16 3H8a2 2 0 0 0-2 2v2h12V5a2 2 0 0 0-2-2z"></path>
+                    <circle cx="16" cy="14" r="1.5" fill="currentColor"></circle>
+                  </svg>
+                  <span class="wallet-dropdown-heading">Student Wallet</span>
+                </div>
+                <span class="wallet-status-pill">Non-Withdrawable</span>
+              </div>
+              <div class="wallet-dropdown-body">
+                <div class="wallet-balance-row">
+                  <span class="wallet-balance-label">Lesson Credit:</span>
+                  <span class="wallet-balance-val" id="wallet-dropdown-balance">${walletBalance}</span>
+                </div>
+                <p class="wallet-dropdown-note">
+                  If you cancel a lesson (at least 3 hours before start time), the cost is refunded to your wallet. While the refunded amount is visible here, it cannot be withdrawn; instead, it can be used to book another lesson of the same value.
+                </p>
+              </div>
+              <div class="wallet-dropdown-footer">
+                <a href="#tutors" class="btn btn-outline-gold btn-sm" style="width: 100%; text-align: center; justify-content: center; font-weight: 700; text-decoration: none;" onclick="const d = document.getElementById('nav-wallet-dropdown'); if (d) d.style.display='none';">
+                  Book Another Lesson
+                </a>
+              </div>
+            </div>
+          </div>
+          ` : ''}
           <!-- Notification Bell & Dropdown -->
           <div class="nav-notif-container" id="nav-notif-container">
             <button type="button" class="nav-notif-btn" id="nav-notif-btn" aria-label="Notifications" title="Notifications">

@@ -2677,3 +2677,177 @@
   border-color: rgba(239, 68, 68, 0.28) !important;
   opacity: 0.78;
 }
+
+
+/* ==========================================
+   NAVIGATION STUDENT WALLET PILL & DROPDOWN
+   ========================================== */
+.nav-wallet-container {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.nav-wallet-btn {
+  background: rgba(198, 138, 40, 0.08);
+  border: 1px solid rgba(198, 138, 40, 0.28);
+  color: var(--gold-800, #975A16);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.32rem 0.75rem;
+  border-radius: 9999px;
+  font-family: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  line-height: 1;
+  transition: all 0.2s ease;
+}
+
+.nav-wallet-btn:hover {
+  background: rgba(198, 138, 40, 0.16);
+  border-color: var(--gold-500, #D69E2E);
+  color: var(--gold-900, #744210);
+  transform: translateY(-1px);
+}
+
+.nav-wallet-icon {
+  color: var(--gold-600, #C68A28);
+  flex-shrink: 0;
+}
+
+.nav-wallet-balance {
+  font-feature-settings: "tnum";
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+.nav-wallet-dropdown {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: -10px;
+  width: 320px;
+  max-width: calc(100vw - 32px);
+  background: #FFFFFF;
+  border: 1px solid rgba(198, 138, 40, 0.28);
+  border-radius: 12px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.14);
+  z-index: 1000;
+  overflow: hidden;
+  animation: notifSlideDown 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.wallet-dropdown-header {
+  padding: 0.85rem 1rem;
+  background: linear-gradient(180deg, #FDFBF7 0%, #F8F4EC 100%);
+  border-bottom: 1px solid rgba(198, 138, 40, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.wallet-dropdown-heading {
+  font-size: 0.88rem;
+  font-weight: 800;
+  color: var(--charcoal-900, #1A202C);
+}
+
+.wallet-status-pill {
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 0.15rem 0.5rem;
+  border-radius: 9999px;
+  background: rgba(198, 138, 40, 0.14);
+  color: var(--gold-900, #744210);
+  border: 1px solid rgba(198, 138, 40, 0.28);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.wallet-dropdown-body {
+  padding: 1rem;
+}
+
+.wallet-balance-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 0.75rem 0.9rem;
+  background: rgba(198, 138, 40, 0.05);
+  border: 1px solid rgba(198, 138, 40, 0.18);
+  border-radius: 8px;
+  margin-bottom: 0.75rem;
+}
+
+.wallet-balance-label {
+  font-size: 0.82rem;
+  color: var(--text-secondary, #718096);
+  font-weight: 600;
+}
+
+.wallet-balance-val {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--gold-700, #B7791F);
+}
+
+.wallet-dropdown-note {
+  font-size: 0.78rem;
+  color: var(--text-secondary, #718096);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.wallet-dropdown-footer {
+  padding: 0.75rem 1rem;
+  background: #FAF7F2;
+  border-top: 1px solid rgba(198, 138, 40, 0.12);
+}
+
+/* Dark theme styling for wallet dropdown */
+[data-theme="dark"] .nav-wallet-btn {
+  background: rgba(198, 138, 40, 0.15);
+  border-color: rgba(198, 138, 40, 0.4);
+  color: #E6B566;
+}
+
+[data-theme="dark"] .nav-wallet-btn:hover {
+  background: rgba(198, 138, 40, 0.25);
+  color: #FFDF9E;
+}
+
+[data-theme="dark"] .nav-wallet-dropdown {
+  background: #1A202C;
+  border-color: rgba(198, 138, 40, 0.35);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
+}
+
+[data-theme="dark"] .wallet-dropdown-header,
+[data-theme="dark"] .wallet-dropdown-footer {
+  background: #151A23;
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="dark"] .wallet-dropdown-heading {
+  color: #F7FAFC;
+}
+
+[data-theme="dark"] .wallet-status-pill {
+  background: rgba(198, 138, 40, 0.25);
+  color: #F6E05E;
+  border-color: rgba(198, 138, 40, 0.45);
+}
+
+[data-theme="dark"] .wallet-balance-row {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(198, 138, 40, 0.25);
+}
+
+[data-theme="dark"] .wallet-balance-val {
+  color: #ECC94B;
+}
+
+[data-theme="dark"] .wallet-dropdown-note {
+  color: #A0AEC0;
+}

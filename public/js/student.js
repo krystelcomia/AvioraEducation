@@ -109,6 +109,9 @@ const Student = {
       const data = await API.getStudentDashboard();
       this.requests = data.requests || [];
       this.subscription = data.subscription || null;
+      if (typeof data.wallet_balance !== 'undefined' && typeof Auth !== 'undefined' && Auth.updateWalletBalance) {
+        Auth.updateWalletBalance(data.wallet_balance);
+      }
 
       // Update Header info
       const studentNameElem = document.getElementById('student-display-name');
@@ -848,13 +851,23 @@ const Student = {
       return;
     }
 
+    const sessionCost = session ? (parseFloat(session.total_amount) || (parseFloat(session.hourly_rate) * (parseFloat(session.duration_hours) || 1.0))) : 0;
+    const refundNote = sessionCost > 0
+      ? ` The session fee of ${sessionCost.toFixed(2)} will be credited back to your Aviora wallet for future bookings (non-withdrawable).`
+      : '';
+
     showConfirm(
       'Cancel Tutoring Booking',
-      'Are you sure you want to cancel this booking? Notice: Cancel booking is only applicable at least 3 hours before the class.',
+      `Are you sure you want to cancel this booking?${refundNote} Notice: Cancel booking is only applicable at least 3 hours before the class.`,
       async () => {
         try {
           const res = await API.cancelRequest(requestId);
           showToast(res.message, 'success');
+          if (typeof res.new_wallet_balance !== 'undefined' && typeof Auth !== 'undefined' && Auth.updateWalletBalance) {
+            Auth.updateWalletBalance(res.new_wallet_balance);
+          } else if (typeof Auth !== 'undefined' && Auth.refreshWallet) {
+            await Auth.refreshWallet();
+          }
           await this.loadDashboard();
         } catch (err) {
           showToast(err.message, 'error');

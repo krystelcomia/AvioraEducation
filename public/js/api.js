@@ -131,6 +131,7 @@ const API = {
 
   // Student
   getStudentDashboard: () => apiRequest('/student/dashboard'),
+  getStudentWallet: () => apiRequest('/student/wallet'),
   getStudentSubscription: () => apiRequest('/student/subscription'),
   purchaseSubscription: (payload) => apiRequest('/student/subscription/purchase', { method: 'POST', body: typeof payload === 'string' ? { package_key: payload } : payload }),
   createRequest: (body) => apiRequest('/student/requests', { method: 'POST', body }),

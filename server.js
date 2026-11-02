@@ -526,9 +526,9 @@ function authenticateToken(req, res, next) {
       return res.status(403).json({ error: 'Session expired or invalid token. Please log in again.' });
     }
 
-    let user = db.prepare('SELECT id, name, email, role, phone, avatar_url, status FROM users WHERE id = ?').get(decoded.id);
+    let user = db.prepare('SELECT id, name, email, role, phone, avatar_url, status, wallet_balance FROM users WHERE id = ?').get(decoded.id);
     if (!user && decoded.email) {
-      user = db.prepare('SELECT id, name, email, role, phone, avatar_url, status FROM users WHERE LOWER(email) = LOWER(?)').get(decoded.email);
+      user = db.prepare('SELECT id, name, email, role, phone, avatar_url, status, wallet_balance FROM users WHERE LOWER(email) = LOWER(?)').get(decoded.email);
     }
     if (!user) {
       return res.status(404).json({ error: 'User account not found.' });
@@ -1934,7 +1934,7 @@ app.put('/api/auth/profile', authenticateToken, (req, res) => {
       );
     }
 
-    const updatedUser = db.prepare('SELECT id, name, email, role, phone, avatar_url, status FROM users WHERE id = ?').get(userId);
+    const updatedUser = db.prepare('SELECT id, name, email, role, phone, avatar_url, status, wallet_balance FROM users WHERE id = ?').get(userId);
     return res.json({ message: 'Profile updated successfully.', user: updatedUser });
   } catch (error) {
     console.error('Profile update error:', error);
@@ -1959,7 +1959,7 @@ app.post('/api/auth/upload-avatar', authenticateToken, (req, res) => {
       }
 
       db.prepare('UPDATE users SET avatar_url = ? WHERE id = ?').run(avatarUrl, req.user.id);
-      const user = db.prepare('SELECT id, name, email, role, phone, avatar_url, status FROM users WHERE id = ?').get(req.user.id);
+      const user = db.prepare('SELECT id, name, email, role, phone, avatar_url, status, wallet_balance FROM users WHERE id = ?').get(req.user.id);
       return res.json({ message: 'Profile avatar updated successfully.', avatar_url: avatarUrl, user });
     } catch (error) {
       console.error('Avatar upload error:', error);
@@ -2655,7 +2655,9 @@ app.get('/api/student/dashboard', authenticateToken, requireRole('student'), (re
       ORDER BY id DESC LIMIT 1
     `).get(studentId);
 
-    res.json({ stats, requests, subscription: activeSub || null });
+    const studentUser = db.prepare('SELECT wallet_balance FROM users WHERE id = ?').get(studentId);
+    const walletBalance = studentUser ? (parseFloat(studentUser.wallet_balance) || 0) : 0;
+    res.json({ stats, requests, subscription: activeSub || null, wallet_balance: walletBalance });
   } catch (error) {
     console.error('Student dashboard error:', error);
     res.status(500).json({ error: 'Failed to load student dashboard.' });
@@ -2665,6 +2667,23 @@ app.get('/api/student/dashboard', authenticateToken, requireRole('student'), (re
 // ==========================================
 // STUDENT SUBSCRIPTION & ANALYTICS ROUTES
 // ==========================================
+
+// Student Wallet Balance (non-withdrawable lesson credits)
+app.get('/api/student/wallet', authenticateToken, requireRole('student'), (req, res) => {
+  try {
+    const student = db.prepare('SELECT wallet_balance FROM users WHERE id = ?').get(req.user.id);
+    const balance = student ? (parseFloat(student.wallet_balance) || 0) : 0;
+    res.json({
+      wallet_balance: balance,
+      formatted_balance: `${balance.toFixed(2)}`,
+      withdrawable: false,
+      currency: 'USD'
+    });
+  } catch (error) {
+    console.error('Wallet error:', error);
+    res.status(500).json({ error: 'Failed to retrieve wallet balance.' });
+  }
+});
 
 // Student Subscription & Spending Analytics
 app.get('/api/student/subscription', authenticateToken, requireRole('student'), (req, res) => {
@@ -3230,7 +3249,7 @@ app.post('/api/student/requests', authenticateToken, requireRole('student'), (re
     const subjectRate = getRateForTutorSubject(tutorProfile, subject);
     const calculatedAmount = Math.round(duration * subjectRate * 100) / 100;
 
-    let finalPaymentMethod = payment_method === 'subscription' ? 'subscription' : 'card';
+    let finalPaymentMethod = payment_method === 'subscription' ? 'subscription' : (payment_method === 'wallet' ? 'wallet' : 'card');
     let remainingCreditsAfter = null;
 
     if (finalPaymentMethod === 'subscription') {
@@ -3241,7 +3260,7 @@ app.post('/api/student/requests', authenticateToken, requireRole('student'), (re
       `).get(studentId);
 
       if (!activeSub) {
-        return res.status(400).json({ error: 'No active subscription lessons remaining. Please choose Card payment or renew your subscription package.' });
+        return res.status(400).json({ error: 'No active subscription lessons remaining. Please choose Wallet, Card payment, or renew your subscription package.' });
       }
 
       const newRemaining = activeSub.lessons_remaining - 1;
@@ -3254,6 +3273,17 @@ app.post('/api/student/requests', authenticateToken, requireRole('student'), (re
       `).run(newRemaining, newStatus, activeSub.id);
 
       remainingCreditsAfter = newRemaining;
+    } else if (finalPaymentMethod === 'wallet') {
+      const studentUser = db.prepare('SELECT wallet_balance FROM users WHERE id = ?').get(studentId);
+      const currentWallet = studentUser ? (parseFloat(studentUser.wallet_balance) || 0) : 0;
+      if (currentWallet < calculatedAmount) {
+        return res.status(400).json({
+          error: `Insufficient wallet balance (${currentWallet.toFixed(2)} available). This lesson costs ${calculatedAmount.toFixed(2)}. Please choose another payment method.`
+        });
+      }
+
+      const newBalance = Math.round((currentWallet - calculatedAmount) * 100) / 100;
+      db.prepare('UPDATE users SET wallet_balance = ? WHERE id = ?').run(newBalance, studentId);
     }
 
     const insert = db.prepare(`
@@ -3281,15 +3311,21 @@ app.post('/api/student/requests', authenticateToken, requireRole('student'), (re
     sendNotification(
       tutor_user_id,
       'New Tutoring Request Received',
-      `${req.user.name} booked a ${subject} tutoring session on ${requested_date} (${requested_time}). Payment: ${finalPaymentMethod === 'subscription' ? 'Subscription Credit Applied' : 'Paid via Card'}.`,
+      `${req.user.name} booked a ${subject} tutoring session on ${requested_date} (${requested_time}). Payment: ${finalPaymentMethod === 'subscription' ? 'Subscription Credit Applied' : (finalPaymentMethod === 'wallet' ? 'Paid via Aviora Wallet' : 'Paid via Card')}.`,
       'request',
       '/#teacher-requests'
     );
 
     // Notify student confirmation
-    const paymentMsg = finalPaymentMethod === 'subscription'
-      ? `1 subscription lesson credit was applied ($0.00 charged). You have ${remainingCreditsAfter} lesson${remainingCreditsAfter === 1 ? '' : 's'} remaining.`
-      : `Payment of $${calculatedAmount.toFixed(2)} was processed successfully via Card.`;
+    const updatedStudentAfterBook = db.prepare('SELECT wallet_balance FROM users WHERE id = ?').get(studentId);
+    const updatedWalletBal = updatedStudentAfterBook ? (parseFloat(updatedStudentAfterBook.wallet_balance) || 0) : 0;
+
+    let paymentMsg = `Payment of ${calculatedAmount.toFixed(2)} was processed successfully via Card.`;
+    if (finalPaymentMethod === 'subscription') {
+      paymentMsg = `1 subscription lesson credit was applied ($0.00 charged). You have ${remainingCreditsAfter} lesson${remainingCreditsAfter === 1 ? '' : 's'} remaining.`;
+    } else if (finalPaymentMethod === 'wallet') {
+      paymentMsg = `Paid using ${calculatedAmount.toFixed(2)} from your Aviora wallet credit balance (remaining: ${updatedWalletBal.toFixed(2)}).`;
+    }
 
     sendNotification(
       studentId,
@@ -3303,7 +3339,8 @@ app.post('/api/student/requests', authenticateToken, requireRole('student'), (re
       message: `Tutoring lesson scheduled successfully! ${paymentMsg}`,
       requestId: result.lastInsertRowid,
       paymentMethod: finalPaymentMethod,
-      remainingLessons: remainingCreditsAfter
+      remainingLessons: remainingCreditsAfter,
+      new_wallet_balance: updatedWalletBal
     });
   } catch (error) {
     console.error('Create tutoring request error:', error);
@@ -3348,14 +3385,31 @@ app.post('/api/student/requests/:id/cancel', authenticateToken, requireRole('stu
 
     db.prepare("UPDATE tutoring_requests SET status = 'cancelled', updated_at = CURRENT_TIMESTAMP WHERE id = ?").run(requestId);
 
-    // If session was booked using subscription, restore lesson credit
-    if (request.payment_method === 'subscription') {
+    // Refund handling:
+    let refundAmount = 0;
+    if (request.payment_method === 'subscription' && (!request.total_amount || parseFloat(request.total_amount) === 0)) {
       db.prepare(`
         UPDATE student_subscriptions 
         SET lessons_remaining = lessons_remaining + 1, updated_at = CURRENT_TIMESTAMP
         WHERE user_id = ? AND status = 'active'
       `).run(studentId);
+    } else {
+      // Non-subscription (card, wallet, direct) or paid session: refund full lesson cost to wallet
+      refundAmount = parseFloat(request.total_amount) || 0;
+      if (refundAmount <= 0 && parseFloat(request.hourly_rate) > 0) {
+        refundAmount = Math.round(parseFloat(request.hourly_rate) * (parseFloat(request.duration_hours) || 1.0) * 100) / 100;
+      }
+      if (refundAmount > 0) {
+        db.prepare(`
+          UPDATE users 
+          SET wallet_balance = ROUND(COALESCE(wallet_balance, 0) + ?, 2)
+          WHERE id = ?
+        `).run(refundAmount, studentId);
+      }
     }
+
+    const updatedUser = db.prepare('SELECT wallet_balance FROM users WHERE id = ?').get(studentId);
+    const newBalance = updatedUser ? (parseFloat(updatedUser.wallet_balance) || 0) : 0;
 
     // Notify tutor
     sendNotification(
@@ -3366,7 +3420,32 @@ app.post('/api/student/requests/:id/cancel', authenticateToken, requireRole('stu
       '#teacher-requests'
     );
 
-    res.json({ message: 'Booking cancelled successfully.' });
+    // Notify student of refund
+    if (refundAmount > 0) {
+      sendNotification(
+        studentId,
+        'Lesson Cancelled & Credit Refunded',
+        `Your ${request.subject} session was cancelled. ${refundAmount.toFixed(2)} was credited to your Aviora wallet as lesson credit (non-withdrawable) for booking another lesson. New balance: ${newBalance.toFixed(2)}.`,
+        'booking',
+        '#student-portal'
+      );
+    } else if (request.payment_method === 'subscription') {
+      sendNotification(
+        studentId,
+        'Lesson Cancelled & Credit Restored',
+        `Your ${request.subject} session was cancelled and 1 subscription lesson credit has been restored to your active plan.`,
+        'booking',
+        '#student-portal'
+      );
+    }
+
+    res.json({
+      message: refundAmount > 0
+        ? `Booking cancelled successfully. ${refundAmount.toFixed(2)} has been credited back to your Aviora wallet (non-withdrawable lesson credit).`
+        : 'Booking cancelled successfully and your lesson credit has been restored.',
+      refunded_amount: refundAmount,
+      new_wallet_balance: newBalance
+    });
   } catch (error) {
     console.error('Cancel request error:', error);
     res.status(500).json({ error: 'Failed to cancel request.' });

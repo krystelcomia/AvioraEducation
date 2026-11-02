@@ -76,6 +76,20 @@ const BookLesson = {
       });
     }
 
+    const payWalletCard = document.getElementById('page-pay-method-wallet');
+    if (payWalletCard) {
+      payWalletCard.addEventListener('click', () => {
+        const opt = document.getElementById('page-pay-opt-wallet');
+        if (opt && !opt.disabled) {
+          opt.checked = true;
+          this.setPaymentMethod('wallet');
+        } else {
+          const userWallet = (Auth.currentUser && parseFloat(Auth.currentUser.wallet_balance)) || 0;
+          showToast(`Insufficient wallet credit (${userWallet.toFixed(2)} available).`, 'warning');
+        }
+      });
+    }
+
     // Confirm & Complete Payment button
     const confirmBtn = document.getElementById('btn-page-confirm-booking');
     if (confirmBtn) {
@@ -544,24 +558,75 @@ const BookLesson = {
       if (cardInputs) cardInputs.style.display = 'block';
     }
 
+    // Configure Wallet Option
+    const walletOption = document.getElementById('page-pay-opt-wallet');
+    const walletCardBox = document.getElementById('page-pay-method-wallet');
+    const walletBalLabel = document.getElementById('page-pay-wallet-balance');
+    const walletDesc = document.getElementById('page-pay-wallet-desc');
+    const walletStatus = document.getElementById('page-pay-wallet-status');
+    const userWallet = (Auth.currentUser && parseFloat(Auth.currentUser.wallet_balance)) || 0;
+    const price = this.getTutorSubjectRate(this.selectedTutor, this.selectedSubject);
+
+    if (walletBalLabel) walletBalLabel.textContent = `${userWallet.toFixed(2)}`;
+
+    if (userWallet >= price) {
+      if (walletCardBox) {
+        walletCardBox.classList.remove('disabled');
+        walletCardBox.style.opacity = '1';
+        walletCardBox.style.cursor = 'pointer';
+      }
+      if (walletOption) walletOption.disabled = false;
+      if (walletDesc) walletDesc.textContent = `Use ${price.toFixed(2)} from your ${userWallet.toFixed(2)} wallet credit to book this lesson.`;
+      if (walletStatus) {
+        walletStatus.textContent = 'Ready to Apply';
+        walletStatus.style.color = 'var(--success)';
+      }
+    } else {
+      if (walletCardBox) {
+        walletCardBox.style.opacity = '0.65';
+      }
+      if (walletOption) walletOption.disabled = true;
+      if (walletDesc) walletDesc.textContent = userWallet > 0
+        ? `Balance: ${userWallet.toFixed(2)} (Insufficient for this ${price.toFixed(2)} lesson)`
+        : 'Balance: $0.00 (No refunded lesson credits available)';
+      if (walletStatus) {
+        walletStatus.textContent = `${userWallet.toFixed(2)} Available`;
+        walletStatus.style.color = 'var(--charcoal-500)';
+      }
+    }
+
     this.updateButtonText();
   },
 
   setPaymentMethod(method) {
+    const user = Auth.currentUser;
+    const userWallet = user ? (parseFloat(user.wallet_balance) || 0) : 0;
+    const price = this.getTutorSubjectRate(this.selectedTutor, this.selectedSubject);
+
+    if (method === 'wallet' && userWallet < price) {
+      showToast(`Insufficient wallet credit (${userWallet.toFixed(2)} available, ${price.toFixed(2)} required).`, 'warning');
+      return;
+    }
+
     this.paymentMethod = method;
     const subCardBox = document.getElementById('page-pay-method-sub');
     const cardCardBox = document.getElementById('page-pay-method-card');
+    const walletCardBox = document.getElementById('page-pay-method-wallet');
     const cardInputs = document.getElementById('page-payment-card-inputs');
 
-    if (method === 'subscription') {
-      if (subCardBox) subCardBox.classList.add('selected');
-      if (cardCardBox) cardCardBox.classList.remove('selected');
-      if (cardInputs) cardInputs.style.display = 'none';
-    } else {
-      if (subCardBox) subCardBox.classList.remove('selected');
-      if (cardCardBox) cardCardBox.classList.add('selected');
-      if (cardInputs) cardInputs.style.display = 'block';
-    }
+    const subRadio = document.getElementById('page-pay-opt-sub');
+    const cardRadio = document.getElementById('page-pay-opt-card');
+    const walletRadio = document.getElementById('page-pay-opt-wallet');
+
+    if (subRadio) subRadio.checked = (method === 'subscription');
+    if (cardRadio) cardRadio.checked = (method === 'card');
+    if (walletRadio) walletRadio.checked = (method === 'wallet');
+
+    if (subCardBox) subCardBox.classList.toggle('selected', method === 'subscription');
+    if (cardCardBox) cardCardBox.classList.toggle('selected', method === 'card');
+    if (walletCardBox) walletCardBox.classList.toggle('selected', method === 'wallet');
+
+    if (cardInputs) cardInputs.style.display = (method === 'card') ? 'block' : 'none';
 
     this.updateButtonText();
   },
@@ -577,6 +642,9 @@ const BookLesson = {
 
     if (this.paymentMethod === 'subscription') {
       btnText.textContent = 'Confirm Booking (Use 1 Lesson Credit — $0.00)';
+    } else if (this.paymentMethod === 'wallet') {
+      const price = this.getTutorSubjectRate(this.selectedTutor, this.selectedSubject);
+      btnText.textContent = `Pay ${price.toFixed(2)} with Wallet Credit & Confirm`;
     } else {
       const price = this.getTutorSubjectRate(this.selectedTutor, this.selectedSubject);
       btnText.textContent = `Pay $${price.toFixed(2)} & Confirm Booking`;
@@ -625,6 +693,9 @@ const BookLesson = {
 
       const res = await API.createRequest(payload);
       showToast(res.message, 'success');
+      if (typeof res.new_wallet_balance !== 'undefined' && typeof Auth !== 'undefined' && Auth.updateWalletBalance) {
+        Auth.updateWalletBalance(res.new_wallet_balance);
+      }
 
       // Refresh student dashboard data
       if (typeof Student !== 'undefined' && Student.loadDashboard) {

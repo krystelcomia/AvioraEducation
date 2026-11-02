@@ -36,6 +36,7 @@ function initSchema() {
       role TEXT NOT NULL CHECK(role IN ('student', 'teacher', 'tutor', 'admin')),
       phone TEXT,
       avatar_url TEXT,
+      wallet_balance REAL DEFAULT 0.00,
       status TEXT DEFAULT 'active' CHECK(status IN ('active', 'inactive', 'suspended')),
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
@@ -300,6 +301,13 @@ function initSchema() {
     CREATE INDEX IF NOT EXISTS idx_oauth_linked_user ON oauth_linked_accounts(user_id);
   `);
 
+  try {
+    const userCols = db.prepare("PRAGMA table_info(users)").all();
+    if (userCols.length > 0 && !userCols.some(c => c.name === 'wallet_balance')) {
+      db.prepare("ALTER TABLE users ADD COLUMN wallet_balance REAL DEFAULT 0.00").run();
+    }
+    db.prepare("UPDATE users SET wallet_balance = 0.00 WHERE wallet_balance IS NULL").run();
+  } catch (e) {}
   try {
     db.prepare("ALTER TABLE users ADD COLUMN auth_provider TEXT DEFAULT 'local'").run();
   } catch (e) {}
@@ -1078,7 +1086,7 @@ function ensureKrystelAccount(customPassword) {
           student_id, tutor_id, subject, grade_level, requested_date,
           requested_time, duration_hours, hourly_rate, total_amount, status, notes, tutor_response_note
         ) VALUES (
-          ?, ?, 'Calculus BC', 'Grade 11 - High School', '2026-10-25',
+          ?, ?, 'Calculus BC', 'Grade 11 - High School', '2026-11-10',
           '14:00', 1.0, 65.0, 65.0, 'accepted',
           'Integration by parts and Taylor series expansions.',
           'I have prepared diagnostic worksheets and step-by-step problem sets for our session.'
@@ -1091,7 +1099,7 @@ function ensureKrystelAccount(customPassword) {
           student_id, tutor_id, subject, grade_level, requested_date,
           requested_time, duration_hours, hourly_rate, total_amount, status, notes
         ) VALUES (
-          ?, ?, 'Physics Mechanics', 'Grade 11 - High School', '2026-10-28',
+          ?, ?, 'Physics Mechanics', 'Grade 11 - High School', '2026-11-12',
           '16:00', 1.0, 75.0, 75.0, 'pending',
           'Rotational dynamics and angular momentum review.'
         )

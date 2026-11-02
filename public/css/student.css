@@ -15,11 +15,11 @@
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 1.25rem;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(251, 244, 226, 0.55) 55%, rgba(255, 255, 255, 0.98) 100%);
-  border: 1px solid rgba(198, 138, 40, 0.28);
+  background: #FFFFFF;
+  border: 1px solid rgba(0, 0, 0, 0.08);
   border-radius: 14px;
   padding: 1.25rem 1.75rem;
-  box-shadow: 0 4px 20px rgba(198, 138, 40, 0.06), 0 1px 4px rgba(0, 0, 0, 0.02);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
   position: relative;
   overflow: hidden;
 }
@@ -29,29 +29,18 @@
   display: flex;
   align-items: center;
   gap: 0.65rem;
-  margin: 1.1rem 0 0.55rem;
+  margin: 1.25rem 0 0.65rem;
   padding: 0 0.15rem;
 }
 
 .dash-category-label .category-badge {
-  display: inline-flex;
-  align-items: center;
-  font-size: 0.72rem;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--gold-800);
-  background: rgba(198, 138, 40, 0.12);
-  border: 1px solid rgba(198, 138, 40, 0.28);
-  padding: 0.2rem 0.6rem;
-  border-radius: 6px;
-  line-height: 1;
+  display: none !important;
 }
 
 .dash-category-label .category-text {
-  font-size: 0.88rem;
-  font-weight: 700;
-  color: var(--charcoal-800);
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--charcoal-900);
   letter-spacing: -0.01em;
 }
 
@@ -59,16 +48,16 @@
   content: '';
   flex: 1;
   height: 1px;
-  background: linear-gradient(90deg, rgba(198, 138, 40, 0.3) 0%, rgba(0, 0, 0, 0.06) 60%, transparent 100%);
+  background: rgba(0, 0, 0, 0.08);
   margin-left: 0.5rem;
 }
 
 [data-theme="dark"] .dash-category-label .category-text {
-  color: var(--charcoal-300);
+  color: var(--charcoal-200);
 }
 
 [data-theme="dark"] .dash-category-label::after {
-  background: linear-gradient(90deg, rgba(198, 138, 40, 0.4) 0%, rgba(255, 255, 255, 0.06) 60%, transparent 100%);
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .portal-header-meta-badge {
@@ -112,15 +101,7 @@
 }
 
 .portal-header::before {
-  content: '';
-  position: absolute;
-  top: -40px;
-  right: -40px;
-  width: 220px;
-  height: 220px;
-  background: radial-gradient(circle, rgba(198, 138, 40, 0.12) 0%, transparent 70%);
-  pointer-events: none;
-  border-radius: 50%;
+  display: none !important;
 }
 
 .portal-user-meta {
@@ -395,36 +376,31 @@
 }
 
 .stat-widget-creative {
-  background: linear-gradient(145deg, rgba(255, 255, 255, 0.98) 0%, rgba(253, 250, 244, 0.9) 100%);
-  border: 1px solid rgba(198, 138, 40, 0.2);
+  background: #FFFFFF;
+  border: 1px solid rgba(0, 0, 0, 0.08);
   border-radius: 12px;
   position: relative;
   overflow: hidden;
-  box-shadow: 0 3px 14px rgba(198, 138, 40, 0.04);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
 }
 
 .stat-widget-creative:hover {
-  border-color: rgba(198, 138, 40, 0.45);
-  transform: translateY(-4px);
-  box-shadow: 0 12px 28px rgba(198, 138, 40, 0.12);
+  border-color: rgba(0, 0, 0, 0.16);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
 }
 
 .stat-widget-creative::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 3px;
-  background: transparent;
-  transition: background 0.2s ease;
+  display: none !important;
 }
 
-.stat-widget-creative.stat-widget-gold::after { background: var(--gradient-gold); }
-.stat-widget-creative.stat-widget-amber::after { background: linear-gradient(90deg, #F59E0B, #D97706); }
-.stat-widget-creative.stat-widget-emerald::after { background: linear-gradient(90deg, #10B981, #059669); }
-.stat-widget-creative.stat-widget-charcoal::after { background: linear-gradient(90deg, #374151, #1F2937); }
-.stat-widget-creative.stat-widget-luxury::after { background: linear-gradient(90deg, #C68A28, #F59E0B); }
+.stat-widget-creative.stat-widget-gold::after,
+.stat-widget-creative.stat-widget-amber::after,
+.stat-widget-creative.stat-widget-emerald::after,
+.stat-widget-creative.stat-widget-charcoal::after,
+.stat-widget-creative.stat-widget-luxury::after {
+  display: none !important;
+}
 
 .stat-widget-icon {
   width: 50px;
@@ -866,11 +842,11 @@
    ========================================= */
 .dash-section-box {
   background: #FFFFFF;
-  border: 1px solid rgba(198, 138, 40, 0.2);
+  border: 1px solid rgba(0, 0, 0, 0.08);
   border-radius: 14px;
   padding: 1.35rem 1.75rem;
   margin-bottom: 0.95rem;
-  box-shadow: 0 3px 14px rgba(0, 0, 0, 0.02);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
 }
 
 .dash-section-header {
@@ -903,12 +879,12 @@
    ========================================= */
 .spotlight-session-card,
 .spotlight-mission-control {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(251, 244, 226, 0.65) 55%, rgba(255, 255, 255, 0.98) 100%);
-  border: 1.5px solid rgba(198, 138, 40, 0.35);
+  background: #FFFFFF;
+  border: 1px solid rgba(0, 0, 0, 0.08);
   border-radius: 14px;
   padding: 1.25rem 1.65rem;
   margin-bottom: 0.95rem;
-  box-shadow: 0 4px 18px rgba(198, 138, 40, 0.06), 0 1px 4px rgba(0, 0, 0, 0.02);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
   position: relative;
   overflow: hidden;
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
@@ -916,31 +892,17 @@
 
 .spotlight-session-card::before,
 .spotlight-mission-control::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 6px;
-  height: 100%;
-  background: var(--gradient-gold);
+  display: none !important;
 }
 
 .spotlight-mission-control::after {
-  content: '';
-  position: absolute;
-  top: -50px;
-  right: -50px;
-  width: 200px;
-  height: 200px;
-  background: radial-gradient(circle, rgba(198, 138, 40, 0.15) 0%, transparent 70%);
-  pointer-events: none;
-  border-radius: 50%;
+  display: none !important;
 }
 
 .spotlight-session-card:hover,
 .spotlight-mission-control:hover {
-  border-color: rgba(198, 138, 40, 0.6);
-  box-shadow: 0 14px 38px rgba(198, 138, 40, 0.15);
+  border-color: rgba(0, 0, 0, 0.16);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
 }
 
 .mission-control-header {
@@ -951,7 +913,7 @@
   gap: 0.75rem;
   margin-bottom: 1.5rem;
   padding-bottom: 1rem;
-  border-bottom: 1px solid rgba(198, 138, 40, 0.18);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
 }
 
 .mission-live-beacon {
@@ -1058,13 +1020,13 @@
 }
 
 .mission-note-quote {
-  background: rgba(251, 244, 226, 0.7);
-  border-left: 3px solid var(--gold-500);
+  background: #F9FAFB;
+  border-left: 3px solid #E5E7EB;
   border-radius: 0 10px 10px 0;
   padding: 0.6rem 0.95rem;
   margin-top: 0.45rem;
   font-size: 0.82rem;
-  color: var(--gold-900);
+  color: var(--charcoal-700);
   font-style: italic;
 }
 
@@ -1104,11 +1066,11 @@
    ========================================= */
 .weekly-rhythm-strip {
   background: #FFFFFF;
-  border: 1px solid rgba(198, 138, 40, 0.2);
+  border: 1px solid rgba(0, 0, 0, 0.08);
   border-radius: 14px;
   padding: 1.15rem 1.45rem;
   margin-bottom: 0.95rem;
-  box-shadow: 0 3px 14px rgba(0, 0, 0, 0.02);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
 }
 
 .weekly-rhythm-header {
@@ -1243,11 +1205,11 @@
    ========================================= */
 .academic-mastery-box {
   background: #FFFFFF;
-  border: 1px solid rgba(198, 138, 40, 0.2);
+  border: 1px solid rgba(0, 0, 0, 0.08);
   border-radius: 14px;
   padding: 1.15rem 1.45rem;
   margin-bottom: 0.95rem;
-  box-shadow: 0 3px 14px rgba(0, 0, 0, 0.02);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
 }
 
 .mastery-cards-grid {
@@ -1258,7 +1220,7 @@
 }
 
 .mastery-card {
-  background: linear-gradient(145deg, #FFFFFF 0%, #FBF9F4 100%);
+  background: #FFFFFF;
   border: 1px solid rgba(0, 0, 0, 0.08);
   border-radius: 14px;
   padding: 1.25rem 1.35rem;
@@ -1873,11 +1835,11 @@
    STUDENT MONTHLY SCHEDULE CALENDAR & DATE AVAILABILITY MANAGER
    ============================================================== */
 .student-calendar-card {
-  background: var(--bg-card, #FFFFFF);
-  border: 1px solid rgba(198, 138, 40, 0.22);
+  background: #FFFFFF;
+  border: 1px solid rgba(0, 0, 0, 0.08);
   border-radius: var(--radius-xl);
   overflow: hidden;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
   margin-bottom: 1.5rem;
 }
 
@@ -1889,7 +1851,7 @@
   align-items: center;
   flex-wrap: wrap;
   gap: 0.75rem;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(250, 243, 230, 0.5) 100%);
+  background: #FFFFFF;
 }
 
 .student-cal-nav-group {
@@ -2036,10 +1998,10 @@
 /* Date schedule manager card */
 .student-date-schedule-card {
   background: #FFFFFF;
-  border: 1.5px solid rgba(198, 138, 40, 0.28);
+  border: 1px solid rgba(0, 0, 0, 0.08);
   border-radius: var(--radius-xl);
   padding: 1.5rem 1.75rem;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
 }
 
 .student-slot-btn {
@@ -2075,4 +2037,30 @@
   border-color: rgba(16, 185, 129, 0.35);
   color: #047857;
   cursor: default;
+}
+
+/* Plain Dashboard Elements Dark Mode Support */
+[data-theme="dark"] .portal-header,
+[data-theme="dark"] .stat-widget-creative,
+[data-theme="dark"] .spotlight-session-card,
+[data-theme="dark"] .spotlight-mission-control,
+[data-theme="dark"] .dash-section-box,
+[data-theme="dark"] .weekly-rhythm-strip,
+[data-theme="dark"] .academic-mastery-box,
+[data-theme="dark"] .mastery-card,
+[data-theme="dark"] .student-calendar-card,
+[data-theme="dark"] .student-calendar-header,
+[data-theme="dark"] .student-date-schedule-card {
+  background: #1C2029;
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="dark"] .mission-control-header {
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="dark"] .mission-note-quote {
+  background: #232834;
+  border-left-color: rgba(255, 255, 255, 0.15);
+  color: var(--charcoal-300);
 }

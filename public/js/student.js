@@ -247,7 +247,7 @@ const Student = {
       const pendingReview = this.requests.find(r => (r.status === 'completed' || r.room_status === 'ended') && !r.review_rating);
       if (pendingReview) {
         container.innerHTML = `
-          <div class="spotlight-mission-control" style="border: 1.5px solid var(--gold-500);">
+          <div class="spotlight-mission-control">
             <div class="mission-control-header">
               <span class="mission-live-beacon" style="background: rgba(245, 158, 11, 0.15); color: #B45309; border-color: rgba(245, 158, 11, 0.3);">
                 ★ RATE YOUR EDUCATOR
@@ -323,10 +323,7 @@ const Student = {
       <div class="spotlight-mission-control">
         <div class="mission-control-header">
           <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
-            <span class="mission-live-beacon">
-              <span class="beacon-pulse"></span>
-              <span>LIVE MISSION CONTROL</span>
-            </span>
+
             <span class="mission-countdown-badge" title="Estimated countdown to session start">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
               <span>${nextSession.room_status === 'open' ? 'Room Open • Join Live' : countdownStr}</span>

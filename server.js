@@ -2920,6 +2920,7 @@ app.post('/api/tutors/:id/messages', (req, res) => {
 app.get('/api/student/dashboard', authenticateToken, requireRole('student'), (req, res) => {
   try {
     const studentId = req.user.id;
+    dispatchClassAboutToBeginReminders(studentId);
 
     const requests = db.prepare(`
       SELECT 
@@ -5606,10 +5607,10 @@ app.post('/api/sessions/:id/room/open', authenticateToken, (req, res) => {
     // Notify the student that room has been opened
     sendNotification(
       request.student_id,
-      'Virtual Classroom is Live!',
-      `${request.tutor_name} has opened the virtual room for your ${request.subject} class. Click to connect now!`,
+      'Class is Live — Join Class Now!',
+      `${request.tutor_name} has opened the virtual classroom for your ${request.subject} session. Click "Join Class" to enter now!`,
       'booking',
-      '#student-portal'
+      `#student-portal?session=${requestId}`
     );
 
     res.json({
@@ -7185,6 +7186,9 @@ app.post('/api/student/schedule/toggle-slot', authenticateToken, requireRole('st
 app.get('/api/notifications', authenticateToken, (req, res) => {
   try {
     const userId = req.user.id;
+    if (req.user && req.user.role === 'student') {
+      dispatchClassAboutToBeginReminders(userId);
+    }
     const prefs = getUserPreferences(userId);
     const filterClause = getNotificationFilterClause(prefs);
 
@@ -7259,6 +7263,75 @@ app.post('/api/notifications/test-delivery', authenticateToken, (req, res) => {
   }
 });
 
+// Class About to Begin Reminders Dispatcher
+function dispatchClassAboutToBeginReminders(targetUserId = null) {
+  try {
+    let sql = `
+      SELECT tr.*, u.name as tutor_name
+      FROM tutoring_requests tr
+      JOIN users u ON tr.tutor_id = u.id
+      WHERE tr.status = 'accepted'
+        AND tr.room_status != 'ended'
+    `;
+    const params = [];
+    if (targetUserId) {
+      sql += ` AND tr.student_id = ?`;
+      params.push(targetUserId);
+    }
+    sql += ` ORDER BY tr.requested_date ASC, tr.requested_time ASC`;
+
+    const sessions = db.prepare(sql).all(...params);
+    if (!sessions || sessions.length === 0) return;
+
+    const now = new Date();
+    const todayStr = now.toISOString().split('T')[0];
+
+    for (const session of sessions) {
+      if (!isNotificationAllowed(session.student_id, 'lesson_reminder')) continue;
+
+      let shouldRemind = false;
+      const timeMatch = String(session.requested_time).match(/(\d{1,2}):(\d{2})/);
+      if (timeMatch) {
+        const h = parseInt(timeMatch[1], 10);
+        const m = parseInt(timeMatch[2], 10);
+        const sessionDate = new Date(`${session.requested_date}T${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:00`);
+        const diffMs = sessionDate.getTime() - now.getTime();
+        const diffMins = Math.round(diffMs / (60 * 1000));
+
+        if (session.requested_date === todayStr && diffMins <= 30 && diffMins >= -50) {
+          shouldRemind = true;
+        } else if (session.requested_date <= todayStr && session.room_status === 'closed') {
+          shouldRemind = true;
+        }
+      } else if (session.requested_date <= todayStr) {
+        shouldRemind = true;
+      }
+
+      if (shouldRemind) {
+        const alreadyNotified = db.prepare(`
+          SELECT id FROM notifications 
+          WHERE user_id = ? 
+            AND type = 'lesson_reminder' 
+            AND (title LIKE '%About to Begin%' OR title LIKE '%Starting Soon%')
+            AND link = ?
+        `).get(session.student_id, `#student-portal?session=${session.id}`);
+
+        if (!alreadyNotified) {
+          sendNotification(
+            session.student_id,
+            `Class Reminder: ${session.subject} is About to Begin!`,
+            `Reminder: Your ${session.subject} class with ${session.tutor_name} is scheduled for ${session.requested_time} and is about to begin. Your tutor will open the virtual room shortly!`,
+            'lesson_reminder',
+            `#student-portal?session=${session.id}`
+          );
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('dispatchClassAboutToBeginReminders error:', err.message);
+  }
+}
+
 // 3-Hour Lesson Reminders & Digest Dispatchers
 function dispatch3HourLessonReminders() {
   try {
@@ -7298,6 +7371,11 @@ function dispatch3HourLessonReminders() {
 setInterval(() => {
   dispatch3HourLessonReminders();
 }, 10 * 60 * 1000);
+
+// Run class about-to-begin checks every minute
+setInterval(() => {
+  dispatchClassAboutToBeginReminders();
+}, 60 * 1000);
 
 // Catch-all for SPA client routing (Express 5 compatible)
 app.use((req, res, next) => {

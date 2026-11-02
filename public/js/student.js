@@ -161,6 +161,7 @@ const Student = {
       this.renderHistory();
       this.renderConnectedTutors();
       this.loadProfileForm();
+      this.setupRealTimeRoomPolling();
       if (typeof Auth !== 'undefined' && Auth.loadNotifications) {
         Auth.loadNotifications();
       }
@@ -296,6 +297,7 @@ const Student = {
 
     const nextSession = upcomingSessions[0];
     const is30Min = nextSession.duration_hours === 0.5 || nextSession.payment_method === 'free_trial';
+    this.checkClassStartingSoonReminder(nextSession);
 
     // Calculate countdown
     const match = String(nextSession.requested_time).match(/(\d{1,2}):(\d{2})/);
@@ -324,7 +326,7 @@ const Student = {
         <div class="mission-control-header">
           <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
 
-            <span class="mission-countdown-badge" title="Estimated countdown to session start">
+            <span class="mission-countdown-badge" title="Estimated countdown to session start" style="${nextSession.room_status === 'open' ? 'background: rgba(16, 185, 129, 0.12); color: #059669; border-color: rgba(16, 185, 129, 0.3);' : ''}">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
               <span>${nextSession.room_status === 'open' ? 'Room Open • Join Live' : countdownStr}</span>
             </span>
@@ -373,20 +375,24 @@ const Student = {
             ` : ''}
 
             ${nextSession.room_status !== 'open' ? `
-              <div style="margin-top: 0.45rem; padding: 0.45rem 0.7rem; background: rgba(16, 185, 129, 0.09); border: 1px solid rgba(16, 185, 129, 0.28); border-radius: 8px; font-size: 0.8rem; color: #059669; font-weight: 600; display: inline-flex; align-items: center; gap: 0.35rem;">
-                ${Icons.bell(13)} Request Accepted — Simply wait for the schedule of your virtual class (${nextSession.requested_date} at ${nextSession.requested_time}).
+              <div style="margin-top: 0.45rem; padding: 0.45rem 0.7rem; background: #F9FAFB; border: 1px solid rgba(0, 0, 0, 0.08); border-radius: 8px; font-size: 0.8rem; color: var(--charcoal-700); font-weight: 600; display: inline-flex; align-items: center; gap: 0.35rem;">
+                ${Icons.clock(13)} Classroom is closed until your educator opens the virtual room (${nextSession.requested_date} at ${nextSession.requested_time}).
               </div>
-            ` : ''}
+            ` : `
+              <div style="margin-top: 0.45rem; padding: 0.45rem 0.7rem; background: rgba(16, 185, 129, 0.09); border: 1px solid rgba(16, 185, 129, 0.28); border-radius: 8px; font-size: 0.8rem; color: #059669; font-weight: 600; display: inline-flex; align-items: center; gap: 0.35rem;">
+                ${Icons.checkCircle(13)} Virtual classroom is live! Click "Join Class" to enter now.
+              </div>
+            `}
           </div>
 
           <div class="mission-action-column">
             ${nextSession.room_status === 'open' ? `
               <button class="btn btn-primary btn-sm btn-vroom-live" onclick="VirtualRoom.joinRoom(${nextSession.id}, 'student')">
-                ${Icons.video(14)} Enter Virtual Room (Live Now)
+                ${Icons.video(14)} Join Class
               </button>
             ` : `
-              <button class="btn btn-secondary btn-sm" style="cursor: default; display: inline-flex; align-items: center; gap: 0.35rem;" onclick="showToast('Your lesson is confirmed for ${nextSession.requested_date} at ${nextSession.requested_time}. Simply wait for the schedule of your virtual class—your tutor will launch the room at class time.', 'info')">
-                ${Icons.clock(14)} Waiting for Virtual Class Schedule
+              <button class="btn btn-secondary btn-sm" style="opacity: 0.7; cursor: not-allowed; display: inline-flex; align-items: center; justify-content: center; gap: 0.35rem;" onclick="showToast('Class is currently closed. Your tutor will open the virtual classroom from their account when the session begins.', 'info')">
+                ${Icons.lock(14)} Closed
               </button>
             `}
             <button class="btn btn-outline-gold btn-sm" onclick="Tutors.openMessageModal(${nextSession.tutor_id})">
@@ -964,9 +970,9 @@ const Student = {
 
           <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
             ${r.status === 'accepted' ? (r.room_status === 'open' ? `
-              <button class="btn btn-primary btn-sm" onclick="VirtualRoom.joinRoom(${r.id}, 'student')" style="background: #10B981; border-color: #10B981;">${Icons.video(14)} Enter Virtual Room (Live)</button>
+              <button class="btn btn-primary btn-sm btn-vroom-live" onclick="VirtualRoom.joinRoom(${r.id}, 'student')" style="background: #10B981; border-color: #10B981;">${Icons.video(14)} Join Class</button>
             ` : `
-              <button class="btn btn-secondary btn-sm" onclick="showToast('Your lesson is confirmed for ${r.requested_date} at ${r.requested_time}. Simply wait for the schedule of your virtual class.', 'info')">🕒 Waiting for Class Schedule</button>
+              <button class="btn btn-secondary btn-sm" style="opacity: 0.7; cursor: not-allowed;" onclick="showToast('Class is currently closed. Your tutor will open the virtual classroom from their account when the session begins.', 'info')">${Icons.lock(14)} Closed</button>
             `) : ''}
             <button class="btn btn-outline-gold btn-sm" onclick="Tutors.openMessageModal(${r.tutor_id})">${Icons.message(14)} Message</button>
             ${r.status === 'pending' || r.status === 'accepted' ? `
@@ -1029,9 +1035,9 @@ const Student = {
         <div class="request-actions-col">
           <span class="status-pill ${r.status}">${r.status === 'completed' ? 'done' : r.status}</span>
           ${(r.status === 'accepted' && r.room_status !== 'ended') ? (r.room_status === 'open' ? `
-            <button class="btn btn-primary btn-sm" onclick="VirtualRoom.joinRoom(${r.id}, 'student')" style="background: #10B981; border-color: #10B981;">${Icons.video(14)} Enter Virtual Room (Live)</button>
+            <button class="btn btn-primary btn-sm btn-vroom-live" onclick="VirtualRoom.joinRoom(${r.id}, 'student')" style="background: #10B981; border-color: #10B981;">${Icons.video(14)} Join Class</button>
           ` : `
-            <button class="btn btn-secondary btn-sm" onclick="showToast('Your lesson is confirmed for ${r.requested_date} at ${r.requested_time}. Simply wait for the schedule of your virtual class.', 'info')">🕒 Waiting for Schedule</button>
+            <button class="btn btn-secondary btn-sm" style="opacity: 0.7; cursor: not-allowed;" onclick="showToast('Class is currently closed. Your tutor will open the virtual classroom from their account when the session begins.', 'info')">${Icons.lock(14)} Closed</button>
           `) : ''}
           ${(r.status === 'pending' || (r.status === 'accepted' && r.room_status !== 'ended')) ? `
             <button class="btn btn-outline-gold btn-sm" onclick="Tutors.openMessageModal(${r.tutor_id})">${Icons.message(14)} Message</button>
@@ -1340,6 +1346,70 @@ const Student = {
     } finally {
       submitBtn.disabled = false;
       submitBtn.textContent = 'Save Profile Changes';
+    }
+  },
+
+  setupRealTimeRoomPolling() {
+    if (this.roomStatusPollTimer) {
+      clearInterval(this.roomStatusPollTimer);
+      this.roomStatusPollTimer = null;
+    }
+
+    const nextAccepted = (this.requests || []).find(r => r.status === 'accepted' && r.room_status !== 'ended');
+    if (!nextAccepted) return;
+
+    this.roomStatusPollTimer = setInterval(async () => {
+      const currentHash = window.location.hash || '';
+      if (!currentHash.includes('student') && !currentHash.includes('dashboard') && currentHash !== '') {
+        clearInterval(this.roomStatusPollTimer);
+        this.roomStatusPollTimer = null;
+        return;
+      }
+
+      try {
+        const check = await API.getRoomDetails(nextAccepted.id);
+        const isOpen = !!(check && (check.is_open || check.room_status === 'open'));
+        if (isOpen && nextAccepted.room_status !== 'open') {
+          nextAccepted.room_status = 'open';
+          this.renderSpotlightSession();
+          this.renderSchedule();
+          this.renderRequestsList();
+          showToast(`${nextAccepted.tutor_name} has opened the virtual classroom! Click "Join Class" to enter.`, 'success');
+          if (typeof Auth !== 'undefined' && Auth.loadNotifications) {
+            Auth.loadNotifications();
+          }
+        } else if (!isOpen && nextAccepted.room_status === 'open') {
+          nextAccepted.room_status = 'closed';
+          this.renderSpotlightSession();
+          this.renderSchedule();
+          this.renderRequestsList();
+        }
+      } catch (e) {
+        // Silently catch background poll issues
+      }
+    }, 3000);
+  },
+
+  checkClassStartingSoonReminder(nextSession) {
+    if (!nextSession || nextSession.status !== 'accepted' || nextSession.room_status === 'ended') return;
+
+    const match = String(nextSession.requested_time).match(/(\d{1,2}):(\d{2})/);
+    if (!match) return;
+
+    const h = parseInt(match[1], 10);
+    const m = parseInt(match[2], 10);
+    const sessionDate = new Date(`${nextSession.requested_date}T${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:00`);
+    const now = new Date();
+    const diffMs = sessionDate.getTime() - now.getTime();
+    const diffMins = Math.round(diffMs / (60 * 1000));
+
+    // If within 30 minutes of start time and room is not yet open
+    if (diffMins <= 30 && diffMins >= -15 && nextSession.room_status !== 'open') {
+      const storageKey = `notif_reminded_${nextSession.id}_${nextSession.requested_date}`;
+      if (!sessionStorage.getItem(storageKey)) {
+        sessionStorage.setItem(storageKey, 'true');
+        showToast(`Reminder: Your ${nextSession.subject} class with ${nextSession.tutor_name} is scheduled for ${nextSession.requested_time} and is about to begin. Your tutor will open the virtual room shortly.`, 'info');
+      }
     }
   }
 };

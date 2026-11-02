@@ -464,7 +464,7 @@
 .stat-widget-info h3 {
   font-size: 1.55rem;
   font-weight: 800;
-  color: var(--text-primary);
+  color: #000000 !important;
   line-height: 1.15;
   margin: 0;
   letter-spacing: -0.02em;
@@ -2063,4 +2063,8 @@
   background: #232834;
   border-left-color: rgba(255, 255, 255, 0.15);
   color: var(--charcoal-300);
+}
+
+[data-theme="dark"] .stat-widget-info h3 {
+  color: #FFFFFF !important;
 }

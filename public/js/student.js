@@ -625,7 +625,9 @@ const Student = {
     const firstDayIndex = monthDate.getDay();
     const daysInMonth = new Date(this.calYear, this.calMonth + 1, 0).getDate();
 
-    const appointments = this.scheduleData?.appointments || [];
+    const appointments = (this.scheduleData?.appointments && this.scheduleData.appointments.length > 0)
+      ? this.scheduleData.appointments
+      : (this.requests || []).filter(r => r.status === 'accepted' || r.status === 'pending');
     const occupiedSlots = this.scheduleData?.occupiedSlots || [];
     const availSched = this.scheduleData?.availabilitySchedule || {};
     const unavailDates = this.scheduleData?.unavailableDates || [];
@@ -667,7 +669,37 @@ const Student = {
 
       let badgesHtml = '';
       if (dayApts.length > 0) {
-        badgesHtml += `<span class="student-cal-badge badge-class">${Icons.calendar(9)} ${dayApts.length} ${dayApts.length > 1 ? 'Classes' : 'Class'}</span>`;
+        dayApts.forEach(apt => {
+          let tutorName = apt.tutor_name;
+          if (!tutorName && this.requests) {
+            const req = this.requests.find(r => r.id === apt.id);
+            if (req) tutorName = req.tutor_name;
+          }
+          if (!tutorName) tutorName = 'Assigned Tutor';
+
+          let subject = apt.subject;
+          if (!subject && this.requests) {
+            const req = this.requests.find(r => r.id === apt.id);
+            if (req) subject = req.subject;
+          }
+          if (!subject) subject = 'Lesson';
+
+          let timeStr = apt.time || apt.requested_time;
+          if (!timeStr && this.requests) {
+            const req = this.requests.find(r => r.id === apt.id);
+            if (req) timeStr = req.requested_time;
+          }
+          timeStr = timeStr ? String(timeStr).trim() : '';
+
+          const isPending = (apt.status === 'pending');
+          badgesHtml += `
+            <div class="student-cal-class-chip ${isPending ? 'pending' : 'accepted'}" title="${escapeHtmlStr(subject)} with ${escapeHtmlStr(tutorName)}${timeStr ? ' at ' + escapeHtmlStr(timeStr) : ''}">
+              <div class="cal-class-lesson" title="${escapeHtmlStr(subject)}">${Icons.book(11)} <span>${escapeHtmlStr(subject)}</span></div>
+              <div class="cal-class-tutor" title="${escapeHtmlStr(tutorName)}">${Icons.user(11)} <span>${escapeHtmlStr(tutorName)}</span></div>
+              ${timeStr ? `<div class="cal-class-time" title="${escapeHtmlStr(timeStr)}">${Icons.clock(11)} <span>${escapeHtmlStr(timeStr)}</span></div>` : ''}
+            </div>
+          `;
+        });
       }
       if (isDateOccupied) {
         badgesHtml += `<span class="student-cal-badge badge-occupied">${Icons.ban(8)} Unavailable</span>`;

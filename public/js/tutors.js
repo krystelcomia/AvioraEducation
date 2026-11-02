@@ -6,6 +6,24 @@ const Tutors = {
   allTutors: [],
   selectedTutor: null,
   activeSubjectFilter: 'all',
+  currentChatTutor: null,
+  currentChatTutorOnline: false,
+  messengerPollInterval: null,
+
+  updateMessengerTutorStatus(isOnline) {
+    this.currentChatTutorOnline = !!isOnline;
+    const dot = document.querySelector('.messenger-status-dot');
+    const indicator = document.querySelector('.messenger-status-indicator');
+    if (dot) {
+      dot.style.backgroundColor = isOnline ? '#10B981' : '#9CA3AF';
+      dot.style.boxShadow = isOnline ? '0 0 0 2px #FFFFFF, 0 0 8px rgba(16, 185, 129, 0.6)' : '0 0 0 2px #FFFFFF';
+      dot.title = isOnline ? 'Active now' : 'Offline';
+    }
+    if (indicator) {
+      indicator.innerHTML = isOnline ? '● Active now' : '○ Offline';
+      indicator.style.color = isOnline ? '#059669' : '#6B7280';
+    }
+  },
 
   async init() {
     this.setupEventListeners();
@@ -781,7 +799,9 @@ const Tutors = {
       try {
         const res = await API.getTutorMessages(tutor.id);
         if (res && Array.isArray(res.messages)) {
-          this.renderMessengerThread(res.messages, tutor);
+          const tutorIsOnline = res.tutor ? !!res.tutor.is_online : false;
+          this.updateMessengerTutorStatus(tutorIsOnline);
+          this.renderMessengerThread(res.messages, tutor, tutorIsOnline);
           return;
         }
       } catch (e) {
@@ -790,13 +810,13 @@ const Tutors = {
 
       const threadKey = `aviora_tutor_chat_${tutor.id}`;
       const localThread = JSON.parse(localStorage.getItem(threadKey) || '[]');
-      this.renderMessengerThread(localThread, tutor);
+      this.renderMessengerThread(localThread, tutor, false);
     };
 
     await fetchChatMessages();
 
-    // Start real-time polling every 3 seconds while chat modal is open
-    this.messengerPollInterval = setInterval(fetchChatMessages, 3000);
+    // Start real-time polling every 2.5 seconds while chat modal is open
+    this.messengerPollInterval = setInterval(fetchChatMessages, 2500);
 
     modal.classList.add('active');
     document.body.style.overflow = 'hidden';
@@ -819,7 +839,7 @@ const Tutors = {
     }
   },
 
-  renderMessengerThread(thread, tutor) {
+  renderMessengerThread(thread, tutor, tutorIsOnline = false) {
     const threadContainer = document.getElementById('messenger-messages-thread');
     if (!threadContainer || !tutor) return;
 
@@ -851,14 +871,22 @@ const Tutors = {
           </div>
         `;
       } else {
+        let statusHtml = '';
+        if (m.status === 'seen' || m.is_read === 1) {
+          statusHtml = `<span>${m.time} • Seen</span>`;
+        } else if (m.status === 'delivered' || tutorIsOnline) {
+          statusHtml = `<span>${m.time} • Delivered</span> <span style="color: #10B981; display: inline-flex; vertical-align: middle;">${Icons.check(11)}</span>`;
+        } else {
+          statusHtml = `<span>${m.time} • Sent</span>`;
+        }
+
         return `
           <div class="messenger-message outgoing">
             <div class="messenger-bubble-wrap">
               <div class="messenger-bubble">
                 <div class="messenger-bubble-text">${this.formatMessageText(m.text)}</div>
-                <div class="messenger-bubble-time" style="display: flex; align-items: center; justify-content: flex-end; gap: 3px;">
-                  <span>${m.time} • Delivered</span>
-                  <span style="color: #10B981; display: inline-flex;">${Icons.check(11)}${Icons.check(11)}</span>
+                <div class="messenger-bubble-time" style="display: flex; align-items: center; justify-content: flex-end; gap: 4px;">
+                  ${statusHtml}
                 </div>
               </div>
             </div>
@@ -886,14 +914,19 @@ const Tutors = {
     const senderEmail = user?.email || 'student@aviora.edu';
     const threadKey = `aviora_tutor_chat_${tutor.id}`;
 
-    // Add student message immediately
+    // Add student message immediately with real-time presence check
     const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const isOnline = !!this.currentChatTutorOnline;
+    const initialStatus = isOnline ? 'delivered' : 'sent';
+
     const studentMsg = {
       id: 'msg-' + Date.now(),
       sender: 'student',
       senderName: senderName,
       text: text,
-      time: timeStr
+      time: timeStr,
+      status: initialStatus,
+      is_read: 0
     };
 
     let thread = [];
@@ -907,21 +940,29 @@ const Tutors = {
       localStorage.setItem(threadKey, JSON.stringify(thread));
     } catch (e) { }
 
-    // Re-render student bubble
-    this.renderMessengerThread(thread, tutor);
+    // Re-render student bubble immediately
+    this.renderMessengerThread(thread, tutor, isOnline);
 
     // Reset input
     input.value = '';
     input.style.height = 'auto';
 
-    // Real-Time Delivery: Save directly to the database for this tutor (No fake bot responses)
+    // Real-Time Delivery: Save directly to the database for this tutor
     try {
-      await API.sendMessageToTutor(tutor.id, {
+      const res = await API.sendMessageToTutor(tutor.id, {
         name: senderName,
         email: senderEmail,
         subject: `Direct Chat with ${tutor.name}`,
         message: text
       });
+      if (res && res.message) {
+        studentMsg.id = res.message.id;
+        studentMsg.status = res.message.status;
+        if (res.tutor) {
+          this.updateMessengerTutorStatus(res.tutor.is_online);
+        }
+        this.renderMessengerThread(thread, tutor, this.currentChatTutorOnline);
+      }
     } catch (err) {
       console.warn('Direct message sync warning:', err);
     }

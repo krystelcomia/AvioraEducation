@@ -182,6 +182,9 @@ function initSchema() {
       sender_email TEXT,
       subject TEXT,
       content TEXT NOT NULL,
+      status TEXT DEFAULT 'sent' CHECK(status IN ('sent', 'delivered', 'seen')),
+      delivered_at DATETIME,
+      read_at DATETIME,
       is_read INTEGER DEFAULT 0,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
@@ -349,6 +352,31 @@ function initSchema() {
     const studentCols = db.prepare("PRAGMA table_info(student_profiles)").all();
     if (studentCols.length > 0 && !studentCols.some(c => c.name === 'availability_schedule')) {
       db.prepare("ALTER TABLE student_profiles ADD COLUMN availability_schedule TEXT").run();
+    }
+  } catch (e) {}
+  try {
+    const userCols = db.prepare("PRAGMA table_info(users)").all();
+    if (userCols.length > 0) {
+      if (!userCols.some(c => c.name === 'is_online')) {
+        db.prepare("ALTER TABLE users ADD COLUMN is_online INTEGER DEFAULT 0").run();
+      }
+      if (!userCols.some(c => c.name === 'last_active_at')) {
+        db.prepare("ALTER TABLE users ADD COLUMN last_active_at DATETIME").run();
+      }
+    }
+  } catch (e) {}
+  try {
+    const msgCols = db.prepare("PRAGMA table_info(messages)").all();
+    if (msgCols.length > 0) {
+      if (!msgCols.some(c => c.name === 'status')) {
+        db.prepare("ALTER TABLE messages ADD COLUMN status TEXT DEFAULT 'sent'").run();
+      }
+      if (!msgCols.some(c => c.name === 'delivered_at')) {
+        db.prepare("ALTER TABLE messages ADD COLUMN delivered_at DATETIME").run();
+      }
+      if (!msgCols.some(c => c.name === 'read_at')) {
+        db.prepare("ALTER TABLE messages ADD COLUMN read_at DATETIME").run();
+      }
     }
   } catch (e) {}
   try {

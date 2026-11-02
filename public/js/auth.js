@@ -85,6 +85,54 @@ const PasswordValidator = {
 
 const Auth = {
   currentUser: null,
+  heartbeatInterval: null,
+  hasBoundPresenceEvents: false,
+
+  startHeartbeat() {
+    if (this.heartbeatInterval) clearInterval(this.heartbeatInterval);
+    if (!this.currentUser) return;
+
+    const ping = () => {
+      if (this.currentUser && typeof API !== 'undefined' && API.sendHeartbeat) {
+        API.sendHeartbeat().catch(() => {});
+      }
+    };
+
+    ping();
+    this.heartbeatInterval = setInterval(ping, 15000);
+
+    if (!this.hasBoundPresenceEvents) {
+      this.hasBoundPresenceEvents = true;
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible' && this.currentUser) {
+          ping();
+        }
+      });
+      window.addEventListener('focus', () => {
+        if (this.currentUser) ping();
+      });
+      window.addEventListener('beforeunload', () => {
+        if (this.currentUser) {
+          try {
+            const data = JSON.stringify({ user_id: this.currentUser.id });
+            if (navigator.sendBeacon) {
+              navigator.sendBeacon('/api/user/offline', data);
+            }
+          } catch (e) {}
+        }
+      });
+    }
+  },
+
+  stopHeartbeat() {
+    if (this.heartbeatInterval) {
+      clearInterval(this.heartbeatInterval);
+      this.heartbeatInterval = null;
+    }
+    if (typeof API !== 'undefined' && API.sendOffline) {
+      API.sendOffline().catch(() => {});
+    }
+  },
 
   async init() {
     this.setupEventListeners();
@@ -1160,6 +1208,7 @@ const Auth = {
   },
 
   performLogout() {
+    this.stopHeartbeat();
     Storage.clearSession();
     this.currentUser = null;
 
@@ -1329,6 +1378,12 @@ const Auth = {
     const guestActions = document.getElementById('nav-guest-actions');
     const userActions = document.getElementById('nav-user-actions');
     const mainNavLinks = document.getElementById('main-nav-links');
+
+    if (user) {
+      this.startHeartbeat();
+    } else {
+      this.stopHeartbeat();
+    }
 
     if (user) {
       if (guestActions) guestActions.style.display = 'none';

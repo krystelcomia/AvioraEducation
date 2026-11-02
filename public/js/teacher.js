@@ -3753,6 +3753,7 @@ const Teacher = {
   // DIRECT STUDENT MESSAGES & REPLIES
   // ==========================================
   teacherMessages: [],
+  teacherMessagesPollInterval: null,
 
   async loadTeacherMessages() {
     try {
@@ -3761,6 +3762,19 @@ const Teacher = {
       this.renderTeacherMessages();
     } catch (err) {
       console.warn('Could not load teacher messages:', err);
+    }
+
+    if (!this.teacherMessagesPollInterval) {
+      this.teacherMessagesPollInterval = setInterval(async () => {
+        const dashboard = document.getElementById('view-teacher-dashboard');
+        if (dashboard && dashboard.style.display !== 'none') {
+          try {
+            const res = await API.getTeacherMessages();
+            this.teacherMessages = res.messages || [];
+            this.renderTeacherMessages();
+          } catch (e) {}
+        }
+      }, 3000);
     }
   },
 
@@ -3809,9 +3823,15 @@ const Teacher = {
             ${timeStr}
           </td>
           <td>
-            <span class="${isUnread ? 'badge-accent' : 'badge-gold'}" style="font-size: 0.72rem;">
-              ${isUnread ? 'Unread' : 'Delivered'}
-            </span>
+            ${(() => {
+              if (m.is_read === 1 || m.status === 'seen') {
+                return '<span class="badge-outline" style="font-size: 0.72rem; color: #059669; border-color: rgba(16, 185, 129, 0.4); background: rgba(16, 185, 129, 0.08); font-weight: 700;">Seen</span>';
+              } else if (m.status === 'sent') {
+                return '<span class="badge-outline" style="font-size: 0.72rem; color: #6B7280; border-color: rgba(156, 163, 175, 0.4);">Sent</span>';
+              } else {
+                return '<span class="badge-accent" style="font-size: 0.72rem;">Delivered</span>';
+              }
+            })()}
           </td>
           <td style="text-align: right;">
             <button type="button" class="btn btn-outline-gold btn-sm" onclick="Teacher.openReplyModal(${m.id}, ${m.sender_id || 'null'}, '${studentName.replace(/'/g, "\\'")}', '${m.content.replace(/'/g, "\\'").replace(/\n/g, ' ')}')">
@@ -3843,7 +3863,43 @@ const Teacher = {
       textarea.focus();
     }
 
+    // Real-Time Seen Status: Mark message as read/seen once tutor opens/reads it
+    if (messageId) {
+      try {
+        if (typeof API !== 'undefined' && API.markTeacherMessageRead) {
+          API.markTeacherMessageRead(messageId).catch(() => {});
+        }
+        const m = this.teacherMessages.find(item => item.id == messageId);
+        if (m) {
+          m.is_read = 1;
+          m.status = 'seen';
+          this.renderTeacherMessages();
+        }
+      } catch (e) {}
+    }
+
     this.openModal('modal-teacher-reply-message');
+  },
+
+  async toggleOnlinePresence() {
+    try {
+      const res = await API.toggleTeacherPresence();
+      const btn = document.getElementById('btn-tutor-presence-toggle');
+      if (btn) {
+        if (res.is_online) {
+          btn.innerHTML = '● Online (Account Open)';
+          btn.style.color = '#059669';
+          btn.style.borderColor = 'rgba(16, 185, 129, 0.4)';
+        } else {
+          btn.innerHTML = '○ Offline (Hidden)';
+          btn.style.color = '#6B7280';
+          btn.style.borderColor = 'rgba(156, 163, 175, 0.4)';
+        }
+      }
+      showToast(res.is_online ? 'Your status is now Online (Account Open).' : 'Your status is now Offline.', 'info');
+    } catch (e) {
+      showToast('Failed to toggle status.', 'error');
+    }
   },
 
   async sendReplyToStudent() {

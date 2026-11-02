@@ -3834,7 +3834,12 @@
                     Real-time private messages from students. Only you as the assigned educator can reply.
                   </p>
                 </div>
-                <span class="badge-gold">Live Inquiries</span>
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                  <button type="button" class="btn btn-outline-gold btn-sm" id="btn-tutor-presence-toggle" onclick="Teacher.toggleOnlinePresence()" title="Toggle your real-time messenger availability status" style="font-size: 0.78rem; padding: 0.35rem 0.75rem; color: #059669; border-color: rgba(16, 185, 129, 0.4);">
+                    ● Online (Account Open)
+                  </button>
+                  <span class="badge-gold">Live Inquiries</span>
+                </div>
               </div>
               <div style="overflow-x: auto;">
                 <table class="admin-table">

@@ -651,6 +651,68 @@ function sendNotification(userId, title, message, type = 'info', link = null) {
   }
 }
 
+// ==========================================
+// REAL-TIME USER PRESENCE TRACKING (ONLINE / ACCOUNT OPEN)
+// ==========================================
+const onlineUsers = new Map(); // userId -> { lastSeen: timestamp, isOnline: boolean }
+
+function markUserActive(userId) {
+  if (!userId) return;
+  const id = Number(userId);
+  onlineUsers.set(id, { lastSeen: Date.now(), isOnline: true });
+  try {
+    db.prepare("UPDATE users SET last_active_at = CURRENT_TIMESTAMP, is_online = 1 WHERE id = ?").run(id);
+    // Transition any 'sent' unread messages for this receiver to 'delivered'
+    db.prepare(`
+      UPDATE messages 
+      SET status = 'delivered', delivered_at = CURRENT_TIMESTAMP 
+      WHERE receiver_id = ? AND status = 'sent' AND is_read = 0
+    `).run(id);
+  } catch (e) {}
+}
+
+function isUserOnline(userId) {
+  if (!userId) return false;
+  const id = Number(userId);
+  const presence = onlineUsers.get(id);
+  if (presence && presence.isOnline && (Date.now() - presence.lastSeen <= 45000)) {
+    return true;
+  }
+  try {
+    const u = db.prepare(`
+      SELECT is_online, last_active_at, 
+             (strftime('%s', 'now') - strftime('%s', last_active_at)) as seconds_ago 
+      FROM users WHERE id = ?
+    `).get(id);
+    if (u && u.is_online === 1 && u.seconds_ago !== null && u.seconds_ago <= 45) {
+      return true;
+    }
+  } catch (e) {}
+  return false;
+}
+
+function markUserOffline(userId) {
+  if (!userId) return;
+  const id = Number(userId);
+  onlineUsers.delete(id);
+  try {
+    db.prepare("UPDATE users SET is_online = 0 WHERE id = ?").run(id);
+  } catch (e) {}
+}
+
+// Periodic cleanup of stale presence (every 15s)
+setInterval(() => {
+  const now = Date.now();
+  for (const [userId, presence] of onlineUsers.entries()) {
+    if (now - presence.lastSeen > 45000) {
+      onlineUsers.delete(userId);
+      try {
+        db.prepare("UPDATE users SET is_online = 0 WHERE id = ?").run(userId);
+      } catch (e) {}
+    }
+  }
+}, 15000);
+
 // Authentication Middleware
 function authenticateToken(req, res, next) {
   const authHeader = req.headers['authorization'];
@@ -677,6 +739,7 @@ function authenticateToken(req, res, next) {
     }
 
     req.user = user;
+    markUserActive(user.id);
     next();
   });
 }
@@ -2632,13 +2695,60 @@ app.get('/api/tutors/:id', (req, res) => {
   }
 });
 
+// Heartbeat & Offline Presence Endpoints
+app.post('/api/user/heartbeat', authenticateToken, (req, res) => {
+  try {
+    markUserActive(req.user.id);
+    res.json({ success: true, online: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Heartbeat error.' });
+  }
+});
+
+app.post('/api/user/offline', (req, res) => {
+  try {
+    let userId = null;
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+    if (token) {
+      try {
+        const decoded = jwt.verify(token, JWT_SECRET);
+        userId = decoded.id;
+      } catch (e) {}
+    }
+    if (!userId && req.body && req.body.user_id) {
+      userId = req.body.user_id;
+    }
+    if (userId) {
+      markUserOffline(userId);
+    }
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Offline error.' });
+  }
+});
+
 // Get Direct Messages with Tutor (Student <-> Tutor Real-Time Thread)
 app.get('/api/tutors/:id/messages', (req, res) => {
   try {
     const tutorProfileId = req.params.id;
-    const tutor = db.prepare('SELECT user_id, headline FROM tutor_profiles WHERE id = ?').get(tutorProfileId);
+    let tutor = db.prepare('SELECT id, user_id, headline FROM tutor_profiles WHERE id = ?').get(tutorProfileId);
+    if (!tutor) {
+      tutor = db.prepare('SELECT id, user_id, headline FROM tutor_profiles WHERE user_id = ?').get(tutorProfileId);
+    }
     if (!tutor) {
       return res.status(404).json({ error: 'Tutor not found.' });
+    }
+
+    const tutorIsOnline = isUserOnline(tutor.user_id);
+
+    // If tutor is online, update any pending 'sent' messages to 'delivered'
+    if (tutorIsOnline) {
+      db.prepare(`
+        UPDATE messages 
+        SET status = 'delivered', delivered_at = CURRENT_TIMESTAMP 
+        WHERE receiver_id = ? AND status = 'sent' AND is_read = 0
+      `).run(tutor.user_id);
     }
 
     let currentUserId = null;
@@ -2651,6 +2761,7 @@ app.get('/api/tutors/:id/messages', (req, res) => {
         currentUserId = decoded.id;
         const u = db.prepare('SELECT email FROM users WHERE id = ?').get(currentUserId);
         if (u) currentUserEmail = u.email;
+        markUserActive(currentUserId);
       } catch (e) {}
     }
 
@@ -2666,7 +2777,7 @@ app.get('/api/tutors/:id/messages', (req, res) => {
 
       // Mark incoming messages to the current user as read
       db.prepare(`
-        UPDATE messages SET is_read = 1 
+        UPDATE messages SET is_read = 1, read_at = CURRENT_TIMESTAMP, status = 'seen'
         WHERE receiver_id = ? AND sender_id = ? AND is_read = 0
       `).run(currentUserId, tutor.user_id);
     } else if (currentUserEmail) {
@@ -2678,16 +2789,35 @@ app.get('/api/tutors/:id/messages', (req, res) => {
       `).all(tutor.user_id, currentUserEmail);
     }
 
-    res.json({
-      messages: rows.map(r => ({
+    const messages = rows.map(r => {
+      let msgStatus = r.status || 'sent';
+      if (r.is_read === 1) {
+        msgStatus = 'seen';
+      } else if (tutorIsOnline || r.delivered_at || r.status === 'delivered') {
+        msgStatus = 'delivered';
+      } else {
+        msgStatus = 'sent';
+      }
+
+      return {
         id: r.id,
         sender: r.sender_id === tutor.user_id ? 'tutor' : 'student',
         senderName: r.sender_name,
         text: r.content,
         time: new Date(r.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         created_at: r.created_at,
+        status: msgStatus,
         is_read: r.is_read
-      }))
+      };
+    });
+
+    res.json({
+      messages,
+      tutor: {
+        id: tutor.id,
+        user_id: tutor.user_id,
+        is_online: tutorIsOnline
+      }
     });
   } catch (error) {
     console.error('Get tutor messages error:', error);
@@ -2705,7 +2835,10 @@ app.post('/api/tutors/:id/messages', (req, res) => {
       return res.status(400).json({ error: 'Message content cannot be empty.' });
     }
 
-    const tutor = db.prepare('SELECT user_id, headline FROM tutor_profiles WHERE id = ?').get(tutorId);
+    let tutor = db.prepare('SELECT id, user_id, headline FROM tutor_profiles WHERE id = ?').get(tutorId);
+    if (!tutor) {
+      tutor = db.prepare('SELECT id, user_id, headline FROM tutor_profiles WHERE user_id = ?').get(tutorId);
+    }
     if (!tutor) {
       return res.status(404).json({ error: 'Tutor not found.' });
     }
@@ -2714,7 +2847,6 @@ app.post('/api/tutors/:id/messages', (req, res) => {
     let senderName = name ? name.trim() : 'Prospective Student';
     let senderEmail = email ? email.trim() : '';
 
-    // Check if authenticated
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
     if (token) {
@@ -2725,38 +2857,57 @@ app.post('/api/tutors/:id/messages', (req, res) => {
         if (user) {
           senderName = user.name;
           senderEmail = user.email;
+          markUserActive(senderId);
         }
-      } catch (e) {
-        // Continue with provided name/email
-      }
+      } catch (e) {}
     }
 
-    db.prepare(`
-      INSERT INTO messages (sender_id, receiver_id, sender_name, sender_email, subject, content)
-      VALUES (?, ?, ?, ?, ?, ?)
+    const tutorIsOnline = isUserOnline(tutor.user_id);
+    const initialStatus = tutorIsOnline ? 'delivered' : 'sent';
+    const deliveredAt = tutorIsOnline ? new Date().toISOString() : null;
+
+    const insertInfo = db.prepare(`
+      INSERT INTO messages (sender_id, receiver_id, sender_name, sender_email, subject, content, status, delivered_at, is_read)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)
     `).run(
       senderId,
       tutor.user_id,
       senderName,
       senderEmail,
       subject || 'Student Inquiry',
-      message.trim()
+      message.trim(),
+      initialStatus,
+      deliveredAt
     );
 
-    // Also notify tutor in notifications table
     sendNotification(
       tutor.user_id,
       `New Message from ${senderName}`,
       message.trim().substring(0, 120) + (message.length > 120 ? '...' : ''),
       'message',
-      '#teacher-requests'
+      '#teacher-dashboard'
     );
 
     res.json({
-      message: `Your message has been sent directly to the tutor. They will be notified immediately.`
+      success: true,
+      message: {
+        id: insertInfo.lastInsertRowid,
+        sender: 'student',
+        senderName: senderName,
+        text: message.trim(),
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        status: initialStatus,
+        is_read: 0,
+        created_at: new Date().toISOString()
+      },
+      tutor: {
+        id: tutor.id,
+        user_id: tutor.user_id,
+        is_online: tutorIsOnline
+      }
     });
   } catch (error) {
-    console.error('Send message error:', error);
+    console.error('Send tutor message error:', error);
     res.status(500).json({ error: 'Failed to send message: ' + error.message });
   }
 });
@@ -3856,7 +4007,7 @@ app.post('/api/teacher/messages/reply', authenticateToken, requireRole('tutor'),
 
     // Mark original message as read
     if (message_id) {
-      db.prepare('UPDATE messages SET is_read = 1 WHERE id = ?').run(message_id);
+      db.prepare("UPDATE messages SET is_read = 1, read_at = CURRENT_TIMESTAMP, status = 'seen' WHERE id = ?").run(message_id);
     }
 
     // Real-time notification to the student
@@ -3876,6 +4027,41 @@ app.post('/api/teacher/messages/reply', authenticateToken, requireRole('tutor'),
   } catch (error) {
     console.error('Teacher reply message error:', error);
     res.status(500).json({ error: 'Failed to send reply: ' + error.message });
+  }
+});
+
+// Mark student message as read / seen by teacher
+app.post('/api/teacher/messages/:id/read', authenticateToken, requireRole('tutor'), (req, res) => {
+  try {
+    const teacherId = req.user.id;
+    const messageId = req.params.id;
+    db.prepare(`
+      UPDATE messages 
+      SET is_read = 1, read_at = CURRENT_TIMESTAMP, status = 'seen' 
+      WHERE id = ? AND receiver_id = ?
+    `).run(messageId, teacherId);
+    res.json({ success: true, message: 'Message marked as read.' });
+  } catch (error) {
+    console.error('Mark message read error:', error);
+    res.status(500).json({ error: 'Failed to mark message as read.' });
+  }
+});
+
+// Toggle tutor presence between online (account open) and appear offline (for testing & control)
+app.post('/api/teacher/presence-toggle', authenticateToken, requireRole('tutor'), (req, res) => {
+  try {
+    const teacherId = req.user.id;
+    const currentOnline = isUserOnline(teacherId);
+    const newStatus = !currentOnline;
+    if (newStatus) {
+      markUserActive(teacherId);
+    } else {
+      markUserOffline(teacherId);
+    }
+    res.json({ success: true, is_online: newStatus });
+  } catch (error) {
+    console.error('Presence toggle error:', error);
+    res.status(500).json({ error: 'Failed to toggle presence.' });
   }
 });
 

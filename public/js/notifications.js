@@ -128,7 +128,7 @@ const NotificationsUI = {
             <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
             <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
           </svg>
-          <p>No new notifications based on your current preferences.</p>
+          <p>No notifications.</p>
         </div>
       `;
       return;
@@ -148,6 +148,11 @@ const NotificationsUI = {
             <div class="notif-item-msg">${this.escapeHtml(notif.message || '')}</div>
             <span class="notif-item-time">${timeStr}</span>
           </div>
+          ${isUnread ? `
+            <button type="button" class="notif-item-read-btn" title="Mark as read" aria-label="Mark as read" onclick="event.preventDefault(); event.stopPropagation(); NotificationsUI.markSingleRead(${notif.id});">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            </button>
+          ` : ''}
         </a>
       `;
     }).join('');
@@ -182,15 +187,69 @@ const NotificationsUI = {
     }
   },
 
-  handleItemClick(e, id, link) {
-    this.closeDropdown();
-    // Optimistically mark this item as read
+  async markSingleRead(id) {
+    const notif = (this.notifications || []).find(n => n.id == id);
+    if (!notif || notif.is_read) return;
+
+    notif.is_read = 1;
+
     const item = document.querySelector(`.notif-item[data-id="${id}"]`);
-    if (item && item.classList.contains('unread')) {
+    if (item) {
       item.classList.remove('unread');
-      this.updateBadge(Math.max(0, this.unreadCount - 1));
+      const readBtn = item.querySelector('.notif-item-read-btn');
+      if (readBtn) readBtn.remove();
     }
-    if (link && link !== '#') {
+
+    const unread = (this.notifications || []).filter(n => !n.is_read).length;
+    this.updateBadge(unread);
+
+    try {
+      if (typeof API !== 'undefined' && API.markNotificationRead) {
+        await API.markNotificationRead(id);
+      } else if (typeof API !== 'undefined' && API.markNotificationsRead) {
+        await API.markNotificationsRead(id);
+      }
+    } catch (err) {
+      console.warn('Failed to mark notification read on server:', err);
+    }
+  },
+
+  async handleItemClick(e, id, link) {
+    if (e && e.preventDefault && (!link || link === '#')) {
+      e.preventDefault();
+    }
+    this.closeDropdown();
+
+    const notif = (this.notifications || []).find(n => n.id == id);
+    const wasUnread = notif ? !notif.is_read : true;
+
+    if (notif) {
+      notif.is_read = 1;
+    }
+
+    const item = document.querySelector(`.notif-item[data-id="${id}"]`);
+    if (item) {
+      item.classList.remove('unread');
+      const readBtn = item.querySelector('.notif-item-read-btn');
+      if (readBtn) readBtn.remove();
+    }
+
+    if (wasUnread) {
+      const unread = (this.notifications || []).filter(n => !n.is_read).length;
+      this.updateBadge(unread);
+
+      try {
+        if (typeof API !== 'undefined' && API.markNotificationRead) {
+          await API.markNotificationRead(id);
+        } else if (typeof API !== 'undefined' && API.markNotificationsRead) {
+          await API.markNotificationsRead(id);
+        }
+      } catch (err) {
+        console.warn('Failed to mark notification read on server:', err);
+      }
+    }
+
+    if (link && link !== '#' && link !== '') {
       window.location.hash = link.replace(/^\//, '');
     }
   },
@@ -200,8 +259,13 @@ const NotificationsUI = {
       if (typeof API !== 'undefined' && API.markNotificationsRead) {
         await API.markNotificationsRead();
       }
+      (this.notifications || []).forEach(n => { n.is_read = 1; });
       this.updateBadge(0);
-      document.querySelectorAll('.notif-item.unread').forEach(el => el.classList.remove('unread'));
+      document.querySelectorAll('.notif-item.unread').forEach(el => {
+        el.classList.remove('unread');
+        const readBtn = el.querySelector('.notif-item-read-btn');
+        if (readBtn) readBtn.remove();
+      });
       if (typeof showToast === 'function') {
         showToast('All notifications marked as read', 'info');
       }

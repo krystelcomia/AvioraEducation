@@ -2549,27 +2549,38 @@
 }
 
 .notif-dropdown-footer {
-  padding: 0.65rem 1rem;
-  background: #FDFBF7;
-  border-top: 1px solid rgba(0, 0, 0, 0.06);
+  display: none !important;
+}
+
+.notif-item-read-btn {
+  background: transparent;
+  border: none;
+  color: var(--charcoal-400, #A0AEC0);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
   display: flex;
-  justify-content: center;
-}
-
-.notif-manage-link {
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: var(--gold-700, #B7791F);
-  display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
-  text-decoration: none;
-  transition: color 0.15s ease;
+  justify-content: center;
+  opacity: 0.6;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+  margin-left: 0.25rem;
 }
 
-.notif-manage-link:hover {
-  color: var(--gold-900, #744210);
-  text-decoration: underline;
+.notif-item-read-btn:hover {
+  opacity: 1;
+  color: var(--gold-600, #C68A28);
+  background: rgba(198, 138, 40, 0.12);
+}
+
+[data-theme="dark"] .notif-item-read-btn {
+  color: #718096;
+}
+
+[data-theme="dark"] .notif-item-read-btn:hover {
+  color: #FBBF24;
+  background: rgba(251, 191, 36, 0.15);
 }
 
 /* Dark theme styling for notification dropdown */

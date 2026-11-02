@@ -7227,11 +7227,30 @@ app.get('/api/notifications', authenticateToken, (req, res) => {
 app.post('/api/notifications/mark-read', authenticateToken, (req, res) => {
   try {
     const userId = req.user.id;
-    db.prepare('UPDATE notifications SET is_read = 1 WHERE user_id = ?').run(userId);
-    res.json({ message: 'Notifications marked as read.', unreadCount: 0 });
+    const { id } = req.body || {};
+    if (id) {
+      db.prepare('UPDATE notifications SET is_read = 1 WHERE user_id = ? AND id = ?').run(userId, id);
+    } else {
+      db.prepare('UPDATE notifications SET is_read = 1 WHERE user_id = ?').run(userId);
+    }
+    const unreadCount = db.prepare('SELECT COUNT(*) as count FROM notifications WHERE user_id = ? AND is_read = 0').get(userId).count;
+    res.json({ message: 'Notifications marked as read.', unreadCount });
   } catch (error) {
     console.error('Mark read error:', error);
     res.status(500).json({ error: 'Failed to update notifications.' });
+  }
+});
+
+app.post('/api/notifications/:id/read', authenticateToken, (req, res) => {
+  try {
+    const userId = req.user.id;
+    const notifId = req.params.id;
+    db.prepare('UPDATE notifications SET is_read = 1 WHERE user_id = ? AND id = ?').run(userId, notifId);
+    const unreadCount = db.prepare('SELECT COUNT(*) as count FROM notifications WHERE user_id = ? AND is_read = 0').get(userId).count;
+    res.json({ message: 'Notification marked as read.', unreadCount });
+  } catch (error) {
+    console.error('Mark notification read error:', error);
+    res.status(500).json({ error: 'Failed to update notification.' });
   }
 });
 

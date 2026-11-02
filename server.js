@@ -2923,7 +2923,24 @@ app.post('/api/student/subscription/purchase', authenticateToken, requireRole('s
       '12_lessons': { key: '12_lessons', name: 'Honors Tier: 12 Lessons', lessons: 12, price: 540.00, days: 30, is_trial: 0, duration_minutes: 50 }
     };
 
-    const selectedPkg = packageMap[package_key] || packageMap['4_lessons'];
+    let selectedPkg = packageMap[package_key];
+    if (!selectedPkg) {
+      const match = String(package_key || '').match(/^(\d+)(_lessons)?$/);
+      if (match) {
+        const count = Math.max(1, Math.min(30, parseInt(match[1], 10)));
+        selectedPkg = {
+          key: `${count}_lessons`,
+          name: `${count} Lessons Package`,
+          lessons: count,
+          price: 0.00,
+          days: 30,
+          is_trial: 0,
+          duration_minutes: 50
+        };
+      } else {
+        selectedPkg = packageMap['4_lessons'];
+      }
+    }
 
     // Check if multi-lesson selection setup is submitted
     if (Array.isArray(lessons) && lessons.length > 0) {

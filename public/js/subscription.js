@@ -11,6 +11,298 @@ const StudentSub = {
   calMonth: new Date().getMonth(),
   selectedDate: null,
   selectedTime: null,
+  pageCustomCount: 6,
+
+  stepPageCustomCount(delta) {
+    this.pageCustomCount = Math.max(1, Math.min(30, this.pageCustomCount + delta));
+    this.updatePageCustomDisplays();
+  },
+
+  setPageCustomCount(num) {
+    this.pageCustomCount = Math.max(1, Math.min(30, parseInt(num, 10) || 6));
+    this.updatePageCustomDisplays();
+  },
+
+  updatePageCustomDisplays() {
+    const count = this.pageCustomCount;
+    const sDisplay = document.getElementById('page-custom-count-display');
+    const vDisplay = document.getElementById('visitor-page-custom-count-display');
+    const sBtn = document.getElementById('btn-buy-custom');
+    const vBtn = document.getElementById('btn-visitor-buy-custom');
+    const sRate = document.getElementById('page-custom-rate-display');
+    const vRate = document.getElementById('visitor-page-custom-rate-display');
+
+    if (sDisplay) sDisplay.textContent = `${count} Lesson${count > 1 ? 's' : ''}`;
+    if (vDisplay) vDisplay.textContent = `${count} Lesson${count > 1 ? 's' : ''}`;
+
+    const tutorName = this.selectedTutor ? this.selectedTutor.name : '';
+    const btnLabel = tutorName 
+      ? `Enroll in ${count} Lesson${count > 1 ? 's' : ''} with ${tutorName}`
+      : `Enroll in ${count} Lesson${count > 1 ? 's' : ''}`;
+
+    if (sBtn) sBtn.textContent = btnLabel;
+    if (vBtn) vBtn.textContent = btnLabel;
+
+    if (this.selectedTutor) {
+      const hourly = Number(this.selectedTutor.hourly_rate || 58);
+      const est = (count * hourly).toFixed(2);
+      if (sRate) sRate.textContent = `$${est} Total Setup`;
+      if (vRate) vRate.textContent = `$${est} Total Setup`;
+    }
+  },
+
+  enrollPageCustom() {
+    const pkgKey = `${this.pageCustomCount}_lessons`;
+    this.openEnrollmentModal(pkgKey);
+  },
+
+  highlightBookingWithTutor(tutorId) {
+    if (tutorId) {
+      sessionStorage.setItem('preferred_booking_tutor_id', tutorId);
+    }
+    const resolvedId = tutorId || sessionStorage.getItem('preferred_booking_tutor_id');
+    if (!resolvedId) return;
+
+    const findTutor = () => {
+      if (this.allTutors && this.allTutors.length > 0) {
+        return this.allTutors.find(t => t.id == resolvedId || t.user_id == resolvedId);
+      }
+      if (typeof Tutors !== 'undefined' && Tutors.allTutors && Tutors.allTutors.length > 0) {
+        return Tutors.allTutors.find(t => t.id == resolvedId || t.user_id == resolvedId);
+      }
+      return null;
+    };
+
+    let tutor = findTutor();
+    const applyTutorUI = (t) => {
+      if (!t) return;
+      this.selectedTutor = t;
+
+      // Student hub banner
+      const sBanner = document.getElementById('sub-selected-tutor-banner');
+      const sAvatar = document.getElementById('sub-banner-tutor-avatar');
+      const sName = document.getElementById('sub-banner-tutor-name');
+      const sHeadline = document.getElementById('sub-banner-tutor-headline');
+
+      if (sBanner) {
+        sBanner.style.display = 'block';
+        if (sAvatar) sAvatar.src = t.avatar_url || t.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80';
+        if (sName) sName.textContent = t.name;
+        if (sHeadline) sHeadline.textContent = `${t.headline || t.subject || 'Faculty Educator'} • $${Number(t.hourly_rate || 58).toFixed(2)}/hr`;
+      }
+
+      // Visitor banner
+      const vBanner = document.getElementById('visitor-sub-tutor-banner');
+      const vAvatar = document.getElementById('visitor-banner-tutor-avatar');
+      const vName = document.getElementById('visitor-banner-tutor-name');
+      const vHeadline = document.getElementById('visitor-banner-tutor-headline');
+
+      if (vBanner) {
+        vBanner.style.display = 'block';
+        if (vAvatar) vAvatar.src = t.avatar_url || t.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80';
+        if (vName) vName.textContent = t.name;
+        if (vHeadline) vHeadline.textContent = `${t.headline || t.subject || 'Faculty Educator'} • $${Number(t.hourly_rate || 58).toFixed(2)}/hr`;
+      }
+
+      // Update package buttons with tutor name
+      const btnTrial = document.getElementById('btn-buy-trial');
+      if (btnTrial) btnTrial.textContent = `Book Free Trial with ${t.name} ($0)`;
+
+      this.updatePageCustomDisplays();
+
+      // Scroll smoothly to tutor banner
+      const targetBanner = sBanner && sBanner.style.display !== 'none' ? sBanner : vBanner;
+      if (targetBanner) {
+        setTimeout(() => {
+          targetBanner.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 150);
+      }
+    };
+
+    if (tutor) {
+      applyTutorUI(tutor);
+    } else {
+      API.getTutors().then(res => {
+        if (res && Array.isArray(res.tutors)) {
+          this.allTutors = res.tutors;
+          tutor = findTutor();
+          if (tutor) applyTutorUI(tutor);
+        }
+      }).catch(() => {});
+    }
+  },
+
+  checkVisitorBookingTutor() {
+    const stored = sessionStorage.getItem('preferred_booking_tutor_id');
+    if (stored) {
+      this.highlightBookingWithTutor(stored);
+    }
+  },
+
+  clearSelectedBookingTutor() {
+    sessionStorage.removeItem('preferred_booking_tutor_id');
+    this.selectedTutor = null;
+
+    const sBanner = document.getElementById('sub-selected-tutor-banner');
+    if (sBanner) sBanner.style.display = 'none';
+
+    const vBanner = document.getElementById('visitor-sub-tutor-banner');
+    if (vBanner) vBanner.style.display = 'none';
+
+    const btnTrial = document.getElementById('btn-buy-trial');
+    if (btnTrial) btnTrial.textContent = 'Book Free Trial ($0)';
+
+    this.updatePageCustomDisplays();
+    showToast('Educator filter cleared. You may select any faculty specialist.', 'info');
+  },
+
+  switchPlanInModal(packageKey, customCount) {
+    let planConfig;
+    if (customCount) {
+      const count = Math.max(1, Math.min(30, parseInt(customCount, 10) || 4));
+      planConfig = this.getPlanConfig(`${count}_lessons`);
+    } else {
+      planConfig = this.getPlanConfig(packageKey);
+    }
+
+    this.activePackageKey = planConfig.key;
+    const newCount = planConfig.lessons;
+    this.allocatedLessons = newCount;
+
+    const subjects = this.getTutorSubjects(this.selectedTutor);
+    const distributedTopics = this.distributeSubjectsForLessons(subjects, newCount);
+
+    const oldLessons = this.selectedLessons || [];
+    this.selectedLessons = Array.from({ length: newCount }, (_, i) => {
+      if (oldLessons[i]) {
+        const subj = oldLessons[i].subject || distributedTopics[i] || subjects[0] || 'General Tutoring';
+        const lessonRate = planConfig.isTrial ? 0.00 : this.getTutorSubjectRate(this.selectedTutor, subj);
+        return {
+          ...oldLessons[i],
+          index: i,
+          label: planConfig.isTrial ? 'Trial Lesson' : `Lesson ${i + 1}`,
+          hourly_rate: lessonRate
+        };
+      }
+      const subj = distributedTopics[i] || subjects[0] || 'General Tutoring';
+      const lessonRate = planConfig.isTrial ? 0.00 : this.getTutorSubjectRate(this.selectedTutor, subj);
+      return {
+        index: i,
+        label: planConfig.isTrial ? 'Trial Lesson' : `Lesson ${i + 1}`,
+        tutor_id: this.selectedTutor?.user_id || this.selectedTutor?.id || 1,
+        tutor_name: this.selectedTutor?.name || 'Educator',
+        tutor_avatar: this.selectedTutor?.avatar_url || this.selectedTutor?.avatar || '',
+        subject: subj,
+        hourly_rate: lessonRate,
+        scheduled_date: null,
+        scheduled_time: null
+      };
+    });
+
+    if (this.activeLessonIndex >= newCount) {
+      this.closeScheduler();
+    }
+
+    const modalBadge = document.getElementById('sub-enroll-badge');
+    const stepTag = document.getElementById('sub-enroll-step-tag');
+    const modalTitle = document.getElementById('sub-enroll-modal-title');
+    const step2Title = document.getElementById('sub-enroll-step2-title');
+    const step2Subtitle = document.getElementById('sub-enroll-step2-subtitle');
+    const notesLabel = document.getElementById('sub-enroll-notes-label');
+    const durationText = document.getElementById('sub-summary-duration-text');
+    const slotDurationBadge = document.getElementById('sub-enroll-slot-duration-badge');
+    const tabsGrid = document.getElementById('sub-lesson-tabs-grid');
+
+    if (modalBadge) modalBadge.textContent = planConfig.isTrial ? 'Free Trial' : 'Plan Enrollment';
+    if (stepTag) stepTag.textContent = planConfig.isTrial ? 'Step 1: Trial Educator & Schedule' : `Step 1: Educator & Schedule (${newCount} Lessons)`;
+    if (modalTitle) modalTitle.textContent = planConfig.isTrial ? 'Free Trial Lesson & Tutor Scheduling' : `${planConfig.name} & Tutor Scheduling`;
+    
+    if (step2Title) {
+      step2Title.textContent = planConfig.isTrial 
+        ? '2. Select 1 Free Trial Lesson: Choose Topic & Respective Date & Time' 
+        : `2. Select ${newCount} Lessons: Choose Topics & Respective Dates & Times`;
+    }
+    if (step2Subtitle) {
+      step2Subtitle.innerHTML = planConfig.isTrial
+        ? 'Choose your complimentary trial topic using the dropdown below. Click on the lesson card marked <strong>"Needs Schedule"</strong> to open its 30-minute date &amp; time setup.'
+        : `Choose a different topic for each lesson using the dropdown on each card (e.g., <strong>Algebra for Lesson 1</strong>, <strong>Calculus for Lesson 2</strong>). Click on any lesson marked <strong>"Needs Schedule"</strong> to open its date &amp; time setup.`;
+    }
+    if (notesLabel) {
+      notesLabel.textContent = planConfig.isTrial
+        ? 'Learning Objectives or Goals for Your Free Trial Lesson (Optional)'
+        : `Learning Objectives or Specific Topics for the ${newCount} Lessons (Optional)`;
+    }
+    if (durationText) {
+      durationText.textContent = planConfig.isTrial ? '30 Minutes (Complimentary Session)' : '50 Minutes per lesson';
+    }
+    if (slotDurationBadge) {
+      slotDurationBadge.textContent = planConfig.isTrial ? '30-Min Trial' : '50-Min Class';
+    }
+
+    if (tabsGrid) {
+      if (newCount === 1) {
+        tabsGrid.classList.add('single-card');
+      } else {
+        tabsGrid.classList.remove('single-card');
+      }
+    }
+
+    this.updateModalPlanSelectorButtons();
+    this.renderLessonTabs();
+    this.updateSummary();
+  },
+
+  stepModalLessons(delta) {
+    const planConfig = this.getPlanConfig(this.activePackageKey);
+    const current = planConfig.isTrial ? 1 : (planConfig.lessons || 4);
+    const next = Math.max(1, Math.min(30, current + delta));
+    this.switchPlanInModal(`${next}_lessons`, next);
+  },
+
+  onModalCustomCountChanged(val) {
+    const count = Math.max(1, Math.min(30, parseInt(val, 10) || 4));
+    this.switchPlanInModal(`${count}_lessons`, count);
+  },
+
+  updateModalPlanSelectorButtons() {
+    const key = this.activePackageKey;
+    const planConfig = this.getPlanConfig(key);
+    const count = planConfig.lessons;
+
+    const badge = document.getElementById('sub-modal-active-plan-badge');
+    if (badge) badge.textContent = planConfig.name;
+
+    const trialBtn = document.getElementById('modal-plan-btn-trial');
+    const p4Btn = document.getElementById('modal-plan-btn-4');
+    const p8Btn = document.getElementById('modal-plan-btn-8');
+    const p12Btn = document.getElementById('modal-plan-btn-12');
+    const customInput = document.getElementById('sub-modal-custom-count-input');
+
+    const setActive = (btn, active) => {
+      if (!btn) return;
+      if (active) {
+        btn.style.background = 'var(--gold-600)';
+        btn.style.color = '#FFFFFF';
+        btn.style.borderColor = 'var(--gold-600)';
+        btn.style.fontWeight = '700';
+      } else {
+        btn.style.background = '#FFFFFF';
+        btn.style.color = 'var(--charcoal-800)';
+        btn.style.borderColor = 'rgba(198, 138, 40, 0.35)';
+        btn.style.fontWeight = '600';
+      }
+    };
+
+    setActive(trialBtn, planConfig.isTrial);
+    setActive(p4Btn, !planConfig.isTrial && count === 4);
+    setActive(p8Btn, !planConfig.isTrial && count === 8);
+    setActive(p12Btn, !planConfig.isTrial && count === 12);
+
+    if (customInput) {
+      customInput.value = count;
+    }
+  },
+
 
   async init() {
     this.setupEventListeners();
@@ -33,6 +325,8 @@ const StudentSub = {
       const res = await API.getStudentSubscription();
       this.data = res;
       this.renderHub(res);
+      const storedTutor = sessionStorage.getItem('preferred_booking_tutor_id');
+      if (storedTutor) this.highlightBookingWithTutor(storedTutor);
     } catch (err) {
       console.error('Failed to load student subscription:', err);
       showToast('Could not load subscription details: ' + (err.message || 'Server error'), 'error');
@@ -163,7 +457,21 @@ const StudentSub = {
       'mastery': { key: '8_lessons', name: '8 Lessons Package', lessons: 8, duration: 50, durationLabel: '50-Min Class', isTrial: false },
       '12_lessons': { key: '12_lessons', name: '12 Lessons Package', lessons: 12, duration: 50, durationLabel: '50-Min Class', isTrial: false }
     };
-    return plans[packageKey] || plans['4_lessons'];
+    if (plans[packageKey]) return plans[packageKey];
+
+    const match = String(packageKey || '').match(/^(\d+)(_lessons)?$/);
+    if (match) {
+      const count = Math.max(1, Math.min(30, parseInt(match[1], 10)));
+      return {
+        key: `${count}_lessons`,
+        name: `${count} Lessons Package`,
+        lessons: count,
+        duration: 50,
+        durationLabel: '50-Min Class',
+        isTrial: false
+      };
+    }
+    return plans['4_lessons'];
   },
 
   purchasePlan(planKey) {
@@ -312,6 +620,12 @@ const StudentSub = {
       }
     }
 
+    const storedTutor = sessionStorage.getItem('preferred_booking_tutor_id');
+    if (storedTutor && this.allTutors.length > 0) {
+      const m = this.allTutors.find(t => t.id == storedTutor || t.user_id == storedTutor);
+      if (m) this.selectedTutor = m;
+    }
+
     // Default educator (or sync selectedTutor with fresh tutor object)
     if (this.selectedTutor && this.allTutors.length > 0) {
       this.selectedTutor = this.allTutors.find(t => t.id == this.selectedTutor.id || t.user_id == this.selectedTutor.user_id) || this.allTutors[0];
@@ -418,6 +732,7 @@ const StudentSub = {
 
     // Update dynamic calculations and summary
     this.updateSummary();
+    this.updateModalPlanSelectorButtons();
 
     modal.classList.add('active');
     document.body.style.overflow = 'hidden';

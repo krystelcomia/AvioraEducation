@@ -1028,6 +1028,41 @@ const Tutors = {
   },
 
   async openBookingModal(tutorId) {
+    // 1. Resolve selected tutor
+    let tutor = null;
+    if (this.allTutors && this.allTutors.length > 0) {
+      tutor = this.allTutors.find(t => t.id == tutorId || t.user_id == tutorId);
+    }
+    if (!tutor && tutorId) {
+      try {
+        const freshData = await API.getTutors();
+        if (freshData && Array.isArray(freshData.tutors) && freshData.tutors.length > 0) {
+          this.allTutors = freshData.tutors;
+          tutor = this.allTutors.find(t => t.id == tutorId || t.user_id == tutorId);
+        }
+      } catch (e) {}
+    }
+
+    if (tutorId) {
+      sessionStorage.setItem('preferred_booking_tutor_id', tutorId);
+    }
+
+    if (tutor && typeof StudentSub !== 'undefined') {
+      StudentSub.selectedTutor = tutor;
+    }
+
+    // 2. Lead to the subscription plan
+    window.location.hash = '#subscriptions';
+    if (typeof Router !== 'undefined' && Router.handleRoute) {
+      Router.handleRoute();
+    }
+    if (typeof StudentSub !== 'undefined' && StudentSub.highlightBookingWithTutor) {
+      StudentSub.highlightBookingWithTutor(tutorId);
+    }
+    return;
+  },
+
+  async legacyOpenSingleBookingModal(tutorId) {
     const user = Auth.currentUser;
 
     if (!user) {

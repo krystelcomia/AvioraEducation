@@ -138,6 +138,10 @@ const StudentSub = {
   },
 
   switchPlanInModal(packageKey) {
+    if ((packageKey === 'trial' || packageKey === 'free_trial') && this.data && this.data.trialUsed) {
+      showToast('The free trial is limited to one use per account and has already been used.', 'warning');
+      return;
+    }
     const planConfig = this.getPlanConfig(packageKey);
 
     this.activePackageKey = planConfig.key;
@@ -241,6 +245,15 @@ const StudentSub = {
     const p4Btn = document.getElementById('modal-plan-btn-4');
     const p8Btn = document.getElementById('modal-plan-btn-8');
     const p12Btn = document.getElementById('modal-plan-btn-12');
+
+    if (trialBtn) {
+      if (this.data && this.data.trialUsed) {
+        trialBtn.style.display = 'none';
+      } else {
+        trialBtn.style.display = 'inline-flex';
+      }
+    }
+
     const setActive = (btn, active) => {
       if (!btn) return;
       if (active) {
@@ -374,34 +387,39 @@ const StudentSub = {
       `).join('');
     }
 
-    // Trial button state & strictly 1-time limit enforcement ($0 free trial)
-    const trialBtn = document.getElementById('btn-buy-trial');
-    const trialBadge = document.getElementById('badge-trial-status');
-    if (trialBtn) {
-      if (data.trialUsed) {
-        trialBtn.disabled = true;
-        trialBtn.classList.remove('btn-outline-gold');
-        trialBtn.classList.add('btn-secondary');
-        trialBtn.style.opacity = '0.55';
-        trialBtn.style.cursor = 'not-allowed';
-        trialBtn.textContent = 'Trial Used (1-Time Limit)';
-        if (trialBadge) {
-          trialBadge.textContent = 'Used • 1-Time Limit';
-          trialBadge.style.color = 'var(--text-secondary)';
-          trialBadge.style.borderColor = 'rgba(0,0,0,0.15)';
-        }
-      } else {
-        trialBtn.disabled = false;
-        trialBtn.classList.remove('btn-secondary');
-        trialBtn.classList.add('btn-outline-gold');
-        trialBtn.style.opacity = '1';
-        trialBtn.style.cursor = 'pointer';
-        trialBtn.textContent = 'Book Free Trial ($0)';
-        if (trialBadge) {
-          trialBadge.textContent = 'Available (1-Time Use)';
-          trialBadge.style.color = 'var(--gold-700)';
-          trialBadge.style.borderColor = 'rgba(198, 138, 40, 0.4)';
-        }
+    // Visibility & Limit Enforcement for Free Trial (Strictly 1-Time Use)
+    const isTrialUsed = !!data.trialUsed;
+    const studentTrialCard = document.getElementById('card-trial-student');
+    const visitorTrialCard = document.getElementById('card-trial-visitor');
+    const modalTrialBtn = document.getElementById('modal-plan-btn-trial');
+    const studentGrid = document.getElementById('student-sub-packages-grid') || document.querySelector('.sub-packages-grid');
+    const visitorGrid = document.getElementById('visitor-pricing-grid') || document.querySelector('.pricing-grid');
+    const subPackagesHeading = document.getElementById('sub-packages-heading');
+    const subPackagesDesc = document.getElementById('sub-packages-desc');
+
+    if (isTrialUsed) {
+      if (studentTrialCard) studentTrialCard.style.display = 'none';
+      if (visitorTrialCard) visitorTrialCard.style.display = 'none';
+      if (modalTrialBtn) modalTrialBtn.style.display = 'none';
+      if (studentGrid) studentGrid.classList.add('no-trial');
+      if (visitorGrid) visitorGrid.classList.add('no-trial');
+      if (subPackagesHeading) subPackagesHeading.textContent = 'Aviora Subscription Packages';
+      if (subPackagesDesc) {
+        subPackagesDesc.textContent = 'Choose from Aviora’s curated lesson packages for 4, 8, or 12 lessons. All subscriptions are valid for one month, with dates and times fully determined by the student.';
+      }
+      if (this.activePackageKey === 'trial' || this.activePackageKey === 'free_trial') {
+        this.activePackageKey = '4_lessons';
+        this.allocatedLessons = 4;
+      }
+    } else {
+      if (studentTrialCard) studentTrialCard.style.display = 'flex';
+      if (visitorTrialCard) visitorTrialCard.style.display = 'flex';
+      if (modalTrialBtn) modalTrialBtn.style.display = 'inline-flex';
+      if (studentGrid) studentGrid.classList.remove('no-trial');
+      if (visitorGrid) visitorGrid.classList.remove('no-trial');
+      if (subPackagesHeading) subPackagesHeading.textContent = 'Aviora Subscription Packages & Free Trial';
+      if (subPackagesDesc) {
+        subPackagesDesc.textContent = 'Choose from Aviora’s curated lesson packages for 4, 8, or 12 lessons. All subscriptions are valid for one month, with dates and times fully determined by the student. Free 30-minute trial lessons are also available for first-time evaluation ($0, strictly 1-time use).';
       }
     }
   },
@@ -445,7 +463,11 @@ const StudentSub = {
       'honors': '8_lessons',
       'mastery': '8_lessons'
     };
-    const packageKey = packageMap[planKey] || planKey || '4_lessons';
+    let packageKey = packageMap[planKey] || planKey || '4_lessons';
+    if ((packageKey === 'trial' || packageKey === 'free_trial') && this.data && this.data.trialUsed) {
+      showToast('The free trial is limited to one use per account and has already been used.', 'warning');
+      packageKey = '4_lessons';
+    }
     const planConfig = this.getPlanConfig(packageKey);
     const planName = planConfig ? planConfig.name : 'Subscription Package';
 
@@ -540,6 +562,18 @@ const StudentSub = {
   // OPEN INTERACTIVE SUBSCRIPTION & LESSONS SCHEDULING STUDIO
   async openEnrollmentModal(packageKey = '4_lessons') {
     const user = typeof Auth !== 'undefined' ? Auth.currentUser : null;
+    if (user && user.role === 'student' && !this.data) {
+      try {
+        const res = await API.getStudentSubscription();
+        this.data = res;
+        this.renderHub(res);
+      } catch (e) {}
+    }
+
+    if (this.data && this.data.trialUsed && (packageKey === 'trial' || packageKey === 'free_trial')) {
+      packageKey = '4_lessons';
+      showToast('The free trial is limited to one use per account and has already been used.', 'info');
+    }
     if (!user) {
       sessionStorage.setItem('pending_subscription_package', packageKey);
       sessionStorage.setItem('pending_subscription_plan', packageKey);
@@ -1345,5 +1379,21 @@ const StudentSub = {
         submitBtn.innerHTML = originalText;
       }
     }
+  },
+
+  resetState() {
+    this.data = null;
+    this.selectedTutor = null;
+    const studentTrialCard = document.getElementById('card-trial-student');
+    const visitorTrialCard = document.getElementById('card-trial-visitor');
+    const modalTrialBtn = document.getElementById('modal-plan-btn-trial');
+    const studentGrid = document.getElementById('student-sub-packages-grid') || document.querySelector('.sub-packages-grid');
+    const visitorGrid = document.getElementById('visitor-pricing-grid') || document.querySelector('.pricing-grid');
+
+    if (studentTrialCard) studentTrialCard.style.display = 'flex';
+    if (visitorTrialCard) visitorTrialCard.style.display = 'flex';
+    if (modalTrialBtn) modalTrialBtn.style.display = 'inline-flex';
+    if (studentGrid) studentGrid.classList.remove('no-trial');
+    if (visitorGrid) visitorGrid.classList.remove('no-trial');
   }
 };

@@ -1180,6 +1180,10 @@ const Auth = {
       Profile.resetToDefaults();
     }
 
+    if (typeof StudentSub !== 'undefined' && StudentSub.resetState) {
+      StudentSub.resetState();
+    }
+
     showToast('You have been securely logged out.', 'info');
     window.location.hash = '#home';
     Router.handleRoute();

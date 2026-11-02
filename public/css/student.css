@@ -2400,3 +2400,56 @@
   background: #1C2029;
   border-color: rgba(255, 255, 255, 0.08);
 }
+
+/* Student Calendar Date Note Manager (Save, Edit, Delete) */
+.student-note-box {
+  border-radius: var(--radius-md);
+  padding: 1.15rem;
+  margin-bottom: 1.25rem;
+  transition: all var(--transition-fast);
+}
+
+.student-note-box.is-empty {
+  background: rgba(198, 138, 40, 0.04);
+  border: 1px solid rgba(198, 138, 40, 0.25);
+}
+
+.student-note-box.is-saved {
+  background: rgba(198, 138, 40, 0.04);
+  border: 1.5px solid rgba(198, 138, 40, 0.32);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+}
+
+.student-note-box.is-editing {
+  background: rgba(198, 138, 40, 0.06);
+  border: 1.5px solid var(--gold-500, #C68A28);
+  box-shadow: 0 0 0 3px rgba(198, 138, 40, 0.15);
+}
+
+.student-note-content-card {
+  background: #FFFFFF;
+  border: 1px solid rgba(198, 138, 40, 0.25);
+  border-radius: 6px;
+  padding: 0.75rem 0.95rem;
+  font-size: 0.92rem;
+  color: var(--charcoal-900);
+  font-weight: 600;
+  line-height: 1.45;
+  word-break: break-word;
+}
+
+[data-theme="dark"] .student-note-content-card {
+  background: rgba(30, 41, 59, 0.7);
+  border-color: rgba(198, 138, 40, 0.4);
+  color: #F1F5F9;
+}
+
+[data-theme="dark"] .student-note-box.is-saved {
+  background: rgba(198, 138, 40, 0.08);
+  border-color: rgba(198, 138, 40, 0.4);
+}
+
+[data-theme="dark"] .student-note-box.is-empty {
+  background: rgba(255, 255, 255, 0.02);
+  border-color: rgba(255, 255, 255, 0.1);
+}

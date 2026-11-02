@@ -23,6 +23,7 @@ const Student = {
   calYear: new Date().getFullYear(),
   calMonth: new Date().getMonth(),
   selectedDate: null,
+  editingDateNote: null,
   hasBoundCalendarNav: false,
 
   async init() {
@@ -730,6 +731,9 @@ const Student = {
   },
 
   selectCalendarDate(dateStr) {
+    if (this.selectedDate !== dateStr) {
+      this.editingDateNote = null;
+    }
     this.selectedDate = dateStr;
     this.renderCalendar();
     this.renderDateSchedulePanel();
@@ -860,28 +864,84 @@ const Student = {
 
         <!-- Right: Schedule Note & Booked Sessions for this Date -->
         <div>
-          <!-- Personal Schedule Note -->
-          <div style="background: rgba(198, 138, 40, 0.04); border: 1px solid rgba(198, 138, 40, 0.25); border-radius: var(--radius-md); padding: 1rem; margin-bottom: 1.25rem;">
-            <label style="font-size: 0.85rem; font-weight: 700; color: var(--charcoal-900); display: flex; align-items: center; gap: 0.35rem; margin-bottom: 0.35rem;">
-              <span>📝 Personal Date Note / Unavailability Reason:</span>
-            </label>
-            <p style="font-size: 0.75rem; color: var(--text-secondary); margin: 0 0 0.5rem 0;">
-              Add private reminders (e.g. school exams, family event, work shift).
-            </p>
-            <div style="display: flex; gap: 0.5rem;">
-              <input type="text" id="student-date-note-input" class="form-control" style="font-size: 0.84rem; padding: 0.45rem 0.65rem;" placeholder="e.g., High school midterm exam, family dinner..." value="${escapeHtmlStr(dayNote)}" onkeydown="if(event.key==='Enter'){event.preventDefault();Student.saveDateNote('${dateStr}');}" />
-              <button type="button" class="btn btn-outline-gold btn-sm" id="student-date-note-save-btn" onclick="Student.saveDateNote('${dateStr}')" style="white-space: nowrap;">Save Note</button>
-            </div>
-            ${dayNote ? `
-              <div style="margin-top: 0.65rem; padding: 0.45rem 0.65rem; background: rgba(245, 158, 11, 0.12); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 6px; font-size: 0.82rem; color: #92400E; display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;">
-                <div style="display: flex; align-items: center; gap: 0.45rem; overflow: hidden;">
-                  <span>📝</span>
-                  <span style="font-weight: 700;">Saved Note: <span style="font-weight: 600;">${escapeHtmlStr(dayNote)}</span></span>
+          <!-- Personal Schedule Note Manager with Dedicated Save, Edit, and Delete -->
+          ${(() => {
+            const isEditing = this.editingDateNote === dateStr;
+            if (isEditing) {
+              return `
+                <div class="student-note-box is-editing" style="background: rgba(198, 138, 40, 0.05); border: 1.5px solid var(--gold-500, #C68A28); border-radius: var(--radius-md); padding: 1.1rem; margin-bottom: 1.25rem;">
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.45rem;">
+                    <label style="font-size: 0.86rem; font-weight: 700; color: var(--charcoal-900); display: flex; align-items: center; gap: 0.4rem; margin: 0;">
+                      <span>✏️</span> <span>Edit Personal Date Note</span>
+                    </label>
+                    <span style="font-size: 0.72rem; color: var(--gold-700); font-weight: 700;">Editing Mode</span>
+                  </div>
+                  <p style="font-size: 0.75rem; color: var(--text-secondary); margin: 0 0 0.55rem 0;">
+                    Modify your private reminder. Changes will be saved directly to your account database.
+                  </p>
+                  <div style="margin-bottom: 0.65rem;">
+                    <input type="text" id="student-date-note-input" class="form-control" style="font-size: 0.86rem; padding: 0.5rem 0.7rem; border-color: var(--gold-500); width: 100%; box-sizing: border-box;" placeholder="e.g., High school midterm exam, family dinner..." value="${escapeHtmlStr(dayNote)}" onkeydown="if(event.key==='Enter'){event.preventDefault();Student.saveDateNote('${dateStr}');}else if(event.key==='Escape'){event.preventDefault();Student.cancelEditDateNote();}" />
+                  </div>
+                  <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+                    <div style="display: flex; gap: 0.45rem;">
+                      <button type="button" class="btn btn-outline-gold btn-sm" id="student-date-note-save-btn" onclick="Student.saveDateNote('${dateStr}')" style="font-weight: 700; padding: 0.38rem 0.8rem; display: inline-flex; align-items: center; gap: 0.35rem; white-space: nowrap;">
+                        <span>💾</span> <span>Save Changes</span>
+                      </button>
+                      <button type="button" class="btn btn-secondary btn-sm" onclick="Student.cancelEditDateNote()" style="font-weight: 600; padding: 0.38rem 0.8rem; white-space: nowrap;">
+                        Cancel
+                      </button>
+                    </div>
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="Student.deleteDateNote('${dateStr}')" title="Delete this note" style="font-weight: 700; font-size: 0.78rem; padding: 0.38rem 0.8rem; color: #DC2626; border-color: rgba(220, 38, 38, 0.4); display: inline-flex; align-items: center; gap: 0.3rem;">
+                      <span>🗑️</span> <span>Delete Note</span>
+                    </button>
+                  </div>
                 </div>
-                <button type="button" onclick="Student.clearDateNote('${dateStr}')" style="background: none; border: none; color: #DC2626; font-size: 0.75rem; font-weight: 700; cursor: pointer; padding: 0; text-decoration: underline; white-space: nowrap;">Clear Note</button>
-              </div>
-            ` : ''}
-          </div>
+              `;
+            } else if (dayNote) {
+              return `
+                <div class="student-note-box is-saved" style="background: rgba(198, 138, 40, 0.04); border: 1.5px solid rgba(198, 138, 40, 0.32); border-radius: var(--radius-md); padding: 1.1rem; margin-bottom: 1.25rem;">
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.6rem; flex-wrap: wrap; gap: 0.5rem;">
+                    <div style="display: flex; align-items: center; gap: 0.45rem;">
+                      <span style="font-size: 1rem;">📝</span>
+                      <strong style="font-size: 0.88rem; color: var(--charcoal-900);">Personal Date Note</strong>
+                      <span class="badge-gold" style="font-size: 0.68rem; padding: 0.15rem 0.5rem; background: rgba(16, 185, 129, 0.12); color: #047857; border: 1px solid rgba(16, 185, 129, 0.3); font-weight: 700;">✓ Saved in Account</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 0.45rem;">
+                      <button type="button" class="btn btn-outline-gold btn-sm" onclick="Student.startEditDateNote('${dateStr}')" title="Edit this saved note" style="font-weight: 700; padding: 0.32rem 0.72rem; font-size: 0.78rem; display: inline-flex; align-items: center; gap: 0.3rem;">
+                        <span>✏️</span> <span>Edit</span>
+                      </button>
+                      <button type="button" class="btn btn-secondary btn-sm" onclick="Student.deleteDateNote('${dateStr}')" title="Delete note from database" style="font-weight: 700; font-size: 0.78rem; padding: 0.32rem 0.72rem; color: #DC2626; border-color: rgba(220, 38, 38, 0.4); display: inline-flex; align-items: center; gap: 0.3rem;">
+                        <span>🗑️</span> <span>Delete</span>
+                      </button>
+                    </div>
+                  </div>
+                  <div class="student-note-content-card" style="background: #FFFFFF; border: 1px solid rgba(198, 138, 40, 0.22); border-radius: 6px; padding: 0.7rem 0.85rem; font-size: 0.9rem; color: var(--charcoal-900); font-weight: 600; line-height: 1.45; word-break: break-word;">
+                    ${escapeHtmlStr(dayNote)}
+                  </div>
+                  <div style="margin-top: 0.45rem; font-size: 0.72rem; color: var(--text-secondary); display: flex; align-items: center; gap: 0.35rem;">
+                    <span>💾 Permanently saved in database and active on your calendar.</span>
+                  </div>
+                </div>
+              `;
+            } else {
+              return `
+                <div class="student-note-box is-empty" style="background: rgba(198, 138, 40, 0.04); border: 1px solid rgba(198, 138, 40, 0.25); border-radius: var(--radius-md); padding: 1.1rem; margin-bottom: 1.25rem;">
+                  <label style="font-size: 0.86rem; font-weight: 700; color: var(--charcoal-900); display: flex; align-items: center; gap: 0.35rem; margin-bottom: 0.35rem;">
+                    <span>📝 Personal Date Note / Unavailability Reason:</span>
+                  </label>
+                  <p style="font-size: 0.75rem; color: var(--text-secondary); margin: 0 0 0.55rem 0;">
+                    Add private reminders (e.g. school exams, family event, work shift). Notes will save directly to your account.
+                  </p>
+                  <div style="display: flex; gap: 0.5rem;">
+                    <input type="text" id="student-date-note-input" class="form-control" style="font-size: 0.85rem; padding: 0.48rem 0.7rem;" placeholder="e.g., High school midterm exam, family dinner..." value="" onkeydown="if(event.key==='Enter'){event.preventDefault();Student.saveDateNote('${dateStr}');}" />
+                    <button type="button" class="btn btn-outline-gold btn-sm" id="student-date-note-save-btn" onclick="Student.saveDateNote('${dateStr}')" style="white-space: nowrap; font-weight: 700; padding: 0.48rem 0.9rem; display: inline-flex; align-items: center; gap: 0.35rem;">
+                      <span>💾</span> <span>Save Note</span>
+                    </button>
+                  </div>
+                </div>
+              `;
+            }
+          })()}
 
           <!-- Booked Classes on this date -->
           <div>
@@ -948,51 +1008,89 @@ const Student = {
     }
   },
 
+  startEditDateNote(date) {
+    this.editingDateNote = date;
+    this.renderDateSchedulePanel();
+    setTimeout(() => {
+      const input = document.getElementById('student-date-note-input');
+      if (input) {
+        input.focus();
+        input.select();
+      }
+    }, 50);
+  },
+
+  cancelEditDateNote() {
+    this.editingDateNote = null;
+    this.renderDateSchedulePanel();
+  },
+
   async saveDateNote(date) {
     const input = document.getElementById('student-date-note-input');
     const saveBtn = document.getElementById('student-date-note-save-btn');
-    const note = input ? input.value : '';
+    const note = input ? input.value.trim() : '';
+
+    if (!note) {
+      return this.deleteDateNote(date);
+    }
+
     if (saveBtn) {
       saveBtn.disabled = true;
-      saveBtn.textContent = 'Saving...';
+      saveBtn.innerHTML = '<span>💾 Saving...</span>';
     }
     try {
       const res = await API.setStudentDayAvailability({
         date: date,
         note: note
       });
+      if (!this.scheduleData) this.scheduleData = {};
       if (res && res.availabilitySchedule) {
-        if (!this.scheduleData) this.scheduleData = {};
         this.scheduleData.availabilitySchedule = res.availabilitySchedule;
         if (res.unavailableDates) this.scheduleData.unavailableDates = res.unavailableDates;
         if (res.occupiedSlots) this.scheduleData.occupiedSlots = res.occupiedSlots;
+      } else {
+        if (!this.scheduleData.availabilitySchedule) this.scheduleData.availabilitySchedule = {};
+        if (!this.scheduleData.availabilitySchedule.date_notes) this.scheduleData.availabilitySchedule.date_notes = {};
+        this.scheduleData.availabilitySchedule.date_notes[date] = note;
       }
-      showToast(note.trim() ? 'Date note saved successfully.' : 'Date note cleared.', 'success');
+      this.editingDateNote = null;
+      showToast('Date note saved to your account and database.', 'success');
       await this.renderSchedule();
     } catch (err) {
       showToast(err.message || 'Failed to save date note.', 'error');
       if (saveBtn) {
         saveBtn.disabled = false;
-        saveBtn.textContent = 'Save Note';
+        saveBtn.innerHTML = '<span>💾 Save Changes</span>';
       }
     }
   },
 
-  async clearDateNote(date) {
+  async deleteDateNote(date) {
     try {
       const res = await API.setStudentDayAvailability({
         date: date,
         note: ''
       });
+      if (!this.scheduleData) this.scheduleData = {};
       if (res && res.availabilitySchedule) {
-        if (!this.scheduleData) this.scheduleData = {};
         this.scheduleData.availabilitySchedule = res.availabilitySchedule;
+        if (res.unavailableDates) this.scheduleData.unavailableDates = res.unavailableDates;
+        if (res.occupiedSlots) this.scheduleData.occupiedSlots = res.occupiedSlots;
+      } else {
+        if (this.scheduleData.availabilitySchedule && this.scheduleData.availabilitySchedule.date_notes) {
+          delete this.scheduleData.availabilitySchedule.date_notes[date];
+        }
       }
-      showToast('Date note removed.', 'success');
+      this.editingDateNote = null;
+      showToast('Date note deleted from your account and database.', 'info');
       await this.renderSchedule();
     } catch (err) {
-      showToast(err.message || 'Failed to remove date note.', 'error');
+      showToast(err.message || 'Failed to delete date note.', 'error');
     }
+  },
+
+  async clearDateNote(date) {
+    return this.deleteDateNote(date);
   },
 
   renderScheduleList() {
@@ -1277,12 +1375,12 @@ const Student = {
       const sp = data.studentProfile || {};
       const u = data.user || {};
 
-      const nameInput = document.getElementById('sp-name');
-      const phoneInput = document.getElementById('sp-phone');
-      const gradeInput = document.getElementById('sp-grade');
-      const schoolInput = document.getElementById('sp-school');
-      const goalsInput = document.getElementById('sp-goals');
-      const subjectsInput = document.getElementById('sp-subjects');
+      const nameInput = document.getElementById('sp-name') || document.getElementById('profile-name');
+      const phoneInput = document.getElementById('sp-phone') || document.getElementById('profile-phone');
+      const gradeInput = document.getElementById('sp-grade') || document.getElementById('profile-grade');
+      const schoolInput = document.getElementById('sp-school') || document.getElementById('profile-school');
+      const goalsInput = document.getElementById('sp-goals') || document.getElementById('profile-goals');
+      const subjectsInput = document.getElementById('sp-subjects') || document.getElementById('profile-subjects');
 
       if (nameInput) nameInput.value = u.name || '';
       if (phoneInput) phoneInput.value = u.phone || '';
@@ -1420,17 +1518,19 @@ const Student = {
 
   async handleProfileUpdate(e) {
     e.preventDefault();
-    const name = document.getElementById('sp-name').value.trim();
-    const phone = document.getElementById('sp-phone').value.trim();
-    const grade_level = document.getElementById('sp-grade').value;
-    const school = document.getElementById('sp-school').value.trim();
-    const learning_goals = document.getElementById('sp-goals').value.trim();
-    const target_subjects = document.getElementById('sp-subjects').value.trim();
-    const submitBtn = e.target.querySelector('button[type="submit"]');
+    const name = (document.getElementById('sp-name') || document.getElementById('profile-name'))?.value.trim() || '';
+    const phone = (document.getElementById('sp-phone') || document.getElementById('profile-phone'))?.value.trim() || '';
+    const grade_level = (document.getElementById('sp-grade') || document.getElementById('profile-grade'))?.value || '';
+    const school = (document.getElementById('sp-school') || document.getElementById('profile-school'))?.value.trim() || '';
+    const learning_goals = (document.getElementById('sp-goals') || document.getElementById('profile-goals'))?.value.trim() || '';
+    const target_subjects = (document.getElementById('sp-subjects') || document.getElementById('profile-subjects'))?.value.trim() || '';
+    const submitBtn = e.target.querySelector('button[type="submit"]') || document.getElementById('btn-save-profile');
 
     try {
-      submitBtn.disabled = true;
-      submitBtn.textContent = 'Saving Changes...';
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Saving Changes...';
+      }
 
       await API.updateProfile({
         name,
@@ -1444,8 +1544,10 @@ const Student = {
     } catch (err) {
       showToast(err.message, 'error');
     } finally {
-      submitBtn.disabled = false;
-      submitBtn.textContent = 'Save Profile Changes';
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Save Profile Changes';
+      }
     }
   },
 

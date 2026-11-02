@@ -1423,7 +1423,7 @@
               </li>
             </ul>
 
-            <button type="button" class="btn btn-outline-gold pricing-card-btn" onclick="StudentSub.purchasePlan('4_lessons')">Enroll in 4 Lessons</button>
+            <button type="button" class="btn btn-outline-gold pricing-card-btn" id="btn-visitor-buy-4" onclick="StudentSub.purchasePlan('4_lessons')">Enroll in 4 Lessons</button>
           </div>
 
           <!-- Plan 3: 8 Lessons Package (Featured) -->
@@ -1469,7 +1469,7 @@
               </li>
             </ul>
 
-            <button type="button" class="btn btn-primary pricing-card-btn" onclick="StudentSub.purchasePlan('8_lessons')">Enroll in 8 Lessons</button>
+            <button type="button" class="btn btn-primary pricing-card-btn" id="btn-visitor-buy-8" onclick="StudentSub.purchasePlan('8_lessons')">Enroll in 8 Lessons</button>
           </div>
 
           <!-- Plan 4: 12 Lessons Package -->
@@ -1514,61 +1514,10 @@
               </li>
             </ul>
 
-            <button type="button" class="btn btn-outline-gold pricing-card-btn" onclick="StudentSub.purchasePlan('12_lessons')">Enroll in 12 Lessons</button>
+            <button type="button" class="btn btn-outline-gold pricing-card-btn" id="btn-visitor-buy-12" onclick="StudentSub.purchasePlan('12_lessons')">Enroll in 12 Lessons</button>
           </div>
 
-          <!-- Plan 5: Custom Lessons Package -->
-          <div class="pricing-card" style="border: 2px dashed var(--gold-500); background: linear-gradient(180deg, #FFFFFF 0%, #FFFDF7 100%);">
-            <div class="pricing-card-header">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
-                <span class="badge-gold" style="font-size: 0.72rem;">Flexible Choice</span>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--gold-600);"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-              </div>
-              <h3 class="pricing-plan-name">Custom Lessons</h3>
-              <div class="pricing-price-wrap" style="min-height: 52px; display: flex; flex-direction: column; justify-content: center;">
-                <span id="visitor-page-custom-rate-display" style="font-size: 1.35rem; font-weight: 800; color: var(--gold-700); font-family: var(--font-heading); line-height: 1.2;">Choose Any Number</span>
-                <span class="pricing-period" style="margin-top: 0.2rem;">Select how many lessons you want to book</span>
-              </div>
-              <p class="pricing-desc">Customize your monthly lesson package to match your academic schedule and learning pace.</p>
-            </div>
-
-            <div style="padding: 0 0 1rem 0; text-align: center;">
-              <div style="display: flex; align-items: center; justify-content: center; gap: 0.6rem; margin-bottom: 0.6rem;">
-                <button type="button" class="btn btn-outline-gold btn-sm" style="width: 32px; height: 32px; padding: 0; font-size: 1.2rem; font-weight: 800; border-radius: 50%;" onclick="StudentSub.stepPageCustomCount(-1)">−</button>
-                <span id="visitor-page-custom-count-display" style="font-size: 1.15rem; font-weight: 800; color: var(--charcoal-900); min-width: 90px; text-align: center;">6 Lessons</span>
-                <button type="button" class="btn btn-outline-gold btn-sm" style="width: 32px; height: 32px; padding: 0; font-size: 1.2rem; font-weight: 800; border-radius: 50%;" onclick="StudentSub.stepPageCustomCount(1)">+</button>
-              </div>
-              <div style="display: flex; justify-content: center; gap: 0.35rem; flex-wrap: wrap;">
-                <button type="button" class="badge-gold" style="cursor: pointer; border: 1px solid rgba(198, 138, 40, 0.4); padding: 0.15rem 0.45rem;" onclick="StudentSub.setPageCustomCount(2)">2</button>
-                <button type="button" class="badge-gold" style="cursor: pointer; border: 1px solid rgba(198, 138, 40, 0.4); padding: 0.15rem 0.45rem;" onclick="StudentSub.setPageCustomCount(4)">4</button>
-                <button type="button" class="badge-gold" style="cursor: pointer; border: 1px solid rgba(198, 138, 40, 0.4); padding: 0.15rem 0.45rem;" onclick="StudentSub.setPageCustomCount(6)">6</button>
-                <button type="button" class="badge-gold" style="cursor: pointer; border: 1px solid rgba(198, 138, 40, 0.4); padding: 0.15rem 0.45rem;" onclick="StudentSub.setPageCustomCount(8)">8</button>
-                <button type="button" class="badge-gold" style="cursor: pointer; border: 1px solid rgba(198, 138, 40, 0.4); padding: 0.15rem 0.45rem;" onclick="StudentSub.setPageCustomCount(10)">10</button>
-                <button type="button" class="badge-gold" style="cursor: pointer; border: 1px solid rgba(198, 138, 40, 0.4); padding: 0.15rem 0.45rem;" onclick="StudentSub.setPageCustomCount(12)">12</button>
-              </div>
-            </div>
-
-            <ul class="pricing-features">
-              <li class="pricing-feature-item">
-                <span class="pricing-feature-icon">✓</span>
-                <span><strong>Custom 1-on-1 Lessons</strong></span>
-              </li>
-              <li class="pricing-feature-item">
-                <span class="pricing-feature-icon">✓</span>
-                <span><strong>Valid for 1 Month</strong> from purchase</span>
-              </li>
-              <li class="pricing-feature-item">
-                <span class="pricing-feature-icon">✓</span>
-                <span>Student chooses dates &amp; times</span>
-              </li>
-              <li class="pricing-feature-item">
-                <span class="pricing-feature-icon">✓</span>
-                <span>Tailored to your learning goals</span>
-              </li>
-            </ul>
-
-            <button type="button" id="btn-visitor-buy-custom" class="btn btn-outline-gold pricing-card-btn" onclick="StudentSub.enrollPageCustom()">Enroll in 6 Lessons</button>
-          </div>
+          
 
         </div>
 
@@ -2961,7 +2910,7 @@
               <li>✓ Upfront payment requirement</li>
               <li>✓ Progress feedback &amp; lesson logs</li>
             </ul>
-            <button class="btn btn-outline-gold btn-sm" onclick="StudentSub.openEnrollmentModal('4_lessons')" style="width: 100%; font-weight: 700;">Enroll in 4 Lessons</button>
+            <button class="btn btn-outline-gold btn-sm" id="btn-buy-4" onclick="StudentSub.openEnrollmentModal('4_lessons')" style="width: 100%; font-weight: 700;">Enroll in 4 Lessons</button>
           </div>
 
           <!-- Package 2: 8 Lessons (Popular) -->
@@ -2989,7 +2938,7 @@
               <li>✓ Priority faculty schedule reservations</li>
               <li>✓ Comprehensive diagnostic milestones</li>
             </ul>
-            <button class="btn btn-primary btn-sm" onclick="StudentSub.openEnrollmentModal('8_lessons')" style="width: 100%; font-weight: 700;">Enroll in 8 Lessons</button>
+            <button class="btn btn-primary btn-sm" id="btn-buy-8" onclick="StudentSub.openEnrollmentModal('8_lessons')" style="width: 100%; font-weight: 700;">Enroll in 8 Lessons</button>
           </div>
 
           <!-- Package 3: 12 Lessons -->
@@ -3014,43 +2963,10 @@
               <li>✓ Multi-subject flexibility &amp; VIP priority</li>
               <li>✓ Full exam simulation &amp; capstone review</li>
             </ul>
-            <button class="btn btn-outline-gold btn-sm" onclick="StudentSub.openEnrollmentModal('12_lessons')" style="width: 100%; font-weight: 700;">Enroll in 12 Lessons</button>
+            <button class="btn btn-outline-gold btn-sm" id="btn-buy-12" onclick="StudentSub.openEnrollmentModal('12_lessons')" style="width: 100%; font-weight: 700;">Enroll in 12 Lessons</button>
           </div>
 
-          <!-- Package 4: Custom Lessons -->
-          <div class="sub-package-card" style="border: 2px dashed var(--gold-500); background: linear-gradient(180deg, #FFFFFF 0%, #FFFDF7 100%);">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
-              <span class="badge-gold">Flexible Choice</span>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--gold-600);"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-            </div>
-            <h3 style="font-family: var(--font-heading); font-size: 1.25rem; font-weight: 800; color: var(--charcoal-900); margin-bottom: 0.25rem;">Custom Lessons</h3>
-            <div style="margin: 0.75rem 0 1rem 0; min-height: 52px; display: flex; flex-direction: column; justify-content: center;">
-              <span id="page-custom-rate-display" style="font-size: 1.35rem; font-weight: 800; color: var(--gold-700); font-family: var(--font-heading); line-height: 1.2;">Choose Any Number</span>
-              <span style="font-size: 0.78rem; color: var(--text-secondary); margin-top: 0.2rem;">Select how many lessons you want to book</span>
-            </div>
-            <div style="margin-bottom: 1rem;">
-              <div style="display: flex; align-items: center; justify-content: center; gap: 0.6rem; margin-bottom: 0.6rem;">
-                <button type="button" class="btn btn-outline-gold btn-sm" style="width: 32px; height: 32px; padding: 0; font-size: 1.2rem; font-weight: 800; border-radius: 50%;" onclick="StudentSub.stepPageCustomCount(-1)">−</button>
-                <span id="page-custom-count-display" style="font-size: 1.15rem; font-weight: 800; color: var(--charcoal-900); min-width: 90px; text-align: center;">6 Lessons</span>
-                <button type="button" class="btn btn-outline-gold btn-sm" style="width: 32px; height: 32px; padding: 0; font-size: 1.2rem; font-weight: 800; border-radius: 50%;" onclick="StudentSub.stepPageCustomCount(1)">+</button>
-              </div>
-              <div style="display: flex; justify-content: center; gap: 0.35rem; flex-wrap: wrap;">
-                <button type="button" class="badge-gold" style="cursor: pointer; border: 1px solid rgba(198, 138, 40, 0.4); padding: 0.15rem 0.45rem;" onclick="StudentSub.setPageCustomCount(2)">2</button>
-                <button type="button" class="badge-gold" style="cursor: pointer; border: 1px solid rgba(198, 138, 40, 0.4); padding: 0.15rem 0.45rem;" onclick="StudentSub.setPageCustomCount(4)">4</button>
-                <button type="button" class="badge-gold" style="cursor: pointer; border: 1px solid rgba(198, 138, 40, 0.4); padding: 0.15rem 0.45rem;" onclick="StudentSub.setPageCustomCount(6)">6</button>
-                <button type="button" class="badge-gold" style="cursor: pointer; border: 1px solid rgba(198, 138, 40, 0.4); padding: 0.15rem 0.45rem;" onclick="StudentSub.setPageCustomCount(8)">8</button>
-                <button type="button" class="badge-gold" style="cursor: pointer; border: 1px solid rgba(198, 138, 40, 0.4); padding: 0.15rem 0.45rem;" onclick="StudentSub.setPageCustomCount(10)">10</button>
-                <button type="button" class="badge-gold" style="cursor: pointer; border: 1px solid rgba(198, 138, 40, 0.4); padding: 0.15rem 0.45rem;" onclick="StudentSub.setPageCustomCount(12)">12</button>
-              </div>
-            </div>
-            <ul style="list-style: none; padding: 0; margin: 0 0 1.5rem 0; font-size: 0.82rem; color: var(--charcoal-800); line-height: 1.7; flex: 1;">
-              <li>✓ <strong>Custom 1-on-1 Lessons</strong></li>
-              <li>✓ <strong>Valid for 1 Month</strong> from purchase</li>
-              <li>✓ Student chooses dates &amp; times</li>
-              <li>✓ Tailored to your learning goals</li>
-            </ul>
-            <button id="btn-buy-custom" class="btn btn-outline-gold btn-sm" onclick="StudentSub.enrollPageCustom()" style="width: 100%; font-weight: 700;">Enroll in 6 Lessons</button>
-          </div>
+          
 
         </div>
 
@@ -5690,20 +5606,11 @@
             </div>
             <span id="sub-modal-active-plan-badge" class="badge-gold" style="font-size: 0.74rem; font-weight: 800;">4 Lessons Package</span>
           </div>
-          <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
-            <div style="display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap;">
-              <button type="button" class="btn btn-sm sub-modal-plan-btn" id="modal-plan-btn-trial" onclick="StudentSub.switchPlanInModal('trial')">Free Trial (1 Lesson - $0)</button>
-              <button type="button" class="btn btn-sm sub-modal-plan-btn" id="modal-plan-btn-4" onclick="StudentSub.switchPlanInModal('4_lessons')">4 Lessons</button>
-              <button type="button" class="btn btn-sm sub-modal-plan-btn" id="modal-plan-btn-8" onclick="StudentSub.switchPlanInModal('8_lessons')">8 Lessons</button>
-              <button type="button" class="btn btn-sm sub-modal-plan-btn" id="modal-plan-btn-12" onclick="StudentSub.switchPlanInModal('12_lessons')">12 Lessons</button>
-            </div>
-            <div style="display: inline-flex; align-items: center; gap: 0.45rem; background: #FFFFFF; border: 1.5px solid rgba(198, 138, 40, 0.4); border-radius: 20px; padding: 0.25rem 0.65rem;">
-              <span style="font-size: 0.78rem; font-weight: 700; color: var(--charcoal-700);">Custom:</span>
-              <button type="button" style="border: none; background: transparent; font-size: 1.1rem; font-weight: 800; color: var(--gold-800); cursor: pointer; padding: 0 4px; line-height: 1;" onclick="StudentSub.stepModalLessons(-1)">−</button>
-              <input type="number" id="sub-modal-custom-count-input" min="1" max="30" value="4" style="width: 44px; text-align: center; font-weight: 800; font-size: 0.85rem; border: 1px solid rgba(198, 138, 40, 0.3); border-radius: 4px; padding: 2px 0;" onchange="StudentSub.onModalCustomCountChanged(this.value)" />
-              <button type="button" style="border: none; background: transparent; font-size: 1.1rem; font-weight: 800; color: var(--gold-800); cursor: pointer; padding: 0 4px; line-height: 1;" onclick="StudentSub.stepModalLessons(1)">+</button>
-              <span style="font-size: 0.78rem; font-weight: 600; color: var(--charcoal-600);">Lessons</span>
-            </div>
+          <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+            <button type="button" class="btn btn-sm sub-modal-plan-btn" id="modal-plan-btn-trial" onclick="StudentSub.switchPlanInModal('trial')">Free Trial (1 Lesson - $0)</button>
+            <button type="button" class="btn btn-sm sub-modal-plan-btn" id="modal-plan-btn-4" onclick="StudentSub.switchPlanInModal('4_lessons')">4 Lessons Package</button>
+            <button type="button" class="btn btn-sm sub-modal-plan-btn" id="modal-plan-btn-8" onclick="StudentSub.switchPlanInModal('8_lessons')">8 Lessons Package</button>
+            <button type="button" class="btn btn-sm sub-modal-plan-btn" id="modal-plan-btn-12" onclick="StudentSub.switchPlanInModal('12_lessons')">12 Lessons Package</button>
           </div>
         </div>
 

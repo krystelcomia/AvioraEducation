@@ -11,50 +11,7 @@ const StudentSub = {
   calMonth: new Date().getMonth(),
   selectedDate: null,
   selectedTime: null,
-  pageCustomCount: 6,
 
-  stepPageCustomCount(delta) {
-    this.pageCustomCount = Math.max(1, Math.min(30, this.pageCustomCount + delta));
-    this.updatePageCustomDisplays();
-  },
-
-  setPageCustomCount(num) {
-    this.pageCustomCount = Math.max(1, Math.min(30, parseInt(num, 10) || 6));
-    this.updatePageCustomDisplays();
-  },
-
-  updatePageCustomDisplays() {
-    const count = this.pageCustomCount;
-    const sDisplay = document.getElementById('page-custom-count-display');
-    const vDisplay = document.getElementById('visitor-page-custom-count-display');
-    const sBtn = document.getElementById('btn-buy-custom');
-    const vBtn = document.getElementById('btn-visitor-buy-custom');
-    const sRate = document.getElementById('page-custom-rate-display');
-    const vRate = document.getElementById('visitor-page-custom-rate-display');
-
-    if (sDisplay) sDisplay.textContent = `${count} Lesson${count > 1 ? 's' : ''}`;
-    if (vDisplay) vDisplay.textContent = `${count} Lesson${count > 1 ? 's' : ''}`;
-
-    const tutorName = this.selectedTutor ? this.selectedTutor.name : '';
-    const btnLabel = tutorName 
-      ? `Enroll in ${count} Lesson${count > 1 ? 's' : ''} with ${tutorName}`
-      : `Enroll in ${count} Lesson${count > 1 ? 's' : ''}`;
-
-    if (sBtn) sBtn.textContent = btnLabel;
-    if (vBtn) vBtn.textContent = btnLabel;
-
-    if (this.selectedTutor) {
-      const hourly = Number(this.selectedTutor.hourly_rate || 58);
-      const est = (count * hourly).toFixed(2);
-      if (sRate) sRate.textContent = `$${est} Total Setup`;
-      if (vRate) vRate.textContent = `$${est} Total Setup`;
-    }
-  },
-
-  enrollPageCustom() {
-    const pkgKey = `${this.pageCustomCount}_lessons`;
-    this.openEnrollmentModal(pkgKey);
-  },
 
   highlightBookingWithTutor(tutorId) {
     if (tutorId) {
@@ -108,7 +65,19 @@ const StudentSub = {
       const btnTrial = document.getElementById('btn-buy-trial');
       if (btnTrial) btnTrial.textContent = `Book Free Trial with ${t.name} ($0)`;
 
-      this.updatePageCustomDisplays();
+      const b4 = document.getElementById('btn-buy-4');
+      if (b4) b4.textContent = `Enroll in 4 Lessons with ${t.name}`;
+      const b8 = document.getElementById('btn-buy-8');
+      if (b8) b8.textContent = `Enroll in 8 Lessons with ${t.name}`;
+      const b12 = document.getElementById('btn-buy-12');
+      if (b12) b12.textContent = `Enroll in 12 Lessons with ${t.name}`;
+
+      const vb4 = document.getElementById('btn-visitor-buy-4');
+      if (vb4) vb4.textContent = `Enroll in 4 Lessons with ${t.name}`;
+      const vb8 = document.getElementById('btn-visitor-buy-8');
+      if (vb8) vb8.textContent = `Enroll in 8 Lessons with ${t.name}`;
+      const vb12 = document.getElementById('btn-visitor-buy-12');
+      if (vb12) vb12.textContent = `Enroll in 12 Lessons with ${t.name}`;
 
       // Scroll smoothly to tutor banner
       const targetBanner = sBanner && sBanner.style.display !== 'none' ? sBanner : vBanner;
@@ -152,18 +121,24 @@ const StudentSub = {
     const btnTrial = document.getElementById('btn-buy-trial');
     if (btnTrial) btnTrial.textContent = 'Book Free Trial ($0)';
 
-    this.updatePageCustomDisplays();
+    const b4 = document.getElementById('btn-buy-4');
+    if (b4) b4.textContent = 'Enroll in 4 Lessons';
+    const b8 = document.getElementById('btn-buy-8');
+    if (b8) b8.textContent = 'Enroll in 8 Lessons';
+    const b12 = document.getElementById('btn-buy-12');
+    if (b12) b12.textContent = 'Enroll in 12 Lessons';
+
+    const vb4 = document.getElementById('btn-visitor-buy-4');
+    if (vb4) vb4.textContent = 'Enroll in 4 Lessons';
+    const vb8 = document.getElementById('btn-visitor-buy-8');
+    if (vb8) vb8.textContent = 'Enroll in 8 Lessons';
+    const vb12 = document.getElementById('btn-visitor-buy-12');
+    if (vb12) vb12.textContent = 'Enroll in 12 Lessons';
     showToast('Educator filter cleared. You may select any faculty specialist.', 'info');
   },
 
-  switchPlanInModal(packageKey, customCount) {
-    let planConfig;
-    if (customCount) {
-      const count = Math.max(1, Math.min(30, parseInt(customCount, 10) || 4));
-      planConfig = this.getPlanConfig(`${count}_lessons`);
-    } else {
-      planConfig = this.getPlanConfig(packageKey);
-    }
+  switchPlanInModal(packageKey) {
+    const planConfig = this.getPlanConfig(packageKey);
 
     this.activePackageKey = planConfig.key;
     const newCount = planConfig.lessons;
@@ -252,17 +227,7 @@ const StudentSub = {
     this.updateSummary();
   },
 
-  stepModalLessons(delta) {
-    const planConfig = this.getPlanConfig(this.activePackageKey);
-    const current = planConfig.isTrial ? 1 : (planConfig.lessons || 4);
-    const next = Math.max(1, Math.min(30, current + delta));
-    this.switchPlanInModal(`${next}_lessons`, next);
-  },
 
-  onModalCustomCountChanged(val) {
-    const count = Math.max(1, Math.min(30, parseInt(val, 10) || 4));
-    this.switchPlanInModal(`${count}_lessons`, count);
-  },
 
   updateModalPlanSelectorButtons() {
     const key = this.activePackageKey;
@@ -276,8 +241,6 @@ const StudentSub = {
     const p4Btn = document.getElementById('modal-plan-btn-4');
     const p8Btn = document.getElementById('modal-plan-btn-8');
     const p12Btn = document.getElementById('modal-plan-btn-12');
-    const customInput = document.getElementById('sub-modal-custom-count-input');
-
     const setActive = (btn, active) => {
       if (!btn) return;
       if (active) {
@@ -298,9 +261,6 @@ const StudentSub = {
     setActive(p8Btn, !planConfig.isTrial && count === 8);
     setActive(p12Btn, !planConfig.isTrial && count === 12);
 
-    if (customInput) {
-      customInput.value = count;
-    }
   },
 
 

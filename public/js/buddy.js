@@ -352,9 +352,7 @@ const AvioraBuddy = {
           ${isPending ? `
             <div style="background: rgba(198, 138, 40, 0.08); border-left: 3px solid var(--gold-600); border-radius: 6px; padding: 0.75rem 0.9rem; font-size: 0.78rem; color: var(--charcoal-800); margin-bottom: 0.85rem; line-height: 1.5;">
               <strong>Awaiting Admin Setup:</strong> Once the admin has set up the students in Aviora Buddy, a date and time for the session will be provided, along with a code to be used for accessing the Aviora Buddy class.
-              <div style="margin-top: 0.35rem; font-size: 0.72rem; color: var(--text-secondary);">
-                🔒 This code is limited to only 2 people. Please ensure that you use only the specific code provided by the admin.
-              </div>
+
             </div>
           ` : `
             <div style="background: rgba(16, 185, 129, 0.06); border-left: 3px solid #10B981; border-radius: 6px; padding: 0.75rem 0.9rem; font-size: 0.78rem; color: #065F46; margin-bottom: 0.85rem; line-height: 1.5;">
@@ -363,9 +361,7 @@ const AvioraBuddy = {
               <div style="font-family: monospace; font-size: 0.85rem; font-weight: 800; color: var(--gold-800); margin-top: 0.3rem;">
                 Class Access Code: ${s.session_code}
               </div>
-              <div style="font-size: 0.72rem; color: #065F46; margin-top: 0.35rem;">
-                🔒 This code is limited to only 2 people. Please ensure that you use only the specific code provided by the admin.
-              </div>
+
             </div>
           `}
 
@@ -396,7 +392,7 @@ const AvioraBuddy = {
                 🎮 Access Aviora Buddy Class
               </button>
             `}
-            <button class="btn btn-outline-gold btn-sm" onclick="navigator.clipboard.writeText('${s.session_code}'); showToast('Admin access code ${s.session_code} copied! Remember this code is limited to only 2 people.', 'success');" title="Copy Specific Admin Code" style="padding: 0.35rem 0.6rem;">
+            <button class="btn btn-outline-gold btn-sm" onclick="navigator.clipboard.writeText('${s.session_code}'); showToast('Buddy code ${s.session_code} copied to clipboard!', 'success');" title="Copy Specific Admin Code" style="padding: 0.35rem 0.6rem;">
               📋 Copy Code
             </button>
           </div>
@@ -466,9 +462,7 @@ const AvioraBuddy = {
               Once the admin has set up the students in Aviora Buddy, a date and time for the session will be provided, along with a code to be used for accessing the Aviora Buddy class.
             </div>
           </div>
-          <div style="background: rgba(198, 138, 40, 0.12); border-left: 3px solid var(--gold-500); padding: 0.65rem 0.85rem; border-radius: 4px; font-size: 0.8rem; color: #FDE68A;">
-            🔒 <strong>Important Requirement:</strong> This code is limited to only 2 people. Please ensure that you use only the specific code provided by the admin.
-          </div>
+
         </div>
 
         <div style="display: flex; justify-content: center; gap: 1.5rem; flex-wrap: wrap; margin-bottom: 1.75rem;">
@@ -1203,7 +1197,7 @@ const AvioraBuddy = {
   async submitJoinCode() {
     const input = document.getElementById('input-buddy-join-code');
     if (!input || !input.value.trim()) {
-      showToast('Please enter the specific code provided by the admin (e.g. BUDDY-7482)', 'warning');
+      showToast('Please enter your Buddy Code (e.g. BUDDY-7482)', 'warning');
       return;
     }
 
@@ -1234,7 +1228,7 @@ const AvioraBuddy = {
         this.selectSession(data.session_id);
       }
     } catch (e) {
-      showToast(e.message || 'Failed to access buddy class. Please ensure that you use only the specific code provided by the admin.', 'error');
+      showToast(e.message || 'Failed to join buddy session.', 'error');
     }
   }
 };

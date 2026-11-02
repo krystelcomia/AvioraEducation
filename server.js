@@ -5908,7 +5908,7 @@ app.post('/api/buddy/join', authenticateToken, (req, res) => {
     const session = db.prepare('SELECT * FROM buddy_sessions WHERE UPPER(session_code) = ?').get(code);
 
     if (!session) {
-      return res.status(404).json({ error: `Buddy session code "${code}" not found. Please ensure that you use only the specific code provided by the admin.` });
+      return res.status(404).json({ error: `Buddy session code "${code}" not found.` });
     }
 
     // Require that the session has been set up and scheduled by the admin
@@ -5964,7 +5964,7 @@ app.post('/api/buddy/join', authenticateToken, (req, res) => {
     } else {
       // 2 students already assigned/enrolled: strictly reject third party
       return res.status(403).json({
-        error: 'Access denied: This code is limited to only 2 people, and the maximum capacity has already been filled. Please ensure that you use only the specific code provided by the admin for your own assigned session.'
+        error: 'This Aviora Buddy session already has two students enrolled.'
       });
     }
   } catch (error) {
@@ -5994,14 +5994,7 @@ app.get('/api/buddy/session/:id', authenticateToken, (req, res) => {
       return res.status(404).json({ error: 'Buddy session not found.' });
     }
 
-    const isAdmin = req.user.role === 'admin';
-    const isParticipant = (req.user.id === session.student1_id || req.user.id === session.student2_id || (session.tutor_id && req.user.id === session.tutor_id));
 
-    if (!isAdmin && !isParticipant) {
-      return res.status(403).json({
-        error: 'Access denied: This Aviora Buddy class and code are limited to only 2 people set up by the admin.'
-      });
-    }
 
     const messages = db.prepare(`
       SELECT * FROM buddy_messages 
@@ -6950,7 +6943,7 @@ app.post('/api/admin/buddy-sessions/:id/schedule', authenticateToken, requireRol
       sendNotification(
         s1.id,
         'Aviora Buddy Session Confirmed by Admin',
-        `Your Aviora Buddy session for "${session.subject}" has been set up by the Admin! Date: ${scheduled_date.trim()} at ${scheduled_time.trim()}${s2 ? ' with ' + s2.name : ''}. Access Code: ${finalCode}. (Note: This code is limited to only 2 people. Please ensure that you use only the specific code provided by the admin.)`,
+        `Your Aviora Buddy session for "${session.subject}" has been set up by the Admin! Date: ${scheduled_date.trim()} at ${scheduled_time.trim()}${s2 ? ' with ' + s2.name : ''}. Access Code: ${finalCode}.`,
         'booking',
         '#aviora-buddy'
       );
@@ -6960,7 +6953,7 @@ app.post('/api/admin/buddy-sessions/:id/schedule', authenticateToken, requireRol
       sendNotification(
         s2.id,
         'Aviora Buddy Session Confirmed by Admin',
-        `You have been paired with ${s1 ? s1.name : 'a peer'} for an Aviora Buddy session on ${scheduled_date.trim()} at ${scheduled_time.trim()} ("${session.subject}"). Access Code: ${finalCode}. (Note: This code is limited to only 2 people. Please ensure that you use only the specific code provided by the admin.)`,
+        `You have been paired with ${s1 ? s1.name : 'a peer'} for an Aviora Buddy session on ${scheduled_date.trim()} at ${scheduled_time.trim()} ("${session.subject}"). Access Code: ${finalCode}.`,
         'booking',
         '#aviora-buddy'
       );
@@ -6973,7 +6966,7 @@ app.post('/api/admin/buddy-sessions/:id/schedule', authenticateToken, requireRol
     `).run(
       sessionId,
       req.user.id,
-      `Schedule Confirmed by Admin: Date: ${scheduled_date.trim()} • Time: ${scheduled_time.trim()}. Access Code: ${finalCode}. This code is limited to only 2 people. Please ensure that you use only the specific code provided by the admin.`
+      `Schedule Confirmed by Admin: Date: ${scheduled_date.trim()} • Time: ${scheduled_time.trim()}. Access Code: ${finalCode}. Both students are now ready to begin in the Activity Arena!`
     );
 
     res.json({
@@ -7029,7 +7022,7 @@ app.post('/api/admin/buddy-sessions/create', authenticateToken, requireRole('adm
       sendNotification(
         s1.id,
         'Aviora Buddy Session Created by Admin',
-        `Your Aviora Buddy session for "${finalSubject}" has been set up by the Admin for ${scheduled_date.trim()} at ${scheduled_time.trim()}${s2 ? ' with ' + s2.name : ''}. Access Code: ${code}. (Note: This code is limited to only 2 people. Please ensure that you use only the specific code provided by the admin.)`,
+        `Your Aviora Buddy session for "${finalSubject}" has been set up by the Admin for ${scheduled_date.trim()} at ${scheduled_time.trim()}${s2 ? ' with ' + s2.name : ''}. Access Code: ${code}.`,
         'booking',
         '#aviora-buddy'
       );
@@ -7038,7 +7031,7 @@ app.post('/api/admin/buddy-sessions/create', authenticateToken, requireRole('adm
       sendNotification(
         s2.id,
         'Aviora Buddy Session Created by Admin',
-        `You have been paired with ${s1 ? s1.name : 'a peer'} for an Aviora Buddy session on ${scheduled_date.trim()} at ${scheduled_time.trim()} ("${finalSubject}"). Access Code: ${code}. (Note: This code is limited to only 2 people. Please ensure that you use only the specific code provided by the admin.)`,
+        `You have been paired with ${s1 ? s1.name : 'a peer'} for an Aviora Buddy session on ${scheduled_date.trim()} at ${scheduled_time.trim()} ("${finalSubject}"). Access Code: ${code}.`,
         'booking',
         '#aviora-buddy'
       );

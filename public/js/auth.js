@@ -1559,33 +1559,35 @@ const Auth = {
               </div>
             </div>
           </div>
-          <!-- Profile Avatar Link (Replaces text button) -->
-          <a href="${profileHash}" class="nav-user-profile-link" id="nav-user-profile-btn" aria-label="View Profile" title="View Profile">
-            <img src="${userAvatarUrl}" alt="${safeUserName}" class="nav-header-profile-avatar nav-user-avatar" id="nav-user-profile-avatar" />
-          </a>
-          <!-- Log Out Popover Prompt Container (Icon Trigger) -->
-          <div class="nav-logout-container" id="nav-logout-container" style="position: relative;">
-            <button type="button" class="nav-logout-btn" id="user-logout-btn" aria-label="Account & Logout" title="Log Out">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-                <polyline points="16 17 21 12 16 7"></polyline>
-                <line x1="21" y1="12" x2="9" y2="12"></line>
-              </svg>
-            </button>
-            <div class="nav-logout-dropdown" id="nav-logout-dropdown" style="display: none;">
-              <div class="logout-dropdown-user-info">
-                <div class="logout-user-name" id="logout-menu-user-name">${safeUserName}</div>
-                <div class="logout-user-role" id="logout-menu-user-role">${roleLabel}</div>
-              </div>
-              <div class="logout-dropdown-actions">
-                <button type="button" class="logout-action-btn" id="nav-confirm-logout-btn">
-                  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-                    <polyline points="16 17 21 12 16 7"></polyline>
-                    <line x1="21" y1="12" x2="9" y2="12"></line>
-                  </svg>
-                  <span>Logout</span>
-                </button>
+          <!-- User Profile & Log-Out Group (Placed side-by-side next to each other) -->
+          <div class="nav-profile-logout-group" id="nav-profile-logout-group">
+            <a href="${profileHash}" class="nav-user-profile-link" id="nav-user-profile-btn" aria-label="View Profile" title="View Profile">
+              <img src="${userAvatarUrl}" alt="${safeUserName}" class="nav-header-profile-avatar nav-user-avatar" id="nav-user-profile-avatar" />
+            </a>
+            <!-- Log Out Popover Prompt Container (Icon Trigger) -->
+            <div class="nav-logout-container" id="nav-logout-container" style="position: relative;">
+              <button type="button" class="nav-logout-btn" id="user-logout-btn" aria-label="Account & Logout" title="Log Out">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                  <polyline points="16 17 21 12 16 7"></polyline>
+                  <line x1="21" y1="12" x2="9" y2="12"></line>
+                </svg>
+              </button>
+              <div class="nav-logout-dropdown" id="nav-logout-dropdown" style="display: none;">
+                <div class="logout-dropdown-user-info">
+                  <div class="logout-user-name" id="logout-menu-user-name">${safeUserName}</div>
+                  <div class="logout-user-role" id="logout-menu-user-role">${roleLabel}</div>
+                </div>
+                <div class="logout-dropdown-actions">
+                  <button type="button" class="logout-action-btn" id="nav-confirm-logout-btn">
+                    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                      <polyline points="16 17 21 12 16 7"></polyline>
+                      <line x1="21" y1="12" x2="9" y2="12"></line>
+                    </svg>
+                    <span>Logout</span>
+                  </button>
+                </div>
               </div>
             </div>
           </div>

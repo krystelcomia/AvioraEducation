@@ -114,12 +114,18 @@
 
 .avatar-deck-container {
   position: relative;
-  width: 76px;
-  height: 76px;
+  width: 72px;
+  height: 72px;
   flex-shrink: 0;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
+  border-radius: 50%;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.avatar-deck-container:hover {
+  transform: scale(1.03);
 }
 
 .portal-avatar-lg {
@@ -132,6 +138,7 @@
   position: relative;
   z-index: 2;
   background: #FFFFFF;
+  display: block;
 }
 
 .profile-avatar-wrap {
@@ -162,6 +169,7 @@
   border: 2px solid rgba(198, 138, 40, 0.35);
   animation: deckPulse 3s cubic-bezier(0.24, 0, 0.38, 1) infinite;
   pointer-events: none;
+  z-index: 1;
 }
 
 @keyframes deckPulse {
@@ -172,15 +180,15 @@
 
 .deck-online-beacon {
   position: absolute;
-  bottom: 2px;
-  right: 2px;
+  bottom: 3px;
+  right: 3px;
   width: 14px;
   height: 14px;
   background: #10B981;
   border: 2.5px solid #FFFFFF;
   border-radius: 50%;
-  z-index: 3;
-  box-shadow: 0 0 10px rgba(16, 185, 129, 0.7);
+  z-index: 4;
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.6);
 }
 
 .deck-greeting-line {
@@ -2133,6 +2141,11 @@
   border-color: rgba(16, 185, 129, 0.35);
   color: #047857;
   cursor: default;
+}
+
+/* Online Status Beacon Dark Mode Support */
+[data-theme="dark"] .deck-online-beacon {
+  border-color: #1C2029;
 }
 
 /* Plain Dashboard Elements Dark Mode Support */

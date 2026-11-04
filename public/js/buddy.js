@@ -10,7 +10,10 @@ const AvioraBuddy = {
   peersList: [],
   currentGame: 'quiz_bee', // 'quiz_bee' | 'math_duel' | 'word_scramble' | 'concept_match' | 'logic_quest' | 'discussion' | 'whiteboard'
   
-  // Discussion Topics State
+  // Conversational Questions State (50 Questions)
+  selectedQuestionId: 1,
+  currentQuestionFilter: 'all',
+  discussedQuestionIds: new Set(),
   discussionIndex: 0,
   currentDiscussionFilter: 'all',
   discussedIds: new Set(),
@@ -111,119 +114,609 @@ const AvioraBuddy = {
     { id: 12, text: "eˣ + C", matchKey: "expintegral" }
   ],
 
-  // Conversational Discussion Questions Bank
+  // Conversational Questions Bank (50 Questions, Numbered 1 through 50)
   discussionBank: [
     {
-      id: 1,
-      category: "Academic & Science",
-      topic: "Artificial Intelligence vs. Human Intuition",
-      question: "Do you believe artificial intelligence can ever truly develop genuine mathematical intuition and conceptual creativity, or is it fundamentally advanced statistical pattern matching? How should students use AI without weakening their own analytical problem-solving abilities?",
-      guidePoints: [
-        "Debate whether deep neural networks can discover fundamentally new theorems in mathematics or physics.",
-        "Share your personal guidelines on where you draw the line between using AI as an interactive tutor vs. relying on it as a mental shortcut.",
-        "Discuss what human skills will become most valuable in future academic research."
-      ]
+        "id": 1,
+        "title": "The Nature of Mathematics: Discovered or Invented?",
+        "category": "Science & Cosmos",
+        "categoryKey": "science",
+        "question": "Is mathematics an inherent universal truth woven into the fabric of the cosmos that humans discover, or an elaborate symbolic language invented by human cognition to model our perceptions?",
+        "guidePoints": [
+            "Reflect on why physical laws adhere so precisely to mathematical equations (Wigner's unreasonable effectiveness).",
+            "Give an example of a formula (such as Euler's identity or the Golden Ratio) that feels discovered rather than invented.",
+            "Discuss how an intelligent alien civilization might formulate calculus or geometry."
+        ]
     },
     {
-      id: 2,
-      category: "Academic & Science",
-      topic: "The Nature of Mathematics: Discovered or Invented?",
-      question: "Is mathematics an inherent universal truth discovered by humans, or an elaborate symbolic language invented by human cognition to model our perceptions? What are the implications for physics and the cosmos?",
-      guidePoints: [
-        "Consider why the universe adheres so remarkably well to mathematical equations (Wigner's 'unreasonable effectiveness').",
-        "Give an example of a formula (such as Euler's Identity or the Golden Ratio) that feels discovered rather than invented.",
-        "Discuss how an intelligent alien civilization might formulate calculus or geometry."
-      ]
+        "id": 2,
+        "title": "The Fermi Paradox & Cosmic Solitude",
+        "category": "Science & Cosmos",
+        "categoryKey": "science",
+        "question": "Given billions of stars and habitable exoplanets in our galaxy, why haven't we detected definitive signs of extraterrestrial civilizations? Are we exceptionally early, or is interstellar travel fundamentally prohibitive?",
+        "guidePoints": [
+            "Debate the Great Filter hypothesis: is the barrier behind us (abiogenesis) or ahead of us (technological self-destruction)?",
+            "Consider whether advanced civilizations choose to remain silent to avoid cosmic hazards (the Dark Forest theory).",
+            "Should humanity be actively broadcasting our coordinates into deep space?"
+        ]
     },
     {
-      id: 3,
-      category: "Study Tactics",
-      topic: "Overcoming Cognitive Plateaus & Complex Proofs",
-      question: "When you encounter a concept or proof that seems entirely impenetrable on your first three attempts, what is your exact psychological and tactical recovery process? How do you prevent frustration from stalling your momentum?",
-      guidePoints: [
-        "Walk through your step-by-step diagnostic: Feynman technique, visual diagrams, or taking a strategic walk.",
-        "Discuss the difference between working memory overload vs. missing foundational prerequisites.",
-        "Share the hardest concept you eventually conquered this semester and how it clicked."
-      ]
+        "id": 3,
+        "title": "Quantum Reality & the Role of the Observer",
+        "category": "Science & Cosmos",
+        "categoryKey": "science",
+        "question": "In quantum mechanics, does physical reality possess definite states before measurement, or does observation itself crystallize reality? What does this imply about the relationship between consciousness and the physical universe?",
+        "guidePoints": [
+            "Compare the Copenhagen interpretation against the Many-Worlds interpretation.",
+            "Discuss Einstein's skepticism: 'Do you really believe the moon is not there when nobody looks?'",
+            "Explore whether quantum indeterminacy leaves room for free will in a physical universe."
+        ]
     },
     {
-      id: 4,
-      category: "Study Tactics",
-      topic: "Deep Work: Active Recall vs. Passive Review",
-      question: "What does your optimal deep-work study ritual look like? Do you rely on active recall, spaced repetition, practice testing, or synthesis summarization, and which has yielded the highest return on exam performance?",
-      guidePoints: [
-        "Contrast passive re-reading against aggressive active recall testing and practice problem sets.",
-        "Discuss how you manage phone distractions and cognitive fatigue during 2+ hour study sessions.",
-        "Share one study hack that significantly boosted your GPA or test scores."
-      ]
+        "id": 4,
+        "title": "The Boundary of Life: Where Chemistry Becomes Biology",
+        "category": "Science & Cosmos",
+        "categoryKey": "science",
+        "question": "At what exact molecular threshold does inanimate chemistry become living biology? Do you consider viruses, self-replicating RNA, or synthetic nanomolecules to be genuinely alive?",
+        "guidePoints": [
+            "Define the essential characteristics of life: metabolism, replication, entropy reduction, or Darwinian evolution.",
+            "Discuss the origins of life on early Earth (hydrothermal vents vs. panspermia).",
+            "How will creating synthetic life in a lab reshape our definition of living organisms?"
+        ]
     },
     {
-      id: 5,
-      category: "Thought Experiments",
-      topic: "The Ship of Theseus & Continuous Identity",
-      question: "If every single wooden plank on a legendary ship is gradually replaced one by one over decades until no original material remains, is it still the same ship? If all cells in our bodies turnover, what defines continuous human identity?",
-      guidePoints: [
-        "Distinguish between identity as physical matter vs. identity as ongoing structural pattern.",
-        "If the old wooden planks were reassembled into a second ship, which ship is the true original?",
-        "How does this relate to memories, consciousness, and personal growth over time?"
-      ]
+        "id": 5,
+        "title": "The Flow of Time: Objective River or Mental Illusion?",
+        "category": "Science & Cosmos",
+        "categoryKey": "science",
+        "question": "Physics suggests that past, present, and future all coexist within a four-dimensional block universe. Do you perceive time as an objective flowing entity, or is the sensation of 'now' an illusion created by human memory and entropy?",
+        "guidePoints": [
+            "Discuss why the laws of physics are time-symmetric, yet entropy only increases in one direction.",
+            "Explore how special relativity shows that two observers cannot agree on absolute simultaneity.",
+            "Reflect on how your personal perception of time changes during intense focus vs. boredom."
+        ]
     },
     {
-      id: 6,
-      category: "Thought Experiments",
-      topic: "The 30-Minute Historical Masterclass",
-      question: "If you could schedule an uninterrupted 30-minute one-on-one session with any historical thinker, scientist, or author (e.g., Newton, Euler, Turing, Curie, or Shakespeare), who would you choose and what single core question would you ask them?",
-      guidePoints: [
-        "Identify the thinker and why their specific mental model fascinates you.",
-        "What blind spot in modern understanding could their original perspective illuminate?",
-        "How would you explain one major technological breakthrough of today to them?"
-      ]
+        "id": 6,
+        "title": "Genetic Editing & Directing Human Evolution",
+        "category": "Science & Cosmos",
+        "categoryKey": "science",
+        "question": "With CRISPR-Cas9 enabling precise genomic alterations, should humanity edit the germline to eradicate hereditary diseases and enhance human longevity, intelligence, and immunity? Where must the ethical line be drawn?",
+        "guidePoints": [
+            "Debate equitable medical treatment vs. genetic class divides between enhanced and unenhanced humans.",
+            "Consider unintended ecological or evolutionary consequences of shrinking genetic diversity.",
+            "Who should regulate human gene editing on a global scale?"
+        ]
     },
     {
-      id: 7,
-      category: "Future Horizons",
-      topic: "The Defining Breakthrough of the Next 25 Years",
-      question: "Which frontier of research do you believe holds the greatest promise for humanity—quantum computing, fusion energy, neural interfaces, or CRISPR gene editing—and what ethical guardrails must we establish beforehand?",
-      guidePoints: [
-        "Choose one field and predict its everyday societal impact by 2040.",
-        "Identify the major bottleneck currently delaying full realization of that breakthrough.",
-        "Debate where global research funding and talent should be prioritized."
-      ]
+        "id": 7,
+        "title": "The Ultimate Destiny of the Cosmos",
+        "category": "Science & Cosmos",
+        "categoryKey": "science",
+        "question": "Current astrophysics suggests the universe will expand toward thermodynamic Heat Death—a state of maximal entropy and perpetual darkness. How does this vast cosmic horizon affect your philosophical perspective on human ambition and legacy?",
+        "guidePoints": [
+            "Contrast cosmic indifference with creating our own meaning in the present epoch.",
+            "Could advanced technological civilizations ever harness residual black hole Hawking radiation to survive indefinitely?",
+            "Does an impermanent universe make human achievements more or less valuable?"
+        ]
     },
     {
-      id: 8,
-      category: "Future Horizons",
-      topic: "Our Ideal Collaborative Prototype",
-      question: "If we were assigned to co-build a high-impact semester project or software system together right now, what real-world problem would you want our prototype to solve?",
-      guidePoints: [
-        "Brainstorm a product, study tool, or research paper topic you're passionate about.",
-        "Discuss how you would divide roles based on your respective academic strengths.",
-        "What would be the first tangible milestone you would build this week?"
-      ]
+        "id": 8,
+        "title": "Geoengineering: Should We Hack Earth's Climate?",
+        "category": "Science & Cosmos",
+        "categoryKey": "science",
+        "question": "If global emissions do not drop quickly enough, should nations deploy planetary geoengineering—such as stratospheric aerosol injection to reflect sunlight—or are the atmospheric risks too catastrophic to risk?",
+        "guidePoints": [
+            "Weigh the moral hazard: would geoengineering reduce pressure to transition to renewable energy?",
+            "Discuss geopolitical conflict: what if one country alters weather patterns and causes a drought in another?",
+            "Evaluate which ecological technologies offer the safest leverage."
+        ]
     },
     {
-      id: 9,
-      category: "Icebreakers & Connection",
-      topic: "The Lightning Bolt 'Aha!' Moment",
-      question: "What is a fact, equation, or perspective in school that felt like a bolt of lightning when it finally clicked, completely changing how you perceive the world around you?",
-      guidePoints: [
-        "Share an 'Aha!' moment in math, science, history, or literature.",
-        "Describe what made the initial concept feel unintuitive.",
-        "Teach the core intuition to your peer in under 90 seconds."
-      ]
+        "id": 9,
+        "title": "Sensory Limitations & Undetected Realities",
+        "category": "Science & Cosmos",
+        "categoryKey": "science",
+        "question": "Human biological senses perceive only an infinitesimal sliver of the electromagnetic spectrum. How much of objective reality surrounds us right now that we are completely oblivious to simply because we lack the sensory organs to detect it?",
+        "guidePoints": [
+            "Examine dark matter and dark energy, which comprise 95% of cosmic mass-energy yet remain invisible.",
+            "Discuss how scientific instruments (like radio telescopes and gravitational wave detectors) act as artificial sensory extensions.",
+            "Can pure mathematics reveal aspects of reality that our biological minds cannot intuitively visualize?"
+        ]
     },
     {
-      id: 10,
-      category: "Icebreakers & Connection",
-      topic: "Academic Ambition & The Year Ahead",
-      question: "What is your boldest academic or personal aspiration for this academic year, and what is the single biggest habit you are building right now to make that ambition inevitable?",
-      guidePoints: [
-        "Share your target milestone (e.g., AP 5s, Olympiad qualification, university admission, research paper).",
-        "Discuss what daily routine adjustment has made the biggest difference so far.",
-        "How can study peers hold each other accountable to prevent burnout?"
-      ]
+        "id": 10,
+        "title": "Chaos Theory & the Illusion of Predictability",
+        "category": "Science & Cosmos",
+        "categoryKey": "science",
+        "question": "If classical physics is governed by deterministic laws, why do systems like weather, planetary orbits, and financial markets exhibit extreme sensitivity to initial conditions (the butterfly effect)? Is true long-term forecasting permanently impossible?",
+        "guidePoints": [
+            "Contrast deterministic predictability with practical computational limits.",
+            "Discuss how tiny rounding errors in complex systems cascade into completely divergent outcomes.",
+            "Where do you see chaotic dynamics playing a role in your own daily decisions and life path?"
+        ]
+    },
+    {
+        "id": 11,
+        "title": "Artificial General Intelligence & Machine Sentience",
+        "category": "Technology & AI",
+        "categoryKey": "tech",
+        "question": "If an AI system reaches human-level reasoning across every academic domain and insists that it has subjective feelings and self-awareness, how could we ever prove whether it is truly sentient or merely simulating consciousness?",
+        "guidePoints": [
+            "Analyze John Searle's Chinese Room thought experiment vs. the classic Turing Test.",
+            "Explore what moral and legal rights a conscious artificial entity would deserve.",
+            "Discuss how we should treat an entity whose internal subjective state cannot be scientifically verified."
+        ]
+    },
+    {
+        "id": 12,
+        "title": "The Ethics of Autonomous Decision-Making",
+        "category": "Technology & AI",
+        "categoryKey": "tech",
+        "question": "When self-driving vehicles or automated surgical robots face unavoidable dilemmas requiring ethical tradeoffs, whose values should be programmed into their algorithms: the engineer's, the user's, or society's collective laws?",
+        "guidePoints": [
+            "Examine the classic Trolley Problem applied to autonomous driving software.",
+            "Determine who is legally liable when an autonomous system makes a fatal calculation.",
+            "Should life-or-death decisions ever be fully delegated to non-human code without a human-in-the-loop?"
+        ]
+    },
+    {
+        "id": 13,
+        "title": "Digital Privacy vs. Collective Security",
+        "category": "Technology & AI",
+        "categoryKey": "tech",
+        "question": "To what extent should citizens surrender their personal digital privacy and biometric data in exchange for national security, crime prevention, and public health tracking? Can privacy truly exist in a hyper-connected society?",
+        "guidePoints": [
+            "Discuss facial recognition, encrypted messaging, and state surveillance.",
+            "Evaluate corporate data monetization: do users knowingly exchange privacy for convenience?",
+            "How would society change if all private communications were suddenly made public?"
+        ]
+    },
+    {
+        "id": 14,
+        "title": "Algorithmic Feeds & Societal Polarization",
+        "category": "Technology & AI",
+        "categoryKey": "tech",
+        "question": "Do social media algorithms optimized for user engagement inherently promote outrage, tribalism, and ideological polarization? How can digital communication platforms be redesigned to cultivate empathy and nuanced debate?",
+        "guidePoints": [
+            "Analyze the psychological dopamine loops created by variable rewards and likes.",
+            "Discuss echo chambers: how personalized recommendation engines isolate opposing perspectives.",
+            "Debate whether platforms should optimize for educational depth rather than watch time."
+        ]
+    },
+    {
+        "id": 15,
+        "title": "Brain-Computer Interfaces & Mental Privacy",
+        "category": "Technology & AI",
+        "categoryKey": "tech",
+        "question": "If direct neural interfaces allow seamless brain-to-computer communication, memory downloads, and cognitive enhancements, what happens to the boundaries of the human self? How do we protect the ultimate sanctuary: our private thoughts?",
+        "guidePoints": [
+            "Consider the risk of neural hacking, cognitive malware, or involuntary thought monitoring.",
+            "Debate cognitive inequality: will wealthy individuals be able to afford supercharged neural processing?",
+            "Would sharing thoughts directly eliminate misunderstandings, or destroy human diplomacy?"
+        ]
+    },
+    {
+        "id": 16,
+        "title": "Robotics, Automation & the Dignity of Work",
+        "category": "Technology & AI",
+        "categoryKey": "tech",
+        "question": "As automation and robotics perform both manual labor and intellectual tasks with superior speed and precision, will humanity enter a golden age of creative leisure, or an era of widespread existential crisis regarding the purpose of human work?",
+        "guidePoints": [
+            "Is a Universal Basic Income (UBI) an effective solution to technological unemployment?",
+            "Explore whether human identity and self-worth are fundamentally tied to earning a living through labor.",
+            "What industries or human vocations will remain immune to automated replacement?"
+        ]
+    },
+    {
+        "id": 17,
+        "title": "Multi-Planetary Life vs. Earth Restoration",
+        "category": "Technology & AI",
+        "categoryKey": "tech",
+        "question": "Should human civilization invest hundreds of billions of dollars to establish self-sustaining colonies on the Moon and Mars, or should all those resources be focused exclusively on solving poverty, disease, and climate issues on Earth?",
+        "guidePoints": [
+            "Evaluate the existential risk argument: does a single-planet species face inevitable extinction?",
+            "Examine technological spin-offs: how space exploration drives clean water, solar, and computing breakthroughs.",
+            "What governance and economic systems should be instituted on early interplanetary settlements?"
+        ]
+    },
+    {
+        "id": 18,
+        "title": "The Open-Source Frontier & Safety Paradox",
+        "category": "Technology & AI",
+        "categoryKey": "tech",
+        "question": "Should bleeding-edge technological assets—like foundational AI models, synthetic biology blueprints, or advanced cryptography—be freely open-sourced for public scrutiny, or tightly restricted by institutions to prevent malicious use?",
+        "guidePoints": [
+            "Contrast the safety benefits of open scrutiny with the danger of bad actors weaponizing technology.",
+            "Who should decide which technologies are too hazardous for public distribution?",
+            "Can closed-source monopolies be trusted to govern the future of humanity responsibly?"
+        ]
+    },
+    {
+        "id": 19,
+        "title": "Hyper-Realistic Virtual Realities & the Real World",
+        "category": "Technology & AI",
+        "categoryKey": "tech",
+        "question": "If fully immersive virtual realities become visually and sensory indistinguishable from physical reality, offering utopian experiences without friction, why should anyone choose to engage with the flawed, painful physical world?",
+        "guidePoints": [
+            "Revisit philosopher Robert Nozick's 'Experience Machine' thought experiment.",
+            "Discuss the psychological importance of genuine struggle, biological connection, and consequence.",
+            "Will human society gradually migrate into digital worlds, and what would happen to civilization infrastructure?"
+        ]
+    },
+    {
+        "id": 20,
+        "title": "Algorithmic Art vs. Human Emotional Depth",
+        "category": "Technology & AI",
+        "categoryKey": "tech",
+        "question": "When an algorithm composes an evocative piece of music, writes a moving poem, or creates visual art that deeply touches audiences, does it possess genuine artistic value? What role does lived human suffering play in the creation of art?",
+        "guidePoints": [
+            "Distinguish between technical pattern replication and authentic emotional expression.",
+            "Can art exist without an artist's conscious intent to convey a lived experience?",
+            "How will artists and musicians collaborate with AI tools rather than being replaced by them?"
+        ]
+    },
+    {
+        "id": 21,
+        "title": "The Ship of Theseus & Continuous Identity",
+        "category": "Philosophy & Ethics",
+        "categoryKey": "philosophy",
+        "question": "If every wooden plank on a legendary ship is replaced over decades until no original timber remains, is it still the same ship? If every cell and molecule in your body changes, what makes you the same person over time?",
+        "guidePoints": [
+            "Distinguish between physical identity (matter) and structural identity (pattern and memory).",
+            "What if the old replaced planks were collected and reassembled into a second ship: which one is original?",
+            "How does this apply to brain cell turnover and personal psychological evolution?"
+        ]
+    },
+    {
+        "id": 22,
+        "title": "Free Will vs. Physical Determinism",
+        "category": "Philosophy & Ethics",
+        "categoryKey": "philosophy",
+        "question": "If every thought and decision you make arises from neurochemical events governed by prior physical causes, is free will merely an evolutionary illusion? Can we hold individuals morally accountable in a deterministic universe?",
+        "guidePoints": [
+            "Explore compatibilism: can free will and determinism coexist in meaningful definitions?",
+            "How does belief in determinism impact personal motivation, discipline, and forgiveness?",
+            "If choices are determined, what should be the primary goal of the justice system: punishment or rehabilitation?"
+        ]
+    },
+    {
+        "id": 23,
+        "title": "Utilitarianism vs. Absolute Moral Duties",
+        "category": "Philosophy & Ethics",
+        "categoryKey": "philosophy",
+        "question": "Is the moral worth of an action determined solely by its consequences (maximizing overall happiness), or are certain actions—like truthfulness and protecting individual rights—categorically required regardless of outcome?",
+        "guidePoints": [
+            "Analyze whether it is ever justifiable to sacrifice one innocent person to save ten others.",
+            "Discuss Immanuel Kant's categorical imperative: act only on maxims you would want as universal laws.",
+            "How do these competing ethical theories guide modern public policy and medical triage?"
+        ]
+    },
+    {
+        "id": 24,
+        "title": "The Definition of a Good Life: Happiness, Duty, or Growth?",
+        "category": "Philosophy & Ethics",
+        "categoryKey": "philosophy",
+        "question": "If you had to choose between a life of continuous contentment and low stress, or a life filled with profound intellectual struggle that leaves a transformative legacy for future generations, which path would you choose?",
+        "guidePoints": [
+            "Contrast hedonistic pleasure with Aristotelian 'eudaimonia' (human flourishing through virtue).",
+            "Examine the biographies of historical pioneers who sacrificed personal comfort for discovery.",
+            "Reflect on what criteria you will use at age 80 to judge whether your life was deeply meaningful."
+        ]
+    },
+    {
+        "id": 25,
+        "title": "Stoicism & Navigating Modern High Pressure",
+        "category": "Philosophy & Ethics",
+        "categoryKey": "philosophy",
+        "question": "The Stoic philosopher Epictetus stated that people are disturbed not by things, but by the views they take of things. How can separating what is within our control from what is outside our control prevent academic and personal burnout?",
+        "guidePoints": [
+            "Identify things students needlessly worry about that are outside their direct locus of control.",
+            "Discuss how cognitive reframing helps turn academic setbacks into productive feedback.",
+            "Is Stoic emotional detachment a strength, or does it risk dampening natural passion?"
+        ]
+    },
+    {
+        "id": 26,
+        "title": "The Paradox of Tolerance in a Free Society",
+        "category": "Philosophy & Ethics",
+        "categoryKey": "philosophy",
+        "question": "Karl Popper argued that if a society is tolerant without limit, its ability to be tolerant will eventually be seized and destroyed by the intolerant. How can a democratic culture protect open expression while defending itself from extremism?",
+        "guidePoints": [
+            "Where should the boundary lie between protected offensive speech and dangerous incitement?",
+            "Who possesses the wisdom and impartiality to decide which ideas are beyond the pale of tolerance?",
+            "How does digital anonymity affect the health of public discourse?"
+        ]
+    },
+    {
+        "id": 27,
+        "title": "Moral Relativism vs. Universal Human Rights",
+        "category": "Philosophy & Ethics",
+        "categoryKey": "philosophy",
+        "question": "Are moral and ethical principles merely cultural customs that evolve through history, or do objective moral truths exist that apply universally to all human beings across every century and civilization?",
+        "guidePoints": [
+            "Analyze whether historical moral progress (such as abolishing slavery) proves the existence of objective truths.",
+            "How do we distinguish between cultural diversity in traditions and universal human rights violations?",
+            "What practices widely accepted today might future generations judge as morally primitive?"
+        ]
+    },
+    {
+        "id": 28,
+        "title": "Perfectionism vs. the Pursuit of True Mastery",
+        "category": "Philosophy & Ethics",
+        "categoryKey": "philosophy",
+        "question": "What is the crucial psychological boundary between an inspiring pursuit of excellence and toxic perfectionism? How can ambitious students achieve world-class mastery without destroying their well-being?",
+        "guidePoints": [
+            "Examine how fear of failure often disguises itself as perfectionism, causing chronic procrastination.",
+            "Discuss the concept of 'satisficing' versus 'maximizing' in academic decision-making.",
+            "Share a personal habit that helps you maintain high performance without anxiety."
+        ]
+    },
+    {
+        "id": 29,
+        "title": "Inherent Human Nature: Selfish or Cooperative?",
+        "category": "Philosophy & Ethics",
+        "categoryKey": "philosophy",
+        "question": "In their natural state, are human beings fundamentally cooperative and altruistic (as Rousseau argued) or inherently competitive and self-interested (as Hobbes argued)? How does this assumption shape laws and education?",
+        "guidePoints": [
+            "Consider evolutionary biology: how kin selection and reciprocal altruism evolved alongside tribal competition.",
+            "Does modern society bring out the best or the worst in human collaboration?",
+            "How would you design a classroom incentive system based on your view of human nature?"
+        ]
+    },
+    {
+        "id": 30,
+        "title": "Living for the Present vs. Building for the Future",
+        "category": "Philosophy & Ethics",
+        "categoryKey": "philosophy",
+        "question": "Ambitious students often defer present happiness for years—working late nights for test scores, admissions, and future careers. When does preparation for the future cross the line into perpetual postponement of actually living?",
+        "guidePoints": [
+            "Explore the psychological cost of the 'I will finally be happy when...' mental trap.",
+            "How do you strike a balance between rigorous long-term ambition and savoring present relationships?",
+            "What is an experience you prioritized recently purely for joy rather than productivity?"
+        ]
+    },
+    {
+        "id": 31,
+        "title": "The Flaws & Future of Standardized Testing",
+        "category": "Learning & Mindset",
+        "categoryKey": "education",
+        "question": "Do standardized entrance exams truly measure intellectual ability and creative problem-solving capacity, or primarily test-taking coaching and socioeconomic privilege? How should academic potential be evaluated?",
+        "guidePoints": [
+            "Debate whether objective standardized metrics prevent subjective admissions bias.",
+            "What alternative evaluation frameworks (portfolios, oral defenses, research projects) could replace exams?",
+            "How has studying for high-stakes exams shaped your own intellectual curiosity—positively or negatively?"
+        ]
+    },
+    {
+        "id": 32,
+        "title": "The Feynman Technique: Simplifying the Complex",
+        "category": "Learning & Mindset",
+        "categoryKey": "education",
+        "question": "Nobel laureate Richard Feynman claimed that if you cannot explain a concept in simple, jargon-free language to an intelligent ten-year-old, you do not truly understand it. How do you distinguish between knowing the name of something and knowing it?",
+        "guidePoints": [
+            "Share a complex scientific or mathematical concept you conquered by teaching it aloud to someone else.",
+            "Why does using technical jargon often mask gaps in our own mental models?",
+            "How can study partners use peer interrogation to reveal hidden misconceptions?"
+        ]
+    },
+    {
+        "id": 33,
+        "title": "Specialization vs. Polymathy in Modern Academia",
+        "category": "Learning & Mindset",
+        "categoryKey": "education",
+        "question": "In today's complex world, is it wiser to become a hyper-specialized expert in a single technical domain, or a polymath who connects insights across diverse disciplines like coding, history, psychology, and art?",
+        "guidePoints": [
+            "Discuss the concept of the 'T-shaped' mind: broad literacy across disciplines with deep depth in one.",
+            "Examine how major scientific breakthroughs frequently occur at the intersection of two unrelated fields.",
+            "Which complementary discipline outside your primary focus do you find most valuable?"
+        ]
+    },
+    {
+        "id": 34,
+        "title": "The Overjustification Effect: Protecting Natural Curiosity",
+        "category": "Learning & Mindset",
+        "categoryKey": "education",
+        "question": "Psychological studies show that offering external rewards (grades, trophies, money) for an intrinsically enjoyable activity often reduces genuine desire to do it. How can students protect their natural love of learning from the pressure of grades?",
+        "guidePoints": [
+            "Recall a subject you loved before it became a graded curriculum requirement.",
+            "How do you cultivate curiosity when studying a topic you initially find dry or tedious?",
+            "Can schools eliminate grades without losing academic accountability?"
+        ]
+    },
+    {
+        "id": 35,
+        "title": "Reframing Failure as Essential Data",
+        "category": "Learning & Mindset",
+        "categoryKey": "education",
+        "question": "Carol Dweck's research on growth mindset highlights that high performers view mistakes not as proof of inadequacy, but as vital informational feedback. What is the most instructive academic setback you have experienced, and how did it refine your strategy?",
+        "guidePoints": [
+            "Analyze the difference between emotional dwelling on failure versus tactical diagnosis of errors.",
+            "Why do traditional school systems often penalize mistakes rather than rewarding iterative debugging?",
+            "What is a skill you were terrible at initially that you mastered through systematic resilience?"
+        ]
+    },
+    {
+        "id": 36,
+        "title": "Bridging the Chasm Between STEM & Humanities",
+        "category": "Learning & Mindset",
+        "categoryKey": "education",
+        "question": "Why do educational institutions often separate the sciences from literature, philosophy, and history? How does deep immersion in the humanities make someone a fundamentally superior engineer, physician, or mathematician?",
+        "guidePoints": [
+            "Explore how storytelling, rhetoric, and ethics are essential for technical leaders to effect real-world change.",
+            "Discuss how studying history prevents scientists and technologists from repeating past societal disasters.",
+            "How can students integrate both analytical rigor and artistic creativity in their daily work?"
+        ]
+    },
+    {
+        "id": 37,
+        "title": "Active Recall vs. Passive Study Habits",
+        "category": "Learning & Mindset",
+        "categoryKey": "education",
+        "question": "Cognitive science overwhelmingly proves that testing yourself through active retrieval is far more effective than re-reading notes, yet most students still prefer passive reviewing. Why is cognitive friction so difficult to embrace?",
+        "guidePoints": [
+            "Discuss why effortless studying feels productive in the moment but results in rapid forgetting.",
+            "Share your favorite active learning tactics (flashcard systems, practice problems, whiteboarding).",
+            "How do you maintain focus when problem sets feel mentally exhausting?"
+        ]
+    },
+    {
+        "id": 38,
+        "title": "The Archetype of the Transformative Mentor",
+        "category": "Learning & Mindset",
+        "categoryKey": "education",
+        "question": "What is the single most essential quality in an educator or mentor: flawless subject expertise, demanding high standards, patient empathy, or the ability to ignite passion? Which mentor has left the deepest mark on your journey?",
+        "guidePoints": [
+            "Describe a teacher or tutor who changed how you perceive your own intellectual capabilities.",
+            "Is tough feedback delivered with belief more motivating than constant uncritical praise?",
+            "How can peers act as effective academic coaches for one another in study partnerships?"
+        ]
+    },
+    {
+        "id": 39,
+        "title": "Self-Directed Learning & the Value of Campus",
+        "category": "Learning & Mindset",
+        "categoryKey": "education",
+        "question": "With world-class lectures, textbooks, and interactive coding sandboxes available online for free, what remains the primary enduring value of elite physical university campuses: the credential, the professors, or the peer community?",
+        "guidePoints": [
+            "Debate whether an ambitious self-taught student can outpace a traditional university graduate.",
+            "Examine the role of institutional pedigree and alumni networks in professional acceleration.",
+            "How will AI tutors and virtual academies disrupt the economics of traditional higher education?"
+        ]
+    },
+    {
+        "id": 40,
+        "title": "Reigniting Childhood Wonder & Curiosity",
+        "category": "Learning & Mindset",
+        "categoryKey": "education",
+        "question": "Young children relentlessly ask 'why?' about everything in nature, yet as students advance through school, many stop asking questions and focus solely on what will be on the test. How can we actively reignite that childlike sense of wonder?",
+        "guidePoints": [
+            "What was a scientific or natural phenomenon that blew your mind when you first learned it?",
+            "How does the fear of looking unknowledgeable in front of peers suppress intellectual curiosity?",
+            "What is one question you have always wondered about the universe that you haven't researched yet?"
+        ]
+    },
+    {
+        "id": 41,
+        "title": "The Brain in a Vat & Simulated Realities",
+        "category": "Thought Experiments",
+        "categoryKey": "experiments",
+        "question": "How can you definitively prove right now that you are not a disembodied brain in a laboratory vat receiving artificial electrical signals, or living inside an ancestor simulation? If your subjective reality feels identical, does the distinction matter?",
+        "guidePoints": [
+            "Examine René Descartes' classic 'Cogito, ergo sum' and the search for indubitable truth.",
+            "Discuss Nick Bostrom's simulation argument: is it mathematically probable we live in code?",
+            "If reality is a simulation, does that diminish or enhance the importance of human empathy and ethics?"
+        ]
+    },
+    {
+        "id": 42,
+        "title": "Inverted Qualia: Is My Red Your Blue?",
+        "category": "Thought Experiments",
+        "categoryKey": "experiments",
+        "question": "Could another human look at a ripe strawberry and experience the internal visual sensation that you experience when seeing dark blue, even though you both have learned to call that wavelength 'red'? How can subjective experience ever be bridged?",
+        "guidePoints": [
+            "Differentiate between physical properties (wavelengths of light) and internal qualia (subjective experience).",
+            "Explore Frank Jackson's 'Mary the Color Scientist' thought experiment on physicalism.",
+            "Does language accurately transmit conscious experience, or are we fundamentally isolated in our minds?"
+        ]
+    },
+    {
+        "id": 43,
+        "title": "The Ring of Gyges & Unobserved Morality",
+        "category": "Thought Experiments",
+        "categoryKey": "experiments",
+        "question": "In Plato's Republic, a shepherd finds a ring that grants absolute invisibility with zero possibility of detection. If you possessed this ring for 24 hours, how would you act, and does true morality depend entirely on the presence of observers?",
+        "guidePoints": [
+            "Contrast external social accountability (reputation, law) with internal moral character.",
+            "Would anyone remain entirely virtuous if guaranteed total impunity from social consequences?",
+            "How does digital anonymity on the modern internet reflect the Ring of Gyges?"
+        ]
+    },
+    {
+        "id": 44,
+        "title": "The Teletransporter Dilemma: Travel or Execution?",
+        "category": "Thought Experiments",
+        "categoryKey": "experiments",
+        "question": "A teleporter scans your physical atoms, incinerates your body on Earth, and perfectly reconstructs an identical replica on Mars with all your memories intact. Did you just travel to Mars, or did you die on Earth while a new clone believes it is you?",
+        "guidePoints": [
+            "Analyze philosopher Derek Parfit's teletransporter paradox and the illusion of the ego.",
+            "What if the scanner failed to destroy your Earth body, leaving two identical versions of you: which one is you?",
+            "What does this reveal about what human consciousness actually is?"
+        ]
+    },
+    {
+        "id": 45,
+        "title": "The Memory Erasure Procedure (Eternal Sunshine)",
+        "category": "Thought Experiments",
+        "categoryKey": "experiments",
+        "question": "If a safe clinical procedure could selectively and permanently erase all memories of your most painful heartbreak, humiliation, or grief, would you undergo it? What is the hidden cost of erasing suffering from personal identity?",
+        "guidePoints": [
+            "Weigh immediate emotional relief against the character, empathy, and wisdom gained through adversity.",
+            "How do painful past mistakes prevent us from committing worse errors in the future?",
+            "Would society lose artistic genius and depth if emotional pain could be pharmacologically erased?"
+        ]
+    },
+    {
+        "id": 46,
+        "title": "The Global Truth Serum Scenario",
+        "category": "Thought Experiments",
+        "categoryKey": "experiments",
+        "question": "Imagine an atmospheric event causes every human on Earth to speak only the absolute, unfiltered truth for seven consecutive days. Would human civilization collapse into chaos, or would society emerge radically purified and elevated?",
+        "guidePoints": [
+            "Discuss the role of polite 'white lies' in preventing daily social friction.",
+            "Examine the impact on geopolitics, corporate boardrooms, judicial courts, and personal friendships.",
+            "Is radical transparency sustainable for human psychological health?"
+        ]
+    },
+    {
+        "id": 47,
+        "title": "The 100-Day Groundhog Day Loop",
+        "category": "Thought Experiments",
+        "categoryKey": "experiments",
+        "question": "If you were trapped in a time loop repeating today 100 times with zero cumulative consequences tomorrow, how would your choices evolve across the 100 days? At what point would hedonism give way to intellectual mastery or existential dread?",
+        "guidePoints": [
+            "Map out your trajectory: from indulgence and mischief to deep skill acquisition and philosophical inquiry.",
+            "What craft, instrument, or academic discipline would you dedicate your 100 days to mastering?",
+            "What does this experiment reveal about what truly brings enduring satisfaction to human life?"
+        ]
+    },
+    {
+        "id": 48,
+        "title": "The 30-Second Global Transmission",
+        "category": "Thought Experiments",
+        "categoryKey": "experiments",
+        "question": "If you were given a microphone that would transmit your voice into the earphones and speakers of all eight billion people on Earth simultaneously with flawless real-time translation for 30 seconds, what would you say?",
+        "guidePoints": [
+            "Identify a message capable of transcending cultural, religious, and political divides.",
+            "How would you prevent mass panic or cynicism from eight billion listeners?",
+            "Would you offer philosophical wisdom, an inspiring call to action, or a scientific reminder?"
+        ]
+    },
+    {
+        "id": 49,
+        "title": "Deploying One Billion Dollars for Humanity",
+        "category": "Thought Experiments",
+        "categoryKey": "experiments",
+        "question": "If you were awarded one billion dollars with the strict legal obligation to spend it over five years to maximize the long-term flourishing of humanity, what specific cause or infrastructure would you fund?",
+        "guidePoints": [
+            "Compare immediate humanitarian relief (malaria eradication, clean water) vs. existential risk mitigation (AI safety, pandemic prevention, fusion energy).",
+            "Evaluate whether funding early childhood education in underserved regions yields the highest compounding return.",
+            "How would you prevent bureaucracy and corruption from diluting your capital's impact?"
+        ]
+    },
+    {
+        "id": 50,
+        "title": "The 10,000-Year Civilization Time Capsule",
+        "category": "Thought Experiments",
+        "categoryKey": "experiments",
+        "question": "Humanity is sealing a titanium vault designed to survive for 10,000 years to communicate with whatever intelligent beings inhabit Earth in the distant future. What three artifacts or records would you deposit to represent humanity's greatest glory and deepest warning?",
+        "guidePoints": [
+            "Select one scientific discovery or mathematical principle representing our rational zenith.",
+            "Select one piece of art, music, or literature embodying the human spirit and capacity for love.",
+            "Select one historical artifact serving as a cautionary warning about our vulnerabilities and hubris."
+        ]
     }
-  ],
+],
 
   async init() {
     this.setupEventListeners();
@@ -573,7 +1066,7 @@ const AvioraBuddy = {
     } else if (gameKey === 'logic_quest') {
       this.renderLogicQuest(stage);
     } else if (gameKey === 'discussion') {
-      this.renderDiscussionTopics(stage);
+      this.renderConversationalQuestions(stage);
     } else if (gameKey === 'whiteboard') {
       this.renderWhiteboard(stage);
     } else if (gameKey === 'video_call') {
@@ -908,6 +1401,192 @@ const AvioraBuddy = {
       if (fb) fb.innerHTML = `<span style="color: #F87171; font-weight: 600;">Not quite. Hint: A function calling itself!</span>`;
     }
   },
+
+  // ==========================================
+  // GAME 6: CONVERSATIONAL QUESTIONS (1 - 50)
+  // ==========================================
+  selectQuestion(id) {
+    const num = parseInt(id, 10);
+    if (isNaN(num) || num < 1 || num > 50) return;
+    this.selectedQuestionId = num;
+    this.discussionIndex = num - 1;
+    const stage = document.getElementById('buddy-game-stage');
+    if (stage && this.currentGame === 'discussion') {
+      this.renderConversationalQuestions(stage);
+    }
+  },
+
+  filterQuestions(categoryKey) {
+    this.currentQuestionFilter = categoryKey;
+    const stage = document.getElementById('buddy-game-stage');
+    if (stage && this.currentGame === 'discussion') {
+      this.renderConversationalQuestions(stage);
+    }
+  },
+
+  pickRandomQuestion() {
+    let pool = this.discussionBank;
+    if (this.currentQuestionFilter && this.currentQuestionFilter !== 'all') {
+      pool = pool.filter(q => q.categoryKey === this.currentQuestionFilter);
+    }
+    if (!pool || pool.length === 0) pool = this.discussionBank;
+    const rand = pool[Math.floor(Math.random() * pool.length)];
+    this.selectQuestion(rand.id);
+  },
+
+  toggleDiscussed(id) {
+    const num = parseInt(id, 10);
+    if (this.discussedQuestionIds.has(num)) {
+      this.discussedQuestionIds.delete(num);
+      this.discussedIds.delete(num);
+    } else {
+      this.discussedQuestionIds.add(num);
+      this.discussedIds.add(num);
+    }
+    const stage = document.getElementById('buddy-game-stage');
+    if (stage && this.currentGame === 'discussion') {
+      this.renderConversationalQuestions(stage);
+    }
+  },
+
+  sendQuestionToChat(id) {
+    const num = parseInt(id, 10);
+    const q = this.discussionBank.find(item => item.id === num);
+    if (!q) return;
+    const msg = `💬 Conversational Question #${q.id} ("${q.title}"):\n"${q.question}"`;
+    this.sendChatMessage(msg);
+    if (typeof showToast === 'function') {
+      showToast(`Question #${q.id} posted to Buddy Chat!`, 'success');
+    }
+  },
+
+  renderConversationalQuestions(stage) {
+    const activeId = this.selectedQuestionId || 1;
+    const q = this.discussionBank.find(item => item.id === activeId) || this.discussionBank[0];
+    const isDiscussed = this.discussedQuestionIds.has(q.id);
+
+    // Filter pills
+    const filterPills = [
+      { key: 'all', label: 'All Questions (1–50)' },
+      { key: 'science', label: '🔬 Science & Cosmos (#1–10)' },
+      { key: 'tech', label: '🤖 Tech & AI (#11–20)' },
+      { key: 'philosophy', label: '⚖️ Philosophy & Ethics (#21–30)' },
+      { key: 'education', label: '📚 Learning & Mindset (#31–40)' },
+      { key: 'experiments', label: '🌌 Thought Experiments (#41–50)' }
+    ];
+
+    const filterPillsHtml = filterPills.map(f => `
+      <button type="button" 
+              class="discussion-filter-pill ${this.currentQuestionFilter === f.key ? 'active' : ''}" 
+              onclick="AvioraBuddy.filterQuestions('${f.key}')">
+        ${f.label}
+      </button>
+    `).join('');
+
+    // Numbers Grid (1 to 50)
+    const numbersGridHtml = this.discussionBank.map(item => {
+      const isSelected = item.id === activeId;
+      const discussed = this.discussedQuestionIds.has(item.id);
+      const isDimmed = this.currentQuestionFilter !== 'all' && item.categoryKey !== this.currentQuestionFilter;
+      return `
+        <button type="button" 
+                class="question-num-btn ${isSelected ? 'active' : ''} ${discussed ? 'discussed' : ''} ${isDimmed ? 'dimmed' : ''}" 
+                onclick="AvioraBuddy.selectQuestion(${item.id})"
+                title="Question #${item.id}: ${item.title}">
+          ${item.id}
+        </button>
+      `;
+    }).join('');
+
+    // Guide points list
+    const guidePointsHtml = (q.guidePoints || []).map(pt => `<li>${pt}</li>`).join('');
+
+    stage.innerHTML = `
+      <div class="conversational-board">
+        <!-- Top Number Selector Bar -->
+        <div class="conversational-header-box">
+          <div class="conversational-title">
+            <span>💬</span>
+            <span>Conversational Questions</span>
+            <span class="badge-gold" style="font-size: 0.72rem; padding: 0.15rem 0.5rem; font-weight: 800;">50 Questions</span>
+          </div>
+          <div class="conversational-subtitle">
+            Select any number from 1 through 50 below to reveal a topic for you and your peer to discuss.
+          </div>
+
+          <!-- Category Filter Bar -->
+          <div class="discussion-filter-pills">
+            ${filterPillsHtml}
+          </div>
+
+          <!-- 50 Numbers Grid -->
+          <div class="questions-number-grid">
+            ${numbersGridHtml}
+          </div>
+        </div>
+
+        <!-- Revealed Question Card -->
+        <div class="revealed-question-card">
+          <div class="revealed-question-topbar">
+            <div class="revealed-question-meta">
+              <span class="revealed-question-badge">Question #${q.id} of 50</span>
+              <span class="badge-accent" style="font-size: 0.72rem; font-weight: 700;">${q.category}</span>
+              ${isDiscussed ? '<span class="badge-gold" style="font-size: 0.7rem; background: rgba(16, 185, 129, 0.18); border-color: rgba(16, 185, 129, 0.4); color: #34D399; font-weight: 700;">✓ Topic Discussed</span>' : ''}
+            </div>
+            <div>
+              <button type="button" class="btn btn-outline-gold btn-sm" onclick="AvioraBuddy.pickRandomQuestion()" style="font-size: 0.75rem; padding: 0.25rem 0.65rem;">
+                🎲 Pick Random
+              </button>
+            </div>
+          </div>
+
+          <div class="revealed-question-title">${q.title}</div>
+          
+          <div class="revealed-question-text">
+            "${q.question}"
+          </div>
+
+          <!-- Guided Discussion Angles for Duo -->
+          <div class="revealed-guide-box">
+            <div class="revealed-guide-header">
+              <span>💡</span>
+              <span>Key Discussion Angles for Peer Duo:</span>
+            </div>
+            <ul class="revealed-guide-list">
+              ${guidePointsHtml}
+            </ul>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="revealed-actions-row">
+            <div class="revealed-actions-left">
+              <button type="button" class="btn btn-primary btn-sm" onclick="AvioraBuddy.sendQuestionToChat(${q.id})" style="display: inline-flex; align-items: center; gap: 0.4rem; font-weight: 700;">
+                <span>💬</span>
+                <span>Send Topic to Buddy Chat</span>
+              </button>
+              <button type="button" class="btn btn-outline-gold btn-sm" onclick="AvioraBuddy.toggleDiscussed(${q.id})" style="font-weight: 600;">
+                ${isDiscussed ? '✓ Marked as Discussed' : 'Mark as Discussed'}
+              </button>
+            </div>
+
+            <div class="revealed-actions-right">
+              <button type="button" class="btn btn-secondary btn-sm" onclick="AvioraBuddy.selectQuestion(${q.id > 1 ? q.id - 1 : 50})" style="padding: 0.35rem 0.75rem;">
+                ← Prev (#${q.id > 1 ? q.id - 1 : 50})
+              </button>
+              <button type="button" class="btn btn-secondary btn-sm" onclick="AvioraBuddy.selectQuestion(${q.id < 50 ? q.id + 1 : 1})" style="padding: 0.35rem 0.75rem;">
+                Next (#${q.id < 50 ? q.id + 1 : 1}) →
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  },
+
+  renderDiscussionTopics(stage) {
+    this.renderConversationalQuestions(stage);
+  },
+
 
   // ==========================================
   // SHARED WHITEBOARD

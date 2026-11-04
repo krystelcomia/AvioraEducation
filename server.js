@@ -2255,6 +2255,19 @@ app.put('/api/auth/profile', authenticateToken, (req, res) => {
         tutorData.availability_schedule || null,
         userId
       );
+      if (tutorData.country || req.body.country) {
+        const cVal = tutorData.country || req.body.country;
+        db.prepare('UPDATE tutor_profiles SET country = ? WHERE user_id = ?').run(cVal, userId);
+        db.prepare('UPDATE users SET country = ? WHERE id = ?').run(cVal, userId);
+        db.prepare('UPDATE teacher_applications SET country = ? WHERE user_id = ?').run(cVal, userId);
+        db.prepare('UPDATE user_preferences SET country = ? WHERE user_id = ?').run(cVal, userId);
+      }
+      if (tutorData.timezone || req.body.timezone) {
+        const tzVal = tutorData.timezone || req.body.timezone;
+        db.prepare('UPDATE tutor_profiles SET timezone = ? WHERE user_id = ?').run(tzVal, userId);
+        db.prepare('UPDATE teacher_applications SET timezone = ? WHERE user_id = ?').run(tzVal, userId);
+        db.prepare('UPDATE user_preferences SET timezone = ? WHERE user_id = ?').run(tzVal, userId);
+      }
       db.prepare(`
         UPDATE teacher_applications
         SET headline = COALESCE(?, headline), bio = COALESCE(?, bio), hourly_rate = ?, updated_at = CURRENT_TIMESTAMP
@@ -2636,6 +2649,8 @@ app.get('/api/tutors', (req, res) => {
         tp.user_id,
         u.name,
         u.avatar_url,
+        COALESCE(tp.country, u.country, 'United States') as country,
+        COALESCE(tp.timezone, 'America/New_York') as timezone,
         tp.headline,
         tp.bio,
         tp.highest_degree,
@@ -2748,7 +2763,9 @@ app.get('/api/tutors/:id', (req, res) => {
         tp.*,
         u.name,
         u.avatar_url,
-        u.email
+        u.email,
+        COALESCE(tp.country, u.country, 'United States') as country,
+        COALESCE(tp.timezone, 'America/New_York') as timezone
       FROM tutor_profiles tp
       JOIN users u ON tp.user_id = u.id
       LEFT JOIN teacher_applications ta ON ta.user_id = tp.user_id
@@ -2762,7 +2779,9 @@ app.get('/api/tutors/:id', (req, res) => {
           tp.*,
           u.name,
           u.avatar_url,
-          u.email
+          u.email,
+        COALESCE(tp.country, u.country, 'United States') as country,
+        COALESCE(tp.timezone, 'America/New_York') as timezone
         FROM tutor_profiles tp
         JOIN users u ON tp.user_id = u.id
         LEFT JOIN teacher_applications ta ON ta.user_id = tp.user_id

@@ -3651,6 +3651,14 @@
                 <div style="display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;">
                   <span class="badge-gold">Verified Educator</span>
                   <span class="badge-accent" id="teacher-headline-tag">Stanford Ph.D. • Applied Mathematics</span>
+                  <span class="badge-gold" id="teacher-dashboard-location-badge" style="display: inline-flex; align-items: center; gap: 0.35rem;">
+                    <span id="teacher-dashboard-country-flag">🇺🇸</span>
+                    <span id="teacher-dashboard-country-name">United States</span>
+                  </span>
+                  <span class="badge-accent" id="teacher-dashboard-time-badge" style="display: inline-flex; align-items: center; gap: 0.35rem;">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline-block;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                    <span id="teacher-dashboard-live-clock">--:-- local</span>
+                  </span>
                 </div>
                 <h1 class="teacher-hero-name" id="teacher-hero-name">Dr. Elena Vance</h1>
                 <p class="teacher-hero-bio" id="teacher-hero-bio">
@@ -3901,6 +3909,14 @@
                   <span id="teacher-profile-status-badge" class="badge-gold" style="font-size: 0.8rem;">Verified Educator</span>
                   <span id="teacher-profile-rate-badge" class="badge-accent" style="font-size: 0.8rem;">$45 / hr</span>
                   <span id="teacher-profile-subject-badge" class="badge-gold" style="font-size: 0.8rem;">Stanford Ph.D. • Applied Mathematics</span>
+                  <span id="teacher-profile-country-badge" class="badge-gold" style="font-size: 0.8rem; display: inline-flex; align-items: center; gap: 0.35rem;">
+                    <span id="teacher-profile-country-flag">🇺🇸</span>
+                    <span id="teacher-profile-country-name">United States</span>
+                  </span>
+                  <span id="teacher-profile-clock-badge" class="badge-accent" style="font-size: 0.8rem; display: inline-flex; align-items: center; gap: 0.35rem;">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline-block;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                    <span id="teacher-profile-live-clock">--:-- local</span>
+                  </span>
                 </div>
                 <p class="portal-subtitle" style="margin-top: 0.35rem; margin-bottom: 0;">
                   <span id="teacher-profile-hero-email" style="font-weight: 600; color: var(--charcoal-900);">elena.vance@aviora.edu</span> • Verified Educator Account
@@ -3947,6 +3963,60 @@
                 <div class="form-group" style="margin-bottom: 0;">
                   <label class="form-label" style="font-weight: 700; font-size: 0.82rem;">Hourly Rate ($ USD / hr)</label>
                   <input type="number" id="t-profile-rate" class="form-control" min="20" max="250" step="1" required />
+                </div>
+              </div>
+
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                <div class="form-group" style="margin-bottom: 0;">
+                  <label class="form-label" style="font-weight: 700; font-size: 0.82rem;">Operating Country / Location</label>
+                  <select id="teacher-profile-country" class="form-control">
+                    <option value="United States">🇺🇸 United States</option>
+                    <option value="United Kingdom">🇬🇧 United Kingdom</option>
+                    <option value="Canada">🇨🇦 Canada</option>
+                    <option value="Australia">🇦🇺 Australia</option>
+                    <option value="Philippines">🇵🇭 Philippines</option>
+                    <option value="Singapore">🇸🇬 Singapore</option>
+                    <option value="Japan">🇯🇵 Japan</option>
+                    <option value="South Korea">🇰🇷 South Korea</option>
+                    <option value="China">🇨🇳 China</option>
+                    <option value="India">🇮🇳 India</option>
+                    <option value="France">🇫🇷 France</option>
+                    <option value="Germany">🇩🇪 Germany</option>
+                    <option value="Spain">🇪🇸 Spain</option>
+                    <option value="Italy">🇮🇹 Italy</option>
+                    <option value="Brazil">🇧🇷 Brazil</option>
+                    <option value="Mexico">🇲🇽 Mexico</option>
+                    <option value="United Arab Emirates">🇦🇪 United Arab Emirates</option>
+                    <option value="Saudi Arabia">🇸🇦 Saudi Arabia</option>
+                    <option value="Indonesia">🇮🇩 Indonesia</option>
+                    <option value="Vietnam">🇻🇳 Vietnam</option>
+                    <option value="Turkey">🇹🇷 Turkey</option>
+                    <option value="Netherlands">🇳🇱 Netherlands</option>
+                    <option value="Poland">🇵🇱 Poland</option>
+                    <option value="Sweden">🇸🇪 Sweden</option>
+                    <option value="Thailand">🇹🇭 Thailand</option>
+                    <option value="Switzerland">🇨🇭 Switzerland</option>
+                    <option value="South Africa">🇿🇦 South Africa</option>
+                    <option value="New Zealand">🇳🇿 New Zealand</option>
+                  </select>
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                  <label class="form-label" style="font-weight: 700; font-size: 0.82rem;">Local Operating Timezone</label>
+                  <select id="teacher-profile-timezone" class="form-control">
+                    <option value="America/New_York">America/New_York (EST)</option>
+                    <option value="America/Chicago">America/Chicago (CST)</option>
+                    <option value="America/Denver">America/Denver (MST)</option>
+                    <option value="America/Los_Angeles">America/Los_Angeles (PST)</option>
+                    <option value="America/Toronto">America/Toronto (EST)</option>
+                    <option value="Europe/London">Europe/London (GMT/BST)</option>
+                    <option value="Europe/Paris">Europe/Paris (CET)</option>
+                    <option value="Europe/Berlin">Europe/Berlin (CET)</option>
+                    <option value="Asia/Manila">Asia/Manila (PHT)</option>
+                    <option value="Asia/Tokyo">Asia/Tokyo (JST)</option>
+                    <option value="Asia/Singapore">Asia/Singapore (SGT)</option>
+                    <option value="Australia/Sydney">Australia/Sydney (AEST)</option>
+                    <option value="UTC">UTC (Coordinated Time)</option>
+                  </select>
                 </div>
               </div>
 

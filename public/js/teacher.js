@@ -3700,6 +3700,28 @@ const Teacher = {
 
       if (bioInp) bioInp.value = tp.bio || app.bio || '';
 
+      const countryVal = tp.country || u.country || localStorage.getItem('aviora_country') || 'United States';
+      const tzVal = tp.timezone || u.timezone || localStorage.getItem('aviora_timezone') || 'America/New_York';
+
+      const countryInp = document.getElementById('teacher-profile-country');
+      const tzInp = document.getElementById('teacher-profile-timezone');
+      if (countryInp) countryInp.value = countryVal;
+      if (tzInp) tzInp.value = tzVal;
+
+      const flag = typeof AvioraGeo !== 'undefined' ? AvioraGeo.getCountryFlag(countryVal) : '🌐';
+      const timeStr = typeof AvioraGeo !== 'undefined' ? AvioraGeo.getCurrentTimeInZone(tzVal) : '';
+      const tzAbbr = typeof AvioraGeo !== 'undefined' ? AvioraGeo.getTimezoneAbbr(tzVal) : '';
+
+      const flagEl = document.getElementById('teacher-profile-country-flag');
+      const nameEl = document.getElementById('teacher-profile-country-name');
+      const clockEl = document.getElementById('teacher-profile-live-clock');
+      if (flagEl) flagEl.textContent = flag;
+      if (nameEl) nameEl.textContent = countryVal;
+      if (clockEl) {
+        clockEl.textContent = `${timeStr} (${tzAbbr})`;
+        clockEl.setAttribute('data-tz', tzVal);
+      }
+
       // Sync settings / preferences in Profile module
       if (typeof Profile !== 'undefined' && Profile.syncAllPreferences) {
         Profile.syncAllPreferences(prefs);
@@ -3723,6 +3745,8 @@ const Teacher = {
     const headline = document.getElementById('t-profile-headline')?.value.trim();
     const hourly_rate = parseFloat(document.getElementById('t-profile-rate')?.value || 45);
     const bio = document.getElementById('t-profile-bio')?.value.trim();
+    const country = document.getElementById('teacher-profile-country')?.value || document.getElementById('teacher-country-select')?.value || 'United States';
+    const timezone = document.getElementById('teacher-profile-timezone')?.value || document.getElementById('teacher-timezone-select')?.value || 'America/New_York';
     const submitBtn = e.target.querySelector('button[type="submit"]');
 
     try {
@@ -3734,7 +3758,8 @@ const Teacher = {
       const res = await API.updateProfile({
         name,
         phone,
-        tutorData: { headline, hourly_rate, bio }
+        country,
+        tutorData: { headline, hourly_rate, bio, country, timezone }
       });
 
       if (res && res.user && typeof Auth !== 'undefined') {
@@ -3743,6 +3768,10 @@ const Teacher = {
       }
 
       showToast('Tutor public profile updated successfully!', 'success');
+      if (typeof Profile !== 'undefined') {
+        if (typeof Profile.applyCountry === 'function') Profile.applyCountry(country, false, true);
+        if (typeof Profile.applyTimezone === 'function') Profile.applyTimezone(timezone, false, true);
+      }
       await this.ensureTeacherStatus();
       if (window.location.hash === '#teacher-profile') {
         await this.loadProfilePage();

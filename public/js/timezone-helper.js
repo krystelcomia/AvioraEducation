@@ -356,6 +356,24 @@
         const abbr = this.getTimezoneAbbr(teacherTz);
         teacherClock.textContent = `${time} (${abbr})`;
       }
+
+      // 4. Teacher profile page hero live clock
+      const teacherProfClock = document.getElementById('teacher-profile-live-clock');
+      if (teacherProfClock) {
+        const tTz = teacherProfClock.getAttribute('data-tz') || localStorage.getItem('aviora_timezone') || 'America/New_York';
+        const time = this.getCurrentTimeInZone(tTz);
+        const abbr = this.getTimezoneAbbr(tTz);
+        teacherProfClock.textContent = `${time} (${abbr})`;
+      }
+
+      // 5. Teacher dashboard hero live clock
+      const teacherDashClock = document.getElementById('teacher-dashboard-live-clock');
+      if (teacherDashClock) {
+        const tTz = teacherDashClock.getAttribute('data-tz') || localStorage.getItem('aviora_timezone') || 'America/New_York';
+        const time = this.getCurrentTimeInZone(tTz);
+        const abbr = this.getTimezoneAbbr(tTz);
+        teacherDashClock.textContent = `${time} (${abbr})`;
+      }
     },
 
     startLiveClocks(intervalMs = 30000) {

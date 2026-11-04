@@ -229,6 +229,7 @@ const Tutors = {
 
     container.innerHTML = featured.map(t => this.createTutorCardHtml(t)).join('');
     this.attachCardEventListeners(container);
+    if (typeof AvioraGeo !== 'undefined') AvioraGeo.updateLiveClocks();
   },
 
   renderDirectoryTutors(tutors) {
@@ -338,6 +339,16 @@ const Tutors = {
               <span class="star-gold" style="display: inline-flex; align-items: center; color: #F59E0B;">${Icons.star(13)}</span>
               <span>${t.rating ? t.rating.toFixed(1) : '5.0'}</span>
               <span class="review-count">(${t.reviews_count || 0} reviews)</span>
+            </div>
+            <div class="tutor-location-line" style="display: flex; align-items: center; gap: 0.45rem; font-size: 0.78rem; margin-top: 0.35rem; flex-wrap: wrap;">
+              <span class="tutor-country-badge" style="display: inline-flex; align-items: center; gap: 0.25rem; font-weight: 700; color: var(--charcoal-900);">
+                <span>${flag}</span> <span>${country}</span>
+              </span>
+              <span style="opacity: 0.35; color: var(--charcoal-400);">•</span>
+              <span class="tutor-card-time tutor-live-clock" data-tutor-tz="${timezone}" style="display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.74rem; background: rgba(198, 138, 40, 0.12); color: var(--gold-800); padding: 0.12rem 0.5rem; border-radius: 999px; font-weight: 600;">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline-block;vertical-align:-1px;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                <span>${localTime} local (${tzAbbr})</span>
+              </span>
             </div>
           </div>
         </div>
@@ -1783,3 +1794,5 @@ const Tutors = {
     }
   }
 };
+
+window.Tutors = Tutors;

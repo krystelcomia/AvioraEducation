@@ -1,7 +1,7 @@
 /**
  * AVIORA BUDDY - 2-STUDENT CO-LEARNING & INTERACTIVE BATTLE STUDIO
  * Supports 2-student sessions ($6 flat fee per participant)
- * Peer-to-peer duo co-learning mode ($6 flat fee), full game suite, conversational discussion topics, chat, and whiteboard.
+ * Peer-to-peer duo co-learning mode ($6 flat fee), full game suite, conversational questions, chat, and whiteboard.
  */
 
 const AvioraBuddy = {
@@ -839,7 +839,7 @@ const AvioraBuddy = {
             ${s.subject}
           </h4>
           <p style="color: var(--text-secondary); font-size: 0.82rem; margin-bottom: 0.75rem; line-height: 1.45;">
-            ${s.topic || 'Quiz Bee, Speed Equations & Discussion Topics'}
+            ${s.topic || 'Quiz Bee, Speed Equations & Conversational Questions'}
           </p>
 
           ${isPending ? `
@@ -945,7 +945,7 @@ const AvioraBuddy = {
           ${this.escapeHtml(session.subject)}
         </h2>
         <div style="font-size: 0.9rem; color: #D1D5DB; margin-bottom: 1.5rem;">
-          ${this.escapeHtml(session.topic || 'Peer Study, Quiz Bee Duel & Discussion Topics')}
+          ${this.escapeHtml(session.topic || 'Peer Study, Quiz Bee Duel & Conversational Questions')}
         </div>
 
         <div style="max-width: 620px; margin: 0 auto 1.75rem; background: rgba(0, 0, 0, 0.35); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 1.25rem 1.5rem; text-align: left; line-height: 1.6;">
@@ -1411,7 +1411,7 @@ const AvioraBuddy = {
     this.selectedQuestionId = num;
     this.discussionIndex = num - 1;
     const stage = document.getElementById('buddy-game-stage');
-    if (stage && this.currentGame === 'discussion') {
+    if (stage) {
       this.renderConversationalQuestions(stage);
     }
   },
@@ -1419,7 +1419,7 @@ const AvioraBuddy = {
   filterQuestions(categoryKey) {
     this.currentQuestionFilter = categoryKey;
     const stage = document.getElementById('buddy-game-stage');
-    if (stage && this.currentGame === 'discussion') {
+    if (stage) {
       this.renderConversationalQuestions(stage);
     }
   },
@@ -1444,7 +1444,7 @@ const AvioraBuddy = {
       this.discussedIds.add(num);
     }
     const stage = document.getElementById('buddy-game-stage');
-    if (stage && this.currentGame === 'discussion') {
+    if (stage) {
       this.renderConversationalQuestions(stage);
     }
   },
@@ -1837,7 +1837,7 @@ const AvioraBuddy = {
     const payload = {
       student2_id: peerSelect && peerSelect.value ? peerSelect.value : null,
       subject: subjectInp && subjectInp.value.trim() ? subjectInp.value.trim() : 'AP Calculus & Co-Learning Studio',
-      topic: topicInp && topicInp.value.trim() ? topicInp.value.trim() : 'Quiz Bee, Math Duel & Discussion Topics',
+      topic: topicInp && topicInp.value.trim() ? topicInp.value.trim() : 'Quiz Bee, Math Duel & Conversational Questions',
       scheduled_date: dateInp && dateInp.value ? dateInp.value : 'Pending Admin Scheduling',
       scheduled_time: timeInp && timeInp.value ? timeInp.value : 'Pending Admin Scheduling'
     };

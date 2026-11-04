@@ -430,14 +430,8 @@ const Auth = {
       });
     });
 
-    // Logout
-    const logoutBtn = document.getElementById('user-logout-btn');
-    if (logoutBtn) {
-      logoutBtn.addEventListener('click', (e) => {
-        e.preventDefault();
-        this.logout();
-      });
-    }
+    // Setup Logout Icon & Prompt Dropdown
+    this.setupLogoutDropdown();
 
     // Password Show/Hide Toggles
     document.querySelectorAll('.password-toggle-btn, .password-toggle-eye').forEach(btn => {
@@ -1196,30 +1190,61 @@ const Auth = {
     }
   },
 
-  confirmLogout() {
-    const title = (typeof I18n !== 'undefined' && I18n.t) 
-      ? I18n.t('auth.confirm_logout_title', 'Confirm Log Out') 
-      : 'Confirm Log Out';
-    const message = (typeof I18n !== 'undefined' && I18n.t) 
-      ? I18n.t('auth.confirm_logout_msg', 'Are you sure you want to log out of your Aviora Education account? This prevents accidental session loss.') 
-      : 'Are you sure you want to log out of your Aviora Education account? This prevents accidental session loss.';
-    const confirmText = (typeof I18n !== 'undefined' && I18n.t) 
-      ? I18n.t('nav.logout', 'Log Out') 
-      : 'Log Out';
-    const cancelText = (typeof I18n !== 'undefined' && I18n.t) 
-      ? I18n.t('common.cancel', 'Cancel') 
-      : 'Cancel';
+  setupLogoutDropdown() {
+    const trigger = document.getElementById('user-logout-btn');
+    const dropdown = document.getElementById('nav-logout-dropdown');
+    if (!trigger || !dropdown) return;
 
-    if (typeof showConfirm === 'function') {
-      showConfirm(title, message, () => {
+    // Replace trigger with clone to safely rebind listeners
+    const newTrigger = trigger.cloneNode(true);
+    trigger.parentNode.replaceChild(newTrigger, trigger);
+
+    newTrigger.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      // Close other header dropdowns
+      const walletDd = document.getElementById('nav-wallet-dropdown');
+      const notifDd = document.getElementById('nav-notif-dropdown');
+      if (walletDd) walletDd.style.display = 'none';
+      if (notifDd) notifDd.style.display = 'none';
+
+      const isOpen = dropdown.style.display === 'block';
+      dropdown.style.display = isOpen ? 'none' : 'block';
+    });
+
+    const logoutAction = document.getElementById('nav-confirm-logout-btn');
+    if (logoutAction) {
+      const newAction = logoutAction.cloneNode(true);
+      logoutAction.parentNode.replaceChild(newAction, logoutAction);
+      newAction.addEventListener('click', (e) => {
+        e.preventDefault();
+        dropdown.style.display = 'none';
         this.performLogout();
-      }, {
-        confirmText,
-        cancelText
       });
-    } else if (window.confirm(message)) {
-      this.performLogout();
     }
+
+    if (!this._logoutDocClickBound) {
+      this._logoutDocClickBound = true;
+      document.addEventListener('click', (e) => {
+        const dd = document.getElementById('nav-logout-dropdown');
+        const cont = document.getElementById('nav-logout-container');
+        if (dd && cont && !cont.contains(e.target)) {
+          dd.style.display = 'none';
+        }
+      });
+
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          const dd = document.getElementById('nav-logout-dropdown');
+          if (dd) dd.style.display = 'none';
+        }
+      });
+    }
+  },
+
+  confirmLogout() {
+    this.performLogout();
   },
 
   performLogout() {
@@ -1253,12 +1278,8 @@ const Auth = {
     Router.handleRoute();
   },
 
-  logout(skipConfirm = false) {
-    if (skipConfirm) {
-      this.performLogout();
-      return;
-    }
-    this.confirmLogout();
+  logout() {
+    this.performLogout();
   },
 
 

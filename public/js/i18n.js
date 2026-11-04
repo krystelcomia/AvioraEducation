@@ -5854,6 +5854,7 @@ const I18n = {
       'nav-link-dashboard': 'nav.dashboard',
       'nav-user-profile-btn': 'nav.profile',
       'user-logout-btn': 'nav.logout',
+      'nav-confirm-logout-btn': 'nav.logout',
       'nav-login-btn': 'nav.login',
       'nav-signup-btn': 'nav.signup',
       'notif-mark-read-btn': 'common.mark_all_read',
@@ -5867,7 +5868,16 @@ const I18n = {
     Object.keys(navMap).forEach(id => {
       const el = document.getElementById(id);
       if (el) {
-        el.textContent = this.t(navMap[id]);
+        if (id === 'user-logout-btn') {
+          el.setAttribute('title', this.t(navMap[id]));
+          el.setAttribute('aria-label', this.t(navMap[id]));
+        } else if (id === 'nav-confirm-logout-btn') {
+          const span = el.querySelector('span');
+          if (span) span.textContent = this.t(navMap[id]);
+          else el.textContent = this.t(navMap[id]);
+        } else {
+          el.textContent = this.t(navMap[id]);
+        }
       }
     });
 

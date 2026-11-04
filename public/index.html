@@ -2569,7 +2569,7 @@
               </div>
 
               <!-- Daily Lucky Spin Game Section -->
-              <div id="profile-daily-spin-card" class="profile-spin-card">
+              <div id="profile-daily-spin-card" class="profile-spin-card" style="margin-top: auto; margin-bottom: 0;">
                 <div class="spin-card-header">
                   <div>
                     <div class="spin-badge-tag">
@@ -2646,11 +2646,6 @@
                   </div>
                 </div>
               </div>
-
-
-              <button type="submit" id="btn-save-profile" class="btn btn-primary btn-lg" style="margin-top: auto; width: 100%; justify-content: center; font-weight: 700;">
-                Save Profile Changes
-              </button>
             </form>
           </div>
 
@@ -2846,20 +2841,22 @@
                 </label>
                 
                 <form id="profile-password-form">
-                  <div style="display: grid; grid-template-columns: 1fr; gap: 0.75rem; margin-bottom: 0.85rem;">
+                  <div class="account-security-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.85rem;">
                     <div class="form-group" style="margin-bottom: 0;">
-                      <label class="form-label" style="font-size: 0.78rem;">Current Password</label>
+                      <label class="form-label" style="font-size: 0.78rem; font-weight: 700;">Gmail Account</label>
+                      <input type="email" id="profile-gmail-account" class="form-control" placeholder="user@gmail.com" />
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                      <label class="form-label" style="font-size: 0.78rem; font-weight: 700;">Current Password</label>
                       <input type="password" id="profile-curr-password" class="form-control" placeholder="••••••••" required />
                     </div>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
-                      <div class="form-group" style="margin-bottom: 0;">
-                        <label class="form-label" style="font-size: 0.78rem;">New Password</label>
-                        <input type="password" id="profile-new-password" class="form-control" placeholder="Min 6 characters" required />
-                      </div>
-                      <div class="form-group" style="margin-bottom: 0;">
-                        <label class="form-label" style="font-size: 0.78rem;">Confirm Password</label>
-                        <input type="password" id="profile-confirm-password" class="form-control" placeholder="Repeat new password" required />
-                      </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                      <label class="form-label" style="font-size: 0.78rem; font-weight: 700;">New Password</label>
+                      <input type="password" id="profile-new-password" class="form-control" placeholder="Min 6 characters" required />
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                      <label class="form-label" style="font-size: 0.78rem; font-weight: 700;">Confirm Password</label>
+                      <input type="password" id="profile-confirm-password" class="form-control" placeholder="Repeat new password" required />
                     </div>
                   </div>
                   <button type="submit" id="btn-save-password" class="btn btn-outline-gold btn-sm" style="width: 100%; justify-content: center; font-weight: 700;">

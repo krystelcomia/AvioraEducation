@@ -1925,7 +1925,7 @@
    ========================================= */
 .profile-page-grid {
   display: grid;
-  grid-template-columns: 1.15fr 1fr;
+  grid-template-columns: 1fr 1fr;
   gap: 1.5rem;
   align-items: stretch;
 }
@@ -3034,8 +3034,8 @@
   border-radius: var(--radius-xl);
   padding: 1.35rem 1.25rem 1.15rem 1.25rem;
   box-shadow: 0 4px 18px rgba(0, 0, 0, 0.03);
-  margin-top: 1.25rem;
-  margin-bottom: 1.5rem;
+  margin-top: auto;
+  margin-bottom: 0;
   position: relative;
   overflow: hidden;
   display: flex;
@@ -3366,4 +3366,10 @@
   align-items: center;
   justify-content: center;
   gap: 4px;
+}
+
+@media (max-width: 576px) {
+  .account-security-grid {
+    grid-template-columns: 1fr !important;
+  }
 }

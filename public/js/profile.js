@@ -522,10 +522,42 @@ const Profile = {
       }
     });
 
-    // Profile Form
+    // Profile Form - Auto-save on entry & handle Enter key
     const profileForm = document.getElementById('profile-page-form');
     if (profileForm) {
-      profileForm.addEventListener('submit', (e) => this.handleProfileSubmit(e));
+      profileForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        this.autoSaveProfile(true);
+      });
+    }
+
+    // Auto-save on entry for all profile fields
+    const autoSaveFieldIds = [
+      'profile-name',
+      'profile-phone',
+      'profile-grade',
+      'profile-school',
+      'profile-goals',
+      'profile-subjects'
+    ];
+
+    autoSaveFieldIds.forEach(id => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      if (el.tagName === 'SELECT') {
+        el.addEventListener('change', () => this.autoSaveProfile(true));
+      } else {
+        el.addEventListener('input', () => this.autoSaveProfile(false));
+        el.addEventListener('change', () => this.autoSaveProfile(true));
+        el.addEventListener('blur', () => this.autoSaveProfile(true));
+      }
+    });
+
+    // Account Security: Gmail Account field auto-save
+    const gmailAccountEl = document.getElementById('profile-gmail-account');
+    if (gmailAccountEl) {
+      gmailAccountEl.addEventListener('change', () => this.autoSaveGmail());
+      gmailAccountEl.addEventListener('blur', () => this.autoSaveGmail());
     }
 
     // Password Form (Student)
@@ -792,6 +824,9 @@ const Profile = {
     if (goalsInput) goalsInput.value = sp.learning_goals || '';
     if (subjectsInput) subjectsInput.value = sp.target_subjects || '';
 
+    const gmailAccountInput = document.getElementById('profile-gmail-account');
+    if (gmailAccountInput) gmailAccountInput.value = u.email || '';
+
     // Synchronize All Saved Preferences from DB to UI controls
     this.syncAllPreferences(prefs, false);
 
@@ -802,8 +837,25 @@ const Profile = {
     }
   },
 
-  async handleProfileSubmit(e) {
-    e.preventDefault();
+  autoSaveDebounceTimer: null,
+
+  autoSaveProfile(immediate = false) {
+    if (this.autoSaveDebounceTimer) {
+      clearTimeout(this.autoSaveDebounceTimer);
+      this.autoSaveDebounceTimer = null;
+    }
+
+    if (immediate) {
+      this.performAutoSaveProfile();
+    } else {
+      this.setSaveStatus('saving', typeof I18n !== 'undefined' ? I18n.t('common.saving', 'Saving...') : 'Saving...');
+      this.autoSaveDebounceTimer = setTimeout(() => {
+        this.performAutoSaveProfile();
+      }, 600);
+    }
+  },
+
+  async performAutoSaveProfile() {
     const name = document.getElementById('profile-name')?.value.trim();
     const phone = document.getElementById('profile-phone')?.value.trim();
     const grade_level = document.getElementById('profile-grade')?.value;
@@ -811,31 +863,59 @@ const Profile = {
     const learning_goals = document.getElementById('profile-goals')?.value.trim();
     const target_subjects = document.getElementById('profile-subjects')?.value.trim();
 
-    const submitBtn = document.getElementById('btn-save-profile');
-
     try {
-      if (submitBtn) {
-        submitBtn.disabled = true;
-        submitBtn.textContent = typeof I18n !== 'undefined' ? I18n.t('settings.saving_profile') : 'Saving Changes...';
-      }
-
+      this.setSaveStatus('saving', typeof I18n !== 'undefined' ? I18n.t('common.saving', 'Saving...') : 'Saving...');
       await API.updateProfile({
         name,
         phone,
         studentData: { grade_level, school, learning_goals, target_subjects }
       });
 
-      showToast('Profile information and academic goals saved!', 'success');
-      await Auth.restoreSession();
-      await this.loadProfilePage();
-    } catch (err) {
-      showToast(err.message || 'Failed to update profile.', 'error');
-    } finally {
-      if (submitBtn) {
-        submitBtn.disabled = false;
-        submitBtn.textContent = typeof I18n !== 'undefined' ? I18n.t('settings.save_profile') : 'Save Profile Changes';
+      if (typeof Auth !== 'undefined' && Auth.currentUser) {
+        Auth.currentUser.name = name;
+        Auth.currentUser.phone = phone;
+        Storage.setUser(Auth.currentUser);
       }
+
+      const heroName = document.getElementById('profile-hero-name');
+      if (heroName && name) heroName.textContent = name;
+      const heroGrade = document.getElementById('profile-hero-grade-badge');
+      if (heroGrade && grade_level) heroGrade.textContent = grade_level;
+
+      this.setSaveStatus('saved', typeof I18n !== 'undefined' ? I18n.t('common.saved', 'Saved to Account') : 'Saved to Account');
+    } catch (err) {
+      console.warn('Auto-save profile error:', err);
+      this.setSaveStatus('error', 'Sync Failed');
     }
+  },
+
+  async autoSaveGmail() {
+    const gmailInput = document.getElementById('profile-gmail-account');
+    if (!gmailInput) return;
+    const email = gmailInput.value.trim();
+    if (!email || !email.includes('@')) return;
+
+    try {
+      this.setSaveStatus('saving', typeof I18n !== 'undefined' ? I18n.t('common.saving', 'Saving...') : 'Saving...');
+      await API.updateProfile({ email });
+      if (typeof Auth !== 'undefined' && Auth.currentUser) {
+        Auth.currentUser.email = email;
+        Storage.setUser(Auth.currentUser);
+      }
+      const pEmail = document.getElementById('profile-email');
+      if (pEmail) pEmail.value = email;
+      const heroEmail = document.getElementById('profile-hero-email');
+      if (heroEmail) heroEmail.textContent = email;
+      this.setSaveStatus('saved', typeof I18n !== 'undefined' ? I18n.t('common.saved', 'Saved to Account') : 'Saved to Account');
+    } catch (e) {
+      console.warn('Auto-save Gmail error:', e);
+      this.setSaveStatus('error', 'Sync Failed');
+    }
+  },
+
+  async handleProfileSubmit(e) {
+    if (e && e.preventDefault) e.preventDefault();
+    await this.performAutoSaveProfile();
   },
 
   async handlePasswordSubmit(e, role = 'student') {

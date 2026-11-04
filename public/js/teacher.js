@@ -429,6 +429,22 @@ const Teacher = {
       heroAvatar.src = user?.avatar || this.tutorProfile.avatar;
     }
 
+    const countryVal = this.tutorProfile?.country || (typeof localStorage !== 'undefined' ? localStorage.getItem('aviora_country') : null) || 'United States';
+    const tzVal = this.tutorProfile?.timezone || (typeof localStorage !== 'undefined' ? localStorage.getItem('aviora_timezone') : null) || 'America/New_York';
+    const dashFlag = document.getElementById('teacher-dashboard-country-flag');
+    const dashName = document.getElementById('teacher-dashboard-country-name');
+    const dashClock = document.getElementById('teacher-dashboard-live-clock');
+    if (dashFlag && typeof AvioraGeo !== 'undefined') dashFlag.textContent = AvioraGeo.getCountryFlag(countryVal);
+    if (dashName) dashName.textContent = countryVal;
+    if (dashClock) {
+      dashClock.setAttribute('data-tz', tzVal);
+      if (typeof AvioraGeo !== 'undefined') {
+        const timeStr = AvioraGeo.getCurrentTimeInZone(tzVal);
+        const tzAbbr = AvioraGeo.getTimezoneAbbr(tzVal);
+        dashClock.textContent = `${timeStr} (${tzAbbr})`;
+      }
+    }
+
     await this.loadTeacherDashboard();
     if (typeof Router !== 'undefined' && Router.updateActiveNav) Router.updateActiveNav();
   },

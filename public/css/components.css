@@ -214,6 +214,65 @@
   color: var(--charcoal-900);
 }
 
+.tutor-location-line {
+  display: flex;
+  align-items: center;
+  margin-top: 0.35rem;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.tutor-geo-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.72rem;
+  line-height: 1.3;
+  background: rgba(198, 138, 40, 0.09);
+  border: 1px solid rgba(198, 138, 40, 0.22);
+  border-radius: 999px;
+  padding: 0.12rem 0.5rem;
+  color: var(--charcoal-900);
+  font-weight: 600;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+.tutor-geo-tag .tutor-country-flag {
+  font-size: 0.82rem;
+  line-height: 1;
+}
+
+.tutor-geo-tag .tutor-country-name {
+  font-weight: 700;
+  color: var(--charcoal-900);
+}
+
+.tutor-geo-tag .tutor-geo-divider {
+  opacity: 0.35;
+  color: var(--charcoal-400);
+  margin: 0 0.05rem;
+}
+
+.tutor-geo-tag .tutor-live-clock {
+  color: var(--gold-800);
+  font-weight: 700;
+}
+
+[data-theme="dark"] .tutor-geo-tag {
+  background: rgba(198, 138, 40, 0.15);
+  border-color: rgba(198, 138, 40, 0.35);
+  color: var(--gold-200);
+}
+
+[data-theme="dark"] .tutor-geo-tag .tutor-country-name {
+  color: #FFFFFF;
+}
+
+[data-theme="dark"] .tutor-geo-tag .tutor-live-clock {
+  color: var(--gold-400);
+}
+
 .star-gold {
   color: #F59E0B;
 }

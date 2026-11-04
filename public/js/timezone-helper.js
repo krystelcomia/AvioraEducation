@@ -329,12 +329,12 @@
 
     updateLiveClocks() {
       // 1. Tutor card live clocks
-      document.querySelectorAll('[data-tutor-tz]').forEach(el => {
+      document.querySelectorAll('.tutor-live-clock[data-tutor-tz]').forEach(el => {
         const tz = el.getAttribute('data-tutor-tz');
         if (tz) {
           const time = this.getCurrentTimeInZone(tz);
-          const icon = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline-block;vertical-align:-1px;margin-right:2px;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>';
-          el.innerHTML = `${icon} ${time} local`;
+          const abbr = this.getTimezoneAbbr(tz);
+          el.textContent = `${time} (${abbr})`;
         }
       });
 

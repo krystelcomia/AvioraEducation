@@ -201,9 +201,14 @@ const Auth = {
       return;
     }
     const uid = this.currentUser.id;
-    if (typeof Profile !== 'undefined' && Profile.syncAllPreferences) {
-      Profile.syncAllPreferences(prefs, false);
-    } else {
+    try {
+      if (typeof Profile !== 'undefined' && typeof Profile.syncAllPreferences === 'function') {
+        Profile.syncAllPreferences(prefs, false);
+      }
+    } catch (e) {
+      console.warn('Could not sync all preferences via Profile:', e);
+    }
+    if (true) {
       if (prefs && prefs.theme === 'dark') {
         document.documentElement.setAttribute('data-theme', 'dark');
         localStorage.setItem('aviora_theme_' + uid, 'dark');

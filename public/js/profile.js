@@ -220,6 +220,52 @@ const Profile = {
     }
   },
 
+  applyCountry(country, notify = true, persistToServer = true) {
+    const activeCountry = country || 'United States';
+    ['profile-country-select', 'teacher-country-select', 'admin-country-select', 'app-country'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = activeCountry;
+    });
+
+    const key = this.getUserKey();
+    if (key) localStorage.setItem(`aviora_country${key}`, activeCountry);
+    localStorage.setItem('aviora_country', activeCountry);
+
+    // Auto-update timezone when country is selected if appropriate
+    if (typeof AvioraGeo !== 'undefined') {
+      const defTz = AvioraGeo.getDefaultTimezone(activeCountry);
+      const currentTz = key ? localStorage.getItem(`aviora_timezone${key}`) : null;
+      if (!currentTz || notify) {
+        if (typeof this.applyTimezone === 'function') {
+          this.applyTimezone(defTz, false, persistToServer);
+        }
+      }
+    }
+
+    if (persistToServer && typeof Auth !== 'undefined' && Auth.currentUser && typeof API !== 'undefined') {
+      this.setSaveStatus('saving');
+      API.updateUserPreferences({ country: activeCountry })
+        .then(res => {
+          if (res && res.preferences) {
+            this.userPreferences = res.preferences;
+            if (typeof Storage !== 'undefined' && Storage.setUserPreferences) {
+              Storage.setUserPreferences(Auth.currentUser.id, res.preferences);
+            }
+          }
+          this.setSaveStatus('saved');
+        })
+        .catch(e => {
+          console.warn('Country preference sync warning:', e);
+          this.setSaveStatus('error', 'Saved Locally');
+        });
+    }
+
+    if (notify) {
+      const flag = typeof AvioraGeo !== 'undefined' ? AvioraGeo.getCountryFlag(activeCountry) : '🌐';
+      showToast(`Country set to ${flag} ${activeCountry}`, 'success');
+    }
+  },
+
   applyTimezone(tz, notify = true, persistToServer = true) {
     const activeTz = tz || 'America/New_York';
     const tzSelect = document.getElementById('profile-timezone-select');
@@ -807,6 +853,8 @@ const Profile = {
     }
   }
 };
+
+window.Profile = Profile;
 
 // Initialize immediately on script load
 Profile.initPreferences();

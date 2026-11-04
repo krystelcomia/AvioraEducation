@@ -990,6 +990,24 @@
   border: 1.5px solid rgba(216, 170, 60, 0.35) !important;
   color: #FFFFFF !important;
 }
+
+/* Selected Booking Educator Banner text in Dark Mode (keeps text dark on the light cream card) */
+[data-theme="dark"] #visitor-banner-tutor-name,
+[data-theme="dark"] #sub-banner-tutor-name,
+[data-theme="dark"] .sub-selected-tutor-banner h3 {
+  color: #14171E !important;
+}
+
+[data-theme="dark"] #visitor-banner-tutor-headline,
+[data-theme="dark"] #sub-banner-tutor-headline,
+[data-theme="dark"] .sub-selected-tutor-banner p {
+  color: #4A5262 !important;
+}
+
+[data-theme="dark"] .sub-selected-tutor-banner span[style*="gold-900"] {
+  color: #553502 !important;
+}
+
 [data-theme="dark"] #sub-enroll-tutor-preview {
   background: #000000 !important;
   border: 1.5px solid rgba(216, 170, 60, 0.35) !important;

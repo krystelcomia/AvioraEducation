@@ -159,7 +159,7 @@
 
 .profile-avatar-wrap:hover .avatar-camera-pill {
   transform: scale(1.15);
-  background: var(--gold-600) !important;
+  background: none !important;
 }
 
 .deck-pulse-ring {

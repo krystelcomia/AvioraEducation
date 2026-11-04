@@ -2998,3 +2998,27 @@
   color: var(--gold-300) !important;
   border: 1px solid rgba(198, 138, 40, 0.45) !important;
 }
+
+
+/* Profile Avatar Plain Black Camera Icon (No Background) */
+.avatar-camera-pill {
+  background: none !important;
+  border: none !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  color: #000000 !important;
+  z-index: 10 !important;
+}
+
+.avatar-camera-pill svg {
+  stroke: #000000 !important;
+}
+
+[data-theme="dark"] .avatar-camera-pill {
+  color: #FFFFFF !important;
+}
+
+[data-theme="dark"] .avatar-camera-pill svg {
+  stroke: #FFFFFF !important;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.8)) !important;
+}

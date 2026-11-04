@@ -2209,7 +2209,8 @@ app.put('/api/auth/profile', authenticateToken, (req, res) => {
 
     const updates = [];
     const params = [];
-    if (name !== undefined && name !== null) {
+    // Full name for student accounts remains permanently unchanged from registration
+    if (name !== undefined && name !== null && req.user.role !== 'student') {
       updates.push('name = ?');
       params.push(name.trim());
     }

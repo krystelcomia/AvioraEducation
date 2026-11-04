@@ -533,7 +533,6 @@ const Profile = {
 
     // Auto-save on entry for all profile fields
     const autoSaveFieldIds = [
-      'profile-name',
       'profile-phone',
       'profile-school',
       'profile-goals',
@@ -855,7 +854,8 @@ const Profile = {
   },
 
   async performAutoSaveProfile() {
-    const name = document.getElementById('profile-name')?.value.trim();
+    // Full name remains exactly as entered during registration and cannot be modified
+    const name = this.currentUser?.name || (typeof Auth !== 'undefined' && Auth.currentUser?.name) || document.getElementById('profile-name')?.value?.trim();
     const phone = document.getElementById('profile-phone')?.value.trim();
     // Grade level remains exactly as entered during registration and cannot be modified in the profile
     const grade_level = this.studentProfile?.grade_level || document.getElementById('profile-grade')?.value || 'Grade 11 - High School';
@@ -866,7 +866,6 @@ const Profile = {
     try {
       this.setSaveStatus('saving', typeof I18n !== 'undefined' ? I18n.t('common.saving', 'Saving...') : 'Saving...');
       await API.updateProfile({
-        name,
         phone,
         studentData: { grade_level, school, learning_goals, target_subjects }
       });

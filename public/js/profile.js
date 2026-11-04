@@ -732,12 +732,14 @@ const Profile = {
     const tHeroAvatar = document.getElementById('teacher-profile-hero-avatar');
     const tDashAvatar = document.getElementById('teacher-hero-avatar');
     const aHeroAvatar = document.getElementById('admin-profile-hero-avatar');
+    const navAvatar = document.getElementById('nav-user-profile-avatar');
     if (heroAvatar) heroAvatar.src = url;
     if (studentAvatar) studentAvatar.src = url;
     if (subAvatar) subAvatar.src = url;
     if (tHeroAvatar) tHeroAvatar.src = url;
     if (tDashAvatar) tDashAvatar.src = url;
     if (aHeroAvatar) aHeroAvatar.src = url;
+    if (navAvatar) navAvatar.src = url;
     document.querySelectorAll('.user-avatar, .nav-user-avatar, .teacher-hero-avatar').forEach(img => {
       img.src = url;
     });

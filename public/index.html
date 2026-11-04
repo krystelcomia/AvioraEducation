@@ -170,7 +170,10 @@
               
             </div>
           </div>
-          <a href="#student-profile" class="nav-link header-text-action" id="nav-user-profile-btn">Profile</a>
+          <!-- Profile Avatar Link (Replaces text button) -->
+          <a href="#student-profile" class="nav-link nav-user-profile-link" id="nav-user-profile-btn" aria-label="View Profile" title="View Profile">
+            <img src="/assets/favicon.png" alt="Profile" class="nav-header-profile-avatar nav-user-avatar" id="nav-user-profile-avatar" />
+          </a>
           <!-- Log Out Popover Prompt Container (Icon Trigger) -->
           <div class="nav-logout-container" id="nav-logout-container" style="position: relative;">
             <button type="button" class="nav-logout-btn" id="user-logout-btn" aria-label="Account & Logout" title="Log Out">

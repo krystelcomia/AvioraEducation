@@ -1195,6 +1195,16 @@ const Auth = {
     const dropdown = document.getElementById('nav-logout-dropdown');
     if (!trigger || !dropdown) return;
 
+    if (this.currentUser) {
+      const nameEl = document.getElementById('logout-menu-user-name');
+      const roleEl = document.getElementById('logout-menu-user-role');
+      if (nameEl) nameEl.textContent = this.currentUser.name || (this.currentUser.role === 'admin' ? 'Administrator' : 'User');
+      if (roleEl) {
+        const role = this.currentUser.role;
+        roleEl.textContent = role === 'admin' ? 'Administrator' : (role === 'teacher' || role === 'tutor' ? 'Teacher' : 'Student');
+      }
+    }
+
     // Replace trigger with clone to safely rebind listeners
     const newTrigger = trigger.cloneNode(true);
     trigger.parentNode.replaceChild(newTrigger, trigger);
@@ -1466,6 +1476,14 @@ const Auth = {
         const profileHash = (user.role === 'teacher' || user.role === 'tutor') ? '#teacher-profile' : (user.role === 'admin' ? '#admin-profile' : '#student-profile');
         const isStudent = user.role === 'student';
         const walletBalance = parseFloat(user.wallet_balance || 0).toFixed(2);
+        const roleLabel = user.role === 'admin' ? 'Administrator' : (user.role === 'teacher' || user.role === 'tutor' ? 'Teacher' : 'Student');
+        const safeUserName = user.name || (user.role === 'admin' ? 'Administrator' : 'User');
+        const defaultAvatar = (user.role === 'teacher' || user.role === 'tutor')
+          ? 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80'
+          : (user.role === 'admin'
+            ? 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=300&q=80'
+            : '/assets/favicon.png');
+        const userAvatarUrl = user.avatar_url || user.avatar || defaultAvatar;
         userActions.innerHTML = `
           ${isStudent ? `
           <!-- Student Wallet Balance Container -->
@@ -1539,11 +1557,38 @@ const Auth = {
               <div class="notif-dropdown-body" id="notif-dropdown-body">
                 <div class="notif-loading-item">Loading notifications...</div>
               </div>
-              
             </div>
           </div>
-          <a href="${profileHash}" class="nav-link header-text-action" id="nav-user-profile-btn">Profile</a>
-          <button type="button" class="nav-link header-text-action" id="user-logout-btn">Log Out</button>
+          <!-- Profile Avatar Link (Replaces text button) -->
+          <a href="${profileHash}" class="nav-link nav-user-profile-link" id="nav-user-profile-btn" aria-label="View Profile" title="View Profile">
+            <img src="${userAvatarUrl}" alt="${safeUserName}" class="nav-header-profile-avatar nav-user-avatar" id="nav-user-profile-avatar" />
+          </a>
+          <!-- Log Out Popover Prompt Container (Icon Trigger) -->
+          <div class="nav-logout-container" id="nav-logout-container" style="position: relative;">
+            <button type="button" class="nav-logout-btn" id="user-logout-btn" aria-label="Account & Logout" title="Log Out">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                <polyline points="16 17 21 12 16 7"></polyline>
+                <line x1="21" y1="12" x2="9" y2="12"></line>
+              </svg>
+            </button>
+            <div class="nav-logout-dropdown" id="nav-logout-dropdown" style="display: none;">
+              <div class="logout-dropdown-user-info">
+                <div class="logout-user-name" id="logout-menu-user-name">${safeUserName}</div>
+                <div class="logout-user-role" id="logout-menu-user-role">${roleLabel}</div>
+              </div>
+              <div class="logout-dropdown-actions">
+                <button type="button" class="logout-action-btn" id="nav-confirm-logout-btn">
+                  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                    <polyline points="16 17 21 12 16 7"></polyline>
+                    <line x1="21" y1="12" x2="9" y2="12"></line>
+                  </svg>
+                  <span>Logout</span>
+                </button>
+              </div>
+            </div>
+          </div>
         `;
 
         if (typeof NotificationsUI !== 'undefined') {
@@ -1551,13 +1596,7 @@ const Auth = {
           NotificationsUI.fetchAndRender();
         }
 
-        const logoutBtn = document.getElementById('user-logout-btn');
-        if (logoutBtn) {
-          logoutBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            this.logout();
-          });
-        }
+        this.setupLogoutDropdown();
       }
 
       // Configure Header Navigation Links

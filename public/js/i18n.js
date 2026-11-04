@@ -5871,6 +5871,9 @@ const I18n = {
         if (id === 'user-logout-btn') {
           el.setAttribute('title', this.t(navMap[id]));
           el.setAttribute('aria-label', this.t(navMap[id]));
+        } else if (id === 'nav-user-profile-btn') {
+          el.setAttribute('title', this.t(navMap[id]));
+          el.setAttribute('aria-label', this.t(navMap[id]));
         } else if (id === 'nav-confirm-logout-btn') {
           const span = el.querySelector('span');
           if (span) span.textContent = this.t(navMap[id]);

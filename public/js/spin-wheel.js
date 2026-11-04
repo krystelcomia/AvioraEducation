@@ -458,3 +458,4 @@ window.SpinWheel = SpinWheel;
 document.addEventListener('DOMContentLoaded', () => {
   SpinWheel.init();
 });
+

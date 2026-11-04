@@ -396,8 +396,10 @@ const Profile = {
     // Language selector (Profile and Header)
     const langSelect = document.getElementById('profile-language-select');
     if (langSelect) {
-      langSelect.addEventListener('change', (e) => {
-        this.applyLanguage(e.target.value);
+      ['change', 'input'].forEach(evt => {
+        langSelect.addEventListener(evt, (e) => {
+          this.applyLanguage(e.target.value);
+        });
       });
     }
 
@@ -469,8 +471,10 @@ const Profile = {
 
     const tLangSelect = document.getElementById('teacher-language-select');
     if (tLangSelect) {
-      tLangSelect.addEventListener('change', (e) => {
-        this.applyLanguage(e.target.value);
+      ['change', 'input'].forEach(evt => {
+        tLangSelect.addEventListener(evt, (e) => {
+          this.applyLanguage(e.target.value);
+        });
       });
     }
 
@@ -523,8 +527,10 @@ const Profile = {
 
     const aLangSelect = document.getElementById('admin-language-select');
     if (aLangSelect) {
-      aLangSelect.addEventListener('change', (e) => {
-        this.applyLanguage(e.target.value);
+      ['change', 'input'].forEach(evt => {
+        aLangSelect.addEventListener(evt, (e) => {
+          this.applyLanguage(e.target.value);
+        });
       });
     }
 

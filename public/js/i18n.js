@@ -5852,8 +5852,6 @@ const I18n = {
       'nav-link-portal': 'nav.student_portal',
       'nav-link-how': 'nav.how_it_works',
       'nav-link-dashboard': 'nav.dashboard',
-      'nav-user-profile-btn': 'nav.profile',
-      'user-logout-btn': 'nav.logout',
       'nav-confirm-logout-btn': 'nav.logout',
       'nav-login-btn': 'nav.login',
       'nav-signup-btn': 'nav.signup',
@@ -5868,13 +5866,7 @@ const I18n = {
     Object.keys(navMap).forEach(id => {
       const el = document.getElementById(id);
       if (el) {
-        if (id === 'user-logout-btn') {
-          el.setAttribute('title', this.t(navMap[id]));
-          el.setAttribute('aria-label', this.t(navMap[id]));
-        } else if (id === 'nav-user-profile-btn') {
-          el.setAttribute('title', this.t(navMap[id]));
-          el.setAttribute('aria-label', this.t(navMap[id]));
-        } else if (id === 'nav-confirm-logout-btn') {
+        if (id === 'nav-confirm-logout-btn') {
           const span = el.querySelector('span');
           if (span) span.textContent = this.t(navMap[id]);
           else el.textContent = this.t(navMap[id]);
@@ -5883,6 +5875,18 @@ const I18n = {
         }
       }
     });
+
+    // Ensure header avatar and logout icon never have their contents replaced
+    const profileBtn = document.getElementById('nav-user-profile-btn');
+    if (profileBtn) {
+      profileBtn.setAttribute('title', this.t('nav.profile'));
+      profileBtn.setAttribute('aria-label', this.t('nav.profile'));
+    }
+    const logoutBtn = document.getElementById('user-logout-btn');
+    if (logoutBtn) {
+      logoutBtn.setAttribute('title', this.t('nav.logout'));
+      logoutBtn.setAttribute('aria-label', this.t('nav.logout'));
+    }
 
     // Settings Profile Card Header
     const profCardTitle = document.querySelector('.profile-card-title');

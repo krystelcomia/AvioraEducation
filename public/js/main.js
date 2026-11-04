@@ -161,6 +161,13 @@ const Router = {
       }
       link.classList.toggle('active', isActive);
     });
+
+    // Explicitly toggle active ring on Profile Avatar link
+    const profileLink = document.getElementById('nav-user-profile-btn');
+    if (profileLink) {
+      const isProfileActive = ['#student-profile', '#teacher-profile', '#admin-profile', '#profile'].includes(hash);
+      profileLink.classList.toggle('active', isProfileActive);
+    }
   },
 
   async handleRoute() {

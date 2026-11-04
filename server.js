@@ -93,6 +93,75 @@ const taskUpload = multer({
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// --- Cross-Timezone & International Scheduling Helpers ---
+function getTimezoneOffsetMinutes(tz, date = new Date()) {
+  try {
+    const d = new Date(date.getTime());
+    const utcDate = new Date(d.toLocaleString('en-US', { timeZone: 'UTC' }));
+    const tzDate = new Date(d.toLocaleString('en-US', { timeZone: tz }));
+    return Math.round((tzDate - utcDate) / (60 * 1000));
+  } catch (e) {
+    return 0;
+  }
+}
+
+function convertDateAndTimeToZone(dateStr, timeStr, fromTz, toTz) {
+  if (!fromTz || !toTz || fromTz === toTz) {
+    const [h, m] = (timeStr || '09:00').split(':').map(Number);
+    return { date: dateStr, time: timeStr, hour: isNaN(h) ? 9 : h, minute: isNaN(m) ? 0 : m };
+  }
+  try {
+    const [h, m] = (timeStr || '09:00').split(':').map(Number);
+    const [year, month, day] = dateStr.split('-').map(Number);
+    const approxUtc = new Date(Date.UTC(year, month - 1, day, isNaN(h) ? 9 : h, isNaN(m) ? 0 : m, 0));
+    const offsetFrom = getTimezoneOffsetMinutes(fromTz, approxUtc);
+    const exactUtcMs = approxUtc.getTime() - (offsetFrom * 60 * 1000);
+    const targetDateObj = new Date(exactUtcMs);
+
+    const toDateParts = new Intl.DateTimeFormat('en-US', {
+      timeZone: toTz,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    }).formatToParts(targetDateObj);
+
+    const partMap = {};
+    toDateParts.forEach(p => partMap[p.type] = p.value);
+    const targetDateStr = `${partMap.year}-${partMap.month}-${partMap.day}`;
+    let targetHour = parseInt(partMap.hour, 10);
+    if (targetHour === 24) targetHour = 0;
+    const targetTimeStr = `${String(targetHour).padStart(2, '0')}:${partMap.minute}`;
+    return { date: targetDateStr, time: targetTimeStr, hour: targetHour, minute: parseInt(partMap.minute, 10) };
+  } catch (err) {
+    return { date: dateStr, time: timeStr, hour: 9, minute: 0 };
+  }
+}
+
+function computeTutorTime(requestedDate, requestedTime, studentTz, tutorTz, durationMins = 50) {
+  if (!requestedDate || !requestedTime) {
+    return { tutorDate: requestedDate, tutorTime: requestedTime };
+  }
+  const cleanStartTime = requestedTime.split('-')[0].trim();
+  const convStart = convertDateAndTimeToZone(requestedDate, cleanStartTime, studentTz, tutorTz);
+
+  const [startH, startM] = cleanStartTime.split(':').map(Number);
+  const totalStartMins = ((isNaN(startH) ? 9 : startH) * 60) + (isNaN(startM) ? 0 : startM);
+  const totalEndMins = totalStartMins + durationMins;
+  const endH = Math.floor(totalEndMins / 60) % 24;
+  const endM = totalEndMins % 60;
+  const cleanEndTime = `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
+  const convEnd = convertDateAndTimeToZone(requestedDate, cleanEndTime, studentTz, tutorTz);
+
+  return {
+    tutorDate: convStart.date,
+    tutorTime: `${convStart.time} - ${convEnd.time}`
+  };
+}
+
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/uploads', express.static(uploadsDir));
 
@@ -2247,7 +2316,7 @@ app.get('/api/user/preferences', authenticateToken, (req, res) => {
 app.put('/api/user/preferences', authenticateToken, (req, res) => {
   try {
     const userId = req.user.id;
-    const { theme, language, font_size, timezone, notif_lessons, notif_calendar, notif_messages, notif_reports } = req.body;
+    const { theme, language, font_size, timezone, country, notif_lessons, notif_calendar, notif_messages, notif_reports } = req.body;
 
     getUserPreferences(userId); // ensure row exists
 

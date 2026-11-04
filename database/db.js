@@ -36,6 +36,7 @@ function initSchema() {
       role TEXT NOT NULL CHECK(role IN ('student', 'teacher', 'tutor', 'admin')),
       phone TEXT,
       avatar_url TEXT,
+      country TEXT DEFAULT 'United States',
       wallet_balance REAL DEFAULT 0.00,
       wallet_tutor_id INTEGER REFERENCES users(id),
       status TEXT DEFAULT 'active' CHECK(status IN ('active', 'inactive', 'suspended')),
@@ -121,6 +122,10 @@ function initSchema() {
       tutor_response_note TEXT,
       room_status TEXT DEFAULT 'closed',
       room_started_at DATETIME,
+      tutor_date TEXT,
+      tutor_time TEXT,
+      tutor_timezone TEXT,
+      student_timezone TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
@@ -153,6 +158,7 @@ function initSchema() {
       language TEXT DEFAULT 'en-US',
       font_size TEXT DEFAULT 'normal',
       timezone TEXT DEFAULT 'America/New_York',
+      country TEXT DEFAULT 'United States',
       notif_lessons INTEGER DEFAULT 1,
       notif_calendar INTEGER DEFAULT 1,
       notif_messages INTEGER DEFAULT 1,
@@ -406,6 +412,62 @@ function initSchema() {
     }
   } catch (e) {}
   try {
+  try {
+    const userCols = db.prepare("PRAGMA table_info(users)").all();
+    if (userCols.length > 0 && !userCols.some(c => c.name === 'country')) {
+      db.prepare("ALTER TABLE users ADD COLUMN country TEXT DEFAULT 'United States'").run();
+    }
+  } catch (e) {}
+
+  try {
+    const prefCols = db.prepare("PRAGMA table_info(user_preferences)").all();
+    if (prefCols.length > 0 && !prefCols.some(c => c.name === 'country')) {
+      db.prepare("ALTER TABLE user_preferences ADD COLUMN country TEXT DEFAULT 'United States'").run();
+    }
+  } catch (e) {}
+
+  try {
+    const tutorCols = db.prepare("PRAGMA table_info(tutor_profiles)").all();
+    if (tutorCols.length > 0) {
+      if (!tutorCols.some(c => c.name === 'country')) {
+        db.prepare("ALTER TABLE tutor_profiles ADD COLUMN country TEXT DEFAULT 'United States'").run();
+      }
+      if (!tutorCols.some(c => c.name === 'timezone')) {
+        db.prepare("ALTER TABLE tutor_profiles ADD COLUMN timezone TEXT DEFAULT 'America/New_York'").run();
+      }
+    }
+  } catch (e) {}
+
+  try {
+    const appCols = db.prepare("PRAGMA table_info(teacher_applications)").all();
+    if (appCols.length > 0) {
+      if (!appCols.some(c => c.name === 'country')) {
+        db.prepare("ALTER TABLE teacher_applications ADD COLUMN country TEXT DEFAULT 'United States'").run();
+      }
+      if (!appCols.some(c => c.name === 'timezone')) {
+        db.prepare("ALTER TABLE teacher_applications ADD COLUMN timezone TEXT DEFAULT 'America/New_York'").run();
+      }
+    }
+  } catch (e) {}
+
+  try {
+    const reqCols = db.prepare("PRAGMA table_info(tutoring_requests)").all();
+    if (reqCols.length > 0) {
+      if (!reqCols.some(c => c.name === 'tutor_date')) {
+        db.prepare("ALTER TABLE tutoring_requests ADD COLUMN tutor_date TEXT").run();
+      }
+      if (!reqCols.some(c => c.name === 'tutor_time')) {
+        db.prepare("ALTER TABLE tutoring_requests ADD COLUMN tutor_time TEXT").run();
+      }
+      if (!reqCols.some(c => c.name === 'tutor_timezone')) {
+        db.prepare("ALTER TABLE tutoring_requests ADD COLUMN tutor_timezone TEXT").run();
+      }
+      if (!reqCols.some(c => c.name === 'student_timezone')) {
+        db.prepare("ALTER TABLE tutoring_requests ADD COLUMN student_timezone TEXT").run();
+      }
+    }
+  } catch (e) {}
+
     // Backfill subject_rates for any existing tutor_profiles and teacher_applications that don't have it set yet
     const profiles = db.prepare("SELECT id, subjects, hourly_rate, subject_rates FROM tutor_profiles WHERE subject_rates IS NULL OR subject_rates = ''").all();
     for (const p of profiles) {
@@ -1040,7 +1102,7 @@ function ensureAdminAccount(customPassword) {
     if (!existingPrefs) {
       db.prepare(`
         INSERT INTO user_preferences (user_id, theme, language, font_size, timezone, notif_lessons, notif_calendar, notif_messages, notif_reports)
-        VALUES (?, 'light', 'en-US', 'normal', 'America/New_York', 1, 1, 1, 0)
+        VALUES (?, 'light', 'en-US', 'normal', 'America/New_York', 'United States', 1, 1, 1, 0)
       `).run(adminId);
     } else {
       db.prepare(`
@@ -1391,7 +1453,7 @@ function getUserPreferences(userId) {
     let prefs = db.prepare('SELECT * FROM user_preferences WHERE user_id = ?').get(userId);
     if (!prefs) {
       db.prepare(`
-        INSERT OR IGNORE INTO user_preferences (user_id, theme, language, font_size, timezone, notif_lessons, notif_calendar, notif_messages, notif_reports)
+        INSERT OR IGNORE INTO user_preferences (user_id, theme, language, font_size, timezone, country, notif_lessons, notif_calendar, notif_messages, notif_reports)
         VALUES (?, 'light', 'en-US', 'normal', 'America/New_York', 1, 1, 1, 0)
       `).run(userId);
       prefs = db.prepare('SELECT * FROM user_preferences WHERE user_id = ?').get(userId);
@@ -1405,6 +1467,7 @@ function getUserPreferences(userId) {
       language: 'en-US',
       font_size: 'normal',
       timezone: 'America/New_York',
+      country: 'United States',
       notif_lessons: 1,
       notif_calendar: 1,
       notif_messages: 1,
@@ -1684,6 +1747,41 @@ ensureJoshuaAccount();
 ensureBuddySeedData();
 ensureInquirySeedData();
 ensureTutorSeedData();
+ensureTutorLocations();
+
+function ensureTutorLocations() {
+  try {
+    const tutorLocationMap = [
+      { name: 'Dr. Elena Vance', email: 'elena.vance@aviora.edu', country: 'United States', timezone: 'America/Los_Angeles' },
+      { name: 'Prof. Marcus Sterling', email: 'marcus.sterling@aviora.edu', country: 'United States', timezone: 'America/New_York' },
+      { name: 'Sarah Lin, M.Ed.', email: 'sarah.lin@aviora.edu', country: 'United States', timezone: 'America/New_York' },
+      { name: 'Dr. Julian Morales', email: 'julian.morales@aviora.edu', country: 'United States', timezone: 'America/Los_Angeles' },
+      { name: 'Aaliyah Chen', email: 'aaliyah.chen@aviora.edu', country: 'Canada', timezone: 'America/Toronto' },
+      { name: 'David Rousseau', email: 'david.rousseau@aviora.edu', country: 'France', timezone: 'Europe/Paris' },
+      { name: 'Dr. Clara Oswald', email: null, country: 'United Kingdom', timezone: 'Europe/London' },
+      { name: 'Joshua Garcia', email: 'joshuagarcia@gmail.com', country: 'Philippines', timezone: 'Asia/Manila' }
+    ];
+
+    for (const loc of tutorLocationMap) {
+      let u = null;
+      if (loc.email) {
+        u = db.prepare("SELECT id FROM users WHERE email = ?").get(loc.email);
+      }
+      if (!u && loc.name) {
+        u = db.prepare("SELECT id FROM users WHERE name LIKE ?").get(`%${loc.name}%`);
+      }
+      if (u) {
+        db.prepare("UPDATE users SET country = ? WHERE id = ?").run(loc.country, u.id);
+        db.prepare("UPDATE tutor_profiles SET country = ?, timezone = ? WHERE user_id = ?").run(loc.country, loc.timezone, u.id);
+        db.prepare("UPDATE teacher_applications SET country = ?, timezone = ? WHERE user_id = ?").run(loc.country, loc.timezone, u.id);
+        db.prepare("UPDATE user_preferences SET country = ?, timezone = ? WHERE user_id = ?").run(loc.country, loc.timezone, u.id);
+      }
+    }
+  } catch (err) {
+    console.warn('ensureTutorLocations warning:', err);
+  }
+}
+
 
 try {
   db.pragma('wal_checkpoint(TRUNCATE)');

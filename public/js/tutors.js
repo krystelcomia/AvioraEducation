@@ -318,6 +318,11 @@ const Tutors = {
 
     const moreSubjects = (t.subjects || []).length > 3 ? `<span class="subject-tag">+${t.subjects.length - 3} more</span>` : '';
     const rateDisplay = this.getTutorRateDisplay(t);
+    const country = t.country || 'United States';
+    const timezone = t.timezone || (typeof AvioraGeo !== 'undefined' ? AvioraGeo.getDefaultTimezone(country) : 'America/New_York');
+    const flag = typeof AvioraGeo !== 'undefined' ? AvioraGeo.getCountryFlag(country) : '🌐';
+    const localTime = typeof AvioraGeo !== 'undefined' ? AvioraGeo.getCurrentTimeInZone(timezone) : '';
+    const tzAbbr = typeof AvioraGeo !== 'undefined' ? AvioraGeo.getTimezoneAbbr(timezone) : 'EST';
 
     return `
       <div class="tutor-card" data-tutor-id="${t.id}">
@@ -409,6 +414,11 @@ const Tutors = {
       const data = await API.getTutorById(tutorId);
       const tutor = data.tutor;
       this.selectedTutor = tutor;
+      const country = tutor.country || 'United States';
+      const timezone = tutor.timezone || (typeof AvioraGeo !== 'undefined' ? AvioraGeo.getDefaultTimezone(country) : 'America/New_York');
+      const flag = typeof AvioraGeo !== 'undefined' ? AvioraGeo.getCountryFlag(country) : '🌐';
+      const localTime = typeof AvioraGeo !== 'undefined' ? AvioraGeo.getCurrentTimeInZone(timezone) : '';
+      const tzAbbr = typeof AvioraGeo !== 'undefined' ? AvioraGeo.getTimezoneAbbr(timezone) : 'EST';
 
       const subjectsTags = (tutor.subjects || []).map(s => {
         const sRate = this.getTutorSubjectRate(tutor, s);

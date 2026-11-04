@@ -2624,9 +2624,42 @@
 
               <!-- 2. Language Selection & Timezone -->
               <div style="border-top: 1px solid rgba(0,0,0,0.06); padding-top: 1.25rem;">
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem;">
                   <div class="form-group" style="margin-bottom: 0;">
-                    <label class="form-label" style="font-weight: 700; font-size: 0.82rem;">Language</label>
+                    <label class="form-label" style="font-weight: 700; font-size: 0.82rem;" data-i18n="settings.country">Country / Region</label>
+                    <select id="profile-country-select" class="form-control">
+                      <option value="United States">🇺🇸 United States</option>
+                      <option value="United Kingdom">🇬🇧 United Kingdom</option>
+                      <option value="Canada">🇨🇦 Canada</option>
+                      <option value="Australia">🇦🇺 Australia</option>
+                      <option value="Philippines">🇵🇭 Philippines</option>
+                      <option value="Singapore">🇸🇬 Singapore</option>
+                      <option value="Japan">🇯🇵 Japan</option>
+                      <option value="South Korea">🇰🇷 South Korea</option>
+                      <option value="China">🇨🇳 China</option>
+                      <option value="India">🇮🇳 India</option>
+                      <option value="France">🇫🇷 France</option>
+                      <option value="Germany">🇩🇪 Germany</option>
+                      <option value="Spain">🇪🇸 Spain</option>
+                      <option value="Italy">🇮🇹 Italy</option>
+                      <option value="Brazil">🇧🇷 Brazil</option>
+                      <option value="Mexico">🇲🇽 Mexico</option>
+                      <option value="United Arab Emirates">🇦🇪 United Arab Emirates</option>
+                      <option value="Saudi Arabia">🇸🇦 Saudi Arabia</option>
+                      <option value="Indonesia">🇮🇩 Indonesia</option>
+                      <option value="Vietnam">🇻🇳 Vietnam</option>
+                      <option value="Turkey">🇹🇷 Turkey</option>
+                      <option value="Netherlands">🇳🇱 Netherlands</option>
+                      <option value="Poland">🇵🇱 Poland</option>
+                      <option value="Sweden">🇸🇪 Sweden</option>
+                      <option value="Thailand">🇹🇭 Thailand</option>
+                      <option value="Switzerland">🇨🇭 Switzerland</option>
+                      <option value="South Africa">🇿🇦 South Africa</option>
+                      <option value="New Zealand">🇳🇿 New Zealand</option>
+                    </select>
+                  </div>
+                  <div class="form-group" style="margin-bottom: 0;">
+                    <label class="form-label" style="font-weight: 700; font-size: 0.82rem;" data-i18n="settings.language">Language</label>
                     <select id="profile-language-select" class="form-control">
                       <option value="en-US">English (US)</option>
                       <option value="es-ES">Español (Spanish)</option>
@@ -3990,9 +4023,42 @@
 
               <!-- 2. Language Selection & Timezone -->
               <div style="border-top: 1px solid rgba(0,0,0,0.06); padding-top: 1.25rem;">
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem;">
                   <div class="form-group" style="margin-bottom: 0;">
-                    <label class="form-label" style="font-weight: 700; font-size: 0.82rem;">Language</label>
+                    <label class="form-label" style="font-weight: 700; font-size: 0.82rem;" data-i18n="settings.country">Country / Region</label>
+                    <select id="teacher-country-select" class="form-control">
+                      <option value="United States">🇺🇸 United States</option>
+                      <option value="United Kingdom">🇬🇧 United Kingdom</option>
+                      <option value="Canada">🇨🇦 Canada</option>
+                      <option value="Australia">🇦🇺 Australia</option>
+                      <option value="Philippines">🇵🇭 Philippines</option>
+                      <option value="Singapore">🇸🇬 Singapore</option>
+                      <option value="Japan">🇯🇵 Japan</option>
+                      <option value="South Korea">🇰🇷 South Korea</option>
+                      <option value="China">🇨🇳 China</option>
+                      <option value="India">🇮🇳 India</option>
+                      <option value="France">🇫🇷 France</option>
+                      <option value="Germany">🇩🇪 Germany</option>
+                      <option value="Spain">🇪🇸 Spain</option>
+                      <option value="Italy">🇮🇹 Italy</option>
+                      <option value="Brazil">🇧🇷 Brazil</option>
+                      <option value="Mexico">🇲🇽 Mexico</option>
+                      <option value="United Arab Emirates">🇦🇪 United Arab Emirates</option>
+                      <option value="Saudi Arabia">🇸🇦 Saudi Arabia</option>
+                      <option value="Indonesia">🇮🇩 Indonesia</option>
+                      <option value="Vietnam">🇻🇳 Vietnam</option>
+                      <option value="Turkey">🇹🇷 Turkey</option>
+                      <option value="Netherlands">🇳🇱 Netherlands</option>
+                      <option value="Poland">🇵🇱 Poland</option>
+                      <option value="Sweden">🇸🇪 Sweden</option>
+                      <option value="Thailand">🇹🇭 Thailand</option>
+                      <option value="Switzerland">🇨🇭 Switzerland</option>
+                      <option value="South Africa">🇿🇦 South Africa</option>
+                      <option value="New Zealand">🇳🇿 New Zealand</option>
+                    </select>
+                  </div>
+                  <div class="form-group" style="margin-bottom: 0;">
+                    <label class="form-label" style="font-weight: 700; font-size: 0.82rem;" data-i18n="settings.language">Language</label>
                     <select id="teacher-language-select" class="form-control">
                       <option value="en-US">English (US)</option>
                       <option value="es-ES">Español (Spanish)</option>
@@ -4270,9 +4336,42 @@
 
               <!-- 2. Language Selection & Timezone -->
               <div style="border-top: 1px solid rgba(0,0,0,0.06); padding-top: 1.25rem;">
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem;">
                   <div class="form-group" style="margin-bottom: 0;">
-                    <label class="form-label" style="font-weight: 700; font-size: 0.82rem;">Language</label>
+                    <label class="form-label" style="font-weight: 700; font-size: 0.82rem;" data-i18n="settings.country">Country / Region</label>
+                    <select id="admin-country-select" class="form-control">
+                      <option value="United States">🇺🇸 United States</option>
+                      <option value="United Kingdom">🇬🇧 United Kingdom</option>
+                      <option value="Canada">🇨🇦 Canada</option>
+                      <option value="Australia">🇦🇺 Australia</option>
+                      <option value="Philippines">🇵🇭 Philippines</option>
+                      <option value="Singapore">🇸🇬 Singapore</option>
+                      <option value="Japan">🇯🇵 Japan</option>
+                      <option value="South Korea">🇰🇷 South Korea</option>
+                      <option value="China">🇨🇳 China</option>
+                      <option value="India">🇮🇳 India</option>
+                      <option value="France">🇫🇷 France</option>
+                      <option value="Germany">🇩🇪 Germany</option>
+                      <option value="Spain">🇪🇸 Spain</option>
+                      <option value="Italy">🇮🇹 Italy</option>
+                      <option value="Brazil">🇧🇷 Brazil</option>
+                      <option value="Mexico">🇲🇽 Mexico</option>
+                      <option value="United Arab Emirates">🇦🇪 United Arab Emirates</option>
+                      <option value="Saudi Arabia">🇸🇦 Saudi Arabia</option>
+                      <option value="Indonesia">🇮🇩 Indonesia</option>
+                      <option value="Vietnam">🇻🇳 Vietnam</option>
+                      <option value="Turkey">🇹🇷 Turkey</option>
+                      <option value="Netherlands">🇳🇱 Netherlands</option>
+                      <option value="Poland">🇵🇱 Poland</option>
+                      <option value="Sweden">🇸🇪 Sweden</option>
+                      <option value="Thailand">🇹🇭 Thailand</option>
+                      <option value="Switzerland">🇨🇭 Switzerland</option>
+                      <option value="South Africa">🇿🇦 South Africa</option>
+                      <option value="New Zealand">🇳🇿 New Zealand</option>
+                    </select>
+                  </div>
+                  <div class="form-group" style="margin-bottom: 0;">
+                    <label class="form-label" style="font-weight: 700; font-size: 0.82rem;" data-i18n="settings.language">Language</label>
                     <select id="admin-language-select" class="form-control">
                       <option value="en-US">English (US) - Default</option>
                       <option value="es-ES">Español (Spanish)</option>
@@ -4444,6 +4543,39 @@
                 </div>
               </div>
 
+              <div class="form-group">
+                <label class="form-label">Country / Location</label>
+                <select name="country" id="app-country" class="form-control">
+                      <option value="United States">🇺🇸 United States</option>
+                      <option value="United Kingdom">🇬🇧 United Kingdom</option>
+                      <option value="Canada">🇨🇦 Canada</option>
+                      <option value="Australia">🇦🇺 Australia</option>
+                      <option value="Philippines">🇵🇭 Philippines</option>
+                      <option value="Singapore">🇸🇬 Singapore</option>
+                      <option value="Japan">🇯🇵 Japan</option>
+                      <option value="South Korea">🇰🇷 South Korea</option>
+                      <option value="China">🇨🇳 China</option>
+                      <option value="India">🇮🇳 India</option>
+                      <option value="France">🇫🇷 France</option>
+                      <option value="Germany">🇩🇪 Germany</option>
+                      <option value="Spain">🇪🇸 Spain</option>
+                      <option value="Italy">🇮🇹 Italy</option>
+                      <option value="Brazil">🇧🇷 Brazil</option>
+                      <option value="Mexico">🇲🇽 Mexico</option>
+                      <option value="United Arab Emirates">🇦🇪 United Arab Emirates</option>
+                      <option value="Saudi Arabia">🇸🇦 Saudi Arabia</option>
+                      <option value="Indonesia">🇮🇩 Indonesia</option>
+                      <option value="Vietnam">🇻🇳 Vietnam</option>
+                      <option value="Turkey">🇹🇷 Turkey</option>
+                      <option value="Netherlands">🇳🇱 Netherlands</option>
+                      <option value="Poland">🇵🇱 Poland</option>
+                      <option value="Sweden">🇸🇪 Sweden</option>
+                      <option value="Thailand">🇹🇭 Thailand</option>
+                      <option value="Switzerland">🇨🇭 Switzerland</option>
+                      <option value="South Africa">🇿🇦 South Africa</option>
+                      <option value="New Zealand">🇳🇿 New Zealand</option>
+                </select>
+              </div>
               <div class="form-group">
                 <label class="form-label">Professional Headline</label>
                 <input type="text" name="headline" id="app-headline" class="form-control" placeholder="e.g. Ph.D. in Applied Mathematics | Stanford University" required />
@@ -6778,6 +6910,7 @@
   <!-- JavaScript Modules -->
   <script src="/js/icons.js"></script>
   <script src="/js/api.js"></script>
+  <script src="/js/timezone-helper.js"></script>
   <script src="/js/i18n.js"></script>
   <script src="/js/auth.js"></script>
   <script src="/js/notifications.js"></script>

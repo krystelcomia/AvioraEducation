@@ -2392,6 +2392,16 @@ const Teacher = {
           </p>
         </div>
       </div>
+      <div style="margin-top: 0.75rem; margin-bottom: 1.25rem; padding: 0.75rem 1rem; background: rgba(198, 138, 40, 0.08); border: 1px solid rgba(198, 138, 40, 0.25); border-radius: 8px; font-size: 0.83rem; color: var(--gold-800); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.6rem;">
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <span style="font-size: 1.2rem;">${typeof AvioraGeo !== 'undefined' ? AvioraGeo.getCountryFlag(this.tutorProfile?.country || localStorage.getItem('aviora_country') || 'United States') : '🌐'}</span>
+          <span><strong>Your Operating Country & Timezone:</strong> ${this.tutorProfile?.country || localStorage.getItem('aviora_country') || 'United States'} (${this.tutorProfile?.timezone || localStorage.getItem('aviora_timezone') || 'America/New_York'} • ${typeof AvioraGeo !== 'undefined' ? AvioraGeo.getTimezoneAbbr(this.tutorProfile?.timezone || localStorage.getItem('aviora_timezone')) : 'EST'})</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 0.4rem; font-weight: 600;">
+          <span id="teacher-live-clock" data-tz="${this.tutorProfile?.timezone || localStorage.getItem('aviora_timezone') || 'America/New_York'}">🕒 ${typeof AvioraGeo !== 'undefined' ? AvioraGeo.getCurrentTimeInZone(this.tutorProfile?.timezone || localStorage.getItem('aviora_timezone')) : ''} local</span>
+          <span style="font-weight: 400; opacity: 0.8; font-size: 0.76rem;">• Availability is set in your local time; students see automatically converted slots</span>
+        </div>
+      </div>
       <div class="default-avail-days-grid">
         ${daysHtml}
       </div>

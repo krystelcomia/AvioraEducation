@@ -58,6 +58,9 @@ const Profile = {
 
     const savedTz = localStorage.getItem(`aviora_timezone${key}`) || 'America/New_York';
     this.applyTimezone(savedTz, false, false);
+
+    const savedCountry = localStorage.getItem(`aviora_country${key}`) || u.country || 'United States';
+    this.applyCountry(savedCountry, false, false);
   },
 
   setSaveStatus(status, text) {
@@ -316,6 +319,9 @@ const Profile = {
     if (prefs.language) {
       this.applyLanguage(prefs.language, notify, false);
     }
+    if (prefs.country) {
+      this.applyCountry(prefs.country, notify, false);
+    }
     if (prefs.timezone) {
       this.applyTimezone(prefs.timezone, notify, false);
     }
@@ -353,6 +359,10 @@ const Profile = {
 
     const langSelect = document.getElementById('profile-language-select');
     if (langSelect) langSelect.value = 'en-US';
+    ['profile-country-select', 'teacher-country-select', 'admin-country-select'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = 'United States';
+    });
   },
 
   setupEventListeners() {

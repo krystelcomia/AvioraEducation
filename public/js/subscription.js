@@ -1195,20 +1195,51 @@ const StudentSub = {
     const modeLabel = dateMode === 'all_day' ? ' • Available All Day' : (blocks.length > 0 ? ` • ${blocks.join(', ')}` : '');
     if (label) label.textContent = `${dateFormatted}${modeLabel}`;
 
-    const slots = [];
-    blocks.forEach(b => {
-      const parts = String(b).split('-').map(s => s.trim());
-      if (parts.length === 2) {
-        const startH = parseInt(parts[0].split(':')[0], 10);
-        const endH = parseInt(parts[1].split(':')[0], 10);
+    const studentCountry = (typeof Profile !== 'undefined' && Profile.userPreferences?.country) || localStorage.getItem('aviora_country') || 'United States';
+    const studentTz = (typeof Profile !== 'undefined' && Profile.userPreferences?.timezone) || localStorage.getItem('aviora_timezone') || 'America/New_York';
+    const tutorCountry = this.selectedTutor?.country || 'United States';
+    const tutorTz = this.selectedTutor?.timezone || (typeof AvioraGeo !== 'undefined' ? AvioraGeo.getDefaultTimezone(tutorCountry) : 'America/New_York');
+    const isCrossTz = studentTz !== tutorTz;
 
-        for (let h = startH; h < endH; h++) {
-          const slotStart = `${String(h).padStart(2, '0')}:00`;
-          const slotEnd = `${String(h).padStart(2, '0')}:${durationMins}`;
-          slots.push({ start: slotStart, end: slotEnd, key: `${slotStart} - ${slotEnd}`, hour: h, minute: '00' });
+    let slots = [];
+    if (typeof AvioraGeo !== 'undefined') {
+      const converted = AvioraGeo.getConvertedSlotsForStudent(dateStr, this.selectedTutor, studentTz, durationMins);
+      slots = converted.map(c => ({
+        start: c.studentStart,
+        end: c.studentEnd,
+        key: c.studentKey,
+        hour: c.studentHour,
+        tutorDate: c.tutorDate,
+        tutorDayName: c.tutorDayName,
+        tutorTime: c.tutorTime,
+        tutorStart: c.tutorStart,
+        tutorEnd: c.tutorEnd,
+        tutorHour: c.tutorHour,
+        rawUtc: c.rawUtc
+      }));
+    } else {
+      blocks.forEach(b => {
+        const parts = String(b).split('-').map(s => s.trim());
+        if (parts.length === 2) {
+          const startH = parseInt(parts[0].split(':')[0], 10);
+          const endH = parseInt(parts[1].split(':')[0], 10);
+          for (let h = startH; h < endH; h++) {
+            const slotStart = `${String(h).padStart(2, '0')}:00`;
+            const slotEnd = `${String(h).padStart(2, '0')}:${durationMins}`;
+            slots.push({
+              start: slotStart,
+              end: slotEnd,
+              key: `${slotStart} - ${slotEnd}`,
+              hour: h,
+              tutorDate: dateStr,
+              tutorDayName: dayName,
+              tutorTime: `${slotStart} - ${slotEnd}`,
+              tutorHour: h
+            });
+          }
         }
-      }
-    });
+      });
+    }
 
     if (!slotsContainer) return;
 
@@ -1218,13 +1249,26 @@ const StudentSub = {
     }
 
     slotsContainer.innerHTML = '';
+
+    if (isCrossTz && typeof AvioraGeo !== 'undefined') {
+      const sFlag = AvioraGeo.getCountryFlag(studentCountry);
+      const sAbbr = AvioraGeo.getTimezoneAbbr(studentTz);
+      const tFlag = AvioraGeo.getCountryFlag(tutorCountry);
+      const tAbbr = AvioraGeo.getTimezoneAbbr(tutorTz);
+      const tzNotice = document.createElement('div');
+      tzNotice.className = 'tz-conversion-alert';
+      tzNotice.style.cssText = 'grid-column: 1 / -1; margin-bottom: 0.65rem; padding: 0.5rem 0.8rem; background: rgba(198, 138, 40, 0.08); border: 1px solid rgba(198, 138, 40, 0.25); border-radius: 6px; font-size: 0.8rem; color: var(--gold-800); display: flex; align-items: center; gap: 0.45rem;';
+      tzNotice.innerHTML = `<span>🌐</span><span><strong>Automatic Timezone Conversion:</strong> Showing available slots in your local time (${sFlag} ${sAbbr}) converted from educator's local schedule (${tFlag} ${tAbbr}).</span>`;
+      slotsContainer.appendChild(tzNotice);
+    }
+
     const now = Date.now();
 
     slots.forEach(slot => {
-      const slotDateTime = new Date(`${dateStr}T${slot.start}:00`).getTime();
+      const slotDateTime = slot.rawUtc || new Date(`${dateStr}T${slot.start}:00`).getTime();
       const isUnder3Hours = (slotDateTime - now) < (3 * 60 * 60 * 1000);
       const occState = typeof Tutors !== 'undefined'
-        ? Tutors.getTutorSlotOccupancyState(this.selectedTutor, dateStr, dayName, slot.hour)
+        ? Tutors.getTutorSlotOccupancyState(this.selectedTutor, slot.tutorDate || dateStr, slot.tutorDayName || dayName, slot.tutorHour ?? slot.hour)
         : { occupied: false };
 
       // Student occupied slot check

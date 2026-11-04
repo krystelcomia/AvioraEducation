@@ -794,6 +794,12 @@ const Profile = {
 
     // Synchronize All Saved Preferences from DB to UI controls
     this.syncAllPreferences(prefs, false);
+
+    // Refresh Daily Lucky Spin Wheel
+    if (typeof SpinWheel !== 'undefined' && SpinWheel.refresh) {
+      SpinWheel.refresh();
+      if (SpinWheel.drawWheel) SpinWheel.drawWheel();
+    }
   },
 
   async handleProfileSubmit(e) {

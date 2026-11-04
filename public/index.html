@@ -2568,6 +2568,86 @@
                 <input type="text" id="profile-subjects" class="form-control" placeholder="e.g. Calculus BC, Physics Mechanics, Python, Organic Chemistry" />
               </div>
 
+              <!-- Daily Lucky Spin Game Section -->
+              <div id="profile-daily-spin-card" class="profile-spin-card">
+                <div class="spin-card-header">
+                  <div>
+                    <div class="spin-badge-tag">
+                      <span>✨</span>
+                      <span>DAILY REWARDS</span>
+                    </div>
+                    <h4 class="spin-card-title">Aviora Daily Lucky Wheel</h4>
+                    <p class="spin-card-subtitle">Spin once daily for bonus spins or learning rewards!</p>
+                  </div>
+                  <div id="daily-spin-status-badge" class="spin-status-pill available">
+                    <span class="spin-status-dot"></span>
+                    <span id="daily-spin-status-text">1 Spin Available</span>
+                  </div>
+                </div>
+
+                <!-- Interactive Wheel Arena -->
+                <div class="wheel-arena">
+                  <!-- Pointer needle at 12 o'clock -->
+                  <div class="wheel-pointer-pin" id="wheel-pointer-pin">
+                    <svg width="32" height="38" viewBox="0 0 32 38" fill="none">
+                      <path d="M16 38L3 10C1.5 6.5 4 2 8 2H24C28 2 30.5 6.5 29 10L16 38Z" fill="url(#wheelPointerGrad)" stroke="#FFFFFF" stroke-width="2" filter="drop-shadow(0 3px 6px rgba(0,0,0,0.35))"/>
+                      <circle cx="16" cy="11" r="4.5" fill="#FFFFFF"/>
+                      <defs>
+                        <linearGradient id="wheelPointerGrad" x1="3" y1="2" x2="29" y2="38" gradientUnits="userSpaceOnUse">
+                          <stop stop-color="#F59E0B"/>
+                          <stop offset="0.5" stop-color="#D97706"/>
+                          <stop offset="1" stop-color="#92400E"/>
+                        </linearGradient>
+                      </defs>
+                    </svg>
+                  </div>
+
+                  <!-- Rotating Wheel Container -->
+                  <div class="wheel-rotator" id="wheel-rotator">
+                    <canvas id="wheel-canvas" width="560" height="560"></canvas>
+                  </div>
+
+                  <!-- Central Hub Button -->
+                  <button type="button" id="wheel-hub-btn" class="wheel-center-hub" aria-label="Spin the wheel">
+                    <div class="wheel-center-hub-inner">
+                      <span class="hub-label">SPIN</span>
+                    </div>
+                  </button>
+                </div>
+
+                <!-- Action Controls & Result Announcements -->
+                <div class="spin-footer-controls">
+                  <button type="button" id="btn-spin-now" class="btn btn-primary btn-spin-trigger">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+                    <span id="btn-spin-now-label">Spin Wheel Now</span>
+                  </button>
+
+                  <!-- Live Outcome Alert Banner -->
+                  <div id="spin-result-banner" class="spin-result-banner" style="display: none;">
+                    <span id="spin-result-emoji" class="spin-result-emoji">🍀</span>
+                    <div class="spin-result-body">
+                      <div id="spin-result-headline" class="spin-result-headline">Try Again</div>
+                      <div id="spin-result-subline" class="spin-result-subline">Better luck next time! Check back tomorrow for another daily spin.</div>
+                    </div>
+                  </div>
+
+                  <!-- Segments Mini Legend -->
+                  <div class="wheel-legend-row">
+                    <span class="wheel-legend-item"><span class="legend-swatch" style="background:#F59E0B;"></span>Try Again (4 slots)</span>
+                    <span class="wheel-legend-item"><span class="legend-swatch" style="background:#06B6D4;"></span>+Spin (1 slot)</span>
+                    <span class="wheel-legend-item"><span class="legend-swatch" style="background:#10B981;"></span>Free Trial (1 slot)</span>
+                    <span class="wheel-legend-item"><span class="legend-swatch" style="background:#EC4899;"></span>4-Lesson Sub (1 slot)</span>
+                  </div>
+
+                  <!-- Countdown & Frequency Note -->
+                  <div class="spin-frequency-note">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: -2px; margin-right: 5px;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                    <span id="daily-spin-timer-text">Limited to 1 spin per day • Resets daily at midnight</span>
+                  </div>
+                </div>
+              </div>
+
+
               <button type="submit" id="btn-save-profile" class="btn btn-primary btn-lg" style="margin-top: auto; width: 100%; justify-content: center; font-weight: 700;">
                 Save Profile Changes
               </button>
@@ -7013,6 +7093,7 @@
   <script src="/js/book-lesson.js"></script>
   <script src="/js/subscription.js"></script>
   <script src="/js/profile.js"></script>
+  <script src="/js/spin-wheel.js"></script>
   <script src="/js/teacher.js"></script>
   <script src="/js/admin.js"></script>
   <script src="/js/buddy.js"></script>

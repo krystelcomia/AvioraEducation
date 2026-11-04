@@ -2228,12 +2228,12 @@ app.put('/api/auth/profile', authenticateToken, (req, res) => {
     }
 
     if (req.user.role === 'student' && studentData) {
+      // Grade level remains exactly as entered during registration and cannot be modified in the profile
       db.prepare(`
         UPDATE student_profiles
-        SET grade_level = ?, school = ?, learning_goals = ?, target_subjects = ?, updated_at = CURRENT_TIMESTAMP
+        SET school = ?, learning_goals = ?, target_subjects = ?, updated_at = CURRENT_TIMESTAMP
         WHERE user_id = ?
       `).run(
-        studentData.grade_level || null,
         studentData.school || null,
         studentData.learning_goals || null,
         studentData.target_subjects || null,

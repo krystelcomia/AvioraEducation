@@ -535,7 +535,6 @@ const Profile = {
     const autoSaveFieldIds = [
       'profile-name',
       'profile-phone',
-      'profile-grade',
       'profile-school',
       'profile-goals',
       'profile-subjects'
@@ -858,7 +857,8 @@ const Profile = {
   async performAutoSaveProfile() {
     const name = document.getElementById('profile-name')?.value.trim();
     const phone = document.getElementById('profile-phone')?.value.trim();
-    const grade_level = document.getElementById('profile-grade')?.value;
+    // Grade level remains exactly as entered during registration and cannot be modified in the profile
+    const grade_level = this.studentProfile?.grade_level || document.getElementById('profile-grade')?.value || 'Grade 11 - High School';
     const school = document.getElementById('profile-school')?.value.trim();
     const learning_goals = document.getElementById('profile-goals')?.value.trim();
     const target_subjects = document.getElementById('profile-subjects')?.value.trim();

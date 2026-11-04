@@ -2944,3 +2944,57 @@
     transform: translateY(0);
   }
 }
+
+
+/* Preferred Timezone Live Clock Box in Profile Settings */
+.profile-tz-clock-box {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-weight: 700;
+  color: var(--charcoal-900);
+  background: #FAF7F2;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: var(--radius-sm);
+  padding: 0.65rem 1rem;
+  font-size: 0.85rem;
+  min-height: 42px;
+  box-sizing: border-box;
+  cursor: default;
+  user-select: none;
+  transition: all var(--transition-fast);
+}
+
+.profile-tz-clock-box .profile-tz-time-val {
+  font-weight: 700;
+  color: var(--charcoal-900);
+  font-size: 0.85rem;
+  letter-spacing: 0.02em;
+}
+
+.profile-tz-clock-box .profile-tz-abbr-val {
+  font-weight: 800;
+  font-size: 0.72rem;
+  padding: 0.15rem 0.5rem;
+}
+
+[data-theme="dark"] .profile-tz-clock-box {
+  background-color: #000000 !important;
+  color: #FFFFFF !important;
+  border: 1.5px solid rgba(216, 170, 60, 0.45) !important;
+  box-shadow: 0 0 0 1px rgba(216, 170, 60, 0.15) !important;
+}
+
+[data-theme="dark"] .profile-tz-clock-box .profile-tz-time-val {
+  color: #FFFFFF !important;
+}
+
+[data-theme="dark"] .profile-tz-clock-box svg {
+  color: var(--gold-400) !important;
+}
+
+[data-theme="dark"] .profile-tz-clock-box .badge-gold {
+  background: rgba(198, 138, 40, 0.22) !important;
+  color: var(--gold-300) !important;
+  border: 1px solid rgba(198, 138, 40, 0.45) !important;
+}

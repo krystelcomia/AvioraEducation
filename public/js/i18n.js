@@ -38,6 +38,7 @@ const I18N_TRANSLATIONS = {
     "settings.country": "Country / Region",
     "settings.language": "Language",
     "settings.timezone": "Preferred Timezone",
+    "settings.timezone_time": "Time in Selected Timezone",
     "settings.notifications": "Notification Preferences",
     "settings.notif_lessons": "3-Hour Lesson Reminders",
     "settings.notif_lessons_desc": "Receive reminder alert 3 hours prior to scheduled 50-minute class",

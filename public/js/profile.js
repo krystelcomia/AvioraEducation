@@ -266,6 +266,32 @@ const Profile = {
     }
   },
 
+  
+  updateTimezoneClockDisplays(tz) {
+    const activeTz = tz || (typeof localStorage !== 'undefined' ? (localStorage.getItem('aviora_timezone' + (this.getUserKey ? this.getUserKey() : '')) || localStorage.getItem('aviora_timezone')) : null) || 'America/New_York';
+    let timeStr = '--:-- --';
+    let abbr = 'EST';
+    const geo = (typeof AvioraGeo !== 'undefined' ? AvioraGeo : (typeof window !== 'undefined' ? window.AvioraGeo : null));
+    if (geo) {
+      timeStr = geo.getCurrentTimeInZone(activeTz);
+      abbr = geo.getTimezoneAbbr(activeTz);
+    } else {
+      try {
+        timeStr = new Intl.DateTimeFormat('en-US', { timeZone: activeTz, hour: 'numeric', minute: '2-digit', hour12: true }).format(new Date());
+        abbr = activeTz.split('/').pop().replace('_', ' ');
+      } catch (e) {}
+    }
+
+    ['profile', 'teacher', 'admin'].forEach(prefix => {
+      const textEl = document.getElementById(`${prefix}-timezone-time-text`);
+      const abbrEl = document.getElementById(`${prefix}-timezone-time-abbr`);
+      const boxEl = document.getElementById(`${prefix}-timezone-clock-display`);
+      if (textEl) textEl.textContent = timeStr;
+      if (abbrEl) abbrEl.textContent = abbr;
+      if (boxEl) boxEl.setAttribute('data-tz', activeTz);
+    });
+  },
+
   applyTimezone(tz, notify = true, persistToServer = true) {
     const activeTz = tz || 'America/New_York';
     const tzSelect = document.getElementById('profile-timezone-select');
@@ -274,6 +300,8 @@ const Profile = {
     if (tTzSelect) tTzSelect.value = activeTz;
     const aTzSelect = document.getElementById('admin-timezone-select');
     if (aTzSelect) aTzSelect.value = activeTz;
+
+    this.updateTimezoneClockDisplays(activeTz);
 
     const key = this.getUserKey();
     if (key) localStorage.setItem(`aviora_timezone${key}`, activeTz);
@@ -459,16 +487,22 @@ const Profile = {
       });
     }
 
-    // Timezone selector
-    const tzSelect = document.getElementById('profile-timezone-select');
-    if (tzSelect) {
-      tzSelect.addEventListener('change', (e) => {
-        this.applyTimezone(e.target.value);
-        if (typeof Student !== 'undefined' && Student.loadDashboard) {
-          Student.loadDashboard();
-        }
-      });
-    }
+    
+    // Instant live clock updates on timezone select change/input
+    ['profile-timezone-select', 'teacher-timezone-select', 'admin-timezone-select'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        ['change', 'input'].forEach(evt => {
+          el.addEventListener(evt, (e) => {
+            this.updateTimezoneClockDisplays(e.target.value);
+            if (evt === 'change') {
+              this.applyTimezone(e.target.value);
+            }
+          });
+        });
+      }
+    });
+    this.updateTimezoneClockDisplays();
 
     // Notification toggles
     const notifMap = {

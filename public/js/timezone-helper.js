@@ -374,6 +374,18 @@
         const abbr = this.getTimezoneAbbr(tTz);
         teacherDashClock.textContent = `${time} (${abbr})`;
       }
+
+      // 6. Profile preferred timezone clock displays (student, teacher, admin)
+      ['profile', 'teacher', 'admin'].forEach(prefix => {
+        const box = document.getElementById(`${prefix}-timezone-clock-display`);
+        const textEl = document.getElementById(`${prefix}-timezone-time-text`);
+        const abbrEl = document.getElementById(`${prefix}-timezone-time-abbr`);
+        if (box && textEl) {
+          const tz = box.getAttribute('data-tz') || localStorage.getItem('aviora_timezone') || 'America/New_York';
+          textEl.textContent = this.getCurrentTimeInZone(tz);
+          if (abbrEl) abbrEl.textContent = this.getTimezoneAbbr(tz);
+        }
+      });
     },
 
     startLiveClocks(intervalMs = 30000) {

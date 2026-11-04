@@ -355,7 +355,7 @@ const Student = {
       }
 
       container.innerHTML = `
-        <div class="spotlight-mission-control" style="border-style: dashed; background: #FFFFFF;">
+        <div class="spotlight-mission-control" style="border-style: dashed;">
           <div class="spotlight-session-grid">
             <div style="color: var(--gold-600); width: 64px; height: 64px; display: flex; align-items: center; justify-content: center; background: rgba(198, 138, 40, 0.1); border-radius: 16px;">
               ${Icons.graduationCap(38)}
@@ -441,9 +441,9 @@ const Student = {
             </div>
 
             ${nextSession.notes ? `
-              <div class="mission-topic-cardlet">
+              <div class="mission-topic-cardlet" style="color: #14171E;">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--gold-600); flex-shrink: 0; margin-top: 2px;"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
-                <div><strong>Topic Focus:</strong> ${escapeHtmlStr(nextSession.notes)}</div>
+                <div style="color: #14171E;"><strong style="color: #14171E;">Topic Focus:</strong> ${escapeHtmlStr(nextSession.notes)}</div>
               </div>
             ` : ''}
 
@@ -454,7 +454,7 @@ const Student = {
             ` : ''}
 
             ${nextSession.room_status !== 'open' ? `
-              <div style="margin-top: 0.45rem; padding: 0.45rem 0.7rem; background: #F9FAFB; border: 1px solid rgba(0, 0, 0, 0.08); border-radius: 8px; font-size: 0.8rem; color: var(--charcoal-700); font-weight: 600; display: inline-flex; align-items: center; gap: 0.35rem;">
+              <div class="mission-room-status-pill closed mission-room-closed-badge" style="margin-top: 0.45rem; padding: 0.45rem 0.7rem; background: #F9FAFB; border: 1px solid rgba(0, 0, 0, 0.08); border-radius: 8px; font-size: 0.8rem; color: #1F2937; font-weight: 600; display: inline-flex; align-items: center; gap: 0.35rem;">
                 ${Icons.clock(13)} Classroom is closed until your educator opens the virtual room (${nextSession.requested_date} at ${nextSession.requested_time}).
               </div>
             ` : `

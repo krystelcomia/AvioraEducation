@@ -1081,10 +1081,15 @@
   padding: 0.65rem 0.95rem;
   margin-top: 0.65rem;
   font-size: 0.84rem;
-  color: var(--charcoal-800);
+  color: #14171E;
   display: flex;
   align-items: flex-start;
   gap: 0.5rem;
+}
+
+.mission-topic-cardlet strong,
+.mission-topic-cardlet div {
+  color: #14171E;
 }
 
 .mission-note-quote {
@@ -2173,6 +2178,26 @@
   border-left-color: rgba(255, 255, 255, 0.15);
   color: var(--charcoal-300);
 }
+
+/* Next Scheduled Lesson & Live Mission Control readability in dark mode */
+[data-theme="dark"] .mission-topic-cardlet,
+[data-theme="dark"] .mission-topic-cardlet * {
+  color: #14171E !important;
+}
+
+[data-theme="dark"] .mission-topic-cardlet svg {
+  color: var(--gold-600) !important;
+}
+
+[data-theme="dark"] .mission-room-status-pill.closed,
+[data-theme="dark"] .mission-room-closed-badge {
+  color: #1F2937 !important;
+}
+
+[data-theme="dark"] .mission-countdown-badge {
+  color: #7A4F05 !important;
+}
+
 
 [data-theme="dark"] .stat-widget-info h3 {
   color: #FFFFFF !important;

@@ -1656,6 +1656,12 @@ const Auth = {
     if (typeof Router !== 'undefined' && Router.updateActiveNav) {
       Router.updateActiveNav();
     }
+
+    if (typeof SpinWheel !== 'undefined') {
+      SpinWheel.refresh();
+      SpinWheel.drawWheel();
+      SpinWheel.attachEventListeners();
+    }
   },
 
   loadNotifications() {

@@ -486,6 +486,12 @@ const Router = {
     if (typeof I18n !== 'undefined' && I18n.applyLanguage) {
       I18n.applyLanguage(I18n.currentLanguage, false);
     }
+
+    if (typeof SpinWheel !== 'undefined') {
+      SpinWheel.attachEventListeners();
+      SpinWheel.refresh();
+      SpinWheel.drawWheel();
+    }
   }
 };
 

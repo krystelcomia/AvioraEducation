@@ -12,8 +12,13 @@
  *  - 30% chance of landing on "+Spin"
  *  - 0% chance (unobtainable) for "Free Trial Lesson" and "Free 4-Lesson Subscription"
  * 
+ * Access Governance:
+ *  - An account is strictly required—specifically for student accounts—to spin the wheel.
+ *  - Guests clicking the wheel or spin triggers are prompted to log in / create a student account.
+ *  - Other roles (teachers, administrators) are informed the reward wheel is student-exclusive.
+ * 
  * Limits:
- *  - 1 spin per day per user account (plus +1 extra spin unlocked if "+Spin" is won).
+ *  - 1 spin per day per student account (plus +1 extra spin unlocked if "+Spin" is won).
  *  - Midnight local-time reset with live countdown timer.
  */
 
@@ -43,8 +48,13 @@ const SpinWheel = {
     }
   },
 
+  getCurrentUser() {
+    return (typeof Auth !== 'undefined' && Auth.currentUser) ||
+           (typeof Storage !== 'undefined' ? Storage.getUser() : null);
+  },
+
   getStorageKey() {
-    const u = (typeof Auth !== 'undefined' && Auth.currentUser) || (typeof Storage !== 'undefined' ? Storage.getUser() : null);
+    const u = this.getCurrentUser();
     const userId = u && u.id ? u.id : 'guest';
     return `aviora_daily_spin_${userId}`;
   },
@@ -86,11 +96,20 @@ const SpinWheel = {
   },
 
   drawWheel() {
-    const canvas = document.getElementById('wheel-canvas');
-    if (!canvas) return;
+    const canvases = document.querySelectorAll('.wheel-canvas, #wheel-canvas, #home-wheel-canvas');
+    if (!canvases || canvases.length === 0) return;
 
+    canvases.forEach(canvas => {
+      this.drawWheelOnCanvas(canvas);
+    });
+  },
+
+  drawWheelOnCanvas(canvas) {
+    if (!canvas) return;
     const ctx = canvas.getContext('2d');
-    const size = canvas.width; // 560
+    if (!ctx) return;
+
+    const size = canvas.width || 560;
     const center = size / 2;
     const radius = center - 18; // Leave margin for outer rim
     const totalSegments = this.segments.length;
@@ -206,24 +225,55 @@ const SpinWheel = {
   },
 
   attachEventListeners() {
-    const hubBtn = document.getElementById('wheel-hub-btn');
-    const spinBtn = document.getElementById('btn-spin-now');
+    const hubButtons = document.querySelectorAll('#wheel-hub-btn, #home-wheel-hub-btn, .wheel-center-hub');
+    const spinButtons = document.querySelectorAll('#btn-spin-now, #home-btn-spin-now, .btn-spin-trigger');
 
-    if (hubBtn && !hubBtn.dataset.bound) {
-      hubBtn.dataset.bound = 'true';
-      hubBtn.addEventListener('click', (e) => {
-        e.preventDefault();
-        this.spin();
-      });
+    hubButtons.forEach(btn => {
+      if (!btn.dataset.bound) {
+        btn.dataset.bound = 'true';
+        btn.addEventListener('click', (e) => this.attemptSpin(e));
+      }
+    });
+
+    spinButtons.forEach(btn => {
+      if (!btn.dataset.bound) {
+        btn.dataset.bound = 'true';
+        btn.addEventListener('click', (e) => this.attemptSpin(e));
+      }
+    });
+  },
+
+  /**
+   * AUTHENTICATION & ROLE-AWARE SPIN DISPATCHER
+   * An account is required—specifically for students—to access the spin wheel.
+   */
+  attemptSpin(e) {
+    if (e && e.preventDefault) e.preventDefault();
+    if (this.isSpinning) return;
+
+    const user = this.getCurrentUser();
+
+    // 1. Guest check: user is not authenticated
+    if (!user) {
+      if (typeof showToast === 'function') {
+        showToast('An account is required—specifically for students—to access the spin wheel. Please log in or create an account.', 'info');
+      }
+      if (typeof Auth !== 'undefined' && typeof Auth.openModal === 'function') {
+        Auth.openModal('login');
+      }
+      return;
     }
 
-    if (spinBtn && !spinBtn.dataset.bound) {
-      spinBtn.dataset.bound = 'true';
-      spinBtn.addEventListener('click', (e) => {
-        e.preventDefault();
-        this.spin();
-      });
+    // 2. Role check: user is authenticated, but not a student
+    if (user.role !== 'student') {
+      if (typeof showToast === 'function') {
+        showToast('The Daily Lucky Wheel is exclusively available for student accounts.', 'warning');
+      }
+      return;
     }
+
+    // 3. User is an authenticated student -> execute spin
+    this.spin();
   },
 
   /**
@@ -276,9 +326,9 @@ const SpinWheel = {
     // Disable controls while in motion
     this.setControlsDisabled(true);
 
-    // Hide any previous outcome banner
-    const banner = document.getElementById('spin-result-banner');
-    if (banner) banner.style.display = 'none';
+    // Hide any previous outcome banners on all wheel cards
+    const banners = document.querySelectorAll('#spin-result-banner, #home-spin-result-banner, .spin-result-banner');
+    banners.forEach(b => { b.style.display = 'none'; });
 
     // Pick rigged outcome according to exact specification
     const outcome = this.pickOutcome();
@@ -304,21 +354,20 @@ const SpinWheel = {
     const targetRotation = this.currentRotation + fullTurns + forwardDiff + jitter;
     this.currentRotation = targetRotation;
 
-    // Trigger visual rotation & ticker needle vibration
-    const rotator = document.getElementById('wheel-rotator');
-    const pointer = document.getElementById('wheel-pointer-pin');
-    if (pointer) pointer.classList.add('ticking');
+    // Trigger visual rotation on all rotators & ticker needle vibrations
+    const rotators = document.querySelectorAll('#wheel-rotator, #home-wheel-rotator, .wheel-rotator');
+    const pointers = document.querySelectorAll('#wheel-pointer-pin, #home-wheel-pointer-pin, .wheel-pointer-pin');
 
-    if (rotator) {
-      rotator.style.transition = 'transform 4.5s cubic-bezier(0.15, 0.9, 0.2, 1)';
-      rotator.style.transform = `rotate(${targetRotation}deg)`;
-    }
+    pointers.forEach(p => p.classList.add('ticking'));
+    rotators.forEach(r => {
+      r.style.transition = 'transform 4.5s cubic-bezier(0.15, 0.9, 0.2, 1)';
+      r.style.transform = `rotate(${targetRotation}deg)`;
+    });
 
     // Wait for wheel to conclude rotation
     setTimeout(() => {
       this.isSpinning = false;
-      if (pointer) pointer.classList.remove('ticking');
-
+      pointers.forEach(p => p.classList.remove('ticking'));
       this.handleSpinCompleted(outcome);
     }, 4600);
   },
@@ -362,75 +411,181 @@ const SpinWheel = {
   },
 
   showOutcomeBanner(type, headline, subline) {
-    const banner = document.getElementById('spin-result-banner');
-    const emoji = document.getElementById('spin-result-emoji');
-    const title = document.getElementById('spin-result-headline');
-    const desc = document.getElementById('spin-result-subline');
+    const bannerPairs = [
+      {
+        banner: document.getElementById('spin-result-banner'),
+        emoji: document.getElementById('spin-result-emoji'),
+        title: document.getElementById('spin-result-headline'),
+        desc: document.getElementById('spin-result-subline')
+      },
+      {
+        banner: document.getElementById('home-spin-result-banner'),
+        emoji: document.getElementById('home-spin-result-emoji'),
+        title: document.getElementById('home-spin-result-headline'),
+        desc: document.getElementById('home-spin-result-subline')
+      }
+    ];
 
-    if (!banner || !title || !desc) return;
+    bannerPairs.forEach(({ banner, emoji, title, desc }) => {
+      if (!banner) return;
+      if (type === 'bonus') {
+        banner.className = 'spin-result-banner bonus-spin';
+        if (emoji) emoji.textContent = '⚡';
+      } else {
+        banner.className = 'spin-result-banner try-again';
+        if (emoji) emoji.textContent = '🍀';
+      }
 
-    if (type === 'bonus') {
-      banner.className = 'spin-result-banner bonus-spin';
-      if (emoji) emoji.textContent = '⚡';
-    } else {
-      banner.className = 'spin-result-banner try-again';
-      if (emoji) emoji.textContent = '🍀';
-    }
-
-    title.textContent = headline;
-    desc.textContent = subline;
-    banner.style.display = 'flex';
+      if (title) title.textContent = headline;
+      if (desc) desc.textContent = subline;
+      banner.style.display = 'flex';
+    });
   },
 
   setControlsDisabled(disabled) {
-    const hubBtn = document.getElementById('wheel-hub-btn');
-    const spinBtn = document.getElementById('btn-spin-now');
-    if (hubBtn) hubBtn.disabled = disabled;
-    if (spinBtn) spinBtn.disabled = disabled;
+    const hubButtons = document.querySelectorAll('#wheel-hub-btn, #home-wheel-hub-btn, .wheel-center-hub');
+    const spinButtons = document.querySelectorAll('#btn-spin-now, #home-btn-spin-now, .btn-spin-trigger');
+
+    hubButtons.forEach(btn => { btn.disabled = disabled; });
+    spinButtons.forEach(btn => { btn.disabled = disabled; });
   },
 
   refresh() {
-    const state = this.getSpinState();
-    const hubBtn = document.getElementById('wheel-hub-btn');
-    const spinBtn = document.getElementById('btn-spin-now');
-    const spinBtnLabel = document.getElementById('btn-spin-now-label');
-    const statusPill = document.getElementById('daily-spin-status-badge');
-    const statusText = document.getElementById('daily-spin-status-text');
+    const user = this.getCurrentUser();
+    const isGuest = !user;
+    const isStudent = user && user.role === 'student';
+    const isOtherRole = user && user.role !== 'student';
+
+    // 1. Home Guest / Role Notice Banners
+    const guestNotice = document.getElementById('home-spin-guest-notice');
+    const roleNotice = document.getElementById('home-spin-role-notice');
+    if (guestNotice) guestNotice.style.display = isGuest ? 'block' : 'none';
+    if (roleNotice) roleNotice.style.display = isOtherRole ? 'block' : 'none';
+
+    // 2. Control elements across all wheel instances
+    const hubButtons = document.querySelectorAll('#wheel-hub-btn, #home-wheel-hub-btn, .wheel-center-hub');
+    const spinButtons = document.querySelectorAll('#btn-spin-now, #home-btn-spin-now, .btn-spin-trigger');
+    const spinBtnLabels = [
+      document.getElementById('btn-spin-now-label'),
+      document.getElementById('home-btn-spin-now-label')
+    ];
+    const statusPills = [
+      document.getElementById('daily-spin-status-badge'),
+      document.getElementById('home-daily-spin-status-badge')
+    ];
+    const statusTexts = [
+      document.getElementById('daily-spin-status-text'),
+      document.getElementById('home-daily-spin-status-text')
+    ];
 
     if (this.isSpinning) {
       this.setControlsDisabled(true);
       return;
     }
 
-    if (state.spinsAvailable > 0) {
-      this.setControlsDisabled(false);
+    if (isGuest) {
+      // Guest: Buttons remain interactive so clicking them triggers the login modal prompt
+      hubButtons.forEach(btn => { btn.disabled = false; });
+      spinButtons.forEach(btn => { btn.disabled = false; });
 
-      if (state.bonusAwarded > 0 && state.spinsUsedToday > 0) {
-        if (spinBtnLabel) spinBtnLabel.textContent = 'Spin Your Bonus Spin!';
-        if (statusText) statusText.textContent = `${state.spinsAvailable} Bonus Spin Ready`;
-        if (statusPill) statusPill.className = 'spin-status-pill bonus';
-      } else {
-        if (spinBtnLabel) spinBtnLabel.textContent = 'Spin Wheel Now';
-        if (statusText) statusText.textContent = `${state.spinsAvailable} Free Spin Available`;
-        if (statusPill) statusPill.className = 'spin-status-pill available';
-      }
+      spinBtnLabels.forEach(lbl => {
+        if (lbl) lbl.textContent = 'Student Account Required to Spin';
+      });
+      statusPills.forEach(pill => {
+        if (pill) pill.className = 'spin-status-pill locked';
+      });
+      statusTexts.forEach(txt => {
+        if (txt) txt.textContent = 'Student Account Required';
+      });
+    } else if (isOtherRole) {
+      // Non-student role: Informative prompt when clicked
+      hubButtons.forEach(btn => { btn.disabled = false; });
+      spinButtons.forEach(btn => { btn.disabled = false; });
+
+      spinBtnLabels.forEach(lbl => {
+        if (lbl) lbl.textContent = 'Exclusive to Student Accounts';
+      });
+      statusPills.forEach(pill => {
+        if (pill) pill.className = 'spin-status-pill locked';
+      });
+      statusTexts.forEach(txt => {
+        if (txt) txt.textContent = 'Student Account Only';
+      });
     } else {
-      this.setControlsDisabled(true);
-      if (spinBtnLabel) spinBtnLabel.textContent = 'Daily Spin Used Today';
-      if (statusText) statusText.textContent = 'Daily Spin Used';
-      if (statusPill) statusPill.className = 'spin-status-pill locked';
+      // Authenticated Student
+      const state = this.getSpinState();
+
+      if (state.spinsAvailable > 0) {
+        this.setControlsDisabled(false);
+
+        if (state.bonusAwarded > 0 && state.spinsUsedToday > 0) {
+          spinBtnLabels.forEach(lbl => {
+            if (lbl) lbl.textContent = 'Spin Your Bonus Spin!';
+          });
+          statusTexts.forEach(txt => {
+            if (txt) txt.textContent = `${state.spinsAvailable} Bonus Spin Ready`;
+          });
+          statusPills.forEach(pill => {
+            if (pill) pill.className = 'spin-status-pill bonus';
+          });
+        } else {
+          spinBtnLabels.forEach(lbl => {
+            if (lbl) lbl.textContent = 'Spin Wheel Now';
+          });
+          statusTexts.forEach(txt => {
+            if (txt) txt.textContent = `${state.spinsAvailable} Free Spin Available`;
+          });
+          statusPills.forEach(pill => {
+            if (pill) pill.className = 'spin-status-pill available';
+          });
+        }
+      } else {
+        this.setControlsDisabled(true);
+        spinBtnLabels.forEach(lbl => {
+          if (lbl) lbl.textContent = 'Daily Spin Used Today';
+        });
+        statusTexts.forEach(txt => {
+          if (txt) txt.textContent = 'Daily Spin Used';
+        });
+        statusPills.forEach(pill => {
+          if (pill) pill.className = 'spin-status-pill locked';
+        });
+      }
     }
 
     this.updateCountdown();
   },
 
   updateCountdown() {
+    const user = this.getCurrentUser();
+    const isGuest = !user;
+    const isStudent = user && user.role === 'student';
+
+    const timerElements = [
+      document.getElementById('daily-spin-timer-text'),
+      document.getElementById('home-daily-spin-timer-text')
+    ];
+
+    if (isGuest) {
+      timerElements.forEach(el => {
+        if (el) el.textContent = 'Student account required to spin • Resets daily at midnight';
+      });
+      return;
+    }
+
+    if (!isStudent) {
+      timerElements.forEach(el => {
+        if (el) el.textContent = 'Available exclusively to registered Aviora student accounts';
+      });
+      return;
+    }
+
     const state = this.getSpinState();
-    const timerText = document.getElementById('daily-spin-timer-text');
-    if (!timerText) return;
 
     if (state.spinsAvailable > 0) {
-      timerText.textContent = 'Limited to 1 spin per day • Resets daily at midnight';
+      timerElements.forEach(el => {
+        if (el) el.textContent = 'Limited to 1 spin per day • Resets daily at midnight';
+      });
       return;
     }
 
@@ -443,7 +598,9 @@ const SpinWheel = {
     const secs = Math.floor((diffMs % (1000 * 60)) / 1000);
 
     const pad = (n) => String(n).padStart(2, '0');
-    timerText.textContent = `Next free spin in: ${pad(hours)}h ${pad(mins)}m ${pad(secs)}s`;
+    timerElements.forEach(el => {
+      if (el) el.textContent = `Next free spin in: ${pad(hours)}h ${pad(mins)}m ${pad(secs)}s`;
+    });
 
     // Midnight rollover detection: if diffMs <= 1000, trigger refresh
     if (diffMs <= 1000) {
@@ -458,4 +615,3 @@ window.SpinWheel = SpinWheel;
 document.addEventListener('DOMContentLoaded', () => {
   SpinWheel.init();
 });
-

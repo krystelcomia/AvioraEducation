@@ -5,6 +5,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const multer = require('multer');
 const fs = require('fs');
+const crypto = require('crypto');
 const { db, ensureAdminAccount, ensureKrystelAccount, ensureJoshuaAccount, getUserPreferences } = require('./database/db');
 const { inspectDocument } = require('./utils/documentDetector');
 
@@ -1197,6 +1198,176 @@ app.post('/api/auth/sync-account', (req, res) => {
   } catch (err) {
     console.error('Account sync error:', err);
     return res.status(500).json({ error: 'Failed to sync account.' });
+  }
+});
+
+// ===================================================
+// FORGOT PASSWORD / EMAILJS VERIFICATION CODE FLOW
+// ===================================================
+
+// In-memory store for active password reset verification codes
+// Map: email -> { code: '123456', expiresAt: timestamp, attempts: 0, verified: boolean, userName: string }
+const passwordResetStore = new Map();
+
+// 1. Request verification code for password reset
+app.post('/api/auth/forgot-password/request', (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email || typeof email !== 'string' || !email.trim()) {
+      return res.status(400).json({ error: 'Please enter your registered email address.' });
+    }
+    const cleanEmail = email.toLowerCase().trim();
+
+    // Verify user exists in database or is permanent account
+    const user = db.prepare('SELECT id, name, email FROM users WHERE LOWER(email) = LOWER(?)').get(cleanEmail);
+    const isJoshua = cleanEmail === 'joshuagarcia@gmail.com';
+    const isKrystel = cleanEmail === 'comiakrystel65@gmail.com';
+
+    if (!user && !isJoshua && !isKrystel) {
+      return res.status(404).json({ error: 'No account registered with this email address. Please check your spelling or create an account.' });
+    }
+
+    const userName = (user && user.name) || (isJoshua ? 'Joshua Garcia' : (isKrystel ? 'Krystel Comia' : cleanEmail.split('@')[0]));
+
+    // Generate secure 6-digit numeric verification code
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes expiry
+
+    passwordResetStore.set(cleanEmail, {
+      code,
+      expiresAt,
+      attempts: 0,
+      verified: false,
+      userName
+    });
+
+    console.log(`[Aviora Security] Password reset code generated for ${cleanEmail}: ${code}`);
+
+    return res.json({
+      success: true,
+      message: 'Verification code generated.',
+      email: cleanEmail,
+      userName,
+      code, // Returned to client to power client-side EmailJS dispatch!
+      expiresInMinutes: 10
+    });
+  } catch (error) {
+    console.error('Forgot password request error:', error);
+    return res.status(500).json({ error: 'Failed to process password reset request.' });
+  }
+});
+
+// 2. Verify submitted 6-digit code
+app.post('/api/auth/forgot-password/verify', (req, res) => {
+  try {
+    const { email, code } = req.body;
+    if (!email || !code) {
+      return res.status(400).json({ error: 'Email and verification code are required.' });
+    }
+    const cleanEmail = email.toLowerCase().trim();
+    const cleanCode = String(code).trim();
+
+    const record = passwordResetStore.get(cleanEmail);
+    if (!record) {
+      return res.status(400).json({ error: 'No verification code was requested for this email, or it has expired. Please request a new code.' });
+    }
+
+    if (Date.now() > record.expiresAt) {
+      passwordResetStore.delete(cleanEmail);
+      return res.status(400).json({ error: 'Verification code has expired. Please request a new code.' });
+    }
+
+    if (record.code !== cleanCode) {
+      record.attempts = (record.attempts || 0) + 1;
+      if (record.attempts >= 5) {
+        passwordResetStore.delete(cleanEmail);
+        return res.status(400).json({ error: 'Too many incorrect attempts. Please request a new code.' });
+      }
+      return res.status(400).json({ error: 'Incorrect verification code. Please check your inbox and try again.' });
+    }
+
+    // Mark as verified
+    record.verified = true;
+    const resetToken = crypto.randomBytes(24).toString('hex');
+    record.resetToken = resetToken;
+
+    return res.json({
+      success: true,
+      message: 'Verification code confirmed. You may now set your new password.',
+      resetToken
+    });
+  } catch (error) {
+    console.error('Verify code error:', error);
+    return res.status(500).json({ error: 'Failed to verify code.' });
+  }
+});
+
+// 3. Set new password following strict security standards
+app.post('/api/auth/forgot-password/reset', (req, res) => {
+  try {
+    const { email, code, resetToken, newPassword } = req.body;
+    if (!email || !newPassword) {
+      return res.status(400).json({ error: 'Email and new password are required.' });
+    }
+    const cleanEmail = email.toLowerCase().trim();
+    const cleanCode = code ? String(code).trim() : '';
+
+    const record = passwordResetStore.get(cleanEmail);
+    const isTokenValid = record && record.verified && (record.resetToken === resetToken || record.code === cleanCode);
+
+    if (!record || !isTokenValid || Date.now() > record.expiresAt) {
+      return res.status(400).json({ error: 'Verification session expired. Please restart the password reset process.' });
+    }
+
+    // Strict Strong Password Requirements (same as registration):
+    // 8+ chars, uppercase, lowercase, number, special symbol
+    if (newPassword.length < 8) {
+      return res.status(400).json({ error: 'Password must be at least 8 characters long.' });
+    }
+    if (!/[A-Z]/.test(newPassword)) {
+      return res.status(400).json({ error: 'Password must contain at least one uppercase letter (A-Z).' });
+    }
+    if (!/[a-z]/.test(newPassword)) {
+      return res.status(400).json({ error: 'Password must contain at least one lowercase letter (a-z).' });
+    }
+    if (!/[0-9]/.test(newPassword)) {
+      return res.status(400).json({ error: 'Password must contain at least one number (0-9).' });
+    }
+    if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(newPassword)) {
+      return res.status(400).json({ error: 'Password must contain at least one special symbol (e.g. !@#$%^&*).' });
+    }
+
+    const salt = bcrypt.genSaltSync(10);
+    const passwordHash = bcrypt.hashSync(newPassword, salt);
+
+    // Update in database if exists
+    let user = db.prepare('SELECT id, name, email, role FROM users WHERE LOWER(email) = LOWER(?)').get(cleanEmail);
+    if (user) {
+      db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(passwordHash, user.id);
+    } else {
+      // If user was a permanent account not yet in SQLite
+      const isJoshua = cleanEmail === 'joshuagarcia@gmail.com';
+      const designatedRole = isJoshua ? 'teacher' : 'student';
+      const name = isJoshua ? 'Joshua Garcia' : 'Krystel Comia';
+      const defaultAvatar = isJoshua
+        ? 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80'
+        : 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=300&q=80';
+      db.prepare(`
+        INSERT INTO users (name, email, password_hash, role, status, avatar_url)
+        VALUES (?, ?, ?, ?, 'active', ?)
+      `).run(name, cleanEmail, passwordHash, designatedRole, defaultAvatar);
+    }
+
+    // Clean up reset session
+    passwordResetStore.delete(cleanEmail);
+
+    return res.json({
+      success: true,
+      message: 'Password updated successfully. You can now sign in with your new password.'
+    });
+  } catch (error) {
+    console.error('Reset password error:', error);
+    return res.status(500).json({ error: 'Failed to reset password.' });
   }
 });
 

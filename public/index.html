@@ -778,32 +778,29 @@
 
       <!-- ==========================================================================
            DAILY LUCKY SPIN WHEEL SECTION (PLACED AT BOTTOM OF HOMEPAGE)
-           Wide horizontal card layout with reduced height and detailed information
+           Wide layout with prominent section header, enlarged info, and large wheel
            ========================================================================== -->
       <section class="section home-spin-section" id="home-spin-wheel-section">
         <div class="container">
+          <!-- Section Header / Title regarding wheel spin -->
+          <div class="section-header" style="max-width: 720px; margin: 0 auto 2.25rem; text-align: center;">
+            <span class="badge-gold">Daily Student Rewards</span>
+            <h2 class="section-title">Aviora Daily Lucky Wheel</h2>
+            <p class="section-desc">Spin once every day for bonus spins, trial sessions, and exclusive academic mentorship perks!</p>
+          </div>
+
           <div class="home-spin-card">
             <!-- Horizontal 3-Column Wide Layout -->
             <div class="home-spin-grid">
 
-              <!-- LEFT COLUMN: Wheel Details, Rules & Information -->
+              <!-- LEFT COLUMN: Enlarged Information, Guidelines & Features -->
               <div class="home-spin-info-col">
-                <div class="spin-card-badge">
-                  <span>✨</span>
-                  <span>DAILY STUDENT REWARDS</span>
-                </div>
-                <h3 class="home-spin-title">Aviora Daily Lucky Wheel</h3>
-                <p class="home-spin-desc">
-                  Spin once every day to claim bonus spins, mentorship perks, and academic rewards. Exclusively designed for registered Aviora students!
-                </p>
-
-                <!-- Information Highlights / Features List -->
                 <div class="home-spin-features">
                   <div class="home-spin-feat-item">
                     <div class="home-spin-feat-icon">🎯</div>
                     <div class="home-spin-feat-text">
                       <strong>1 Daily Free Spin</strong>
-                      <span>Every student receives 1 complimentary spin, refreshed every 24 hours at midnight.</span>
+                      <span>Every registered student receives 1 complimentary spin daily, automatically refreshed at midnight (00:00).</span>
                     </div>
                   </div>
 
@@ -811,26 +808,34 @@
                     <div class="home-spin-feat-icon">⚡</div>
                     <div class="home-spin-feat-text">
                       <strong>Instant +1 Bonus Spins</strong>
-                      <span>Land on the +1 Spin slot to immediately unlock a consecutive free spin for today!</span>
+                      <span>Land on the +1 Spin slot to immediately unlock a consecutive free turn to roll again today!</span>
                     </div>
                   </div>
 
                   <div class="home-spin-feat-item">
                     <div class="home-spin-feat-icon">🎓</div>
                     <div class="home-spin-feat-text">
-                      <strong>Mentorship Perks</strong>
-                      <span>Unlock trial lessons, 1-on-1 tutoring packages, and bonus curriculum support.</span>
+                      <strong>Trial Lessons &amp; Mentorship</strong>
+                      <span>Earn 1-on-1 trial lessons and multi-class curriculum coaching with verified faculty educators.</span>
+                    </div>
+                  </div>
+
+                  <div class="home-spin-feat-item">
+                    <div class="home-spin-feat-icon">🛡️</div>
+                    <div class="home-spin-feat-text">
+                      <strong>Automatic Account Sync</strong>
+                      <span>All rewards, bonus turns, and session credits are saved and synced directly to your student account.</span>
                     </div>
                   </div>
                 </div>
               </div>
 
-              <!-- CENTER COLUMN: Compact Interactive Wheel Arena -->
+              <!-- CENTER COLUMN: Large Interactive Wheel Arena -->
               <div class="home-spin-wheel-col">
                 <div class="wheel-arena home-wheel-arena">
                   <!-- Pointer needle at 12 o'clock -->
                   <div class="wheel-pointer-pin" id="home-wheel-pointer-pin">
-                    <svg width="30" height="36" viewBox="0 0 32 38" fill="none">
+                    <svg width="36" height="44" viewBox="0 0 32 38" fill="none">
                       <path d="M16 38L3 10C1.5 6.5 4 2 8 2H24C28 2 30.5 6.5 29 10L16 38Z" fill="url(#homeWheelPointerGrad)" stroke="#FFFFFF" stroke-width="2" filter="drop-shadow(0 3px 6px rgba(0,0,0,0.35))"/>
                       <circle cx="16" cy="11" r="4.5" fill="#FFFFFF"/>
                       <defs>
@@ -843,7 +848,7 @@
                     </svg>
                   </div>
 
-                  <!-- Rotating Wheel Container -->
+                  <!-- Rotating Wheel Container (Large) -->
                   <div class="wheel-rotator home-wheel-rotator" id="home-wheel-rotator">
                     <canvas id="home-wheel-canvas" class="wheel-canvas" width="560" height="560"></canvas>
                   </div>

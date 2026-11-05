@@ -384,108 +384,6 @@
         </div>
       </section>
 
-      <!-- DAILY LUCKY SPIN WHEEL SECTION (STUDENT REWARDS) -->
-      <section class="section home-spin-section" id="home-spin-wheel-section">
-        <div class="container">
-          <div class="section-header" style="max-width: 640px; margin: 0 auto 2rem; text-align: center;">
-            <span class="badge-gold">Daily Student Rewards</span>
-            <h2 class="section-title">Aviora Daily Lucky Wheel</h2>
-            <p class="section-desc">Spin once every day for bonus spins and academic mentorship rewards! Available exclusively for registered Aviora student accounts.</p>
-          </div>
-
-          <div class="home-spin-card">
-            <!-- Dynamic Role / Guest Notification Notice -->
-            <div id="home-spin-guest-notice" class="home-spin-guest-notice" style="display: none;">
-              <p><strong>Student Account Required:</strong> An account is required—specifically for students—to access the spin wheel.</p>
-              <div class="home-spin-guest-actions">
-                <button type="button" class="btn btn-primary btn-sm" onclick="if(typeof Auth!=='undefined'&&Auth.openModal){Auth.openModal('login');}">Log In as Student</button>
-                <button type="button" class="btn btn-outline-gold btn-sm" onclick="if(typeof Auth!=='undefined'&&Auth.openModal){Auth.openModal('register');}">Create Account</button>
-              </div>
-            </div>
-
-            <div id="home-spin-role-notice" class="home-spin-role-notice" style="display: none;">
-              <span>ℹ️ The Daily Lucky Wheel is exclusively available for student accounts.</span>
-            </div>
-
-            <!-- Header with Title & Live Spin Status Pill -->
-            <div class="spin-card-header" style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.25rem;">
-              <div>
-                <div class="spin-card-badge" style="display: inline-flex; align-items: center; gap: 4px; font-size: 0.75rem; font-weight: 700; color: #C68A28; letter-spacing: 0.05em; margin-bottom: 4px;">
-                  <span>✨</span>
-                  <span>STUDENT EXCLUSIVE</span>
-                </div>
-                <h4 class="spin-card-title" style="margin: 0; font-size: 1.25rem; font-weight: 700;">Spin &amp; Win Daily</h4>
-              </div>
-              <div id="home-daily-spin-status-badge" class="spin-status-pill available">
-                <span class="spin-status-dot"></span>
-                <span id="home-daily-spin-status-text">1 Spin Available</span>
-              </div>
-            </div>
-
-            <!-- Interactive Wheel Arena -->
-            <div class="wheel-arena">
-              <!-- Pointer needle at 12 o'clock -->
-              <div class="wheel-pointer-pin" id="home-wheel-pointer-pin">
-                <svg width="32" height="38" viewBox="0 0 32 38" fill="none">
-                  <path d="M16 38L3 10C1.5 6.5 4 2 8 2H24C28 2 30.5 6.5 29 10L16 38Z" fill="url(#homeWheelPointerGrad)" stroke="#FFFFFF" stroke-width="2" filter="drop-shadow(0 3px 6px rgba(0,0,0,0.35))"/>
-                  <circle cx="16" cy="11" r="4.5" fill="#FFFFFF"/>
-                  <defs>
-                    <linearGradient id="homeWheelPointerGrad" x1="3" y1="2" x2="29" y2="38" gradientUnits="userSpaceOnUse">
-                      <stop stop-color="#F59E0B"/>
-                      <stop offset="0.5" stop-color="#D97706"/>
-                      <stop offset="1" stop-color="#92400E"/>
-                    </linearGradient>
-                  </defs>
-                </svg>
-              </div>
-
-              <!-- Rotating Wheel Container -->
-              <div class="wheel-rotator" id="home-wheel-rotator">
-                <canvas id="home-wheel-canvas" class="wheel-canvas" width="560" height="560"></canvas>
-              </div>
-
-              <!-- Central Hub Button -->
-              <button type="button" id="home-wheel-hub-btn" class="wheel-center-hub" aria-label="Spin the wheel">
-                <div class="wheel-center-hub-inner">
-                  <span class="hub-label">SPIN</span>
-                </div>
-              </button>
-            </div>
-
-            <!-- Action Controls & Result Announcements -->
-            <div class="spin-footer-controls">
-              <button type="button" id="home-btn-spin-now" class="btn btn-primary btn-spin-trigger">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
-                <span id="home-btn-spin-now-label">Spin Wheel Now</span>
-              </button>
-
-              <!-- Live Outcome Alert Banner -->
-              <div id="home-spin-result-banner" class="spin-result-banner" style="display: none;">
-                <span id="home-spin-result-emoji" class="spin-result-emoji">🍀</span>
-                <div class="spin-result-body">
-                  <div id="home-spin-result-headline" class="spin-result-headline">Try Again</div>
-                  <div id="home-spin-result-subline" class="spin-result-subline">Better luck next time! Check back tomorrow for another daily spin.</div>
-                </div>
-              </div>
-
-              <!-- Segments Mini Legend -->
-              <div class="wheel-legend-row">
-                <span class="wheel-legend-item"><span class="legend-swatch" style="background:#F59E0B;"></span>Try Again (4 slots)</span>
-                <span class="wheel-legend-item"><span class="legend-swatch" style="background:#06B6D4;"></span>+Spin (1 slot)</span>
-                <span class="wheel-legend-item"><span class="legend-swatch" style="background:#10B981;"></span>Free Trial (1 slot)</span>
-                <span class="wheel-legend-item"><span class="legend-swatch" style="background:#EC4899;"></span>4-Lesson Sub (1 slot)</span>
-              </div>
-
-              <!-- Countdown & Frequency Note -->
-              <div class="spin-frequency-note">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: -2px; margin-right: 5px;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-                <span id="home-daily-spin-timer-text">Limited to 1 spin per day • Resets daily at midnight</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
       <!-- REAL-TIME PLATFORM & SUBJECT ANALYTICS SECTION -->
       <section class="section analytics-section" id="realtime-analytics-section">
         <div class="container">
@@ -876,6 +774,163 @@
             </div>
           </div>
         </div>
+      </section>
+
+      <!-- ==========================================================================
+           DAILY LUCKY SPIN WHEEL SECTION (PLACED AT BOTTOM OF HOMEPAGE)
+           Wide horizontal card layout with reduced height and detailed information
+           ========================================================================== -->
+      <section class="section home-spin-section" id="home-spin-wheel-section">
+        <div class="container">
+          <div class="home-spin-card">
+            <!-- Dynamic Role / Guest Notification Notice -->
+            <div id="home-spin-guest-notice" class="home-spin-guest-notice" style="display: none;">
+              <p><strong>Student Account Required:</strong> An account is required—specifically for students—to access the spin wheel.</p>
+              <div class="home-spin-guest-actions">
+                <button type="button" class="btn btn-primary btn-sm" onclick="if(typeof Auth!=='undefined'&&Auth.openModal){Auth.openModal('login');}">Log In as Student</button>
+                <button type="button" class="btn btn-outline-gold btn-sm" onclick="if(typeof Auth!=='undefined'&&Auth.openModal){Auth.openModal('register');}">Create Account</button>
+              </div>
+            </div>
+
+            <div id="home-spin-role-notice" class="home-spin-role-notice" style="display: none;">
+              <span>ℹ️ The Daily Lucky Wheel is exclusively available for student accounts.</span>
+            </div>
+
+            <!-- Horizontal 3-Column Wide Layout -->
+            <div class="home-spin-grid">
+
+              <!-- LEFT COLUMN: Wheel Details, Rules & Information -->
+              <div class="home-spin-info-col">
+                <div class="spin-card-badge">
+                  <span>✨</span>
+                  <span>DAILY STUDENT REWARDS</span>
+                </div>
+                <h3 class="home-spin-title">Aviora Daily Lucky Wheel</h3>
+                <p class="home-spin-desc">
+                  Spin once every day to claim bonus spins, mentorship perks, and academic rewards. Exclusively designed for registered Aviora students!
+                </p>
+
+                <!-- Information Highlights / Features List -->
+                <div class="home-spin-features">
+                  <div class="home-spin-feat-item">
+                    <div class="home-spin-feat-icon">🎯</div>
+                    <div class="home-spin-feat-text">
+                      <strong>1 Daily Free Spin</strong>
+                      <span>Every student receives 1 complimentary spin, refreshed every 24 hours at midnight.</span>
+                    </div>
+                  </div>
+
+                  <div class="home-spin-feat-item">
+                    <div class="home-spin-feat-icon">⚡</div>
+                    <div class="home-spin-feat-text">
+                      <strong>Instant +1 Bonus Spins</strong>
+                      <span>Land on the +1 Spin slot to immediately unlock a consecutive free spin for today!</span>
+                    </div>
+                  </div>
+
+                  <div class="home-spin-feat-item">
+                    <div class="home-spin-feat-icon">🎓</div>
+                    <div class="home-spin-feat-text">
+                      <strong>Mentorship Perks</strong>
+                      <span>Unlock trial lessons, 1-on-1 tutoring packages, and bonus curriculum support.</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- CENTER COLUMN: Compact Interactive Wheel Arena -->
+              <div class="home-spin-wheel-col">
+                <div class="wheel-arena home-wheel-arena">
+                  <!-- Pointer needle at 12 o'clock -->
+                  <div class="wheel-pointer-pin" id="home-wheel-pointer-pin">
+                    <svg width="30" height="36" viewBox="0 0 32 38" fill="none">
+                      <path d="M16 38L3 10C1.5 6.5 4 2 8 2H24C28 2 30.5 6.5 29 10L16 38Z" fill="url(#homeWheelPointerGrad)" stroke="#FFFFFF" stroke-width="2" filter="drop-shadow(0 3px 6px rgba(0,0,0,0.35))"/>
+                      <circle cx="16" cy="11" r="4.5" fill="#FFFFFF"/>
+                      <defs>
+                        <linearGradient id="homeWheelPointerGrad" x1="3" y1="2" x2="29" y2="38" gradientUnits="userSpaceOnUse">
+                          <stop stop-color="#F59E0B"/>
+                          <stop offset="0.5" stop-color="#D97706"/>
+                          <stop offset="1" stop-color="#92400E"/>
+                        </linearGradient>
+                      </defs>
+                    </svg>
+                  </div>
+
+                  <!-- Rotating Wheel Container -->
+                  <div class="wheel-rotator home-wheel-rotator" id="home-wheel-rotator">
+                    <canvas id="home-wheel-canvas" class="wheel-canvas" width="560" height="560"></canvas>
+                  </div>
+
+                  <!-- Central Hub Button -->
+                  <button type="button" id="home-wheel-hub-btn" class="wheel-center-hub" aria-label="Spin the wheel">
+                    <div class="wheel-center-hub-inner">
+                      <span class="hub-label">SPIN</span>
+                    </div>
+                  </button>
+                </div>
+              </div>
+
+              <!-- RIGHT COLUMN: Spin Actions, Outcome Banner & Prize Breakdown Guide -->
+              <div class="home-spin-actions-col">
+                <!-- Status Row -->
+                <div class="home-spin-status-row">
+                  <span class="home-spin-status-label">Today's Spin Status</span>
+                  <div id="home-daily-spin-status-badge" class="spin-status-pill available">
+                    <span class="spin-status-dot"></span>
+                    <span id="home-daily-spin-status-text">1 Spin Available</span>
+                  </div>
+                </div>
+
+                <!-- Spin Trigger Button -->
+                <button type="button" id="home-btn-spin-now" class="btn btn-primary btn-spin-trigger home-btn-spin">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+                  <span id="home-btn-spin-now-label">Spin Wheel Now</span>
+                </button>
+
+                <!-- Live Outcome Alert Banner -->
+                <div id="home-spin-result-banner" class="spin-result-banner" style="display: none;">
+                  <span id="home-spin-result-emoji" class="spin-result-emoji">🍀</span>
+                  <div class="spin-result-body">
+                    <div id="home-spin-result-headline" class="spin-result-headline">Try Again</div>
+                    <div id="home-spin-result-subline" class="spin-result-subline">Better luck next time! Check back tomorrow for another daily spin.</div>
+                  </div>
+                </div>
+
+                <!-- Prize & Segment Breakdown Guide -->
+                <div class="home-spin-prize-guide">
+                  <div class="home-spin-prize-guide-header">
+                    <span>Wheel Prize Guide (7 Slices)</span>
+                  </div>
+                  <div class="home-spin-prize-grid">
+                    <div class="home-spin-prize-item">
+                      <span class="legend-swatch" style="background:#F59E0B;"></span>
+                      <span class="home-spin-prize-desc"><strong>Try Again (4 Slots)</strong>: Fresh chance tomorrow</span>
+                    </div>
+                    <div class="home-spin-prize-item">
+                      <span class="legend-swatch" style="background:#06B6D4;"></span>
+                      <span class="home-spin-prize-desc"><strong>+1 Spin (1 Slot)</strong>: Instant extra turn today</span>
+                    </div>
+                    <div class="home-spin-prize-item">
+                      <span class="legend-swatch" style="background:#10B981;"></span>
+                      <span class="home-spin-prize-desc"><strong>Free Trial (1 Slot)</strong>: Verified 1-on-1 session</span>
+                    </div>
+                    <div class="home-spin-prize-item">
+                      <span class="legend-swatch" style="background:#EC4899;"></span>
+                      <span class="home-spin-prize-desc"><strong>4 Lessons Sub (1 Slot)</strong>: Complete study package</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Countdown & Frequency Note -->
+                <div class="spin-frequency-note" style="margin-top: 0.65rem; justify-content: flex-start;">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: -2px; margin-right: 5px;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                  <span id="home-daily-spin-timer-text">Limited to 1 spin per day • Resets daily at midnight</span>
+                </div>
+              </div>
+
+            </div><!-- END .home-spin-grid -->
+          </div><!-- END .home-spin-card -->
+        </div><!-- END .container -->
       </section>
 
     </div><!-- END VIEW 1: HOME -->

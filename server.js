@@ -1205,6 +1205,15 @@ app.post('/api/auth/sync-account', (req, res) => {
 // FORGOT PASSWORD / EMAILJS VERIFICATION CODE FLOW
 // ===================================================
 
+// Provide public EmailJS configuration if configured in environment
+app.get('/api/auth/emailjs-config', (req, res) => {
+  return res.json({
+    serviceId: process.env.EMAILJS_SERVICE_ID || '',
+    templateId: process.env.EMAILJS_TEMPLATE_ID || '',
+    publicKey: process.env.EMAILJS_PUBLIC_KEY || ''
+  });
+});
+
 // In-memory store for active password reset verification codes
 // Map: email -> { code: '123456', expiresAt: timestamp, attempts: 0, verified: boolean, userName: string }
 const passwordResetStore = new Map();
@@ -1219,9 +1228,18 @@ app.post('/api/auth/forgot-password/request', (req, res) => {
     const cleanEmail = email.toLowerCase().trim();
 
     // Verify user exists in database or is permanent account
-    const user = db.prepare('SELECT id, name, email FROM users WHERE LOWER(email) = LOWER(?)').get(cleanEmail);
+    let user = db.prepare('SELECT id, name, email FROM users WHERE LOWER(email) = LOWER(?)').get(cleanEmail);
     const isJoshua = cleanEmail === 'joshuagarcia@gmail.com';
     const isKrystel = cleanEmail === 'comiakrystel65@gmail.com';
+
+    if (!user && isJoshua) {
+      ensureJoshuaAccount();
+      user = db.prepare('SELECT id, name, email FROM users WHERE LOWER(email) = LOWER(?)').get(cleanEmail);
+    }
+    if (!user && isKrystel) {
+      ensureKrystelAccount();
+      user = db.prepare('SELECT id, name, email FROM users WHERE LOWER(email) = LOWER(?)').get(cleanEmail);
+    }
 
     if (!user && !isJoshua && !isKrystel) {
       return res.status(404).json({ error: 'No account registered with this email address. Please check your spelling or create an account.' });

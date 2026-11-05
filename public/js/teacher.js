@@ -1258,7 +1258,7 @@ const Teacher = {
             Add the academic subjects and specializations you are qualified to teach. They will appear on your profile for students to book.
           </p>
           <button type="button" class="btn btn-primary btn-sm" onclick="Teacher.openAddSubjectModal()">
-            + Add Your First Qualified Subject
+            Add Your First Qualified Subject
           </button>
         </div>
       `;
@@ -1309,18 +1309,15 @@ const Teacher = {
               Save Rate
             </button>
 
-            ${subjectsList.length > 1 ? `
-              <button
-                type="button"
-                class="btn btn-secondary btn-sm teacher-subject-remove-btn"
-                data-subject="${safeSubj}"
-                onclick="Teacher.removeSubjectFromBtn(this)"
-                ${!approved ? 'disabled title="Locked while application is under review"' : 'title="Remove subject"'}
-                aria-label="Remove subject"
-              >
-                ${Icons.x(14)}
-              </button>
-            ` : ''}
+            <button
+              type="button"
+              class="btn btn-outline-danger btn-sm teacher-subject-delete-btn"
+              data-subject="${safeSubj}"
+              onclick="Teacher.confirmDeleteSubject('${safeSubj}')"
+              ${!approved ? 'disabled title="Locked while application is under review"' : 'title="Delete subject from profile"'}
+            >
+              Delete
+            </button>
           </div>
         </div>
       `;
@@ -1341,6 +1338,21 @@ const Teacher = {
       this.application.subjects = this.subjects;
       this.application.subject_rates = this.subjectRates;
       if (res.hourly_rate) this.application.hourly_rate = res.hourly_rate;
+    }
+
+    if (typeof Auth !== 'undefined' && Auth.currentUser) {
+      Auth.currentUser.subjects = this.subjects.join(', ');
+      if (typeof Storage !== 'undefined' && Storage.setUser) {
+        Storage.setUser(Auth.currentUser);
+      }
+      try {
+        const accounts = JSON.parse(localStorage.getItem('aviora_created_accounts') || '{}');
+        const emailKey = (Auth.currentUser.email || '').toLowerCase();
+        if (accounts[emailKey]) {
+          accounts[emailKey].subjects = this.subjects.join(', ');
+          localStorage.setItem('aviora_created_accounts', JSON.stringify(accounts));
+        }
+      } catch (e) {}
     }
 
     this.renderTeacherSubjects();
@@ -1485,7 +1497,7 @@ const Teacher = {
     } finally {
       if (submitBtn) {
         submitBtn.disabled = false;
-        submitBtn.textContent = '+ Add Subject to Teaching Profile';
+        submitBtn.textContent = 'Add Subject to Teaching Profile';
       }
     }
   },
@@ -1530,7 +1542,7 @@ const Teacher = {
     } finally {
       if (btn) {
         btn.disabled = false;
-        btn.textContent = '+ Add Subject & Rate';
+        btn.textContent = 'Add Subject & Rate';
       }
     }
   },
@@ -1548,12 +1560,15 @@ const Teacher = {
     if (!subject) return;
     if (isNaN(rate) || rate < 5 || rate > 1000) {
       showToast('Please enter a valid hourly rate between $5 and $1,000.', 'warning');
+      if (rateInput) rateInput.focus();
       return;
     }
 
     try {
-      btnEl.disabled = true;
-      btnEl.textContent = 'Saving...';
+      if (btnEl) {
+        btnEl.disabled = true;
+        btnEl.textContent = 'Saving...';
+      }
       const res = await API.updateTeacherSubjects({
         action: 'update',
         subject,
@@ -1564,32 +1579,63 @@ const Teacher = {
       showToast(`Updated "${subject}" rate to $${rate.toFixed(2)}/hr (synced to Student & Admin).`, 'success');
     } catch (err) {
       showToast(err.message || 'Failed to update subject rate.', 'error');
-      btnEl.disabled = false;
-      btnEl.textContent = 'Save Rate';
+    } finally {
+      if (btnEl) {
+        btnEl.disabled = false;
+        btnEl.textContent = 'Save Rate';
+      }
     }
   },
 
-  async removeSubjectFromBtn(btnEl) {
+  confirmDeleteSubject(subject) {
     if (!this.isApproved()) {
-      showToast('Operational Lock: Managing subjects and rates unlocks once your account is approved by the Administrator.', 'warning');
+      showToast('Operational Lock: Managing subjects unlocks once your account is approved by the Administrator.', 'warning');
       return;
     }
-    const subject = btnEl?.getAttribute('data-subject');
+    if (!subject) return;
+
+    if (this.subjects && this.subjects.length <= 1) {
+      showToast('You must maintain at least one qualified teaching subject on your profile. Please add another subject before deleting this one.', 'warning');
+      return;
+    }
+
+    showConfirm(
+      'Delete Subject',
+      `Are you sure you want to delete "${subject}" from your teaching profile? It will be removed from your account and will no longer be available for student bookings.`,
+      async () => {
+        await this.executeDeleteSubject(subject);
+      },
+      {
+        confirmText: 'Delete Subject',
+        cancelText: 'Cancel',
+        confirmBtnClass: 'btn btn-danger btn-sm'
+      }
+    );
+  },
+
+  async executeDeleteSubject(subject) {
+    if (!this.isApproved()) {
+      showToast('Operational Lock: Managing subjects unlocks once approved by the administrator.', 'warning');
+      return;
+    }
     if (!subject) return;
 
     try {
-      btnEl.disabled = true;
       const res = await API.updateTeacherSubjects({
         action: 'remove',
         subject
       });
       this.syncUpdatedSubjectsAcrossApp(res);
       await this.loadClasses();
-      showToast(`Removed "${subject}" from your active subjects.`, 'info');
+      showToast(`"${subject}" has been successfully deleted from your account.`, 'success');
     } catch (err) {
-      showToast(err.message || 'Failed to remove subject.', 'error');
-      btnEl.disabled = false;
+      showToast(err.message || 'Failed to delete subject.', 'error');
     }
+  },
+
+  removeSubjectFromBtn(btnEl) {
+    const subject = btnEl?.getAttribute('data-subject');
+    if (subject) this.confirmDeleteSubject(subject);
   },
 
   filterClasses(filter, btn) {

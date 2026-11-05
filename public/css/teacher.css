@@ -522,6 +522,63 @@
   white-space: nowrap;
 }
 
+.teacher-subject-delete-btn {
+  padding: 0.4rem 0.75rem !important;
+  font-size: 0.78rem !important;
+  font-weight: 700 !important;
+  color: #DC2626 !important;
+  background: rgba(220, 38, 38, 0.06) !important;
+  border: 1px solid rgba(220, 38, 38, 0.35) !important;
+  border-radius: var(--radius-sm);
+  transition: all 0.2s ease;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.teacher-subject-delete-btn:hover:not(:disabled) {
+  background: rgba(220, 38, 38, 0.15) !important;
+  border-color: #DC2626 !important;
+  color: #B91C1C !important;
+  transform: translateY(-1px);
+}
+
+.teacher-subject-delete-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+}
+
+[data-theme="dark"] .teacher-subject-delete-btn {
+  color: #F87171 !important;
+  background: rgba(239, 68, 68, 0.12) !important;
+  border-color: rgba(239, 68, 68, 0.4) !important;
+}
+
+[data-theme="dark"] .teacher-subject-delete-btn:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.22) !important;
+  border-color: #F87171 !important;
+  color: #FECACA !important;
+}
+
+.btn-danger {
+  background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%) !important;
+  color: #FFFFFF !important;
+  border: 1px solid rgba(220, 38, 38, 0.4) !important;
+  box-shadow: 0 4px 14px rgba(220, 38, 38, 0.25) !important;
+}
+
+.btn-danger:hover {
+  background: linear-gradient(135deg, #DC2626 0%, #B91C1C 100%) !important;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(220, 38, 38, 0.35) !important;
+  color: #FFFFFF !important;
+}
+
+[data-theme="dark"] .btn-danger {
+  background: linear-gradient(135deg, #DC2626 0%, #B91C1C 100%) !important;
+  border-color: rgba(239, 68, 68, 0.5) !important;
+}
+
 .teacher-subject-remove-btn {
   padding: 0.4rem 0.6rem !important;
   font-size: 0.78rem !important;

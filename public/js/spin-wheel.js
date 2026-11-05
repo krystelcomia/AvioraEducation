@@ -227,6 +227,7 @@ const SpinWheel = {
   attachEventListeners() {
     const hubButtons = document.querySelectorAll('#wheel-hub-btn, #home-wheel-hub-btn, .wheel-center-hub');
     const spinButtons = document.querySelectorAll('#btn-spin-now, #home-btn-spin-now, .btn-spin-trigger');
+    const wheelElements = document.querySelectorAll('#wheel-rotator, #home-wheel-rotator, .wheel-rotator, .wheel-canvas');
 
     hubButtons.forEach(btn => {
       if (!btn.dataset.bound) {
@@ -241,11 +242,23 @@ const SpinWheel = {
         btn.addEventListener('click', (e) => this.attemptSpin(e));
       }
     });
+
+    wheelElements.forEach(el => {
+      if (!el.dataset.bound) {
+        el.dataset.bound = 'true';
+        el.style.cursor = 'pointer';
+        el.addEventListener('click', (e) => {
+          // Prevent re-trigger if click was on or within the hub button
+          if (e.target.closest('#wheel-hub-btn, #home-wheel-hub-btn, .wheel-center-hub')) return;
+          this.attemptSpin(e);
+        });
+      }
+    });
   },
 
   /**
    * AUTHENTICATION & ROLE-AWARE SPIN DISPATCHER
-   * An account is required—specifically for students—to access the spin wheel.
+   * If user is not logged in, clicking the spin wheel redirects to the sign-up page.
    */
   attemptSpin(e) {
     if (e && e.preventDefault) e.preventDefault();
@@ -253,14 +266,9 @@ const SpinWheel = {
 
     const user = this.getCurrentUser();
 
-    // 1. Guest check: user is not authenticated
+    // 1. Guest check: unauthenticated visitor -> redirect immediately to sign-up page
     if (!user) {
-      if (typeof showToast === 'function') {
-        showToast('An account is required—specifically for students—to access the spin wheel. Please log in or create an account.', 'info');
-      }
-      if (typeof Auth !== 'undefined' && typeof Auth.openModal === 'function') {
-        Auth.openModal('login');
-      }
+      window.location.hash = '#signup';
       return;
     }
 
@@ -456,13 +464,7 @@ const SpinWheel = {
     const isStudent = user && user.role === 'student';
     const isOtherRole = user && user.role !== 'student';
 
-    // 1. Home Guest / Role Notice Banners
-    const guestNotice = document.getElementById('home-spin-guest-notice');
-    const roleNotice = document.getElementById('home-spin-role-notice');
-    if (guestNotice) guestNotice.style.display = isGuest ? 'block' : 'none';
-    if (roleNotice) roleNotice.style.display = isOtherRole ? 'block' : 'none';
-
-    // 2. Control elements across all wheel instances
+    // Control elements across all wheel instances
     const hubButtons = document.querySelectorAll('#wheel-hub-btn, #home-wheel-hub-btn, .wheel-center-hub');
     const spinButtons = document.querySelectorAll('#btn-spin-now, #home-btn-spin-now, .btn-spin-trigger');
     const spinBtnLabels = [
@@ -484,18 +486,18 @@ const SpinWheel = {
     }
 
     if (isGuest) {
-      // Guest: Buttons remain interactive so clicking them triggers the login modal prompt
+      // Guest: Interactive wheel and button; clicking redirects to sign-up page
       hubButtons.forEach(btn => { btn.disabled = false; });
       spinButtons.forEach(btn => { btn.disabled = false; });
 
       spinBtnLabels.forEach(lbl => {
-        if (lbl) lbl.textContent = 'Student Account Required to Spin';
+        if (lbl) lbl.textContent = 'Spin Wheel Now';
       });
       statusPills.forEach(pill => {
-        if (pill) pill.className = 'spin-status-pill locked';
+        if (pill) pill.className = 'spin-status-pill available';
       });
       statusTexts.forEach(txt => {
-        if (txt) txt.textContent = 'Student Account Required';
+        if (txt) txt.textContent = '1 Free Spin Available';
       });
     } else if (isOtherRole) {
       // Non-student role: Informative prompt when clicked
@@ -568,7 +570,7 @@ const SpinWheel = {
 
     if (isGuest) {
       timerElements.forEach(el => {
-        if (el) el.textContent = 'Student account required to spin • Resets daily at midnight';
+        if (el) el.textContent = 'Limited to 1 spin per day • Resets daily at midnight';
       });
       return;
     }

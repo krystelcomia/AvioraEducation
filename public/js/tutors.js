@@ -173,6 +173,22 @@ const Tutors = {
     try {
       const data = await API.getTutors();
       this.allTutors = data.tutors || [];
+
+      // Dynamically sync all qualified subjects to the subject filter dropdown
+      const subjectFilterEl = document.getElementById('tutor-subject-filter');
+      if (subjectFilterEl) {
+        const uniqueSubjects = [...new Set(this.allTutors.flatMap(t => t.subjects || []))].filter(Boolean);
+        uniqueSubjects.forEach(s => {
+          const exists = Array.from(subjectFilterEl.options).some(o => o.value.toLowerCase() === s.toLowerCase());
+          if (!exists) {
+            const opt = document.createElement('option');
+            opt.value = s;
+            opt.textContent = s;
+            subjectFilterEl.appendChild(opt);
+          }
+        });
+      }
+
       this.renderFeaturedTutors();
       this.renderDirectoryTutors(this.allTutors);
       await this.renderTutorsSubBanner();
@@ -333,7 +349,13 @@ const Tutors = {
             <div class="verified-badge-icon" title="Aviora Academic Board Verified">${Icons.check(10)}</div>
           </div>
           <div class="tutor-info-meta">
-            <h3 class="tutor-name">${t.name}</h3>
+            <div class="tutor-name-header-row" style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap;">
+              <h3 class="tutor-name" style="margin: 0;">${t.name}</h3>
+              <div class="tutor-name-subjects-pills" style="display: inline-flex; align-items: center; gap: 0.3rem; flex-wrap: wrap;">
+                ${(t.subjects || []).slice(0, 3).map(s => `<span class="badge-gold" style="font-size: 0.7rem; padding: 0.12rem 0.45rem; font-weight: 600; border-radius: 4px;">${s}</span>`).join('')}
+                ${(t.subjects || []).length > 3 ? `<span class="badge-gold" style="font-size: 0.7rem; padding: 0.12rem 0.45rem; opacity: 0.85;">+${t.subjects.length - 3}</span>` : ''}
+              </div>
+            </div>
             <p class="tutor-headline">${t.headline || t.institution || 'Verified Academic Specialist'}</p>
             <div class="tutor-ratings-line">
               <span class="star-gold" style="display: inline-flex; align-items: center; color: #F59E0B;">${Icons.star(13)}</span>
@@ -526,9 +548,14 @@ const Tutors = {
             </div>
 
             <div class="tutor-hero-info">
-              <div class="tutor-hero-title-row">
-                <h1 class="tutor-hero-name">${tutor.name}</h1>
-                <span class="badge-gold">Verified Educator</span>
+              <div class="tutor-hero-title-row" style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap;">
+                <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                  <h1 class="tutor-hero-name" style="margin: 0;">${tutor.name}</h1>
+                  <span class="badge-gold">Verified Educator</span>
+                </div>
+                <div class="tutor-hero-subjects-pills" style="display: inline-flex; align-items: center; gap: 0.35rem; flex-wrap: wrap;">
+                  ${(tutor.subjects || []).map(s => `<span class="badge-gold" style="font-size: 0.75rem; padding: 0.18rem 0.55rem; font-weight: 600; border-radius: 4px;">${s}</span>`).join('')}
+                </div>
               </div>
               <div class="tutor-hero-headline">${tutor.headline || 'Distinguished Faculty Specialist'}</div>
               <div class="tutor-hero-credentials" style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
@@ -1237,8 +1264,13 @@ const Tutors = {
           <div style="display: flex; align-items: center; gap: 1rem;">
             <img src="${tutor.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80'}" style="width: 52px; height: 52px; border-radius: var(--radius-md); object-fit: cover; border: 2px solid var(--gold-500);" />
             <div>
-              <h4 style="color: var(--charcoal-950); font-size: 1.15rem; margin: 0 0 0.2rem 0;">${tutor.name}</h4>
-              <p style="color: var(--gold-800); font-size: 0.85rem; font-weight: 600; margin: 0;">${tutor.headline || tutor.institution || 'Verified Educator'} • $${tutor.hourly_rate}/hour</p>
+              <div style="display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap;">
+                <h4 style="color: var(--charcoal-950); font-size: 1.15rem; margin: 0;">${tutor.name}</h4>
+                <div style="display: inline-flex; gap: 0.25rem; flex-wrap: wrap;">
+                  ${(tutor.subjects || []).map(s => `<span class="badge-gold" style="font-size: 0.68rem; padding: 0.12rem 0.4rem; font-weight: 600;">${s}</span>`).join('')}
+                </div>
+              </div>
+              <p style="color: var(--gold-800); font-size: 0.85rem; font-weight: 600; margin: 0.2rem 0 0 0;">${tutor.headline || tutor.institution || 'Verified Educator'} • $${tutor.hourly_rate}/hour</p>
             </div>
           </div>
           <div style="display: flex; align-items: center; gap: 0.5rem;">

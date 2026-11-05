@@ -4859,7 +4859,7 @@ app.put('/api/teacher/subjects', authenticateToken, requireRole('teacher'), (req
       tutorProfile?.hourly_rate || appRecord.hourly_rate || 45
     );
 
-    const { action, subject, new_subject, rate, subjects: fullSubjects, subject_rates: fullSubjectRates } = req.body;
+    const { action, subject, new_subject, rate, category, level, qualification, subjects: fullSubjects, subject_rates: fullSubjectRates } = req.body;
 
     let updatedSubjects = [...currentNorm.subjects];
     let updatedRates = { ...currentNorm.subject_rates };
@@ -4881,6 +4881,20 @@ app.put('/api/teacher/subjects', authenticateToken, requireRole('teacher'), (req
       } else {
         updatedSubjects.push(cleanSubj);
         updatedRates[cleanSubj] = roundedRate;
+      }
+
+      if (level && typeof level === 'string') {
+        try {
+          const currentGrades = safeParseArray(tutorProfile?.grade_levels || appRecord?.grade_levels);
+          if (!currentGrades.includes(level)) {
+            currentGrades.push(level);
+            const gradesJson = JSON.stringify(currentGrades);
+            if (tutorProfile) {
+              db.prepare('UPDATE tutor_profiles SET grade_levels = ? WHERE user_id = ?').run(gradesJson, teacherId);
+            }
+            db.prepare('UPDATE teacher_applications SET grade_levels = ? WHERE user_id = ?').run(gradesJson, teacherId);
+          }
+        } catch (e) {}
       }
     } else if (action === 'update') {
       const targetSubj = String(subject || '').trim();

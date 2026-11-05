@@ -1232,9 +1232,7 @@ const Teacher = {
   renderTeacherSubjects() {
     const grid = document.getElementById('teacher-subjects-rates-grid');
     const countBadge = document.getElementById('teacher-subjects-count-badge');
-    const addBtn = document.getElementById('btn-teacher-add-subject');
-    const newNameInp = document.getElementById('teacher-new-subject-name');
-    const newRateInp = document.getElementById('teacher-new-subject-rate');
+    const openAddBtn = document.getElementById('btn-open-formal-add-subject');
     if (!grid) return;
 
     const approved = this.isApproved();
@@ -1246,17 +1244,22 @@ const Teacher = {
       countBadge.textContent = `${subjectsList.length} ${subjectsList.length === 1 ? 'Subject' : 'Subjects'}`;
     }
 
-    if (addBtn) {
-      addBtn.disabled = !approved;
-      addBtn.title = approved ? 'Add new subject or specialization with its specific rate' : 'Operations locked while application is under review';
+    if (openAddBtn) {
+      openAddBtn.disabled = !approved;
+      openAddBtn.title = approved ? 'Add new qualified subject' : 'Operational Lock: Managing subjects unlocks once approved by administrator';
     }
-    if (newNameInp) newNameInp.disabled = !approved;
-    if (newRateInp) newRateInp.disabled = !approved;
 
     if (subjectsList.length === 0) {
       grid.innerHTML = `
-        <div class="teacher-subject-empty">
-          No subjects or specializations listed yet. Add your first subject and its hourly rate below.
+        <div class="teacher-subject-empty" style="grid-column: 1 / -1; text-align: center; padding: 2.5rem 1rem;">
+          <div style="color: var(--gold-600); margin-bottom: 0.5rem;">${Icons.book(32)}</div>
+          <div style="font-weight: 700; color: var(--text-primary); margin-bottom: 0.35rem; font-size: 1.05rem;">No Qualified Subjects Added Yet</div>
+          <p style="color: var(--text-secondary); font-size: 0.88rem; max-width: 440px; margin: 0 auto 1.25rem;">
+            Add the academic subjects and specializations you are qualified to teach. They will appear on your profile for students to book.
+          </p>
+          <button type="button" class="btn btn-primary btn-sm" onclick="Teacher.openAddSubjectModal()">
+            + Add Your First Qualified Subject
+          </button>
         </div>
       `;
       return;
@@ -1343,8 +1346,147 @@ const Teacher = {
     this.renderTeacherSubjects();
 
     // Refresh public Tutors cache so Student views on the same session also reflect immediately
-    if (typeof Tutors !== 'undefined' && typeof Tutors.loadTutors === 'function') {
-      Tutors.loadTutors().catch(() => { });
+    if (typeof Tutors !== 'undefined') {
+      if (typeof Tutors.fetchTutors === 'function') {
+        Tutors.fetchTutors().catch(() => { });
+      }
+      if (typeof Tutors.loadTutors === 'function') {
+        Tutors.loadTutors().catch(() => { });
+      }
+    }
+  },
+
+  // Formal Subject Accreditation Modal Workflow
+  openAddSubjectModal() {
+    if (!this.isApproved()) {
+      showToast('Operational Lock: Adding qualified subjects unlocks once your account is approved by the Administrator following your virtual interview.', 'warning');
+      return;
+    }
+    const modal = document.getElementById('modal-add-qualified-subject');
+    if (!modal) return;
+
+    const catSelect = document.getElementById('formal-subject-category');
+    const nameInput = document.getElementById('formal-subject-name');
+    const levelSelect = document.getElementById('formal-subject-level');
+    const rateInput = document.getElementById('formal-subject-rate');
+    const qualInput = document.getElementById('formal-subject-qualification');
+
+    if (catSelect) catSelect.value = 'Mathematics';
+    if (nameInput) nameInput.value = '';
+    if (levelSelect) levelSelect.value = 'AP & College Prep';
+    if (rateInput) rateInput.value = (this.tutorProfile?.hourly_rate || this.application?.hourly_rate || 45);
+    if (qualInput) qualInput.value = '';
+
+    this.onSubjectCategoryChange('Mathematics');
+
+    modal.classList.add('active');
+    modal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+    if (nameInput) setTimeout(() => nameInput.focus(), 80);
+  },
+
+  closeAddSubjectModal() {
+    const modal = document.getElementById('modal-add-qualified-subject');
+    if (!modal) return;
+    modal.classList.remove('active');
+    modal.style.display = 'none';
+    document.body.style.overflow = '';
+  },
+
+  onSubjectCategoryChange(category) {
+    const pillsContainer = document.getElementById('formal-subject-pills');
+    if (!pillsContainer) return;
+
+    const suggestionsByCategory = {
+      'Mathematics': ['AP Calculus BC', 'AP Calculus AB', 'Linear Algebra', 'Multivariable Calculus', 'AP Statistics', 'Geometry', 'SAT Math Prep'],
+      'Sciences': ['AP Physics C: Mechanics', 'AP Chemistry', 'AP Biology', 'Organic Chemistry', 'Anatomy & Physiology', 'Biochemistry'],
+      'Computer Science': ['AP Computer Science A', 'Data Structures & Algorithms', 'Python Programming', 'Web Development', 'Machine Learning Basics'],
+      'Languages': ['AP English Literature', 'AP Spanish Language', 'Academic Writing & Essay Prep', 'French', 'Public Speaking'],
+      'Economics': ['AP Microeconomics', 'AP Macroeconomics', 'Corporate Finance', 'Econometrics', 'Intro to Accounting'],
+      'Test Prep': ['SAT Comprehensive Prep', 'ACT Math & Science', 'AP Exam Cram Sprint', 'Olympiad Math Problem Solving'],
+      'Other': ['Data Analysis', 'Logic & Critical Thinking', 'Philosophy', 'Creative Writing']
+    };
+
+    const list = suggestionsByCategory[category] || suggestionsByCategory['Mathematics'];
+    pillsContainer.innerHTML = list.map(item => `
+      <button type="button" class="btn btn-outline-gold btn-xs" style="font-size: 0.72rem; padding: 0.2rem 0.5rem; border-radius: 999px;" onclick="Teacher.selectSuggestedSubject('${item}')">
+        + ${item}
+      </button>
+    `).join('');
+  },
+
+  selectSuggestedSubject(name) {
+    const nameInput = document.getElementById('formal-subject-name');
+    if (nameInput) {
+      nameInput.value = name;
+      nameInput.focus();
+    }
+  },
+
+  async submitFormalQualifiedSubject() {
+    if (!this.isApproved()) {
+      showToast('Operational Lock: Adding subjects unlocks once approved by the administrator.', 'warning');
+      return;
+    }
+
+    const catSelect = document.getElementById('formal-subject-category');
+    const nameInput = document.getElementById('formal-subject-name');
+    const levelSelect = document.getElementById('formal-subject-level');
+    const rateInput = document.getElementById('formal-subject-rate');
+    const qualInput = document.getElementById('formal-subject-qualification');
+    const submitBtn = document.getElementById('btn-submit-formal-subject');
+
+    const subject = (nameInput?.value || '').trim();
+    const rate = parseFloat(rateInput?.value);
+    const category = catSelect?.value || 'Mathematics';
+    const level = levelSelect?.value || 'AP & College Prep';
+    const qualification = (qualInput?.value || '').trim();
+
+    if (!subject) {
+      showToast('Please specify the subject or specialization name.', 'warning');
+      if (nameInput) nameInput.focus();
+      return;
+    }
+
+    if (isNaN(rate) || rate < 5 || rate > 1000) {
+      showToast('Please enter a valid hourly rate between $5 and $1,000.', 'warning');
+      if (rateInput) rateInput.focus();
+      return;
+    }
+
+    if (!qualification) {
+      showToast('Please provide your teaching qualification, credentials, or syllabus coverage for this subject.', 'warning');
+      if (qualInput) qualInput.focus();
+      return;
+    }
+
+    try {
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Verifying & Adding...';
+      }
+
+      const res = await API.updateTeacherSubjects({
+        action: 'add',
+        subject,
+        rate,
+        category,
+        level,
+        qualification
+      });
+
+      this.syncUpdatedSubjectsAcrossApp(res);
+      this.closeAddSubjectModal();
+      await this.loadClasses();
+
+      showToast(`"${subject}" ($${rate.toFixed(2)}/hr) added to your teaching profile and is now bookable by students!`, 'success');
+    } catch (err) {
+      showToast(err.message || 'Failed to add qualified subject.', 'error');
+    } finally {
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = '+ Add Subject to Teaching Profile';
+      }
     }
   },
 

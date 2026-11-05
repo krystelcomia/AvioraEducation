@@ -113,7 +113,7 @@ function showConfirm(title, message, onConfirm, options = {}) {
 
 // Router
 const Router = {
-  routes: ['#home', '#about', '#tutors', '#aviora-buddy', '#buddy', '#aviora-buddy-studio', '#how-it-works', '#book-now', '#book-lesson', '#subscriptions', '#subscription', '#student-subscriptions', '#login', '#signup', '#student-portal', '#dashboard', '#student-lessons', '#student-tutors', '#student-history', '#student-schedule', '#student-profile', '#teacher-portal', '#teacher-classes', '#teacher-class', '#teacher-students', '#teacher-schedule', '#teacher-buddy', '#teacher-dashboard', '#teacher-profile', '#teacher-application', '#admin-portal', '#admin-profile'],
+  routes: ['#home', '#about', '#tutors', '#aviora-buddy', '#buddy', '#aviora-buddy-studio', '#how-it-works', '#book-now', '#book-lesson', '#subscriptions', '#subscription', '#student-subscriptions', '#login', '#signup', '#student-portal', '#dashboard', '#student-lessons', '#student-tutors', '#student-history', '#student-schedule', '#student-profile', '#teacher-portal', '#teacher-classes', '#teacher-class', '#teacher-students', '#teacher-schedule', '#teacher-dashboard', '#teacher-profile', '#teacher-application', '#admin-portal', '#admin-profile'],
 
   init() {
     window.addEventListener('hashchange', () => this.handleRoute());
@@ -153,7 +153,7 @@ const Router = {
       if (!isActive && href === '#tutors' && (hash === '#tutors' || hash.startsWith('#tutor-profile') || hash.startsWith('#book-lesson') || hash.startsWith('#book-now'))) {
         isActive = true;
       }
-      if (!isActive && (href === '#teacher-buddy' || href === '#aviora-buddy' || href === '#buddy' || link.id === 'nav-link-teacher-buddy') && (hash.startsWith('#aviora-buddy') || hash.startsWith('#buddy') || hash === '#teacher-buddy')) {
+      if (!isActive && (href === '#aviora-buddy' || href === '#buddy' || link.id === 'nav-link-buddy') && (hash.startsWith('#aviora-buddy') || hash.startsWith('#buddy'))) {
         isActive = true;
       }
       if (!isActive && (href === '#subscriptions' || href === '#subscription') && (hash === '#subscriptions' || hash === '#subscription' || hash === '#student-subscriptions')) {
@@ -321,20 +321,12 @@ const Router = {
       if (view) view.style.display = 'block';
       window.scrollTo(0, 0);
       await Tutors.fetchTutors();
-    } else if (hash === '#aviora-buddy' || hash.startsWith('#aviora-buddy') || hash === '#buddy' || hash.startsWith('#buddy') || hash === '#teacher-buddy') {
-      const user = Auth.currentUser;
-      if (user && (user.role === 'teacher' || user.role === 'tutor') && hash !== '#aviora-buddy-studio') {
-        const view = document.getElementById('view-teacher-buddy');
-        if (view) view.style.display = 'block';
-        window.scrollTo(0, 0);
-        await Teacher.loadBuddyPage();
-      } else {
-        const view = document.getElementById('view-aviora-buddy');
-        if (view) view.style.display = 'block';
-        window.scrollTo(0, 0);
-        if (typeof AvioraBuddy !== 'undefined' && AvioraBuddy.init) {
-          await AvioraBuddy.init();
-        }
+    } else if (hash === '#aviora-buddy' || hash.startsWith('#aviora-buddy') || hash === '#buddy' || hash.startsWith('#buddy')) {
+      const view = document.getElementById('view-aviora-buddy');
+      if (view) view.style.display = 'block';
+      window.scrollTo(0, 0);
+      if (typeof AvioraBuddy !== 'undefined' && AvioraBuddy.init) {
+        await AvioraBuddy.init();
       }
     } else if (hash === '#student-profile' || (hash === '#profile' && (!Auth.currentUser || Auth.currentUser.role === 'student'))) {
       const user = Auth.currentUser;
@@ -449,10 +441,8 @@ const Router = {
       window.scrollTo(0, 0);
       await Teacher.loadSchedulePage();
     } else if (hash === '#teacher-buddy') {
-      const view = document.getElementById('view-teacher-buddy');
-      if (view) view.style.display = 'block';
-      window.scrollTo(0, 0);
-      await Teacher.loadBuddyPage();
+      window.location.hash = '#teacher-dashboard';
+      return;
     } else if (hash === '#teacher-application') {
       const view = document.getElementById('view-teacher-application');
       if (view) view.style.display = 'block';

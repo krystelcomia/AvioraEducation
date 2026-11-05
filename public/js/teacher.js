@@ -1,12 +1,11 @@
 /**
  * AVIORA EDUCATION - TUTOR PROFILE, ACCOUNT & TEACHING WORKSPACE
  * Features:
- *  - Header & Tab Navigation: Dashboard, Class, Students, Schedule, Aviora Buddy, Profile & Rates
+ *  - Header & Tab Navigation: Dashboard, Class, Students, Schedule, Profile & Rates
  *  - Financial Dashboard: Gross Student Revenue, Aviora 15% Commission Cut, Net Take-Home Earnings, Monthly Ledger
  *  - Virtual Classes: Room status, Launch Virtual Session (alerts student, opens WebRTC classroom)
  *  - Students Management: Respective subjects roster, Assign Coursework Tasks, Grade Submissions with Feedback
  *  - Schedule & Availability: Weekly timetable calendar with interactive Occupied / Available slot toggling
- *  - Aviora Buddy: Manage assigned 2-student study duos and collaborative cohort classes
  */
 
 const Teacher = {
@@ -401,13 +400,9 @@ const Teacher = {
     if (typeof Router !== 'undefined' && Router.updateActiveNav) Router.updateActiveNav();
   },
 
-  // 4. Dedicated Aviora Buddy Page
+  // 4. Dedicated Aviora Buddy Page (Removed from Teacher)
   async loadBuddyPage() {
-    this.currentTab = 'buddy';
-    await this.ensureTeacherStatus();
-    this.renderStatusBanner('teacher-banner-buddy');
-    await this.loadBuddySessions();
-    if (typeof Router !== 'undefined' && Router.updateActiveNav) Router.updateActiveNav();
+    window.location.hash = '#teacher-dashboard';
   },
 
   // 5. Dedicated Dashboard Page
@@ -609,7 +604,7 @@ const Teacher = {
           </div>
         ` : `
           <div style="margin-top: 1.25rem; background: rgba(0,0,0,0.05); border-left: 3px solid ${accent}; padding: 0.75rem 1rem; border-radius: 0 var(--radius-sm) var(--radius-sm) 0; font-size: 0.84rem; color: var(--text-primary); line-height: 1.55;">
-            <strong style="display: inline-flex; align-items: center; gap: 0.35rem;">${Icons.lock(15, 'color: ' + accent + ';')} Operational Lock Notice:</strong> While your application is under review, you can freely view and explore everything within your account (Dashboard, Classes, Students, Schedule, and Aviora Buddy). Operational actions (conducting live sessions, assigning tasks, and accepting student bookings) remain locked until your application is approved following your virtual interview.
+            <strong style="display: inline-flex; align-items: center; gap: 0.35rem;">${Icons.lock(15, 'color: ' + accent + ';')} Operational Lock Notice:</strong> While your application is under review, you can freely view and explore everything within your account (Dashboard, Classes, Students, and Schedule). Operational actions (conducting live sessions, assigning tasks, and accepting student bookings) remain locked until your application is approved following your virtual interview.
           </div>
         `}
       </div>
@@ -691,7 +686,7 @@ const Teacher = {
           Explore Your Account Sections (View Mode)
         </h3>
         <p style="font-size: 0.88rem; color: var(--text-secondary); max-width: 600px; margin: 0 auto 1.5rem; line-height: 1.55;">
-          You can view everything within your account right now. Check your dashboard metrics, see your scheduled timetable calendar, inspect classes, or explore Aviora Buddy cohorts.
+          You can view everything within your account right now. Check your dashboard metrics, see your scheduled timetable calendar, or inspect classes.
         </p>
 
         <div style="display: flex; gap: 0.75rem; justify-content: center; align-items: center; flex-wrap: wrap;">
@@ -706,9 +701,6 @@ const Teacher = {
           </button>
           <button type="button" class="btn btn-outline-gold" onclick="window.location.hash='#teacher-schedule';">
             View Schedule Calendar
-          </button>
-          <button type="button" class="btn btn-outline-gold" onclick="window.location.hash='#teacher-buddy';">
-            View Aviora Buddy
           </button>
         </div>
 
@@ -731,8 +723,8 @@ const Teacher = {
       await this.loadStudentsPage();
     } else if (currentHash === '#teacher-schedule') {
       await this.loadSchedulePage();
-    } else if (currentHash === '#teacher-buddy' || currentHash === '#aviora-buddy') {
-      await this.loadBuddyPage();
+    } else if (currentHash === '#teacher-buddy') {
+      window.location.hash = '#teacher-dashboard';
     } else if (currentHash === '#teacher-application') {
       await this.loadApplicationPage();
     } else if (currentHash === '#teacher-profile') {
@@ -747,7 +739,6 @@ const Teacher = {
     if (tabId === 'classes') window.location.hash = '#teacher-classes';
     else if (tabId === 'students') window.location.hash = '#teacher-students';
     else if (tabId === 'schedule') window.location.hash = '#teacher-schedule';
-    else if (tabId === 'buddy') window.location.hash = '#teacher-buddy';
     else if (tabId === 'profile') window.location.hash = '#teacher-profile';
     else {
       window.location.hash = '#teacher-dashboard';

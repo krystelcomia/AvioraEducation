@@ -5859,7 +5859,6 @@ const I18n = {
       'nav-link-teacher-classes': 'nav.class',
       'nav-link-teacher-students': 'nav.students',
       'nav-link-teacher-schedule': 'nav.schedule',
-      'nav-link-teacher-buddy': 'nav.buddy',
       'nav-link-teacher-dashboard': 'nav.dashboard'
     };
 

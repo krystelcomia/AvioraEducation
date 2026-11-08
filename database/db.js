@@ -308,6 +308,27 @@ function initSchema() {
       UNIQUE(student_id, date, day_of_week, time_slot)
     );
 
+    CREATE TABLE IF NOT EXISTS tutor_date_notes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      tutor_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      date TEXT NOT NULL,
+      note TEXT NOT NULL,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(tutor_id, date)
+    );
+
+    CREATE TABLE IF NOT EXISTS tutor_date_hours (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      tutor_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      date TEXT,
+      day_of_week TEXT,
+      mode TEXT NOT NULL,
+      hours_json TEXT NOT NULL,
+      scope TEXT DEFAULT 'date',
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(tutor_id, date, day_of_week)
+    );
+
     -- Enforce case-insensitive uniqueness and relational indexes across the entire system
     CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email_nocase ON users(email COLLATE NOCASE);
     CREATE INDEX IF NOT EXISTS idx_student_profiles_user_id ON student_profiles(user_id);
@@ -319,6 +340,8 @@ function initSchema() {
     CREATE INDEX IF NOT EXISTS idx_tutor_tasks_student ON tutor_tasks(student_id);
     CREATE INDEX IF NOT EXISTS idx_tutor_occupied_tutor ON tutor_occupied_slots(tutor_id);
     CREATE INDEX IF NOT EXISTS idx_student_occupied_student ON student_occupied_slots(student_id);
+    CREATE INDEX IF NOT EXISTS idx_tutor_date_notes_tutor ON tutor_date_notes(tutor_id, date);
+    CREATE INDEX IF NOT EXISTS idx_tutor_date_hours_tutor ON tutor_date_hours(tutor_id, date);
     CREATE INDEX IF NOT EXISTS idx_reviews_tutor ON reviews(tutor_id);
     CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id);
     CREATE INDEX IF NOT EXISTS idx_subscriptions_user ON student_subscriptions(user_id);
@@ -1369,7 +1392,11 @@ function ensureJoshuaAccount(customPassword) {
             diploma_filename = COALESCE(diploma_filename, 'UC_Berkeley_Diploma.pdf'),
             credentials_file = COALESCE(credentials_file, 'credential_verified_sample.pdf'),
             credentials_filename = COALESCE(credentials_filename, 'Joshua_Garcia_Resume.pdf'),
-            availability_schedule = COALESCE(availability_schedule, ?),
+            availability_schedule = CASE 
+              WHEN availability_schedule IS NULL OR availability_schedule = '' OR availability_schedule = '{}' 
+              THEN ? 
+              ELSE availability_schedule 
+            END,
             status = 'approved',
             interview_status = 'completed',
             reviewed_by = COALESCE(reviewed_by, 1),
@@ -1407,7 +1434,11 @@ function ensureJoshuaAccount(customPassword) {
             subject_rates = CASE WHEN subject_rates IS NULL OR subject_rates = '' OR subject_rates = '{}' THEN ? ELSE subject_rates END,
             grade_levels = CASE WHEN grade_levels IS NULL OR grade_levels = '' OR grade_levels = '[]' THEN ? ELSE grade_levels END,
             hourly_rate = COALESCE(hourly_rate, 45.0),
-            availability_schedule = COALESCE(availability_schedule, ?),
+            availability_schedule = CASE 
+              WHEN availability_schedule IS NULL OR availability_schedule = '' OR availability_schedule = '{}' 
+              THEN ? 
+              ELSE availability_schedule 
+            END,
             is_active = 1
         WHERE user_id = ?
       `).run(appId, defaultSubjects, defaultSubjectRates, JSON.stringify(['Grade 9-12', 'College Prep']), defaultSchedule, userId);

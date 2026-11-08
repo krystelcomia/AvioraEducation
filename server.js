@@ -426,8 +426,79 @@ function normalizeAvailabilitySchedule(rawInput) {
   return normalized;
 }
 
+function getTutorEffectiveSchedule(teacherId) {
+  let tpSched = null;
+  let taSched = null;
+  try {
+    const tp = db.prepare('SELECT availability_schedule FROM tutor_profiles WHERE user_id = ?').get(teacherId);
+    tpSched = safeParseObject(tp?.availability_schedule);
+  } catch (e) {}
+  try {
+    const ta = db.prepare('SELECT availability_schedule FROM teacher_applications WHERE user_id = ?').get(teacherId);
+    taSched = safeParseObject(ta?.availability_schedule);
+  } catch (e) {}
+
+  const p1 = tpSched || {};
+  const p2 = taSched || {};
+
+  // Deep merge to ensure nothing is lost across restarts, updates, or profile syncs
+  const merged = Object.assign({}, p2, p1);
+
+  merged.date_notes = Object.assign({}, safeParseObject(p2.date_notes), safeParseObject(p1.date_notes));
+  merged.date_hours = Object.assign({}, safeParseObject(p2.date_hours), safeParseObject(p1.date_hours));
+  merged.date_modes = Object.assign({}, safeParseObject(p2.date_modes), safeParseObject(p1.date_modes));
+  merged.day_modes = Object.assign({}, safeParseObject(p2.day_modes), safeParseObject(p1.day_modes));
+
+  // Merge dedicated tutor_date_notes table if present
+  try {
+    const noteRows = db.prepare('SELECT date, note FROM tutor_date_notes WHERE tutor_id = ?').all(teacherId);
+    for (const r of noteRows) {
+      if (r.date && r.note) merged.date_notes[r.date] = r.note;
+    }
+  } catch (e) {}
+
+  // Merge dedicated tutor_date_hours table if present
+  try {
+    const hourRows = db.prepare('SELECT date, day_of_week, mode, hours_json FROM tutor_date_hours WHERE tutor_id = ?').all(teacherId);
+    for (const r of hourRows) {
+      const blks = safeParseArray(r.hours_json);
+      if (r.date && blks.length > 0) {
+        merged.date_hours[r.date] = blks;
+        if (r.mode) merged.date_modes[r.date] = r.mode;
+      }
+      if (r.day_of_week && blks.length > 0) {
+        merged[r.day_of_week] = blks;
+        if (r.mode) merged.day_modes[r.day_of_week] = r.mode;
+      }
+    }
+  } catch (e) {}
+
+  const unavailSet = new Set([
+    ...(Array.isArray(p2.unavailable_dates) ? p2.unavailable_dates : []),
+    ...(Array.isArray(p1.unavailable_dates) ? p1.unavailable_dates : [])
+  ]);
+  merged.unavailable_dates = Array.from(unavailSet);
+
+  for (const day of WEEKDAY_NAMES) {
+    const lowerDay = day.toLowerCase();
+    const val1 = p1[day] !== undefined ? p1[day] : p1[lowerDay];
+    const val2 = p2[day] !== undefined ? p2[day] : p2[lowerDay];
+    if (Array.isArray(val1) && val1.length > 0) {
+      merged[day] = val1;
+    } else if (Array.isArray(val2) && val2.length > 0) {
+      merged[day] = val2;
+    } else if (val1 !== undefined) {
+      merged[day] = val1;
+    } else if (val2 !== undefined) {
+      merged[day] = val2;
+    }
+  }
+
+  return normalizeAvailabilitySchedule(merged);
+}
+
 function getTutorLiveAvailability(tutorUserId, rawSchedule) {
-  const schedule = normalizeAvailabilitySchedule(rawSchedule);
+  const schedule = rawSchedule ? normalizeAvailabilitySchedule(rawSchedule) : getTutorEffectiveSchedule(tutorUserId);
   let occupiedSlots = [];
   let bookedSlots = [];
   try {
@@ -574,11 +645,9 @@ function checkScheduleConflict({ studentId = null, tutorUserId = null, requested
 
   // 1. TEACHER CONFLICT CHECKS
   if (tutorUserId) {
-    const tp = db.prepare('SELECT availability_schedule FROM tutor_profiles WHERE user_id = ?').get(tutorUserId);
-    const ta = db.prepare('SELECT availability_schedule FROM teacher_applications WHERE user_id = ?').get(tutorUserId);
     const tutorUser = db.prepare('SELECT name FROM users WHERE id = ?').get(tutorUserId);
     const tutorName = tutorUser?.name || 'Educator';
-    const live = getTutorLiveAvailability(tutorUserId, tp?.availability_schedule || ta?.availability_schedule);
+    const live = getTutorLiveAvailability(tutorUserId);
 
     if (live.unavailable_dates.includes(cleanDate)) {
       return {
@@ -5610,9 +5679,8 @@ app.get('/api/teacher/schedule', authenticateToken, requireRole('teacher'), (req
       ORDER BY day_of_week ASC, time_slot ASC
     `).all(teacherId);
 
-    const tp = db.prepare('SELECT availability_schedule FROM tutor_profiles WHERE user_id = ?').get(teacherId);
-    const ta = db.prepare('SELECT availability_schedule FROM teacher_applications WHERE user_id = ?').get(teacherId);
-    const live = getTutorLiveAvailability(teacherId, tp?.availability_schedule || ta?.availability_schedule);
+    const schedule = getTutorEffectiveSchedule(teacherId);
+    const live = getTutorLiveAvailability(teacherId, schedule);
 
     res.json({
       appointments,
@@ -5626,11 +5694,63 @@ app.get('/api/teacher/schedule', authenticateToken, requireRole('teacher'), (req
   }
 });
 
-// Helper to save tutor availability_schedule to both tutor_profiles and teacher_applications
+// Helper to save tutor availability_schedule to both tutor_profiles, teacher_applications, and dedicated persistence tables
 function saveTutorAvailabilitySchedule(teacherId, scheduleObj) {
   const jsonStr = JSON.stringify(scheduleObj);
   db.prepare('UPDATE tutor_profiles SET availability_schedule = ?, updated_at = CURRENT_TIMESTAMP WHERE user_id = ?').run(jsonStr, teacherId);
   db.prepare('UPDATE teacher_applications SET availability_schedule = ?, updated_at = CURRENT_TIMESTAMP WHERE user_id = ?').run(jsonStr, teacherId);
+
+  // Sync date notes to tutor_date_notes table for permanent preservation
+  if (scheduleObj.date_notes && typeof scheduleObj.date_notes === 'object') {
+    try {
+      const stmt = db.prepare(`
+        INSERT INTO tutor_date_notes (tutor_id, date, note, updated_at)
+        VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+        ON CONFLICT(tutor_id, date) DO UPDATE SET note = excluded.note, updated_at = CURRENT_TIMESTAMP
+      `);
+      for (const [d, noteText] of Object.entries(scheduleObj.date_notes)) {
+        if (noteText && typeof noteText === 'string' && noteText.trim()) {
+          stmt.run(teacherId, d, noteText.trim());
+        } else {
+          db.prepare('DELETE FROM tutor_date_notes WHERE tutor_id = ? AND date = ?').run(teacherId, d);
+        }
+      }
+    } catch (e) {}
+  }
+
+  // Sync date hours to tutor_date_hours table
+  if (scheduleObj.date_hours && typeof scheduleObj.date_hours === 'object') {
+    try {
+      const stmt = db.prepare(`
+        INSERT INTO tutor_date_hours (tutor_id, date, day_of_week, mode, hours_json, scope, updated_at)
+        VALUES (?, ?, NULL, ?, ?, 'date', CURRENT_TIMESTAMP)
+        ON CONFLICT(tutor_id, date, day_of_week) DO UPDATE SET
+          mode = excluded.mode, hours_json = excluded.hours_json, scope = excluded.scope, updated_at = CURRENT_TIMESTAMP
+      `);
+      for (const [d, blks] of Object.entries(scheduleObj.date_hours)) {
+        if (Array.isArray(blks) && blks.length > 0) {
+          const modeVal = scheduleObj.date_modes?.[d] || 'specific';
+          stmt.run(teacherId, d, modeVal, JSON.stringify(blks));
+        }
+      }
+    } catch (e) {}
+  }
+
+  // Sync weekday hours to tutor_date_hours table
+  try {
+    const stmt = db.prepare(`
+      INSERT INTO tutor_date_hours (tutor_id, date, day_of_week, mode, hours_json, scope, updated_at)
+      VALUES (?, NULL, ?, ?, ?, 'weekday', CURRENT_TIMESTAMP)
+      ON CONFLICT(tutor_id, date, day_of_week) DO UPDATE SET
+        mode = excluded.mode, hours_json = excluded.hours_json, scope = excluded.scope, updated_at = CURRENT_TIMESTAMP
+    `);
+    for (const day of WEEKDAY_NAMES) {
+      if (Array.isArray(scheduleObj[day])) {
+        const modeVal = scheduleObj.day_modes?.[day] || (scheduleObj[day].length === 0 ? 'unavailable' : 'specific');
+        stmt.run(teacherId, day, modeVal, JSON.stringify(scheduleObj[day]));
+      }
+    }
+  } catch (e) {}
 }
 
 // Toggle Occupied Time Slot (Mark as Unavailable / Available)
@@ -5648,8 +5768,7 @@ app.post('/api/teacher/schedule/toggle-slot', authenticateToken, requireRole('te
     }
 
     const dayName = day_of_week || (date ? new Date(date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long' }) : 'Monday');
-    const tp = db.prepare('SELECT availability_schedule FROM tutor_profiles WHERE user_id = ?').get(teacherId);
-    const schedule = normalizeAvailabilitySchedule(tp?.availability_schedule || appRecord.availability_schedule);
+    const schedule = getTutorEffectiveSchedule(teacherId);
 
     let existing;
     if (date) {
@@ -5731,8 +5850,7 @@ app.post('/api/teacher/schedule/set-day-availability', authenticateToken, requir
     } = req.body;
 
     const dayName = day_of_week || (date ? new Date(date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long' }) : 'Monday');
-    const tp = db.prepare('SELECT availability_schedule FROM tutor_profiles WHERE user_id = ?').get(teacherId);
-    const schedule = normalizeAvailabilitySchedule(tp?.availability_schedule || appRecord.availability_schedule);
+    const schedule = getTutorEffectiveSchedule(teacherId);
     if (!schedule.date_hours) schedule.date_hours = {};
     if (!schedule.date_modes) schedule.date_modes = {};
     if (!schedule.day_modes) schedule.day_modes = {};

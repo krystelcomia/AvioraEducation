@@ -2001,8 +2001,50 @@
 
 .tsa-save-row {
   display: flex;
-  justify-content: flex-end;
-  gap: 0.5rem;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 0.85rem;
+}
+
+.tsa-save-row .tsa-field-col {
+  flex: 1;
+  min-width: 170px;
+  display: flex;
+  flex-direction: column;
+}
+
+.tsa-field-label {
+  display: block;
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  margin-bottom: 0.35rem;
+}
+
+.tsa-select {
+  height: 38px !important;
+  padding: 0.4rem 0.75rem !important;
+  font-size: 0.84rem !important;
+  border-radius: var(--radius-sm);
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  width: 100%;
+}
+
+.tsa-save-btn {
+  height: 38px !important;
+  padding: 0 1.25rem !important;
+  font-weight: 700 !important;
+  font-size: 0.84rem !important;
+  white-space: nowrap !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0.35rem !important;
+  flex-shrink: 0;
+  margin-bottom: 0 !important;
 }
 
 .cal-more-events {

@@ -2916,7 +2916,7 @@ const Teacher = {
         }
       }
 
-      // Load educator personal date notes (both from server & localStorage)
+      // Load educator personal date notes (both from server & localStorage to guarantee zero loss across refreshes)
       const user = Auth.currentUser;
       const localKey = user ? `aviora_teacher_date_notes_${user.id}` : null;
       let localNotes = {};
@@ -2925,6 +2925,61 @@ const Teacher = {
       }
       const serverNotes = data?.availabilitySchedule?.date_notes || {};
       this.dateNotes = Object.assign({}, localNotes, serverNotes);
+      if (localKey) {
+        try { localStorage.setItem(localKey, JSON.stringify(this.dateNotes)); } catch (e) {}
+      }
+
+      // Load educator hours modifications (both from server & localStorage to prevent loss upon refresh)
+      const localHoursKey = user ? `aviora_teacher_hours_${user.id}` : null;
+      let localHours = {};
+      if (localHoursKey) {
+        try { localHours = JSON.parse(localStorage.getItem(localHoursKey) || '{}'); } catch (e) {}
+      }
+      if (this.scheduleData && this.scheduleData.availabilitySchedule) {
+        if (!this.scheduleData.availabilitySchedule.date_hours) this.scheduleData.availabilitySchedule.date_hours = {};
+        if (!this.scheduleData.availabilitySchedule.date_modes) this.scheduleData.availabilitySchedule.date_modes = {};
+        if (!this.scheduleData.availabilitySchedule.day_modes) this.scheduleData.availabilitySchedule.day_modes = {};
+
+        if (localHours.date_hours) {
+          for (const [d, blks] of Object.entries(localHours.date_hours)) {
+            if (!this.scheduleData.availabilitySchedule.date_hours[d]) {
+              this.scheduleData.availabilitySchedule.date_hours[d] = blks;
+            }
+          }
+        }
+        if (localHours.date_modes) {
+          for (const [d, m] of Object.entries(localHours.date_modes)) {
+            if (!this.scheduleData.availabilitySchedule.date_modes[d]) {
+              this.scheduleData.availabilitySchedule.date_modes[d] = m;
+            }
+          }
+        }
+        if (localHours.day_hours) {
+          for (const [d, blks] of Object.entries(localHours.day_hours)) {
+            if (!this.scheduleData.availabilitySchedule[d] || this.scheduleData.availabilitySchedule[d].length === 0) {
+              this.scheduleData.availabilitySchedule[d] = blks;
+            }
+          }
+        }
+        if (localHours.day_modes) {
+          for (const [d, m] of Object.entries(localHours.day_modes)) {
+            if (!this.scheduleData.availabilitySchedule.day_modes[d]) {
+              this.scheduleData.availabilitySchedule.day_modes[d] = m;
+            }
+          }
+        }
+
+        if (localHoursKey) {
+          try {
+            const cacheObj = {
+              date_hours: this.scheduleData.availabilitySchedule.date_hours,
+              date_modes: this.scheduleData.availabilitySchedule.date_modes,
+              day_modes: this.scheduleData.availabilitySchedule.day_modes
+            };
+            localStorage.setItem(localHoursKey, JSON.stringify(cacheObj));
+          } catch (e) {}
+        }
+      }
 
       this.renderSchedule();
     } catch (err) {
@@ -3210,6 +3265,14 @@ const Teacher = {
     if (btnEl) {
       btnEl.disabled = true;
       btnEl.innerHTML = `${Icons.loader(14)} Saving...`;
+    }
+
+    const user = Auth.currentUser;
+    const localWeeklyKey = user ? `aviora_teacher_weekly_${user.id}` : null;
+    if (localWeeklyKey) {
+      try {
+        localStorage.setItem(localWeeklyKey, JSON.stringify({ weeklySchedule, dayModes }));
+      } catch (e) {}
     }
 
     try {
@@ -3958,7 +4021,7 @@ const Teacher = {
               `}
 
               <div class="tsa-save-row">
-                <div style="flex: 1; min-width: 170px;">
+                <div class="tsa-field-col">
                   <label class="tsa-field-label">Apply To</label>
                   <select id="tsa-apply-scope" class="form-control tsa-select">
                     <option value="date" selected>This Date Only (${this.selectedDate})</option>
@@ -3966,7 +4029,7 @@ const Teacher = {
                     <option value="all_days">All Days (Mon–Sun)</option>
                   </select>
                 </div>
-                <button type="button" class="btn btn-primary btn-sm" onclick="Teacher.saveTimeSlotAvailabilityHours('${activeMode}')" style="height: 36px; padding: 0 0.85rem; font-weight: 700; white-space: nowrap; display: inline-flex; align-items: center; gap: 0.35rem;">
+                <button type="button" class="btn btn-primary btn-sm tsa-save-btn" onclick="Teacher.saveTimeSlotAvailabilityHours('${activeMode}')">
                   ${Icons.save(14)} Save Hours
                 </button>
               </div>
@@ -4126,6 +4189,42 @@ const Teacher = {
           showToast('Available end hour must be after the start hour.', 'warning');
           return;
         }
+      }
+
+      // Persist in localStorage as immediate client cache so it survives refreshes
+      const user = Auth.currentUser;
+      const localHoursKey = user ? `aviora_teacher_hours_${user.id}` : null;
+      if (localHoursKey) {
+        try {
+          const stored = JSON.parse(localStorage.getItem(localHoursKey) || '{}');
+          if (!stored.date_hours) stored.date_hours = {};
+          if (!stored.date_modes) stored.date_modes = {};
+          if (!stored.day_hours) stored.day_hours = {};
+          if (!stored.day_modes) stored.day_modes = {};
+          const blocks = mode === 'all_day' ? ['08:00 - 20:00'] : [`${startTime} - ${endTime}`];
+          if (applyScope === 'date' && this.selectedDate) {
+            stored.date_hours[this.selectedDate] = blocks;
+            stored.date_modes[this.selectedDate] = mode;
+          } else if (applyScope === 'all_days') {
+            const allDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+            allDays.forEach(d => {
+              stored.day_hours[d] = blocks;
+              stored.day_modes[d] = mode;
+            });
+            if (this.selectedDate) {
+              stored.date_hours[this.selectedDate] = blocks;
+              stored.date_modes[this.selectedDate] = mode;
+            }
+          } else {
+            stored.day_hours[dayOfWeekName] = blocks;
+            stored.day_modes[dayOfWeekName] = mode;
+            if (this.selectedDate) {
+              stored.date_hours[this.selectedDate] = blocks;
+              stored.date_modes[this.selectedDate] = mode;
+            }
+          }
+          localStorage.setItem(localHoursKey, JSON.stringify(stored));
+        } catch (e) {}
       }
 
       const res = await API.setDayAvailability({

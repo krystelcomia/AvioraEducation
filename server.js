@@ -5886,8 +5886,41 @@ app.post('/api/teacher/schedule/set-day-availability', authenticateToken, requir
         availabilitySchedule: live.availability_schedule,
         unavailableDates: live.unavailable_dates
       });
+    } else if (action === 'save_weekly_schedule' || action === 'save_weekly') {
+      const { weekly_schedule, day_modes } = req.body;
+      if (weekly_schedule && typeof weekly_schedule === 'object') {
+        for (const d of WEEKDAY_NAMES) {
+          if (weekly_schedule[d] !== undefined) {
+            if (Array.isArray(weekly_schedule[d])) {
+              schedule[d] = weekly_schedule[d];
+            } else if (typeof weekly_schedule[d] === 'string') {
+              schedule[d] = weekly_schedule[d].trim() ? [weekly_schedule[d].trim()] : [];
+            }
+          }
+        }
+      }
+      if (day_modes && typeof day_modes === 'object') {
+        for (const d of WEEKDAY_NAMES) {
+          if (day_modes[d] !== undefined) {
+            schedule.day_modes[d] = day_modes[d];
+          }
+        }
+      }
+      for (const d of WEEKDAY_NAMES) {
+        if (schedule.day_modes[d] === 'unavailable' || (Array.isArray(schedule[d]) && schedule[d].length === 0)) {
+          schedule[d] = [];
+          schedule.day_modes[d] = 'unavailable';
+        }
+      }
+      saveTutorAvailabilitySchedule(teacherId, schedule);
+      const live = getTutorLiveAvailability(teacherId, schedule);
+      return res.json({
+        message: 'Weekly availability successfully updated! Operating hours are now live.',
+        availabilitySchedule: live.availability_schedule,
+        unavailableDates: live.unavailable_dates
+      });
     } else {
-      return res.status(400).json({ error: 'Invalid action. Supported actions are "free_all", "date_available", "block_all", "date_occupied", "save_hours", or "save_date_note".' });
+      return res.status(400).json({ error: 'Invalid action. Supported actions are "free_all", "date_available", "block_all", "date_occupied", "save_hours", "save_date_note", or "save_weekly_schedule".' });
     }
   } catch (error) {
     console.error('Set day availability error:', error);

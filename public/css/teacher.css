@@ -1287,6 +1287,8 @@
   margin-bottom: 1.25rem;
   font-size: 0.85rem;
   color: var(--text-secondary);
+  width: 100%;
+  max-width: 100%;
 }
 
 .schedule-legend-item {
@@ -1313,6 +1315,21 @@
   background: #10B981;
 }
 
+/* Schedule Page Container Width Overrides: Full-Width Zero-Side-Gaps */
+#view-teacher-schedule .container {
+  width: 100% !important;
+  max-width: 100% !important;
+  padding-left: 1.75rem !important;
+  padding-right: 1.75rem !important;
+}
+
+#view-teacher-schedule .data-table-container {
+  width: 100% !important;
+  max-width: 100% !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+}
+
 /* Default Weekly Availability Card */
 .teacher-default-availability-card {
   background: var(--bg-card);
@@ -1321,17 +1338,23 @@
   padding: 1.35rem 1.6rem;
   margin-bottom: 1.5rem;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
-  max-width: 980px;
-  margin-left: auto;
-  margin-right: auto;
+  width: 100%;
+  max-width: 100%;
+  margin-left: 0;
+  margin-right: 0;
 }
 
 .default-avail-header {
   margin-bottom: 0.9rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
 }
 
 .default-avail-title {
-  font-size: 1.1rem;
+  font-size: 1.15rem;
   font-weight: 700;
   color: var(--text-primary);
   display: flex;
@@ -1348,25 +1371,38 @@
 
 .default-avail-days-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: 0.65rem;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0.75rem;
+}
+
+@media (max-width: 1024px) {
+  .default-avail-days-grid {
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  }
 }
 
 .default-avail-day-card {
   background: rgba(0, 0, 0, 0.02);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
-  padding: 0.7rem 0.6rem;
+  padding: 0.8rem 0.65rem;
   text-align: center;
   display: flex;
   flex-direction: column;
-  gap: 0.3rem;
+  gap: 0.35rem;
   transition: all var(--transition-fast);
+  cursor: pointer;
+}
+
+.default-avail-day-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 14px rgba(198, 138, 40, 0.12);
+  border-color: var(--gold-500);
 }
 
 .default-avail-day-card.open {
-  border-color: rgba(16, 185, 129, 0.3);
-  background: rgba(16, 185, 129, 0.04);
+  border-color: rgba(16, 185, 129, 0.35);
+  background: rgba(16, 185, 129, 0.05);
 }
 
 .default-avail-day-card.off {
@@ -1416,6 +1452,110 @@
   align-items: center;
 }
 
+/* Weekly Availability Editor Panel */
+.weekly-avail-editor-panel {
+  background: rgba(198, 138, 40, 0.03);
+  border: 1px solid rgba(198, 138, 40, 0.25);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem 1.4rem;
+  margin-top: 1.25rem;
+  animation: vroomFadeIn 0.25s ease;
+}
+
+.weekly-avail-editor-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.weekly-presets-row {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding: 0.6rem 0.85rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+}
+
+.weekly-day-editor-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  margin-bottom: 0.6rem;
+  gap: 0.85rem;
+  flex-wrap: wrap;
+  transition: all var(--transition-fast);
+}
+
+.weekly-day-editor-row.is-off {
+  opacity: 0.65;
+  background: rgba(0, 0, 0, 0.015);
+}
+
+.weekly-day-name-col {
+  width: 110px;
+  font-weight: 700;
+  font-size: 0.92rem;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.weekly-day-toggle-btn {
+  min-width: 115px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  padding: 0.35rem 0.7rem;
+  border-radius: 6px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  transition: all var(--transition-fast);
+}
+
+.weekly-day-toggle-btn.is-open {
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  color: #059669;
+}
+
+.weekly-day-toggle-btn.is-off {
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  color: #DC2626;
+}
+
+.weekly-day-hours-controls {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+}
+
+.weekly-hour-select {
+  height: 34px;
+  font-size: 0.8rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+}
+
 /* ==============================================================
    TEACHER MONTHLY SCHEDULE CALENDAR & DATE SCHEDULE MANAGER
    ============================================================== */
@@ -1426,8 +1566,9 @@
   overflow: hidden;
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04);
   transition: all var(--transition-normal);
-  max-width: 980px;
-  margin: 0 auto;
+  width: 100%;
+  max-width: 100%;
+  margin: 0 0 1.75rem 0;
 }
 
 .teacher-calendar-header {
@@ -1438,6 +1579,18 @@
   align-items: center;
   flex-wrap: wrap;
   gap: 0.75rem;
+}
+
+.teacher-cal-session-bar {
+  display: none;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.6rem 1.25rem;
+  background: rgba(59, 130, 246, 0.08);
+  border-bottom: 1px solid rgba(59, 130, 246, 0.2);
+  font-size: 0.84rem;
+  flex-wrap: wrap;
+  gap: 0.5rem;
 }
 
 .teacher-cal-nav-group {
@@ -1492,16 +1645,17 @@
 
 .teacher-cal-day-cell {
   background: var(--bg-card);
-  min-height: 52px;
-  height: 58px;
-  padding: 0.3rem 0.4rem;
+  min-height: 84px;
+  height: auto;
+  padding: 0.45rem 0.5rem;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  justify-content: flex-start;
   cursor: pointer;
   transition: all var(--transition-fast);
   position: relative;
   overflow: hidden;
+  gap: 0.3rem;
 }
 
 .teacher-cal-day-cell:hover {
@@ -1865,6 +2019,8 @@
   border-radius: var(--radius-xl);
   padding: 1.75rem;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+  width: 100%;
+  max-width: 100%;
 }
 
 /* Selected Date Notes Section */

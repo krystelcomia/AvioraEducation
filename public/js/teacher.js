@@ -2898,6 +2898,24 @@ const Teacher = {
         occupiedSlots: data?.occupiedSlots || []
       };
 
+      // Auto-navigate calendar to upcoming student session if available
+      if (!this.selectedDate && activeAppointments.length > 0) {
+        const sorted = [...activeAppointments].sort((a, b) => (a.requested_date + ' ' + a.requested_time).localeCompare(b.requested_date + ' ' + b.requested_time));
+        const nextApt = sorted[0];
+        if (nextApt && nextApt.requested_date) {
+          const parts = nextApt.requested_date.split('-');
+          if (parts.length >= 2) {
+            const aY = parseInt(parts[0], 10);
+            const aM = parseInt(parts[1], 10) - 1;
+            if (!isNaN(aY) && !isNaN(aM)) {
+              this.calYear = aY;
+              this.calMonth = aM;
+              this.selectedDate = nextApt.requested_date;
+            }
+          }
+        }
+      }
+
       // Load educator personal date notes (both from server & localStorage)
       const user = Auth.currentUser;
       const localKey = user ? `aviora_teacher_date_notes_${user.id}` : null;
@@ -2990,7 +3008,7 @@ const Teacher = {
       }
 
       return `
-        <div class="default-avail-day-card ${statusClass}">
+        <div class="default-avail-day-card ${statusClass}" onclick="Teacher.openDayInWeeklyEditor('${day}')" title="Click to modify ${day} availability">
           <div class="default-avail-day-name">${day}</div>
           <div class="default-avail-day-status">
             ${statusClass === 'open' 
@@ -2998,6 +3016,7 @@ const Teacher = {
               : `<span class="default-avail-badge off">${Icons.ban(12, 'color: var(--text-secondary);')} Off</span>`}
           </div>
           <div class="default-avail-day-hours">${hoursDisplay}</div>
+          <div style="font-size: 0.68rem; color: var(--gold-600); font-weight: 600; margin-top: 0.2rem; display: inline-flex; align-items: center; justify-content: center; gap: 0.2rem;">${Icons.edit(10)} Modify</div>
         </div>
       `;
     }).join('');
@@ -3009,8 +3028,13 @@ const Teacher = {
             ${Icons.clock(18)} Default Weekly Availability
           </h3>
           <p class="default-avail-subtitle">
-            Your recurring standard weekly hours. Options to edit hours or mark unavailability appear when you select a specific date on the calendar below.
+            Your recurring standard weekly operating schedule. Click 'Modify Available Days &amp; Times' or select any day below to customize your schedule.
           </p>
+        </div>
+        <div>
+          <button type="button" class="btn btn-outline-gold btn-sm" id="btn-toggle-weekly-editor" onclick="Teacher.toggleWeeklyAvailabilityEditor()" style="font-weight: 700; display: inline-flex; align-items: center; gap: 0.35rem;">
+            ${this.isEditingWeekly ? Icons.x(13) + ' Close Editor' : Icons.edit(13) + ' Modify Available Days &amp; Times'}
+          </button>
         </div>
       </div>
       <div style="margin-top: 0.75rem; margin-bottom: 1.25rem; padding: 0.75rem 1rem; background: rgba(198, 138, 40, 0.08); border: 1px solid rgba(198, 138, 40, 0.25); border-radius: 8px; font-size: 0.83rem; color: var(--gold-800); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.6rem;">
@@ -3025,6 +3049,311 @@ const Teacher = {
       </div>
       <div class="default-avail-days-grid">
         ${daysHtml}
+      </div>
+      ${this.isEditingWeekly ? this.renderWeeklyAvailabilityEditorHtml(availSched) : ''}
+    `;
+  },
+
+  toggleWeeklyAvailabilityEditor() {
+    if (this.application?.status !== 'approved') {
+      showToast('Operational Lock: Schedule availability and student bookings unlock once your account has been approved by the Administrator.', 'warning');
+      return;
+    }
+    this.isEditingWeekly = !this.isEditingWeekly;
+    this.renderDefaultAvailabilitySection();
+    if (this.isEditingWeekly) {
+      setTimeout(() => {
+        const p = document.getElementById('teacher-weekly-editor-panel');
+        if (p) p.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }, 60);
+    }
+  },
+
+  openDayInWeeklyEditor(dayName) {
+    if (this.application?.status !== 'approved') {
+      showToast('Operational Lock: Schedule availability and student bookings unlock once your account has been approved by the Administrator.', 'warning');
+      return;
+    }
+    this.isEditingWeekly = true;
+    this.focusedWeeklyDay = dayName;
+    this.renderDefaultAvailabilitySection();
+    setTimeout(() => {
+      const row = document.getElementById(`weekly-day-row-${dayName}`);
+      if (row) {
+        row.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        row.style.borderColor = 'var(--gold-500)';
+        setTimeout(() => row.style.borderColor = '', 1600);
+      }
+    }, 60);
+  },
+
+  toggleWeeklyDayStatus(dayName) {
+    const input = document.getElementById(`weekly-day-status-input-${dayName}`);
+    const btn = document.getElementById(`weekly-day-toggle-${dayName}`);
+    const hoursWrap = document.getElementById(`weekly-day-hours-wrap-${dayName}`);
+    const row = document.getElementById(`weekly-day-row-${dayName}`);
+    if (!input || !btn) return;
+
+    const isCurrentlyOpen = input.value === 'open';
+    if (isCurrentlyOpen) {
+      input.value = 'off';
+      btn.className = 'weekly-day-toggle-btn is-off';
+      btn.innerHTML = `${Icons.ban(13)} Off (Unavailable)`;
+      if (hoursWrap) hoursWrap.style.display = 'none';
+      if (row) row.classList.add('is-off');
+    } else {
+      input.value = 'open';
+      btn.className = 'weekly-day-toggle-btn is-open';
+      btn.innerHTML = `${Icons.checkCircle(13)} Open (Available)`;
+      if (hoursWrap) hoursWrap.style.display = 'flex';
+      if (row) row.classList.remove('is-off');
+    }
+  },
+
+  onWeeklyDayModeChange(dayName, mode) {
+    const timeSelects = document.getElementById(`weekly-day-time-selects-${dayName}`);
+    if (!timeSelects) return;
+    timeSelects.style.display = (mode === 'all_day') ? 'none' : 'inline-flex';
+  },
+
+  applyWeeklyPreset(presetName) {
+    const weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+    const weekends = ['Saturday', 'Sunday'];
+    const allDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
+    const setDay = (d, status, mode, start, end) => {
+      const input = document.getElementById(`weekly-day-status-input-${d}`);
+      const btn = document.getElementById(`weekly-day-toggle-${d}`);
+      const hoursWrap = document.getElementById(`weekly-day-hours-wrap-${d}`);
+      const modeSelect = document.getElementById(`weekly-day-mode-${d}`);
+      const timeSelects = document.getElementById(`weekly-day-time-selects-${d}`);
+      const startSelect = document.getElementById(`weekly-day-start-${d}`);
+      const endSelect = document.getElementById(`weekly-day-end-${d}`);
+      const row = document.getElementById(`weekly-day-row-${d}`);
+
+      if (input) input.value = status;
+      if (btn) {
+        btn.className = `weekly-day-toggle-btn ${status === 'open' ? 'is-open' : 'is-off'}`;
+        btn.innerHTML = status === 'open' ? `${Icons.checkCircle(13)} Open (Available)` : `${Icons.ban(13)} Off (Unavailable)`;
+      }
+      if (hoursWrap) hoursWrap.style.display = status === 'open' ? 'flex' : 'none';
+      if (row) {
+        if (status === 'open') row.classList.remove('is-off');
+        else row.classList.add('is-off');
+      }
+      if (modeSelect) modeSelect.value = mode;
+      if (timeSelects) timeSelects.style.display = mode === 'all_day' ? 'none' : 'inline-flex';
+      if (startSelect && start) startSelect.value = start;
+      if (endSelect && end) endSelect.value = end;
+    };
+
+    if (presetName === 'standard_workweek') {
+      weekdays.forEach(d => setDay(d, 'open', 'specific', '09:00', '17:00'));
+      weekends.forEach(d => setDay(d, 'off', 'specific', '09:00', '17:00'));
+      showToast('Applied Mon–Fri (9 AM – 5 PM) workweek preset.', 'info');
+    } else if (presetName === 'all_day_weekdays') {
+      weekdays.forEach(d => setDay(d, 'open', 'all_day', '08:00', '20:00'));
+      weekends.forEach(d => setDay(d, 'off', 'specific', '09:00', '17:00'));
+      showToast('Applied Mon–Fri All Day (8 AM – 8 PM) preset.', 'info');
+    } else if (presetName === 'all_days_all_day') {
+      allDays.forEach(d => setDay(d, 'open', 'all_day', '08:00', '20:00'));
+      showToast('Applied All 7 Days Open preset.', 'info');
+    } else if (presetName === 'weekends_off') {
+      weekends.forEach(d => setDay(d, 'off', 'specific', '09:00', '17:00'));
+      showToast('Set Saturdays & Sundays to Off (Unavailable).', 'info');
+    }
+  },
+
+  async saveWeeklyAvailability(btnEl = null) {
+    if (this.application?.status !== 'approved') {
+      showToast('Operational Lock: Schedule availability unlocks once approved.', 'warning');
+      return;
+    }
+
+    const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    const weeklySchedule = {};
+    const dayModes = {};
+
+    for (const d of days) {
+      const input = document.getElementById(`weekly-day-status-input-${d}`);
+      const modeSelect = document.getElementById(`weekly-day-mode-${d}`);
+      const startSelect = document.getElementById(`weekly-day-start-${d}`);
+      const endSelect = document.getElementById(`weekly-day-end-${d}`);
+
+      const status = input ? input.value : 'open';
+      const mode = modeSelect ? modeSelect.value : 'specific';
+
+      if (status === 'off') {
+        weeklySchedule[d] = [];
+        dayModes[d] = 'unavailable';
+      } else {
+        if (mode === 'all_day') {
+          weeklySchedule[d] = ['08:00 - 20:00'];
+          dayModes[d] = 'all_day';
+        } else {
+          const s = startSelect ? startSelect.value : '09:00';
+          const e = endSelect ? endSelect.value : '17:00';
+          const sH = parseInt(s.split(':')[0], 10);
+          const eH = parseInt(e.split(':')[0], 10);
+          if (isNaN(sH) || isNaN(eH) || eH <= sH) {
+            showToast(`For ${d}, the end time must be later than start time.`, 'warning');
+            if (endSelect) endSelect.focus();
+            return;
+          }
+          weeklySchedule[d] = [`${s} - ${e}`];
+          dayModes[d] = 'specific';
+        }
+      }
+    }
+
+    const origText = btnEl ? btnEl.innerHTML : '';
+    if (btnEl) {
+      btnEl.disabled = true;
+      btnEl.innerHTML = `${Icons.loader(14)} Saving...`;
+    }
+
+    try {
+      const res = await API.setDayAvailability({
+        action: 'save_weekly_schedule',
+        weekly_schedule: weeklySchedule,
+        day_modes: dayModes
+      });
+
+      if (res && res.availabilitySchedule) {
+        if (!this.scheduleData) this.scheduleData = {};
+        this.scheduleData.availabilitySchedule = res.availabilitySchedule;
+        if (this.tutorProfile) this.tutorProfile.availability_schedule = res.availabilitySchedule;
+      }
+
+      this.isEditingWeekly = false;
+      this.focusedWeeklyDay = null;
+      this.renderSchedule();
+      showToast('Weekly availability successfully updated! Operating hours are now live.', 'success');
+    } catch (err) {
+      console.error('Failed to save weekly availability:', err);
+      showToast(err.message || 'Failed to save weekly schedule.', 'error');
+    } finally {
+      if (btnEl) {
+        btnEl.disabled = false;
+        btnEl.innerHTML = origText;
+      }
+    }
+  },
+
+  renderWeeklyAvailabilityEditorHtml(availSched) {
+    const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    const timeOptions = [];
+    for (let h = 7; h <= 21; h++) {
+      const val24 = `${String(h).padStart(2, '0')}:00`;
+      const ampm = h >= 12 ? 'PM' : 'AM';
+      const hr12 = h % 12 === 0 ? 12 : h % 12;
+      const lbl = `${String(hr12).padStart(2, '0')}:00 ${ampm}`;
+      timeOptions.push({ val: val24, lbl });
+    }
+
+    const rowsHtml = days.map(day => {
+      const blocks = Array.isArray(availSched[day]) ? availSched[day] : [];
+      const mode = availSched.day_modes?.[day];
+      const isDayOff = mode === 'unavailable' || (blocks.length === 0 && mode !== 'all_day');
+      const isAllDay = !isDayOff && (mode === 'all_day' || (blocks.length === 1 && blocks[0] === '08:00 - 20:00'));
+
+      let startVal = '09:00';
+      let endVal = '17:00';
+      if (blocks.length > 0 && typeof blocks[0] === 'string') {
+        const parts = blocks[0].split('-').map(s => s.trim());
+        if (parts.length === 2) {
+          const sH = this.parseTimeHour(parts[0]);
+          const eH = this.parseTimeHour(parts[1]);
+          if (sH) startVal = `${String(sH.hour).padStart(2, '0')}:00`;
+          if (eH) endVal = `${String(eH.hour).padStart(2, '0')}:00`;
+        }
+      }
+
+      const isFocused = this.focusedWeeklyDay === day;
+
+      return `
+        <div class="weekly-day-editor-row ${isDayOff ? 'is-off' : ''}" id="weekly-day-row-${day}" style="${isFocused ? 'border-color: var(--gold-500);' : ''}">
+          <div class="weekly-day-name-col">
+            <span>${day}</span>
+          </div>
+          
+          <div>
+            <button type="button" class="weekly-day-toggle-btn ${!isDayOff ? 'is-open' : 'is-off'}" id="weekly-day-toggle-${day}" onclick="Teacher.toggleWeeklyDayStatus('${day}')">
+              ${!isDayOff ? Icons.checkCircle(13) + ' Open (Available)' : Icons.ban(13) + ' Off (Unavailable)'}
+            </button>
+            <input type="hidden" id="weekly-day-status-input-${day}" value="${!isDayOff ? 'open' : 'off'}" />
+          </div>
+
+          <div class="weekly-day-hours-controls" id="weekly-day-hours-wrap-${day}" style="display: ${!isDayOff ? 'flex' : 'none'};">
+            <div style="display: flex; gap: 0.35rem; align-items: center;">
+              <label style="margin: 0; font-size: 0.76rem; color: var(--text-secondary); font-weight: 600;">Mode:</label>
+              <select class="weekly-hour-select" id="weekly-day-mode-${day}" onchange="Teacher.onWeeklyDayModeChange('${day}', this.value)">
+                <option value="specific" ${!isAllDay ? 'selected' : ''}>Specific Hours</option>
+                <option value="all_day" ${isAllDay ? 'selected' : ''}>All Day (8 AM – 8 PM)</option>
+              </select>
+            </div>
+
+            <div id="weekly-day-time-selects-${day}" style="display: ${!isAllDay ? 'inline-flex' : 'none'}; align-items: center; gap: 0.35rem;">
+              <span style="font-size: 0.76rem; color: var(--text-secondary);">From:</span>
+              <select class="weekly-hour-select" id="weekly-day-start-${day}">
+                ${timeOptions.slice(0, -1).map(t => `<option value="${t.val}" ${t.val === startVal ? 'selected' : ''}>${t.lbl}</option>`).join('')}
+              </select>
+              <span style="font-size: 0.76rem; color: var(--text-secondary);">To:</span>
+              <select class="weekly-hour-select" id="weekly-day-end-${day}">
+                ${timeOptions.slice(1).map(t => `<option value="${t.val}" ${t.val === endVal ? 'selected' : ''}>${t.lbl}</option>`).join('')}
+              </select>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    return `
+      <div class="weekly-avail-editor-panel" id="teacher-weekly-editor-panel">
+        <div class="weekly-avail-editor-header">
+          <div>
+            <h4 style="margin: 0 0 0.2rem 0; font-size: 1.05rem; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 0.45rem;">
+              ${Icons.edit(16)} Modify Standard Weekly Operating Schedule
+            </h4>
+            <p style="margin: 0; font-size: 0.8rem; color: var(--text-secondary);">
+              Toggle available days and customize operating hours for recurring student bookings. Changes take effect immediately.
+            </p>
+          </div>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="Teacher.toggleWeeklyAvailabilityEditor()" style="padding: 0.25rem 0.65rem; font-size: 0.78rem;">
+            ${Icons.x(12)} Close
+          </button>
+        </div>
+
+        <!-- Quick Presets -->
+        <div class="weekly-presets-row">
+          <span style="font-size: 0.76rem; font-weight: 700; color: var(--text-primary); margin-right: 0.25rem;">Quick Presets:</span>
+          <button type="button" class="btn btn-outline-gold btn-sm" onclick="Teacher.applyWeeklyPreset('standard_workweek')" style="padding: 0.2rem 0.55rem; font-size: 0.74rem;">
+            Mon–Fri 9 AM – 5 PM
+          </button>
+          <button type="button" class="btn btn-outline-gold btn-sm" onclick="Teacher.applyWeeklyPreset('all_day_weekdays')" style="padding: 0.2rem 0.55rem; font-size: 0.74rem;">
+            Mon–Fri 8 AM – 8 PM
+          </button>
+          <button type="button" class="btn btn-outline-gold btn-sm" onclick="Teacher.applyWeeklyPreset('all_days_all_day')" style="padding: 0.2rem 0.55rem; font-size: 0.74rem;">
+            All 7 Days Open
+          </button>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="Teacher.applyWeeklyPreset('weekends_off')" style="padding: 0.2rem 0.55rem; font-size: 0.74rem;">
+            Weekends Off
+          </button>
+        </div>
+
+        <!-- Day Rows -->
+        <div class="weekly-days-list" style="margin-bottom: 1.15rem;">
+          ${rowsHtml}
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 0.65rem; align-items: center; border-top: 1px solid var(--border-color); padding-top: 0.85rem;">
+          <button type="button" class="btn btn-secondary btn-sm" onclick="Teacher.toggleWeeklyAvailabilityEditor()" style="padding: 0.45rem 1rem;">
+            Cancel
+          </button>
+          <button type="button" class="btn btn-primary btn-sm" id="btn-save-weekly-avail" onclick="Teacher.saveWeeklyAvailability(this)" style="font-weight: 700; padding: 0.45rem 1.35rem; display: inline-flex; align-items: center; gap: 0.35rem;">
+            ${Icons.save(14)} Save Weekly Availability
+          </button>
+        </div>
       </div>
     `;
   },
@@ -3120,6 +3449,52 @@ const Teacher = {
     const appointments = this.scheduleData?.appointments || [];
     const occupiedSlots = this.scheduleData?.occupiedSlots || [];
 
+    // Render upcoming session banner above calendar
+    const nextSessionBar = document.getElementById('teacher-cal-next-session-bar');
+    if (nextSessionBar) {
+      const activeUpcomingApts = appointments
+        .filter(a => a.requested_date && a.status !== 'completed' && a.status !== 'done' && a.status !== 'cancelled' && a.status !== 'declined' && a.room_status !== 'ended')
+        .sort((a, b) => {
+          const da = `${a.requested_date.split('T')[0]} ${a.requested_time || '00:00'}`;
+          const db = `${b.requested_date.split('T')[0]} ${b.requested_time || '00:00'}`;
+          return da.localeCompare(db);
+        });
+
+      if (activeUpcomingApts.length > 0) {
+        const nextApt = activeUpcomingApts[0];
+        const nextDateStr = nextApt.requested_date.split('T')[0];
+        const nextDateObj = new Date(nextDateStr + 'T00:00:00');
+        const nextDateFormatted = nextDateObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+        nextSessionBar.style.display = 'flex';
+        nextSessionBar.style.background = 'rgba(59, 130, 246, 0.08)';
+        nextSessionBar.style.borderColor = 'rgba(59, 130, 246, 0.2)';
+        nextSessionBar.innerHTML = `
+          <div style="display: flex; align-items: center; gap: 0.65rem; flex-wrap: wrap;">
+            <span style="font-weight: 700; color: #1D4ED8; display: inline-flex; align-items: center; gap: 0.35rem;">
+              ${Icons.calendar(15, 'color: #3B82F6;')} Next Scheduled Class:
+            </span>
+            <strong style="color: var(--text-primary); font-size: 0.88rem;">${this.escapeHtml(nextApt.student_name || 'Student')}</strong>
+            <span class="badge" style="background: rgba(59, 130, 246, 0.12); color: #2563EB; font-size: 0.72rem; padding: 0.15rem 0.5rem; font-weight: 600;">${this.escapeHtml(nextApt.subject || 'Class')}</span>
+            <span style="color: var(--text-secondary); font-size: 0.8rem;">● ${nextDateFormatted} at ${this.escapeHtml(nextApt.requested_time || '')} (50m)</span>
+            <span class="status-pill ${nextApt.status === 'accepted' ? 'accepted' : 'pending'}" style="font-size: 0.68rem; padding: 0.1rem 0.45rem; text-transform: uppercase;">${nextApt.status === 'accepted' ? 'Confirmed' : 'Pending'}</span>
+          </div>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="Teacher.selectCalendarDate('${nextDateStr}')" style="padding: 0.25rem 0.65rem; font-size: 0.75rem; display: inline-flex; align-items: center; gap: 0.25rem;">
+            View on Calendar →
+          </button>
+        `;
+      } else {
+        nextSessionBar.style.display = 'flex';
+        nextSessionBar.style.background = 'rgba(16, 185, 129, 0.08)';
+        nextSessionBar.style.borderColor = 'rgba(16, 185, 129, 0.2)';
+        nextSessionBar.innerHTML = `
+          <div style="display: flex; align-items: center; gap: 0.5rem; color: #047857; font-size: 0.82rem;">
+            <span>${Icons.checkCircle(14, 'color: #10B981;')}</span>
+            <span><strong>No pending or ongoing sessions</strong> — All completed classes are cleared from your schedule. Ready for upcoming bookings!</span>
+          </div>
+        `;
+      }
+    }
+
     // Update calendar header info bar (no duplicate action buttons)
     const calHintBox = document.querySelector('#view-teacher-schedule .teacher-cal-hint');
     if (calHintBox) {
@@ -3161,11 +3536,22 @@ const Teacher = {
         prevY--;
       }
       const dateStr = `${prevY}-${String(prevM).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
+      const dayApts = aptsByDate[dateStr] || [];
       cellsHtml += `
         <div class="teacher-cal-day-cell is-other-month" onclick="Teacher.selectCalendarDate('${dateStr}')">
           <div class="teacher-cal-day-header">
             <span class="teacher-cal-day-num">${dayNum}</span>
           </div>
+          ${dayApts.length > 0 ? `
+            <div class="teacher-cal-events-list">
+              ${dayApts.slice(0, 1).map(apt => `
+                <div class="cal-event-chip chip-class" style="opacity: 0.85;" title="${this.escapeHtml(apt.student_name || 'Student')} • ${this.escapeHtml(apt.subject || 'Class')}">
+                  <div class="chip-time">${this.escapeHtml(apt.requested_time || '')}</div>
+                  <div class="chip-student">${this.escapeHtml(apt.student_name || 'Student')}</div>
+                </div>
+              `).join('')}
+            </div>
+          ` : ''}
         </div>
       `;
     }
@@ -3193,15 +3579,21 @@ const Teacher = {
             <span class="teacher-cal-day-num">${day}</span>
             ${hasPersonalNote || hasStudentNotes ? `<span class="cal-note-indicator-dot" title="Has Notes (Click to view)">${Icons.note(12, 'color: var(--gold-600);')}</span>` : ''}
           </div>
-          <div class="teacher-cal-compact-indicators">
-            ${isDateOccupied ? `
-              <span class="cal-mini-badge badge-occupied">${Icons.ban(11, 'color: #EF4444;')} Occupied</span>
-            ` : dayApts.length > 0 ? `
-              <span class="cal-mini-badge badge-class">
-                ● ${dayApts.length === 1 ? (dayApts[0].requested_time || '1 class') : `${dayApts.length} classes`}
-              </span>
+          <div class="teacher-cal-events-list">
+            ${dayApts.length > 0 ? `
+              ${dayApts.slice(0, 2).map(apt => `
+                <div class="cal-event-chip chip-class" title="${this.escapeHtml(apt.student_name || 'Student')} • ${this.escapeHtml(apt.subject || 'Class')} (${this.escapeHtml(apt.requested_time || '')})">
+                  <div class="chip-time">${this.escapeHtml(apt.requested_time || '')}</div>
+                  <div class="chip-student">${this.escapeHtml(apt.student_name || 'Student')}</div>
+                </div>
+              `).join('')}
+              ${dayApts.length > 2 ? `<div style="font-size: 0.62rem; color: #2563EB; font-weight: 700; padding: 0.05rem 0.2rem;">+${dayApts.length - 2} more</div>` : ''}
+            ` : isDateOccupied ? `
+              <div class="cal-event-chip chip-occupied" title="Marked Occupied">
+                <span>${Icons.ban(10, 'color: #EF4444;')} Occupied</span>
+              </div>
             ` : (hasPersonalNote ? `
-              <span class="cal-mini-badge badge-note">${Icons.note(11, 'color: var(--gold-600);')} Note</span>
+              <span class="cal-mini-badge badge-note" style="margin-top: 0.2rem;">${Icons.note(10, 'color: var(--gold-600);')} Note</span>
             ` : '')}
           </div>
         </div>
@@ -3219,11 +3611,22 @@ const Teacher = {
         nextY++;
       }
       const dateStr = `${nextY}-${String(nextM).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      const dayApts = aptsByDate[dateStr] || [];
       cellsHtml += `
         <div class="teacher-cal-day-cell is-other-month" onclick="Teacher.selectCalendarDate('${dateStr}')">
           <div class="teacher-cal-day-header">
             <span class="teacher-cal-day-num">${day}</span>
           </div>
+          ${dayApts.length > 0 ? `
+            <div class="teacher-cal-events-list">
+              ${dayApts.slice(0, 1).map(apt => `
+                <div class="cal-event-chip chip-class" style="opacity: 0.85;" title="${this.escapeHtml(apt.student_name || 'Student')} • ${this.escapeHtml(apt.subject || 'Class')}">
+                  <div class="chip-time">${this.escapeHtml(apt.requested_time || '')}</div>
+                  <div class="chip-student">${this.escapeHtml(apt.student_name || 'Student')}</div>
+                </div>
+              `).join('')}
+            </div>
+          ` : ''}
         </div>
       `;
     }

@@ -1431,7 +1431,7 @@ function ensureJoshuaAccount(customPassword) {
           INSERT INTO tutoring_requests (
             student_id, tutor_id, subject, grade_level, requested_date, requested_time,
             duration_hours, hourly_rate, total_amount, status, notes, room_status
-          ) VALUES (?, ?, 'Calculus BC', 'Grade 11-12', '2026-10-29', '14:00', 1.0, 45.0, 45.0, 'accepted', 'Need help with Taylor Series convergence and integration by parts.', 'closed')
+          ) VALUES (?, ?, 'Calculus BC', 'Grade 11-12', '2026-10-29', '14:00', 1.0, 45.0, 45.0, 'completed', 'Need help with Taylor Series convergence and integration by parts.', 'ended')
         `).run(krystel.id, userId);
 
         const existingTask = db.prepare('SELECT id FROM tutor_tasks WHERE tutor_id = ? AND student_id = ?').get(userId, krystel.id);
@@ -1442,6 +1442,13 @@ function ensureJoshuaAccount(customPassword) {
             ) VALUES (?, ?, 'Calculus BC', 'Taylor Polynomials Practice Worksheet', 'Complete exercises 1 through 8 on finding the 3rd-degree Taylor polynomial centered at x=0.', '2026-11-02', 'assigned')
           `).run(userId, krystel.id);
         }
+      } else {
+        // Concluded class with Krystel Comia is marked as completed/done and ended
+        db.prepare(`
+          UPDATE tutoring_requests
+          SET status = 'completed', room_status = 'ended', updated_at = CURRENT_TIMESTAMP
+          WHERE id = ? AND (status != 'completed' OR room_status != 'ended')
+        `).run(existingReq.id);
       }
     }
 

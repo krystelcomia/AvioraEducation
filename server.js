@@ -445,7 +445,7 @@ function getTutorLiveAvailability(tutorUserId, rawSchedule) {
     bookedSlots = db.prepare(`
       SELECT id, requested_date as date, requested_time as time, status, subject
       FROM tutoring_requests
-      WHERE tutor_id = ? AND status IN ('accepted', 'pending')
+      WHERE tutor_id = ? AND status IN ('accepted', 'pending') AND (room_status IS NULL OR room_status != 'ended')
       ORDER BY requested_date ASC, requested_time ASC
     `).all(tutorUserId);
   } catch (e) {
@@ -534,7 +534,7 @@ function getStudentLiveAvailability(studentId) {
       SELECT tr.id, tr.requested_date as date, tr.requested_time as time, tr.status, tr.subject, tr.tutor_id, u.name as tutor_name
       FROM tutoring_requests tr
       JOIN users u ON tr.tutor_id = u.id
-      WHERE tr.student_id = ? AND tr.status IN ('accepted', 'pending')
+      WHERE tr.student_id = ? AND tr.status IN ('accepted', 'pending') AND (tr.room_status IS NULL OR tr.room_status != 'ended')
       ORDER BY tr.requested_date ASC, tr.requested_time ASC
     `).all(studentId);
   } catch (e) {
@@ -5597,7 +5597,9 @@ app.get('/api/teacher/schedule', authenticateToken, requireRole('teacher'), (req
       FROM tutoring_requests tr
       JOIN users u ON tr.student_id = u.id
       LEFT JOIN student_profiles sp ON sp.user_id = u.id
-      WHERE tr.tutor_id = ? AND tr.status IN ('pending', 'accepted', 'completed')
+      WHERE tr.tutor_id = ? 
+        AND tr.status IN ('pending', 'accepted') 
+        AND (tr.room_status IS NULL OR tr.room_status != 'ended')
       ORDER BY tr.requested_date ASC, tr.requested_time ASC
     `).all(teacherId);
 

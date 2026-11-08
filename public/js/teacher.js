@@ -996,14 +996,14 @@ const Teacher = {
           <span style="font-weight: 700; color: var(--gold-400);">$${Number(r.total_amount || 0).toFixed(2)}</span>
         </td>
         <td>
-          <span class="status-pill ${r.status === 'completed' ? 'completed' : r.status === 'declined' ? 'declined' : 'pending'}">${r.status === 'completed' ? 'DONE' : r.status === 'declined' ? 'CANCELLED' : 'PENDING'}</span>
+          <span class="status-pill ${(r.status === 'completed' || r.status === 'done' || r.room_status === 'ended') ? 'completed' : (r.status === 'declined' || r.status === 'cancelled') ? 'declined' : 'pending'}">${(r.status === 'completed' || r.status === 'done' || r.room_status === 'ended') ? 'DONE' : (r.status === 'declined' || r.status === 'cancelled') ? 'CANCELLED' : 'PENDING'}</span>
         </td>
         <td style="text-align: right;">
           <div style="display: flex; gap: 0.4rem; justify-content: flex-end; align-items: center;">
             ${!this.isApproved() ? `
               <span class="badge" style="background: rgba(245, 158, 11, 0.15); color: #D97706; font-size: 0.75rem; padding: 0.35rem 0.65rem; border-radius: 4px; display: inline-flex; align-items: center; gap: 0.25rem;" title="Operations locked while application is under review">${Icons.lock(12)} Locked (Under Review)</span>
-            ` : r.status === 'completed' ? `
-              <span style="font-size: 0.8rem; color: #10B981; font-weight: 600; display: inline-flex; align-items: center; gap: 0.25rem;">${Icons.check(13)} Completed (Done)</span>
+            ` : (r.status === 'completed' || r.status === 'done' || r.room_status === 'ended') ? `
+              <span style="font-size: 0.8rem; color: #10B981; font-weight: 600; display: inline-flex; align-items: center; gap: 0.25rem;">${Icons.check(13)} Done</span>
             ` : r.status === 'declined' || r.status === 'cancelled' ? `
               <span style="font-size: 0.8rem; color: #EF4444; font-weight: 600; display: inline-flex; align-items: center; gap: 0.25rem;">${Icons.x(13)} Cancelled</span>
             ` : (r.status === 'pending' || r.status === 'accepted') ? `
@@ -1811,9 +1811,9 @@ const Teacher = {
     if (this.classFilter === 'open') {
       filtered = filtered.filter(c => c.room_status === 'open');
     } else if (this.classFilter === 'pending' || this.classFilter === 'accepted') {
-      filtered = filtered.filter(c => (c.status === 'pending' || c.status === 'accepted') && c.room_status !== 'open');
+      filtered = filtered.filter(c => (c.status === 'pending' || c.status === 'accepted') && c.room_status !== 'open' && c.status !== 'completed' && c.status !== 'done' && c.room_status !== 'ended');
     } else if (this.classFilter === 'done' || this.classFilter === 'completed') {
-      filtered = filtered.filter(c => c.status === 'completed');
+      filtered = filtered.filter(c => c.status === 'completed' || c.status === 'done' || c.room_status === 'ended');
     } else if (this.classFilter === 'cancelled' || this.classFilter === 'declined') {
       filtered = filtered.filter(c => c.status === 'declined' || c.status === 'cancelled');
     }
@@ -1860,10 +1860,10 @@ const Teacher = {
 
     container.innerHTML = filtered.map(c => {
       const isLive = c.room_status === 'open';
-      const isCompleted = c.status === 'completed' || c.status === 'done';
-      const isDeclined = c.status === 'declined' || c.status === 'cancelled';
-      const isAccepted = c.status === 'accepted';
-      const isPending = c.status === 'pending';
+      const isCompleted = c.status === 'completed' || c.status === 'done' || c.room_status === 'ended';
+      const isDeclined = !isCompleted && (c.status === 'declined' || c.status === 'cancelled');
+      const isAccepted = !isCompleted && c.status === 'accepted';
+      const isPending = !isCompleted && c.status === 'pending';
       const isEditing = !isCompleted && this.editingClassId === Number(c.id);
       const cleanDateVal = String(c.requested_date || '').split('T')[0];
 
@@ -1921,12 +1921,12 @@ const Teacher = {
             </div>
 
             ${!isDeclined ? `
-              <div class="class-calendar-sync-badge ${isCompleted ? 'is-completed' : ''}" onclick="Teacher.viewClassOnCalendar('${cleanDateVal}')" title="Open Schedule Calendar on ${cleanDateVal}">
+              <div class="class-calendar-sync-badge ${isCompleted ? 'is-completed' : ''}" ${isCompleted ? '' : `onclick="Teacher.viewClassOnCalendar('${cleanDateVal}')"`} title="${isCompleted ? 'Class concluded on ' + cleanDateVal : 'Open Schedule Calendar on ' + cleanDateVal}">
                 <span style="display: inline-flex; align-items: center; gap: 0.35rem;">
                   ${isCompleted ? Icons.check(13) + ' <strong>Concluded:</strong> ' : Icons.calendar(13) + ' <strong>Calendar:</strong> '}
                   ${c.requested_date} • ${c.requested_time}
                 </span>
-                <span class="class-calendar-sync-link">View Schedule →</span>
+                ${isCompleted ? `<span class="class-calendar-sync-link" style="color: #10B981; font-weight: 600; text-decoration: none;">(Concluded Session)</span>` : `<span class="class-calendar-sync-link">View Schedule →</span>`}
               </div>
             ` : `
               <div class="class-action-indicator-badge status-declined" style="padding: 0.3rem 0.5rem; font-size: 0.75rem;">
@@ -1987,9 +1987,9 @@ const Teacher = {
                 ${Icons.lock(12)} Operations Locked (Under Review)
               </button>
             ` : isCompleted ? `
-              <button type="button" class="btn btn-secondary btn-sm btn-done-class" disabled style="flex: 1; justify-content: center; opacity: 0.75; cursor: not-allowed; font-weight: 700; display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.35rem 0.65rem; font-size: 0.82rem;" title="This class has concluded (allotted 50-minute duration elapsed)">
-                ${Icons.check(13)} Done Class
-              </button>
+              <div class="class-status-summary-pill is-completed-summary" style="flex: 1; justify-content: center; display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.38rem 0.65rem; font-size: 0.82rem; font-weight: 700; border-radius: 6px;" title="This class has concluded (allotted 50-minute duration elapsed)">
+                ${Icons.check(14)} Done
+              </div>
               <button type="button" class="btn btn-outline-gold btn-sm" style="justify-content: center; font-weight: 600; display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.35rem 0.65rem; font-size: 0.82rem;" onclick="Teacher.openClassRecordModal(${c.id})" title="View class record, history, and send lesson summary to student">
                 ${Icons.fileText(13)} Class Record &amp; Summary
               </button>
@@ -2890,7 +2890,13 @@ const Teacher = {
   async loadSchedule() {
     try {
       const data = await API.getTeacherSchedule();
-      this.scheduleData = data || { appointments: [], occupiedSlots: [] };
+      const rawAppointments = data?.appointments || [];
+      const activeAppointments = rawAppointments.filter(a => a.status !== 'completed' && a.status !== 'done' && a.status !== 'cancelled' && a.status !== 'declined' && a.room_status !== 'ended');
+      this.scheduleData = {
+        ...(data || {}),
+        appointments: activeAppointments,
+        occupiedSlots: data?.occupiedSlots || []
+      };
 
       // Load educator personal date notes (both from server & localStorage)
       const user = Auth.currentUser;
@@ -3133,10 +3139,11 @@ const Teacher = {
       }
     }
 
-    // Map appointments by YYYY-MM-DD
+    // Map appointments by YYYY-MM-DD (exclude completed or cancelled sessions)
     const aptsByDate = {};
     appointments.forEach(apt => {
       if (!apt.requested_date) return;
+      if (apt.status === 'completed' || apt.status === 'done' || apt.status === 'cancelled' || apt.status === 'declined' || apt.room_status === 'ended') return;
       const dStr = apt.requested_date.split('T')[0];
       if (!aptsByDate[dStr]) aptsByDate[dStr] = [];
       aptsByDate[dStr].push(apt);
@@ -3274,7 +3281,7 @@ const Teacher = {
     const availSched = this.scheduleData?.availabilitySchedule || this.tutorProfile?.availability_schedule || {};
 
     const isDateOccupied = this.isDateMarkedUnavailable(this.selectedDate, dayOfWeekName);
-    const dayApts = appointments.filter(a => (a.requested_date || '').startsWith(this.selectedDate));
+    const dayApts = appointments.filter(a => (a.requested_date || '').startsWith(this.selectedDate) && a.status !== 'completed' && a.status !== 'done' && a.status !== 'cancelled' && a.status !== 'declined' && a.room_status !== 'ended');
     const dayOccupied = occupiedSlots.filter(o => (o.date === this.selectedDate || (!o.date && o.day_of_week === dayOfWeekName)) && o.time_slot !== 'ALL_DAY');
 
     // Resolve configured available hours for this date / weekday
@@ -3742,7 +3749,8 @@ const Teacher = {
   renderUpcomingAppointmentsList() {
     const upcomingList = document.getElementById('teacher-upcoming-appointments-list');
     const countBadge = document.getElementById('teacher-upcoming-count-badge');
-    const appointments = this.scheduleData?.appointments || [];
+    const rawAppointments = this.scheduleData?.appointments || [];
+    const appointments = rawAppointments.filter(a => a.status !== 'completed' && a.status !== 'done' && a.status !== 'cancelled' && a.status !== 'declined' && a.room_status !== 'ended');
 
     if (countBadge) {
       countBadge.textContent = `${appointments.length} Appointment${appointments.length === 1 ? '' : 's'}`;

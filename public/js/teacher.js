@@ -1010,9 +1010,8 @@ const Teacher = {
               ${r.room_status === 'open' ? `
                 <button class="btn btn-primary btn-sm" onclick="VirtualRoom.joinRoom(${r.id}, 'tutor')" style="background: #10B981; border-color: #10B981;">${Icons.video(14)} Enter Room (Live)</button>
               ` : `
-                <button class="btn btn-primary btn-sm" onclick="VirtualRoom.openRoomAsTutor(${r.id})">${Icons.video(14)} Open Room</button>
+                <button class="btn btn-primary btn-sm" onclick="Teacher.startVirtualClassSession(${r.id}, this)">${Icons.video(14)} Open Room</button>
               `}
-              <button class="btn btn-outline-gold btn-sm" onclick="Teacher.updateStatus(${r.id}, 'completed', this)">Mark Done</button>
             ` : ''}
           </div>
         </td>
@@ -1033,13 +1032,15 @@ const Teacher = {
     }
 
     const actionType = customPayload?.action || (status === 'accepted' ? 'accept' : status);
-    const effectiveStatus = (actionType === 'accept' || actionType === 'start_class' || actionType === 'reschedule')
-      ? 'accepted'
-      : (actionType === 'decline' || actionType === 'declined')
-        ? 'declined'
-        : (actionType === 'done' || actionType === 'completed')
-          ? 'completed'
-          : status;
+    const effectiveStatus = (actionType === 'reschedule' || actionType === 'update')
+      ? (existingClass ? existingClass.status : (status || 'pending'))
+      : (actionType === 'accept' || actionType === 'start_class')
+        ? 'accepted'
+        : (actionType === 'decline' || actionType === 'declined')
+          ? 'declined'
+          : (actionType === 'done' || actionType === 'completed')
+            ? 'completed'
+            : (existingClass ? existingClass.status : status);
 
     let note = customPayload?.note !== undefined ? customPayload.note : '';
     if (effectiveStatus === 'declined' && !note) {
@@ -1059,8 +1060,8 @@ const Teacher = {
       btnEl.disabled = true;
       btnEl.innerHTML = actionType === 'start_class'
         ? 'Starting Class...'
-        : actionType === 'reschedule'
-          ? 'Rescheduling...'
+        : (actionType === 'reschedule' || actionType === 'update')
+          ? 'Saving...'
           : effectiveStatus === 'accepted'
             ? 'Accepting...'
             : effectiveStatus === 'completed'
@@ -1143,7 +1144,7 @@ const Teacher = {
         console.error('Error re-rendering teacher views:', renderErr);
       }
 
-      showToast(res.message || `Class updated (${actionType.toUpperCase()}).`, 'success');
+      showToast(res.message || ((actionType === 'reschedule' || actionType === 'update') ? 'Class schedule updated successfully.' : `Class updated (${actionType.toUpperCase()}).`), 'success');
 
       if (actionType === 'start_class') {
         if (typeof VirtualRoom !== 'undefined' && VirtualRoom.joinRoom) {
@@ -1182,27 +1183,20 @@ const Teacher = {
   },
 
   onClassUpdateActionChange(requestId, actionVal) {
-    if (actionVal === 'record') {
-      this.toggleClassUpdatePanel(requestId);
-      this.openClassRecordModal(requestId);
-      return;
-    }
     const schedFields = document.getElementById(`class-update-schedule-fields-${requestId}`);
     const noteFieldWrap = document.getElementById(`class-update-note-wrap-${requestId}`);
     const noteInput = document.getElementById(`class-update-note-${requestId}`);
     if (schedFields) {
-      schedFields.style.display = (actionVal === 'decline' || actionVal === 'completed') ? 'none' : 'grid';
+      schedFields.style.display = (actionVal === 'decline') ? 'none' : 'grid';
     }
     if (noteFieldWrap) {
-      noteFieldWrap.style.display = (actionVal === 'decline' || actionVal === 'reschedule' || actionVal === 'accept') ? 'flex' : 'none';
+      noteFieldWrap.style.display = 'flex';
     }
     if (noteInput) {
       if (actionVal === 'decline') {
-        noteInput.placeholder = 'Reason for declining (e.g., Scheduling conflict)...';
-      } else if (actionVal === 'reschedule') {
-        noteInput.placeholder = 'Note for student regarding the rescheduled time...';
+        noteInput.placeholder = 'Reason for cancellation (e.g., Scheduling conflict)...';
       } else {
-        noteInput.placeholder = 'Optional note for student...';
+        noteInput.placeholder = 'Optional note for student regarding the updated schedule...';
       }
     }
   },
@@ -1217,30 +1211,22 @@ const Teacher = {
     const timeEl = document.getElementById(`class-update-time-${requestId}`);
     const noteEl = document.getElementById(`class-update-note-${requestId}`);
 
-    const action = actionEl ? actionEl.value : 'start_class';
-    if (action === 'record') {
-      this.toggleClassUpdatePanel(requestId);
-      this.openClassRecordModal(requestId);
-      return;
-    }
+    const action = actionEl ? actionEl.value : 'reschedule';
     const requested_date = dateEl ? dateEl.value.trim() : '';
     const requested_time = timeEl ? timeEl.value.trim() : '';
     const note = noteEl ? noteEl.value.trim() : undefined;
 
-    if ((action === 'accept' || action === 'reschedule' || action === 'start_class') && (!requested_date || !requested_time)) {
+    if (action === 'reschedule' && (!requested_date || !requested_time)) {
       showToast('Please provide both a valid Date and Time for the class schedule.', 'warning');
       return;
     }
 
-    const statusMap = {
-      accept: 'accepted',
-      start_class: 'accepted',
-      reschedule: 'accepted',
-      decline: 'declined',
-      completed: 'completed'
-    };
+    const existingClass = (this.classes || []).find(c => Number(c.id) === Number(requestId));
+    const effectiveStatus = (action === 'decline' || action === 'declined')
+      ? 'declined'
+      : (existingClass ? existingClass.status : 'accepted');
 
-    await this.updateStatus(requestId, statusMap[action] || 'accepted', btnEl, {
+    await this.updateStatus(requestId, effectiveStatus, btnEl, {
       action,
       requested_date,
       requested_time,
@@ -1874,14 +1860,30 @@ const Teacher = {
 
     container.innerHTML = filtered.map(c => {
       const isLive = c.room_status === 'open';
-      const isCompleted = c.status === 'completed';
+      const isCompleted = c.status === 'completed' || c.status === 'done';
       const isDeclined = c.status === 'declined' || c.status === 'cancelled';
-      const isPending = !isCompleted && !isDeclined; // automatically assigned upcoming class
+      const isAccepted = c.status === 'accepted';
+      const isPending = c.status === 'pending';
       const isEditing = !isCompleted && this.editingClassId === Number(c.id);
       const cleanDateVal = String(c.requested_date || '').split('T')[0];
 
-      const statusBadgeText = isCompleted ? 'DONE' : (isDeclined ? 'CANCELLED' : 'PENDING');
-      const statusClass = isCompleted ? 'completed' : (isDeclined ? 'declined' : 'pending');
+      const statusBadgeText = isCompleted 
+        ? 'DONE' 
+        : (isDeclined 
+          ? 'CANCELLED' 
+          : (isAccepted 
+            ? 'ACCEPTED' 
+            : (isPending 
+              ? 'PENDING' 
+              : String(c.status || 'PENDING').toUpperCase())));
+
+      const statusClass = isCompleted 
+        ? 'completed' 
+        : (isDeclined 
+          ? 'declined' 
+          : (isAccepted 
+            ? 'accepted' 
+            : 'pending'));
 
       return `
         <div class="teacher-class-card ${isLive ? 'is-live-room' : ''}" id="teacher-class-card-${c.id}">
@@ -1943,17 +1945,14 @@ const Teacher = {
           ${this.isApproved() && !isCompleted && isEditing ? `
             <div class="class-update-drawer">
               <div class="class-update-drawer-header">
-                <strong>Select Update Action</strong>
-                <span>Saves action, syncs Calendar & notifies student</span>
+                <strong>Update Class Schedule &amp; Details</strong>
+                <span>Modify date, time, or send an update note to student</span>
               </div>
               <div class="class-update-field">
-                <label for="class-update-action-${c.id}">Action to Take</label>
+                <label for="class-update-action-${c.id}">Action</label>
                 <select id="class-update-action-${c.id}" class="form-control" onchange="Teacher.onClassUpdateActionChange(${c.id}, this.value)">
-                  <option value="start_class" selected>Start Virtual Class — Open Live Classroom Session</option>
-                  <option value="reschedule">Reschedule — Adjust Set Date & Time on Calendar</option>
-                  <option value="decline">Cancel Class — Remove from Schedule & Notify Student</option>
-                  <option value="completed">Done — Mark Lesson as Complete (Final)</option>
-                  <option value="record">View Class Record &amp; Lesson Summary</option>
+                  <option value="reschedule" selected>Update Schedule (Set Date &amp; Time)</option>
+                  <option value="decline">Cancel Class (Remove from Schedule)</option>
                 </select>
               </div>
               <div class="class-update-fields-grid" id="class-update-schedule-fields-${c.id}">
@@ -1988,34 +1987,31 @@ const Teacher = {
                 ${Icons.lock(12)} Operations Locked (Under Review)
               </button>
             ` : isCompleted ? `
-              <button type="button" class="btn btn-outline-gold btn-sm" style="flex: 1; justify-content: center; font-weight: 700; display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.4rem 0.7rem; font-size: 0.82rem;" onclick="Teacher.openClassRecordModal(${c.id})" title="View class record, history, and send lesson summary to student">
-                ${Icons.fileText(13)} Class Record &amp; Lesson Summary
+              <button type="button" class="btn btn-secondary btn-sm btn-done-class" disabled style="flex: 1; justify-content: center; opacity: 0.75; cursor: not-allowed; font-weight: 700; display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.35rem 0.65rem; font-size: 0.82rem;" title="This class has concluded (allotted 50-minute duration elapsed)">
+                ${Icons.check(13)} Done Class
+              </button>
+              <button type="button" class="btn btn-outline-gold btn-sm" style="justify-content: center; font-weight: 600; display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.35rem 0.65rem; font-size: 0.82rem;" onclick="Teacher.openClassRecordModal(${c.id})" title="View class record, history, and send lesson summary to student">
+                ${Icons.fileText(13)} Class Record &amp; Summary
               </button>
             ` : isLive ? `
               <button type="button" class="btn btn-primary btn-sm btn-vroom-live-pulse" style="flex: 1; justify-content: center; background: #10B981; border-color: #10B981; font-weight: 700; display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.35rem 0.65rem; font-size: 0.82rem;" onclick="VirtualRoom.joinRoom(${c.id}, 'tutor')">
                 ${Icons.video(13)} Enter Live Room
               </button>
-              <button type="button" class="btn btn-secondary btn-sm" style="padding: 0.35rem 0.65rem; font-size: 0.82rem;" title="Mark lesson as done (complete)" onclick="Teacher.updateStatus(${c.id}, 'completed', this, { action: 'completed' })">
-                Done
-              </button>
-              <button type="button" class="btn btn-outline-gold btn-sm class-card-update-toggle-btn ${isEditing ? 'active' : ''}" style="padding: 0.35rem 0.65rem; font-size: 0.82rem;" title="Choose update action" onclick="Teacher.toggleClassUpdatePanel(${c.id})">
+              <button type="button" class="btn btn-outline-gold btn-sm class-card-update-toggle-btn ${isEditing ? 'active' : ''}" style="padding: 0.35rem 0.65rem; font-size: 0.82rem;" title="Update class schedule" onclick="Teacher.toggleClassUpdatePanel(${c.id})">
                 ${isEditing ? 'Close' : 'Update'}
               </button>
             ` : !isDeclined ? `
-              <button type="button" class="btn btn-primary btn-sm" style="flex: 1; justify-content: center; font-weight: 700; display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.35rem 0.65rem; font-size: 0.82rem;" onclick="Teacher.updateStatus(${c.id}, 'accepted', this, { action: 'start_class' })">
+              <button type="button" class="btn btn-primary btn-sm btn-start-virtual-class" style="flex: 1; justify-content: center; font-weight: 700; display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.35rem 0.65rem; font-size: 0.82rem;" onclick="Teacher.startVirtualClassSession(${c.id}, this)">
                 ${Icons.video(13)} Start Virtual Class
               </button>
-              <button type="button" class="btn btn-secondary btn-sm" style="padding: 0.35rem 0.65rem; font-size: 0.82rem;" title="Mark lesson as done (complete)" onclick="Teacher.updateStatus(${c.id}, 'completed', this, { action: 'completed' })">
-                Done
-              </button>
-              <button type="button" class="btn btn-outline-gold btn-sm class-card-update-toggle-btn ${isEditing ? 'active' : ''}" style="padding: 0.35rem 0.65rem; font-size: 0.82rem;" title="Choose update action (Reschedule, Cancel, Done)" onclick="Teacher.toggleClassUpdatePanel(${c.id})">
+              <button type="button" class="btn btn-outline-gold btn-sm class-card-update-toggle-btn ${isEditing ? 'active' : ''}" style="padding: 0.35rem 0.65rem; font-size: 0.82rem;" title="Update class schedule" onclick="Teacher.toggleClassUpdatePanel(${c.id})">
                 ${isEditing ? 'Close' : 'Update'}
               </button>
             ` : `
               <div class="class-status-summary-pill is-declined-summary" style="display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.35rem 0.6rem; font-size: 0.8rem;">
                 ${Icons.x(12)} Class Cancelled
               </div>
-              <button type="button" class="btn btn-outline-gold btn-sm class-card-update-toggle-btn ${isEditing ? 'active' : ''}" style="padding: 0.35rem 0.65rem; font-size: 0.82rem;" title="Choose update action (Reschedule)" onclick="Teacher.toggleClassUpdatePanel(${c.id})">
+              <button type="button" class="btn btn-outline-gold btn-sm class-card-update-toggle-btn ${isEditing ? 'active' : ''}" style="padding: 0.35rem 0.65rem; font-size: 0.82rem;" title="Reschedule class" onclick="Teacher.toggleClassUpdatePanel(${c.id})">
                 ${isEditing ? 'Close' : 'Update'}
               </button>
             `}
@@ -2024,6 +2020,39 @@ const Teacher = {
         </div>
       `;
     }).join('');
+  },
+
+  async startVirtualClassSession(requestId, btnEl = null) {
+    if (!this.isApproved()) {
+      showToast('Operational Lock: Live virtual class operations unlock once your account has been approved by the Administrator following your virtual interview.', 'warning');
+      return;
+    }
+    const existingClass = (this.classes || []).find(c => Number(c.id) === Number(requestId));
+    if (existingClass && existingClass.status === 'completed') {
+      showToast('This lesson has already concluded.', 'info');
+      return;
+    }
+
+    const origHtml = btnEl ? btnEl.innerHTML : '';
+    if (btnEl) {
+      btnEl.disabled = true;
+      btnEl.innerHTML = `${Icons.video(13)} Starting Room...`;
+    }
+
+    try {
+      if (typeof VirtualRoom !== 'undefined' && VirtualRoom.openRoomAsTutor) {
+        await VirtualRoom.openRoomAsTutor(requestId);
+      } else {
+        await this.updateStatus(requestId, 'accepted', btnEl, { action: 'start_class' });
+      }
+      await this.loadClasses();
+    } catch (err) {
+      if (btnEl) {
+        btnEl.disabled = false;
+        btnEl.innerHTML = origHtml;
+      }
+      showToast(err.message || 'Failed to start virtual class.', 'error');
+    }
   },
 
   async launchClassSession(sessionId) {
@@ -3403,12 +3432,11 @@ const Teacher = {
                       ${!this.isApproved() ? `
                         <span class="badge" style="background: rgba(245, 158, 11, 0.15); color: #D97706; font-size: 0.75rem; padding: 0.3rem 0.6rem; border-radius: 4px; display: inline-flex; align-items: center; gap: 0.25rem;" title="Operations locked while application is under review">${Icons.lock(12)} Locked</span>
                       ` : apt.status === 'completed' ? `
-                        <span style="font-size: 0.78rem; color: #10B981; font-weight: 700; display: inline-flex; align-items: center; gap: 0.25rem;">${Icons.check(13)} Done</span>
+                        <span style="font-size: 0.78rem; color: #10B981; font-weight: 700; display: inline-flex; align-items: center; gap: 0.25rem;">${Icons.check(13)} Done Class</span>
                       ` : apt.room_status === 'open' ? `
                         <button class="btn btn-primary btn-sm" onclick="VirtualRoom.joinRoom(${apt.id}, 'tutor')" style="background: #10B981; border-color: #10B981;">Enter</button>
                       ` : `
-                        <button class="btn btn-secondary btn-sm" onclick="VirtualRoom.openRoomAsTutor(${apt.id})">Open Room</button>
-                        <button class="btn btn-outline-gold btn-sm" onclick="Teacher.updateStatus(${apt.id}, 'completed', this)">Done</button>
+                        <button class="btn btn-secondary btn-sm" onclick="Teacher.startVirtualClassSession(${apt.id}, this)">Open Room</button>
                       `}
                     </div>
                   </div>

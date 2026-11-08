@@ -4783,7 +4783,7 @@ app.get('/api/teacher/dashboard', authenticateToken, requireRole('teacher'), (re
 function checkAndAutoEndElapsedRooms() {
   try {
     const openRooms = db.prepare(`
-      SELECT id, room_started_at, duration_hours, payment_method, status
+      SELECT id, room_started_at, duration_hours, payment_method, status, tutor_id
       FROM tutoring_requests
       WHERE room_status = 'open' AND room_started_at IS NOT NULL
     `).all();
@@ -4800,6 +4800,16 @@ function checkAndAutoEndElapsedRooms() {
           SET room_status = 'ended', status = 'completed', updated_at = CURRENT_TIMESTAMP 
           WHERE id = ?
         `).run(r.id);
+
+        if (r.status !== 'completed' && r.tutor_id) {
+          try {
+            db.prepare(`
+              UPDATE tutor_profiles 
+              SET total_sessions = total_sessions + 1, updated_at = CURRENT_TIMESTAMP 
+              WHERE user_id = ?
+            `).run(r.tutor_id);
+          } catch (tErr) {}
+        }
       }
     }
   } catch (err) {
@@ -5917,13 +5927,21 @@ app.post('/api/teacher/requests/:id/status', authenticateToken, requireRole('tea
     }
 
     const rawAction = action ? String(action).toLowerCase().trim() : '';
-    let finalStatus = status ? String(status).toLowerCase().trim() : request.status;
-    if (rawAction === 'accept' || rawAction === 'start_class' || rawAction === 'reschedule') {
-      finalStatus = 'accepted';
-    } else if (rawAction === 'decline' || rawAction === 'declined') {
+    let finalStatus = request.status;
+
+    if (rawAction === 'decline' || rawAction === 'declined') {
       finalStatus = 'declined';
+    } else if (rawAction === 'accept') {
+      finalStatus = 'accepted';
+    } else if (rawAction === 'start_class') {
+      finalStatus = 'accepted';
     } else if (rawAction === 'done' || rawAction === 'completed') {
       finalStatus = 'completed';
+    } else if (rawAction === 'update' || rawAction === 'reschedule') {
+      // Pure schedule or details edit: strictly preserve existing request status!
+      finalStatus = request.status;
+    } else if (status && ['accepted', 'declined', 'completed', 'pending'].includes(String(status).toLowerCase().trim())) {
+      finalStatus = String(status).toLowerCase().trim();
     }
 
     if (!['accepted', 'declined', 'completed', 'pending'].includes(finalStatus)) {
@@ -5932,12 +5950,12 @@ app.post('/api/teacher/requests/:id/status', authenticateToken, requireRole('tea
 
     const finalDate = requested_date && String(requested_date).trim() ? String(requested_date).trim() : request.requested_date;
     const finalTime = requested_time && String(requested_time).trim() ? String(requested_time).trim() : request.requested_time;
-    const scheduleChanged = (finalDate !== request.requested_date || finalTime !== request.requested_time) || rawAction === 'reschedule';
+    const scheduleChanged = (finalDate !== request.requested_date || finalTime !== request.requested_time) || rawAction === 'reschedule' || rawAction === 'update';
 
     let defaultActionNote = request.tutor_response_note;
     if (rawAction === 'start_class') {
       defaultActionNote = `Action: Start Virtual Class (${finalDate} at ${finalTime})`;
-    } else if (scheduleChanged && finalStatus === 'accepted') {
+    } else if (scheduleChanged && (finalStatus === 'accepted' || finalStatus === 'pending')) {
       const conflictCheck = checkScheduleConflict({
         studentId: request.student_id,
         tutorUserId: teacherId,
@@ -5948,7 +5966,7 @@ app.post('/api/teacher/requests/:id/status', authenticateToken, requireRole('tea
       if (conflictCheck.hasConflict) {
         return res.status(400).json({ error: conflictCheck.error });
       }
-      defaultActionNote = `Action: Rescheduled to ${finalDate} at ${finalTime}`;
+      defaultActionNote = `Action: Schedule updated to ${finalDate} at ${finalTime}`;
     } else if (finalStatus === 'accepted') {
       defaultActionNote = `Action: Accepted — Scheduled for ${finalDate} at ${finalTime}`;
     } else if (finalStatus === 'declined') {
@@ -5978,7 +5996,7 @@ app.post('/api/teacher/requests/:id/status', authenticateToken, requireRole('tea
             requested_date = ?,
             requested_time = ?,
             tutor_response_note = ?,
-            room_status = CASE WHEN ? IN ('declined', 'completed', 'pending') THEN 'closed' ELSE room_status END,
+            room_status = CASE WHEN ? IN ('declined', 'completed') THEN 'closed' ELSE room_status END,
             updated_at = CURRENT_TIMESTAMP
         WHERE id = ?
       `).run(finalStatus, finalDate, finalTime, finalNote, finalStatus, requestId);
@@ -6217,8 +6235,8 @@ app.post('/api/sessions/:id/room/open', authenticateToken, (req, res) => {
       }
     }
 
-    if (request.status !== 'accepted') {
-      return res.status(400).json({ error: 'Virtual room can only be opened for confirmed sessions.' });
+    if (request.status !== 'accepted' && request.status !== 'pending') {
+      return res.status(400).json({ error: 'Virtual room cannot be opened for cancelled or concluded sessions.' });
     }
 
     let startedAt = request.room_started_at;
@@ -6226,13 +6244,13 @@ app.post('/api/sessions/:id/room/open', authenticateToken, (req, res) => {
       startedAt = new Date().toISOString();
       db.prepare(`
         UPDATE tutoring_requests 
-        SET room_status = 'open', room_started_at = ?, updated_at = CURRENT_TIMESTAMP
+        SET status = 'accepted', room_status = 'open', room_started_at = ?, updated_at = CURRENT_TIMESTAMP
         WHERE id = ?
       `).run(startedAt, requestId);
     } else {
       db.prepare(`
         UPDATE tutoring_requests 
-        SET room_status = 'open', updated_at = CURRENT_TIMESTAMP
+        SET status = 'accepted', room_status = 'open', updated_at = CURRENT_TIMESTAMP
         WHERE id = ?
       `).run(requestId);
     }

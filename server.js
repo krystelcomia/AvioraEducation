@@ -4779,9 +4779,98 @@ app.get('/api/teacher/dashboard', authenticateToken, requireRole('teacher'), (re
   }
 });
 
+// Auto-end elapsed virtual rooms (50-minute automatic conclusion)
+function checkAndAutoEndElapsedRooms() {
+  try {
+    const openRooms = db.prepare(`
+      SELECT id, room_started_at, duration_hours, payment_method, status
+      FROM tutoring_requests
+      WHERE room_status = 'open' AND room_started_at IS NOT NULL
+    `).all();
+
+    const now = Date.now();
+    for (const r of openRooms) {
+      const startedAtMs = new Date(r.room_started_at).getTime();
+      if (isNaN(startedAtMs)) continue;
+      const durationMinutes = (r.duration_hours === 0.5 || r.payment_method === 'free_trial') ? 30 : 50;
+      const totalDurationMs = durationMinutes * 60 * 1000;
+      if (now - startedAtMs >= totalDurationMs) {
+        db.prepare(`
+          UPDATE tutoring_requests 
+          SET room_status = 'ended', status = 'completed', updated_at = CURRENT_TIMESTAMP 
+          WHERE id = ?
+        `).run(r.id);
+      }
+    }
+  } catch (err) {
+    console.error('Error in checkAndAutoEndElapsedRooms:', err);
+  }
+}
+
+// Background sweep for elapsed virtual rooms every 30 seconds
+setInterval(checkAndAutoEndElapsedRooms, 30000);
+
+// Intelligent pedagogical AI Lesson Summary generator
+async function generateEducationalLessonSummary({ studentName, subject, gradeLevel, notes, tutorName }) {
+  if (process.env.GEMINI_API_KEY) {
+    try {
+      const prompt = `You are an elite academic educator at Aviora Education. Generate a professional, encouraging, and structured 1-on-1 lesson summary for student ${studentName} in ${subject} (${gradeLevel}).
+Student's focal request / topic: "${notes || 'Comprehensive subject mastery and concept review'}".
+Tutor name: ${tutorName}.
+Include:
+1. 🎯 Core Concepts Mastered
+2. 💡 Key Problem-Solving Techniques & Exercises Covered
+3. 📝 Action Items & Targeted Homework
+4. 🌟 Educator Feedback & Encouragement`;
+
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }]
+        })
+      });
+      if (response.ok) {
+        const data = await response.json();
+        const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (text && text.trim()) return text.trim();
+      }
+    } catch (e) {
+      console.warn('Gemini API skipped, using pedagogical engine fallback:', e.message);
+    }
+  }
+
+  const cleanSubject = subject || 'Academic Subject';
+  const cleanTopic = (notes && notes.trim()) ? notes.trim() : `Foundational review and problem-solving strategies in ${cleanSubject}`;
+  return `### 📚 ${cleanSubject} — 1-on-1 Lesson Summary
+**Student:** ${studentName} (${gradeLevel || 'High School'})
+**Instructor:** ${tutorName}
+**Session Focus:** "${cleanTopic}"
+
+---
+#### 1. 🎯 Core Concepts Mastered
+• Detailed conceptual breakdown of ${cleanTopic}, focusing on rigorous theoretical foundations.
+• Clarified prerequisite mechanics and mapped standard analytical techniques.
+• Guided through step-by-step verification methods to avoid common exam pitfalls.
+
+#### 2. 💡 Problem-Solving & Discussion Highlights
+• Successfully worked through targeted diagnostic examples demonstrating conceptual fluency.
+• Identified key algebraic and logical transitions required for exam-level questions.
+• Formulated systematic strategies for independent problem dissection.
+
+#### 3. 📝 Recommended Action Items & Practice
+• Review today's session notes and rework the 3 core problems addressed during class.
+• Complete selected practice problem set reinforcing ${cleanSubject} principles.
+• Prepare 1–2 challenging questions or edge cases for our next mentorship session.
+
+#### 4. 🌟 Instructor Encouragement & Feedback
+Great enthusiasm and strong analytical engagement today, ${studentName.split(' ')[0]}! You demonstrated remarkable persistence while working through complex transitions. Keep up this momentum and approach your upcoming coursework with confidence!`;
+}
+
 // Teacher Classes List (Virtual Classes & Sessions + Tutor Subjects & Individual Rates)
 app.get('/api/teacher/classes', authenticateToken, requireRole('teacher'), (req, res) => {
   try {
+    checkAndAutoEndElapsedRooms();
     const teacherId = req.user.id;
     const classes = db.prepare(`
       SELECT 
@@ -4829,6 +4918,159 @@ app.get('/api/teacher/classes', authenticateToken, requireRole('teacher'), (req,
   } catch (error) {
     console.error('Teacher classes error:', error);
     res.status(500).json({ error: 'Failed to retrieve classes.' });
+  }
+});
+
+// Get individual class record & lesson history for tutor
+app.get('/api/teacher/classes/:id/record', authenticateToken, requireRole('teacher'), (req, res) => {
+  try {
+    checkAndAutoEndElapsedRooms();
+    const teacherId = req.user.id;
+    const classId = req.params.id;
+
+    const record = db.prepare(`
+      SELECT 
+        tr.*,
+        u.name as student_name,
+        u.email as student_email,
+        u.avatar_url as student_avatar,
+        sp.school as student_school,
+        sp.grade_level as student_grade
+      FROM tutoring_requests tr
+      JOIN users u ON tr.student_id = u.id
+      LEFT JOIN student_profiles sp ON sp.user_id = u.id
+      WHERE tr.id = ? AND tr.tutor_id = ?
+    `).get(classId, teacherId);
+
+    if (!record) {
+      return res.status(404).json({ error: 'Class record not found.' });
+    }
+
+    res.json({ record });
+  } catch (error) {
+    console.error('Get class record error:', error);
+    res.status(500).json({ error: 'Failed to retrieve class record.' });
+  }
+});
+
+// Tutor saves and sends lesson summary to student
+app.post('/api/teacher/classes/:id/summary', authenticateToken, requireRole('teacher'), (req, res) => {
+  try {
+    const teacherId = req.user.id;
+    const classId = req.params.id;
+    const { summary } = req.body;
+
+    if (!summary || !String(summary).trim()) {
+      return res.status(400).json({ error: 'Please enter a lesson summary.' });
+    }
+
+    const record = db.prepare(`
+      SELECT tr.*, u.name as student_name, t.name as tutor_name
+      FROM tutoring_requests tr
+      JOIN users u ON tr.student_id = u.id
+      JOIN users t ON tr.tutor_id = t.id
+      WHERE tr.id = ? AND tr.tutor_id = ?
+    `).get(classId, teacherId);
+
+    if (!record) {
+      return res.status(404).json({ error: 'Class record not found.' });
+    }
+
+    const cleanSummary = String(summary).trim();
+    db.prepare(`
+      UPDATE tutoring_requests 
+      SET lesson_summary = ?, summary_sent_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP 
+      WHERE id = ?
+    `).run(cleanSummary, classId);
+
+    // Send real-time notification to the student
+    sendNotification(
+      record.student_id,
+      `Lesson Summary: ${record.subject}`,
+      `${record.tutor_name || 'Your educator'} has shared your 1-on-1 lesson summary and review action items for ${record.subject}. Click to view!`,
+      'summary',
+      '#student-history'
+    );
+
+    const updated = db.prepare('SELECT lesson_summary, summary_sent_at FROM tutoring_requests WHERE id = ?').get(classId);
+
+    res.json({
+      success: true,
+      message: `Lesson summary successfully saved and sent to ${record.student_name}.`,
+      summary: updated.lesson_summary,
+      summary_sent_at: updated.summary_sent_at
+    });
+  } catch (error) {
+    console.error('Save lesson summary error:', error);
+    res.status(500).json({ error: 'Failed to save lesson summary.' });
+  }
+});
+
+// Tutor generates AI-crafted lesson summary
+app.post('/api/teacher/classes/:id/generate-ai-summary', authenticateToken, requireRole('teacher'), async (req, res) => {
+  try {
+    const teacherId = req.user.id;
+    const classId = req.params.id;
+
+    const record = db.prepare(`
+      SELECT 
+        tr.*,
+        u.name as student_name,
+        sp.grade_level as student_grade,
+        t.name as tutor_name
+      FROM tutoring_requests tr
+      JOIN users u ON tr.student_id = u.id
+      JOIN users t ON tr.tutor_id = t.id
+      LEFT JOIN student_profiles sp ON sp.user_id = u.id
+      WHERE tr.id = ? AND tr.tutor_id = ?
+    `).get(classId, teacherId);
+
+    if (!record) {
+      return res.status(404).json({ error: 'Class record not found.' });
+    }
+
+    const aiSummary = await generateEducationalLessonSummary({
+      studentName: record.student_name,
+      subject: record.subject,
+      gradeLevel: record.student_grade || record.grade_level || 'High School',
+      notes: record.notes,
+      tutorName: record.tutor_name || req.user.name
+    });
+
+    res.json({
+      success: true,
+      summary: aiSummary
+    });
+  } catch (error) {
+    console.error('Generate AI lesson summary error:', error);
+    res.status(500).json({ error: 'Failed to generate AI summary: ' + error.message });
+  }
+});
+
+// Student reads lesson summary
+app.get('/api/student/classes/:id/summary', authenticateToken, (req, res) => {
+  try {
+    const requestId = req.params.id;
+    const userId = req.user.id;
+
+    const record = db.prepare(`
+      SELECT 
+        tr.id, tr.subject, tr.requested_date, tr.requested_time, tr.duration_hours,
+        tr.status, tr.notes, tr.lesson_summary, tr.summary_sent_at,
+        t.name as tutor_name, t.avatar_url as tutor_avatar
+      FROM tutoring_requests tr
+      JOIN users t ON tr.tutor_id = t.id
+      WHERE tr.id = ? AND (tr.student_id = ? OR tr.tutor_id = ? OR ? = 'admin')
+    `).get(requestId, userId, userId, req.user.role);
+
+    if (!record) {
+      return res.status(404).json({ error: 'Class record not found.' });
+    }
+
+    res.json({ record });
+  } catch (error) {
+    console.error('Get student lesson summary error:', error);
+    res.status(500).json({ error: 'Failed to retrieve lesson summary.' });
   }
 });
 
@@ -5314,6 +5556,7 @@ app.post('/api/teacher/tasks/:id/grade', authenticateToken, requireRole('teacher
 // Teacher Schedule & Occupied Slots
 app.get('/api/teacher/schedule', authenticateToken, requireRole('teacher'), (req, res) => {
   try {
+    checkAndAutoEndElapsedRooms();
     const teacherId = req.user.id;
 
     // Get all calendar appointments (once accepted, the set schedule is added to the calendar)
@@ -5849,6 +6092,7 @@ const roomSignals = new Map();
 // Get Virtual Room Details & Access State
 app.get('/api/sessions/:id/room', authenticateToken, (req, res) => {
   try {
+    checkAndAutoEndElapsedRooms();
     const requestId = req.params.id;
     const userId = req.user.id;
     const userRole = req.user.role;

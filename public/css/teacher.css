@@ -749,56 +749,56 @@
 /* Virtual Classes Cards Grid */
 .teacher-classes-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-  gap: 1.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(310px, 1fr));
+  gap: 1.15rem;
 }
 
 .teacher-class-card {
   background: var(--bg-card);
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-xl);
-  padding: 1.75rem;
+  border-radius: var(--radius-lg);
+  padding: 1.05rem 1.15rem;
   display: flex;
   flex-direction: column;
   transition: all var(--transition-fast);
 }
 
 .teacher-class-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.07);
   border-color: var(--gold-400);
 }
 
 .teacher-class-card.is-live-room {
   border: 2px solid #10B981;
   background: linear-gradient(180deg, rgba(16, 185, 129, 0.05) 0%, var(--bg-card) 100%);
-  box-shadow: 0 8px 25px rgba(16, 185, 129, 0.15);
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.12);
 }
 
 .class-card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1.25rem;
+  margin-bottom: 0.5rem;
 }
 
 .live-pulse-badge {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
-  font-size: 0.725rem;
+  gap: 0.35rem;
+  font-size: 0.7rem;
   font-weight: 800;
   color: #10B981;
   background: rgba(16, 185, 129, 0.15);
   border: 1px solid rgba(16, 185, 129, 0.35);
-  padding: 0.25rem 0.65rem;
+  padding: 0.2rem 0.55rem;
   border-radius: var(--radius-full);
-  margin-left: 0.5rem;
+  margin-left: 0.4rem;
 }
 
 .live-dot {
-  width: 8px;
-  height: 8px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
   background: #10B981;
   box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
@@ -814,43 +814,70 @@
 .class-card-student {
   display: flex;
   align-items: center;
-  gap: 1rem;
-  margin-bottom: 1.25rem;
+  gap: 0.65rem;
+  margin-bottom: 0.55rem;
 }
 
 .class-card-avatar {
-  width: 52px;
-  height: 52px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   object-fit: cover;
-  border: 2px solid var(--gold-400);
+  border: 1.5px solid var(--gold-400);
 }
 
 .class-card-student-name {
-  font-size: 1.15rem;
+  font-size: 0.95rem;
   font-weight: 700;
   color: var(--text-primary);
-  margin: 0 0 0.2rem;
+  margin: 0 0 0.1rem;
+  line-height: 1.25;
 }
 
 .class-card-student-meta {
-  font-size: 0.825rem;
+  font-size: 0.76rem;
   color: var(--text-secondary);
+  line-height: 1.2;
 }
 
 .class-card-details {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
-  margin-bottom: 1.5rem;
-  font-size: 0.85rem;
+  gap: 0.35rem;
+  margin-bottom: 0.75rem;
+  font-size: 0.8rem;
   color: var(--text-secondary);
+}
+
+.class-meta-inline-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.15rem;
+}
+
+.class-meta-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  background: rgba(0, 0, 0, 0.025);
+  border: 1px solid var(--border-color);
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.76rem;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+[data-theme="dark"] .class-meta-pill {
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .class-detail-item {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.4rem;
 }
 
 .detail-icon {
@@ -859,24 +886,25 @@
 }
 
 .class-card-notes {
-  background: rgba(0, 0, 0, 0.03);
-  padding: 0.75rem;
-  border-radius: var(--radius-md);
-  font-size: 0.825rem;
+  background: rgba(198, 138, 40, 0.05);
+  padding: 0.35rem 0.6rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.76rem;
   color: var(--text-primary);
-  margin-top: 0.35rem;
-  border-left: 3px solid var(--gold-400);
+  margin-top: 0.15rem;
+  border-left: 2.5px solid var(--gold-400);
+  line-height: 1.35;
 }
 
 .class-action-indicator-badge {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.35rem;
   flex-wrap: wrap;
-  padding: 0.45rem 0.7rem;
-  margin-top: 0.2rem;
-  border-radius: var(--radius-md);
-  font-size: 0.78rem;
+  padding: 0.35rem 0.55rem;
+  margin-top: 0.15rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
   background: rgba(198, 138, 40, 0.08);
   border: 1px solid rgba(198, 138, 40, 0.25);
   color: var(--text-primary);
@@ -909,27 +937,39 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.65rem;
+  gap: 0.5rem;
   flex-wrap: wrap;
-  padding: 0.5rem 0.75rem;
-  margin-top: 0.25rem;
-  background: rgba(16, 185, 129, 0.09);
-  border: 1px solid rgba(16, 185, 129, 0.3);
-  border-radius: var(--radius-md);
+  padding: 0.35rem 0.6rem;
+  margin-top: 0.15rem;
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  border-radius: var(--radius-sm);
   color: #059669;
-  font-size: 0.79rem;
-  font-weight: 700;
+  font-size: 0.76rem;
+  font-weight: 600;
   cursor: pointer;
   transition: all var(--transition-fast);
 }
 
 .class-calendar-sync-badge:hover {
-  background: rgba(16, 185, 129, 0.16);
+  background: rgba(16, 185, 129, 0.15);
   border-color: #10B981;
 }
 
+.class-calendar-sync-badge.is-completed {
+  background: rgba(16, 185, 129, 0.09);
+  border-color: rgba(16, 185, 129, 0.3);
+  color: #059669;
+}
+
+.class-calendar-sync-badge.is-rescheduled {
+  background: rgba(198, 138, 40, 0.08);
+  border-color: rgba(198, 138, 40, 0.3);
+  color: var(--gold-800);
+}
+
 .class-calendar-sync-link {
-  font-size: 0.75rem;
+  font-size: 0.73rem;
   font-weight: 800;
   color: #10B981;
   text-decoration: underline;

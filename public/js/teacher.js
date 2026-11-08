@@ -1170,6 +1170,11 @@ const Teacher = {
   },
 
   onClassUpdateActionChange(requestId, actionVal) {
+    if (actionVal === 'record') {
+      this.toggleClassUpdatePanel(requestId);
+      this.openClassRecordModal(requestId);
+      return;
+    }
     const schedFields = document.getElementById(`class-update-schedule-fields-${requestId}`);
     const noteFieldWrap = document.getElementById(`class-update-note-wrap-${requestId}`);
     const noteInput = document.getElementById(`class-update-note-${requestId}`);
@@ -1201,6 +1206,11 @@ const Teacher = {
     const noteEl = document.getElementById(`class-update-note-${requestId}`);
 
     const action = actionEl ? actionEl.value : 'start_class';
+    if (action === 'record') {
+      this.toggleClassUpdatePanel(requestId);
+      this.openClassRecordModal(requestId);
+      return;
+    }
     const requested_date = dateEl ? dateEl.value.trim() : '';
     const requested_time = timeEl ? timeEl.value.trim() : '';
     const note = noteEl ? noteEl.value.trim() : undefined;
@@ -1848,27 +1858,16 @@ const Teacher = {
       const isEditing = !isCompleted && this.editingClassId === Number(c.id);
       const cleanDateVal = String(c.requested_date || '').split('T')[0];
 
-      let actionTakenText = 'Scheduled — Assigned & Added to Calendar (Awaiting Session Time)';
-      if (isCompleted) {
-        actionTakenText = 'Done — Lesson Complete (No further actions available)';
-      } else if (isLive) {
-        actionTakenText = 'Start Virtual Class — Live Classroom Active';
-      } else if (c.tutor_response_note && c.tutor_response_note.toLowerCase().includes('rescheduled')) {
-        actionTakenText = `Rescheduled — Confirmed for ${c.requested_date} • ${c.requested_time} (Student Notified)`;
-      } else if (isDeclined) {
-        actionTakenText = `Cancelled — ${c.tutor_response_note || 'Scheduling conflict'}`;
-      }
-
       const statusBadgeText = isCompleted ? 'DONE' : (isDeclined ? 'CANCELLED' : 'PENDING');
       const statusClass = isCompleted ? 'completed' : (isDeclined ? 'declined' : 'pending');
 
       return `
         <div class="teacher-class-card ${isLive ? 'is-live-room' : ''}" id="teacher-class-card-${c.id}">
           
-          <!-- Card Header: Status & Room Badge -->
+          <!-- Card Header: Status & Room Badge (Compact) -->
           <div class="class-card-header">
-            <div class="class-card-header-left">
-              <span class="badge-accent">${c.subject}</span>
+            <div class="class-card-header-left" style="display: flex; align-items: center;">
+              <span class="badge-accent" style="font-size: 0.8rem; padding: 0.2rem 0.55rem;">${c.subject}</span>
               ${isLive ? `
                 <span class="live-pulse-badge">
                   <span class="live-dot"></span> LIVE CLASSROOM OPEN
@@ -1876,45 +1875,44 @@ const Teacher = {
               ` : ''}
             </div>
             <div class="class-card-header-right">
-              <span class="status-pill ${statusClass}">${statusBadgeText}</span>
+              <span class="status-pill ${statusClass}" style="font-size: 0.68rem; padding: 0.15rem 0.5rem;">${statusBadgeText}</span>
             </div>
           </div>
 
-          <!-- Student Profile in Card -->
+          <!-- Student Profile in Card (Compact) -->
           <div class="class-card-student">
-            <img src="${c.student_avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=120&q=80'}" alt="${c.student_name}" class="class-card-avatar" />
-            <div>
+            <img src="${c.student_avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=80&q=80'}" alt="${c.student_name}" class="class-card-avatar" />
+            <div style="flex: 1; min-width: 0;">
               <h4 class="class-card-student-name">${c.student_name}</h4>
               <div class="class-card-student-meta">${c.student_grade || 'Student'} • ${c.student_school || 'Enrolled Student'}</div>
             </div>
           </div>
 
-          <!-- Schedule & Details -->
+          <!-- Schedule & Details (Streamlined & Space-Saving) -->
           <div class="class-card-details">
-            <div class="class-detail-item">
-              <span class="detail-icon">${Icons.calendar(14)}</span>
-              <span><strong>Date:</strong> ${c.requested_date}</span>
+            <div class="class-meta-inline-row">
+              <span class="class-meta-pill" title="Lesson Date">${Icons.calendar(12)} ${c.requested_date}</span>
+              <span class="class-meta-pill" title="Lesson Time & Duration">${Icons.clock(12)} ${c.requested_time} (50m)</span>
+              <span class="class-meta-pill" title="Session Fee">${Icons.award(12)} $${Number(c.total_amount || 0).toFixed(2)}</span>
             </div>
-            <div class="class-detail-item">
-              <span class="detail-icon">${Icons.clock(14)}</span>
-              <span><strong>Time:</strong> ${c.requested_time} (50m tailored lesson)</span>
-            </div>
-            <div class="class-detail-item">
-              <span class="detail-icon">${Icons.award(14)}</span>
-              <span><strong>Fee:</strong> $${Number(c.total_amount || 0).toFixed(2)} (${c.payment_method === 'subscription' ? 'Subscription Credit' : 'Card Payment'})</span>
-            </div>
-            <div class="class-action-indicator-badge status-${statusClass}">
-              <strong>Update:</strong> <span>${actionTakenText}</span>
-            </div>
+
             ${!isDeclined ? `
-              <div class="class-calendar-sync-badge" onclick="Teacher.viewClassOnCalendar('${cleanDateVal}')" title="Open Schedule Calendar on ${cleanDateVal}">
-                <span style="display: inline-flex; align-items: center; gap: 0.35rem;">${Icons.calendar(14)} Added to Calendar (${c.requested_date} • ${c.requested_time})</span>
-                <span class="class-calendar-sync-link">View Calendar →</span>
+              <div class="class-calendar-sync-badge ${isCompleted ? 'is-completed' : ''}" onclick="Teacher.viewClassOnCalendar('${cleanDateVal}')" title="Open Schedule Calendar on ${cleanDateVal}">
+                <span style="display: inline-flex; align-items: center; gap: 0.35rem;">
+                  ${isCompleted ? Icons.check(13) + ' <strong>Concluded:</strong> ' : Icons.calendar(13) + ' <strong>Calendar:</strong> '}
+                  ${c.requested_date} • ${c.requested_time}
+                </span>
+                <span class="class-calendar-sync-link">View Schedule →</span>
               </div>
-            ` : ''}
+            ` : `
+              <div class="class-action-indicator-badge status-declined" style="padding: 0.3rem 0.5rem; font-size: 0.75rem;">
+                <strong>Cancelled:</strong> <span>${c.tutor_response_note || 'Session cancelled'}</span>
+              </div>
+            `}
+
             ${c.notes ? `
-              <div class="class-card-notes">
-                <strong>Student Focus:</strong> "${c.notes}"
+              <div class="class-card-notes" title="Student Focus Request">
+                <strong>Focus:</strong> "${this.escapeHtml(c.notes)}"
               </div>
             ` : ''}
           </div>
@@ -1933,6 +1931,7 @@ const Teacher = {
                   <option value="reschedule">Reschedule — Adjust Set Date & Time on Calendar</option>
                   <option value="decline">Cancel Class — Remove from Schedule & Notify Student</option>
                   <option value="completed">Done — Mark Lesson as Complete (Final)</option>
+                  <option value="record">View Class Record &amp; Lesson Summary</option>
                 </select>
               </div>
               <div class="class-update-fields-grid" id="class-update-schedule-fields-${c.id}">
@@ -1960,41 +1959,41 @@ const Teacher = {
             </div>
           ` : ''}
 
-          <!-- Action Launch Pad -->
+          <!-- Action Launch Pad (Compact) -->
           <div class="class-card-actions">
             ${!this.isApproved() ? `
-              <button type="button" class="btn btn-secondary btn-sm" style="flex: 1; opacity: 0.7; cursor: not-allowed; display: inline-flex; align-items: center; justify-content: center; gap: 0.35rem;" disabled title="Classroom operations locked while application is under review">
-                ${Icons.lock(13)} Operations Locked (Under Review)
+              <button type="button" class="btn btn-secondary btn-sm" style="flex: 1; opacity: 0.7; cursor: not-allowed; display: inline-flex; align-items: center; justify-content: center; gap: 0.35rem; padding: 0.35rem 0.6rem; font-size: 0.8rem;" disabled title="Classroom operations locked while application is under review">
+                ${Icons.lock(12)} Operations Locked (Under Review)
               </button>
             ` : isCompleted ? `
-              <div class="class-status-summary-pill is-completed-summary" style="flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 0.35rem;" title="Lesson is complete. No further actions are available.">
-                ${Icons.check(13)} Class Session Completed (Done — No further actions available)
-              </div>
-            ` : isLive ? `
-              <button type="button" class="btn btn-primary btn-sm btn-vroom-live-pulse" style="flex: 1; justify-content: center; background: #10B981; border-color: #10B981; font-weight: 700; display: inline-flex; align-items: center; gap: 0.35rem;" onclick="VirtualRoom.joinRoom(${c.id}, 'tutor')">
-                ${Icons.video(14)} Enter Live Classroom
+              <button type="button" class="btn btn-outline-gold btn-sm" style="flex: 1; justify-content: center; font-weight: 700; display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.4rem 0.7rem; font-size: 0.82rem;" onclick="Teacher.openClassRecordModal(${c.id})" title="View class record, history, and send lesson summary to student">
+                ${Icons.fileText(13)} Class Record &amp; Lesson Summary
               </button>
-              <button type="button" class="btn btn-secondary btn-sm" title="Mark lesson as done (complete)" onclick="Teacher.updateStatus(${c.id}, 'completed', this, { action: 'completed' })">
+            ` : isLive ? `
+              <button type="button" class="btn btn-primary btn-sm btn-vroom-live-pulse" style="flex: 1; justify-content: center; background: #10B981; border-color: #10B981; font-weight: 700; display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.35rem 0.65rem; font-size: 0.82rem;" onclick="VirtualRoom.joinRoom(${c.id}, 'tutor')">
+                ${Icons.video(13)} Enter Live Room
+              </button>
+              <button type="button" class="btn btn-secondary btn-sm" style="padding: 0.35rem 0.65rem; font-size: 0.82rem;" title="Mark lesson as done (complete)" onclick="Teacher.updateStatus(${c.id}, 'completed', this, { action: 'completed' })">
                 Done
               </button>
-              <button type="button" class="btn btn-outline-gold btn-sm class-card-update-toggle-btn ${isEditing ? 'active' : ''}" title="Choose update action (Start Virtual Class, Reschedule, Cancel, Done)" onclick="Teacher.toggleClassUpdatePanel(${c.id})">
+              <button type="button" class="btn btn-outline-gold btn-sm class-card-update-toggle-btn ${isEditing ? 'active' : ''}" style="padding: 0.35rem 0.65rem; font-size: 0.82rem;" title="Choose update action" onclick="Teacher.toggleClassUpdatePanel(${c.id})">
                 ${isEditing ? 'Close' : 'Update'}
               </button>
             ` : !isDeclined ? `
-              <button type="button" class="btn btn-primary btn-sm" style="flex: 1; justify-content: center; font-weight: 700; display: inline-flex; align-items: center; gap: 0.35rem;" onclick="Teacher.updateStatus(${c.id}, 'accepted', this, { action: 'start_class' })">
-                ${Icons.video(14)} Start Virtual Class
+              <button type="button" class="btn btn-primary btn-sm" style="flex: 1; justify-content: center; font-weight: 700; display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.35rem 0.65rem; font-size: 0.82rem;" onclick="Teacher.updateStatus(${c.id}, 'accepted', this, { action: 'start_class' })">
+                ${Icons.video(13)} Start Virtual Class
               </button>
-              <button type="button" class="btn btn-secondary btn-sm" title="Mark lesson as done (complete)" onclick="Teacher.updateStatus(${c.id}, 'completed', this, { action: 'completed' })">
+              <button type="button" class="btn btn-secondary btn-sm" style="padding: 0.35rem 0.65rem; font-size: 0.82rem;" title="Mark lesson as done (complete)" onclick="Teacher.updateStatus(${c.id}, 'completed', this, { action: 'completed' })">
                 Done
               </button>
-              <button type="button" class="btn btn-outline-gold btn-sm class-card-update-toggle-btn ${isEditing ? 'active' : ''}" title="Choose update action (Start Virtual Class, Reschedule, Cancel, Done)" onclick="Teacher.toggleClassUpdatePanel(${c.id})">
+              <button type="button" class="btn btn-outline-gold btn-sm class-card-update-toggle-btn ${isEditing ? 'active' : ''}" style="padding: 0.35rem 0.65rem; font-size: 0.82rem;" title="Choose update action (Reschedule, Cancel, Done)" onclick="Teacher.toggleClassUpdatePanel(${c.id})">
                 ${isEditing ? 'Close' : 'Update'}
               </button>
             ` : `
-              <div class="class-status-summary-pill is-declined-summary" style="display: inline-flex; align-items: center; gap: 0.3rem;">
-                ${Icons.x(13)} Class Cancelled
+              <div class="class-status-summary-pill is-declined-summary" style="display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.35rem 0.6rem; font-size: 0.8rem;">
+                ${Icons.x(12)} Class Cancelled
               </div>
-              <button type="button" class="btn btn-outline-gold btn-sm class-card-update-toggle-btn ${isEditing ? 'active' : ''}" title="Choose update action (Reschedule)" onclick="Teacher.toggleClassUpdatePanel(${c.id})">
+              <button type="button" class="btn btn-outline-gold btn-sm class-card-update-toggle-btn ${isEditing ? 'active' : ''}" style="padding: 0.35rem 0.65rem; font-size: 0.82rem;" title="Choose update action (Reschedule)" onclick="Teacher.toggleClassUpdatePanel(${c.id})">
                 ${isEditing ? 'Close' : 'Update'}
               </button>
             `}
@@ -2015,6 +2014,218 @@ const Teacher = {
       await this.loadClasses();
     } catch (err) {
       showToast(err.message || 'Failed to launch class session.', 'error');
+    }
+  },
+
+  // ==============================================================
+  // CLASS RECORD & LESSON SUMMARY (AI + MANUAL + NOTIFICATION)
+  // ==============================================================
+  activeRecordClassId: null,
+
+  async openClassRecordModal(classId) {
+    this.activeRecordClassId = classId;
+    const modal = document.getElementById('modal-teacher-class-record');
+    const metaBox = document.getElementById('class-record-meta-box');
+    const summaryInput = document.getElementById('class-record-summary-input');
+    const sentWrap = document.getElementById('class-record-sent-badge-wrap');
+    const titleEl = document.getElementById('class-record-title');
+
+    if (!modal) return;
+
+    let record = (this.classes || []).find(c => Number(c.id) === Number(classId));
+
+    if (metaBox) {
+      metaBox.innerHTML = `
+        <div style="text-align: center; padding: 1.25rem; color: var(--text-secondary); font-size: 0.88rem;">
+          Loading class record & history...
+        </div>
+      `;
+    }
+
+    this.openModal('modal-teacher-class-record');
+
+    try {
+      const res = await API.getClassRecord(classId);
+      if (res && res.record) record = res.record;
+    } catch (e) {
+      console.warn('Could not fetch latest class record from API, using in-memory record:', e);
+    }
+
+    if (!record) {
+      showToast('Class record not found.', 'error');
+      this.closeModal('modal-teacher-class-record');
+      return;
+    }
+
+    if (titleEl) {
+      titleEl.textContent = `${record.subject} — Class Record & History`;
+    }
+
+    const isCompleted = record.status === 'completed';
+
+    if (metaBox) {
+      metaBox.innerHTML = `
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.75rem; flex-wrap: wrap;">
+          <div style="display: flex; align-items: center; gap: 0.65rem;">
+            <img src="${record.student_avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=80&q=80'}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid var(--gold-400);" />
+            <div>
+              <h4 style="margin: 0 0 0.1rem; font-size: 1rem; color: var(--text-primary); font-weight: 700;">${record.student_name}</h4>
+              <div style="font-size: 0.76rem; color: var(--text-secondary);">${record.student_grade || 'Student'} • ${record.student_school || 'Enrolled Scholar'} • ${record.student_email || ''}</div>
+            </div>
+          </div>
+          <div style="text-align: right; display: flex; align-items: center; gap: 0.35rem;">
+            <span class="badge-accent" style="font-size: 0.78rem; padding: 0.2rem 0.5rem;">${record.subject}</span>
+            <span class="status-pill ${isCompleted ? 'completed' : record.status}" style="font-size: 0.68rem; padding: 0.15rem 0.5rem;">${isCompleted ? 'DONE' : record.status.toUpperCase()}</span>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 0.5rem; margin-top: 0.75rem; padding-top: 0.65rem; border-top: 1px solid var(--border-color); font-size: 0.78rem; color: var(--text-secondary);">
+          <div>📅 <strong>Date:</strong> ${record.requested_date}</div>
+          <div>🕒 <strong>Time:</strong> ${record.requested_time} (50m)</div>
+          <div>💰 <strong>Fee:</strong> $${Number(record.total_amount || 0).toFixed(2)}</div>
+          <div>🎓 <strong>Status:</strong> ${isCompleted ? 'Concluded / Done' : 'Scheduled'}</div>
+        </div>
+
+        ${record.notes ? `
+          <div style="margin-top: 0.65rem; padding: 0.45rem 0.65rem; background: rgba(198, 138, 40, 0.07); border-left: 3px solid var(--gold-500); border-radius: 4px; font-size: 0.78rem; color: var(--text-primary);">
+            <strong>Student Focus Request:</strong> "${this.escapeHtml(record.notes)}"
+          </div>
+        ` : ''}
+      `;
+    }
+
+    if (summaryInput) {
+      summaryInput.value = record.lesson_summary || '';
+      if (!summaryInput.value) {
+        summaryInput.placeholder = `Write a comprehensive lesson summary for ${record.student_name} covering concepts mastered, practice problems solved, and recommended next steps... Or click "Generate with AI" above!`;
+      }
+    }
+
+    if (sentWrap) {
+      if (record.summary_sent_at) {
+        const sentDate = new Date(record.summary_sent_at).toLocaleString('en-US', {
+          month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit'
+        });
+        sentWrap.innerHTML = `
+          <span style="color: #059669; font-weight: 700; display: inline-flex; align-items: center; gap: 0.3rem;">
+            ${Icons.check(14)} Lesson summary was sent to ${record.student_name} on ${sentDate}
+          </span>
+        `;
+      } else {
+        sentWrap.innerHTML = `
+          <span style="color: var(--text-secondary); font-style: italic;">
+            Summary has not been sent to the student yet. You can write your own notes or click "Generate with AI" above, then save &amp; send it.
+          </span>
+        `;
+      }
+    }
+  },
+
+  async generateAISummary() {
+    if (!this.activeRecordClassId) return;
+    const btn = document.getElementById('btn-ai-generate-summary');
+    const summaryInput = document.getElementById('class-record-summary-input');
+    const origHtml = btn ? btn.innerHTML : '';
+
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '✨ Generating with AI...';
+    }
+
+    try {
+      const res = await API.generateAISummary(this.activeRecordClassId);
+      if (res && res.summary) {
+        if (summaryInput) {
+          summaryInput.value = res.summary;
+        }
+        showToast('AI lesson summary generated! You can review or edit before sending to the student.', 'success');
+      }
+    } catch (err) {
+      showToast(err.message || 'Failed to generate AI lesson summary.', 'error');
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = origHtml;
+      }
+    }
+  },
+
+  resetSummaryTemplate() {
+    const record = (this.classes || []).find(c => Number(c.id) === Number(this.activeRecordClassId));
+    const summaryInput = document.getElementById('class-record-summary-input');
+    if (!summaryInput) return;
+
+    const studentName = record?.student_name || 'Student';
+    const subject = record?.subject || 'Subject';
+    const topic = record?.notes || 'Comprehensive lesson review and problem-solving';
+
+    summaryInput.value = `### 📚 ${subject} — 1-on-1 Lesson Summary\n` +
+      `**Student:** ${studentName}\n` +
+      `**Session Focus:** "${topic}"\n\n` +
+      `#### 1. 🎯 Core Concepts Mastered\n` +
+      `• Thorough review of foundational mechanics and analytical definitions.\n` +
+      `• Addressed targeted questions regarding ${topic}.\n\n` +
+      `#### 2. 💡 Problem-Solving & Exercises Covered\n` +
+      `• Worked step-by-step through standard diagnostic problems.\n` +
+      `• Verified calculation accuracy and discussed alternative solving methods.\n\n` +
+      `#### 3. 📝 Recommended Homework & Action Items\n` +
+      `• Rework the problems covered in today's class session.\n` +
+      `• Complete independent review exercises before our next meeting.\n\n` +
+      `#### 4. 🌟 Educator Feedback\n` +
+      `Great focus and participation today, ${studentName.split(' ')[0]}! Keep up the dedicated effort.`;
+    showToast('Applied standard lesson summary template.', 'info');
+  },
+
+  async sendLessonSummary() {
+    if (!this.activeRecordClassId) return;
+    const summaryInput = document.getElementById('class-record-summary-input');
+    const btn = document.getElementById('btn-send-lesson-summary');
+    const sentWrap = document.getElementById('class-record-sent-badge-wrap');
+
+    const summaryText = summaryInput ? summaryInput.value.trim() : '';
+    if (!summaryText) {
+      showToast('Please enter or generate a lesson summary before sending.', 'warning');
+      return;
+    }
+
+    const origHtml = btn ? btn.innerHTML : '';
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = 'Sending...';
+    }
+
+    try {
+      const res = await API.saveAndSendLessonSummary(this.activeRecordClassId, { summary: summaryText });
+      showToast(res.message || 'Lesson summary saved and sent to student!', 'success');
+
+      if (sentWrap) {
+        sentWrap.innerHTML = `
+          <span style="color: #059669; font-weight: 700; display: inline-flex; align-items: center; gap: 0.3rem;">
+            ${Icons.check(14)} Lesson summary sent to student (Just now)
+          </span>
+        `;
+      }
+
+      // Update in-memory record
+      if (Array.isArray(this.classes)) {
+        this.classes = this.classes.map(c => {
+          if (Number(c.id) === Number(this.activeRecordClassId)) {
+            return { ...c, lesson_summary: summaryText, summary_sent_at: res.summary_sent_at || new Date().toISOString() };
+          }
+          return c;
+        });
+      }
+
+      setTimeout(() => {
+        this.closeModal('modal-teacher-class-record');
+      }, 900);
+    } catch (err) {
+      showToast(err.message || 'Failed to send lesson summary.', 'error');
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = origHtml;
+      }
     }
   },
 

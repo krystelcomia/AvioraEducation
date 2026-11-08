@@ -1378,7 +1378,12 @@ const Student = {
           <div style="font-size: 0.75rem; color: var(--text-muted);">50 min class completed</div>
         </div>
 
-        <div style="display: flex; justify-content: flex-end; align-items: center; min-width: 0;">
+        <div style="display: flex; flex-direction: column; justify-content: center; align-items: flex-end; min-width: 0; gap: 0.35rem;">
+          ${r.lesson_summary ? `
+            <button type="button" class="btn btn-outline-gold btn-sm" onclick="Student.viewLessonSummary(${r.id})" style="font-size: 0.74rem; padding: 0.22rem 0.55rem; display: inline-flex; align-items: center; gap: 0.25rem;">
+              ${Icons.fileText(12)} Lesson Summary
+            </button>
+          ` : ''}
           ${r.review_rating ? `
             <div style="text-align: right;">
               <div style="color: #F59E0B; display: inline-flex; align-items: center; gap: 2px;">
@@ -1691,6 +1696,51 @@ const Student = {
         sessionStorage.setItem(storageKey, 'true');
         showToast(`Reminder: Your ${nextSession.subject} class with ${nextSession.tutor_name} is scheduled for ${nextSession.requested_time} and is about to begin. Your tutor will open the virtual room shortly.`, 'info');
       }
+    }
+  },
+
+  async viewLessonSummary(requestId) {
+    const modal = document.getElementById('modal-student-lesson-summary');
+    const metaBox = document.getElementById('student-summary-meta-box');
+    const contentBox = document.getElementById('student-summary-content');
+    const titleEl = document.getElementById('student-summary-title');
+    if (!modal) return;
+
+    this.openModal('modal-student-lesson-summary');
+    if (contentBox) contentBox.innerHTML = '<div style="text-align: center; padding: 1.5rem; color: var(--text-secondary);">Loading lesson summary...</div>';
+
+    try {
+      const res = await API.getStudentLessonSummary(requestId);
+      const record = res.record;
+      if (!record || !record.lesson_summary) {
+        if (contentBox) contentBox.innerHTML = '<em>Your instructor has not submitted a detailed lesson summary for this session yet.</em>';
+        return;
+      }
+
+      if (titleEl) {
+        titleEl.textContent = `${record.subject} — Lesson Summary`;
+      }
+
+      if (metaBox) {
+        const sentDateStr = record.summary_sent_at ? new Date(record.summary_sent_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+        metaBox.innerHTML = `
+          <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; flex-wrap: wrap; padding-bottom: 0.75rem; border-bottom: 1px solid var(--border-color);">
+            <div>
+              <span class="badge-gold">${record.subject}</span>
+              <span style="font-size: 0.82rem; color: var(--text-secondary); margin-left: 0.4rem;">${record.requested_date} (${record.requested_time})</span>
+            </div>
+            <div style="font-size: 0.82rem; color: var(--gold-800); font-weight: 600;">
+              Instructor: ${record.tutor_name} ${sentDateStr ? `• Sent ${sentDateStr}` : ''}
+            </div>
+          </div>
+        `;
+      }
+
+      if (contentBox) {
+        contentBox.textContent = record.lesson_summary;
+      }
+    } catch (err) {
+      if (contentBox) contentBox.innerHTML = `<span style="color: #EF4444;">Failed to load lesson summary: ${err.message}</span>`;
     }
   }
 };

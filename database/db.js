@@ -122,6 +122,8 @@ function initSchema() {
       tutor_response_note TEXT,
       room_status TEXT DEFAULT 'closed',
       room_started_at DATETIME,
+      lesson_summary TEXT,
+      summary_sent_at DATETIME,
       tutor_date TEXT,
       tutor_time TEXT,
       tutor_timezone TEXT,
@@ -464,6 +466,12 @@ function initSchema() {
       }
       if (!reqCols.some(c => c.name === 'student_timezone')) {
         db.prepare("ALTER TABLE tutoring_requests ADD COLUMN student_timezone TEXT").run();
+      }
+      if (!reqCols.some(c => c.name === 'lesson_summary')) {
+        db.prepare("ALTER TABLE tutoring_requests ADD COLUMN lesson_summary TEXT").run();
+      }
+      if (!reqCols.some(c => c.name === 'summary_sent_at')) {
+        db.prepare("ALTER TABLE tutoring_requests ADD COLUMN summary_sent_at DATETIME").run();
       }
     }
   } catch (e) {}

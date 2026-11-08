@@ -7336,6 +7336,77 @@
   </div>
 
 
+  <!-- =========================================
+       MODAL: CLASS RECORD & LESSON SUMMARY (TUTOR)
+       ========================================= -->
+  <div class="modal-overlay" id="modal-teacher-class-record">
+    <div class="modal-card" style="max-width: 680px; width: 95%;">
+      <div class="modal-header">
+        <div>
+          <span class="badge-gold">Class History &amp; Academic Record</span>
+          <h3 class="modal-title text-gold" style="margin-top: 0.25rem;" id="class-record-title">Class Record &amp; Lesson Summary</h3>
+        </div>
+        <button class="modal-close-btn" onclick="Teacher.closeModal('modal-teacher-class-record')">✕</button>
+      </div>
+      <div class="modal-body" style="padding: 1.25rem 1.5rem;">
+        <div id="class-record-meta-box" class="class-record-meta-container">
+          <!-- Populated dynamically via Teacher.openClassRecordModal -->
+        </div>
+
+        <div class="class-record-summary-section" style="margin-top: 1.15rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; flex-wrap: wrap; gap: 0.5rem;">
+            <label class="form-label" style="margin: 0; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 0.35rem; font-size: 0.9rem;">
+              <span>📝 Lesson Summary &amp; Study Action Items</span>
+            </label>
+            <div style="display: flex; gap: 0.4rem; align-items: center;">
+              <button type="button" class="btn btn-outline-gold btn-sm" id="btn-ai-generate-summary" onclick="Teacher.generateAISummary()" style="display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.78rem; font-weight: 700; padding: 0.25rem 0.65rem;">
+                ✨ Generate with AI
+              </button>
+              <button type="button" class="btn btn-secondary btn-sm" onclick="Teacher.resetSummaryTemplate()" style="font-size: 0.78rem; padding: 0.25rem 0.65rem;">
+                Template
+              </button>
+            </div>
+          </div>
+
+          <textarea id="class-record-summary-input" class="form-control" rows="8" placeholder="Enter lesson overview, core concepts mastered, exercises covered, and homework or study recommendations..." style="font-size: 0.86rem; line-height: 1.55;"></textarea>
+          
+          <div id="class-record-sent-badge-wrap" style="margin-top: 0.5rem; font-size: 0.8rem;">
+            <!-- Sent status badge -->
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1.25rem; align-items: center; flex-wrap: wrap;">
+          <button type="button" class="btn btn-secondary btn-sm" onclick="Teacher.closeModal('modal-teacher-class-record')">Close</button>
+          <button type="button" class="btn btn-primary btn-sm" id="btn-send-lesson-summary" onclick="Teacher.sendLessonSummary()" style="display: inline-flex; align-items: center; gap: 0.35rem; font-weight: 700;">
+            🚀 Save &amp; Send Summary to Student
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================
+       MODAL: STUDENT LESSON SUMMARY VIEW
+       ========================================= -->
+  <div class="modal-overlay" id="modal-student-lesson-summary">
+    <div class="modal-card" style="max-width: 640px; width: 95%;">
+      <div class="modal-header">
+        <div>
+          <span class="badge-gold">Instructor Lesson Summary</span>
+          <h3 class="modal-title text-gold" style="margin-top: 0.25rem;" id="student-summary-title">Lesson Summary &amp; Study Notes</h3>
+        </div>
+        <button class="modal-close-btn" onclick="Student.closeModal('modal-student-lesson-summary')">✕</button>
+      </div>
+      <div class="modal-body" style="padding: 1.25rem 1.5rem;">
+        <div id="student-summary-meta-box" style="margin-bottom: 1rem;"></div>
+        <div id="student-summary-content" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1.15rem; font-size: 0.88rem; line-height: 1.6; white-space: pre-wrap; color: var(--text-primary); max-height: 420px; overflow-y: auto;"></div>
+        <div style="display: flex; justify-content: flex-end; margin-top: 1.25rem;">
+          <button type="button" class="btn btn-primary btn-sm" onclick="Student.closeModal('modal-student-lesson-summary')">Done</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Toast Notification Container -->
   <div class="toast-container" id="toast-container"></div>
 

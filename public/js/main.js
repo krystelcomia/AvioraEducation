@@ -113,7 +113,7 @@ function showConfirm(title, message, onConfirm, options = {}) {
 
 // Router
 const Router = {
-  routes: ['#home', '#about', '#tutors', '#aviora-buddy', '#buddy', '#aviora-buddy-studio', '#how-it-works', '#book-now', '#book-lesson', '#subscriptions', '#subscription', '#student-subscriptions', '#login', '#signup', '#student-portal', '#dashboard', '#student-lessons', '#student-tutors', '#student-history', '#student-schedule', '#student-profile', '#teacher-portal', '#teacher-classes', '#teacher-class', '#teacher-students', '#teacher-schedule', '#teacher-dashboard', '#teacher-profile', '#teacher-application', '#admin-portal', '#admin-profile'],
+  routes: ['#home', '#about', '#tutors', '#aviora-buddy', '#buddy', '#aviora-buddy-studio', '#how-it-works', '#book-now', '#book-lesson', '#subscriptions', '#subscription', '#student-subscriptions', '#login', '#signup', '#student-portal', '#dashboard', '#student-lessons', '#student-tutors', '#student-history', '#student-schedule', '#student-messages', '#messages', '#student-profile', '#teacher-portal', '#teacher-classes', '#teacher-class', '#teacher-students', '#teacher-schedule', '#teacher-messages', '#teacher-dashboard', '#teacher-profile', '#teacher-application', '#admin-portal', '#admin-profile'],
 
   init() {
     window.addEventListener('hashchange', () => this.handleRoute());
@@ -127,6 +127,9 @@ const Router = {
       const href = link.getAttribute('href');
       let isActive = (href === hash);
       if (!isActive && (href === '#student-portal' || href === '#dashboard') && ['#student-portal', '#dashboard', '#student-lessons', '#student-schedule', '#student-history', '#student-tutors'].includes(hash)) {
+        isActive = true;
+      }
+      if (!isActive && (href === '#student-messages' || href === '#messages' || link.id === 'nav-link-student-messages') && (hash === '#student-messages' || hash === '#messages')) {
         isActive = true;
       }
       if (!isActive && (href === '#student-profile' || (href === '#profile' && (!Auth.currentUser || Auth.currentUser.role === 'student')) || (link.id === 'nav-user-profile-btn' && (!Auth.currentUser || Auth.currentUser.role === 'student'))) && (hash === '#student-profile' || (hash === '#profile' && (!Auth.currentUser || Auth.currentUser.role === 'student')))) {
@@ -148,6 +151,9 @@ const Router = {
         isActive = true;
       }
       if (!isActive && (href === '#teacher-schedule' || link.id === 'nav-link-teacher-schedule') && hash === '#teacher-schedule') {
+        isActive = true;
+      }
+      if (!isActive && (href === '#teacher-messages' || link.id === 'nav-link-teacher-messages') && hash === '#teacher-messages') {
         isActive = true;
       }
       if (!isActive && href === '#tutors' && (hash === '#tutors' || hash.startsWith('#tutor-profile') || hash.startsWith('#book-lesson') || hash.startsWith('#book-now'))) {
@@ -416,6 +422,18 @@ const Router = {
       if (params.toString() && typeof Student !== 'undefined' && Student.handleNotificationNavigation) {
         Student.handleNotificationNavigation(params);
       }
+    } else if (hash === '#student-messages' || hash === '#messages') {
+      const user = Auth.currentUser;
+      if (user && (user.role === 'teacher' || user.role === 'tutor')) {
+        window.location.hash = '#teacher-messages';
+        return;
+      }
+      const view = document.getElementById('view-student-messages');
+      if (view) view.style.display = 'block';
+      window.scrollTo(0, 0);
+      if (typeof Student !== 'undefined' && Student.loadMessagesPage) {
+        await Student.loadMessagesPage();
+      }
     } else if (hash === '#virtual-room') {
       const sessionId = params.get('session');
       if (sessionId && typeof VirtualRoom !== 'undefined') {
@@ -440,6 +458,11 @@ const Router = {
       if (view) view.style.display = 'block';
       window.scrollTo(0, 0);
       await Teacher.loadSchedulePage();
+    } else if (hash === '#teacher-messages') {
+      const view = document.getElementById('view-teacher-messages');
+      if (view) view.style.display = 'block';
+      window.scrollTo(0, 0);
+      await Teacher.loadMessagesPage();
     } else if (hash === '#teacher-buddy') {
       window.location.hash = '#teacher-dashboard';
       return;

@@ -2375,3 +2375,39 @@
     flex-direction: row;
   }
 }
+
+/* Teacher Messages Filter Pills */
+.teacher-msg-filter-btn {
+  background: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  padding: 0.35rem 0.8rem;
+  border-radius: var(--radius-full);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.teacher-msg-filter-btn:hover {
+  border-color: var(--gold-400);
+  color: var(--gold-700);
+}
+
+.teacher-msg-filter-btn.active {
+  background: var(--gold-500);
+  border-color: var(--gold-500);
+  color: #14151B;
+  font-weight: 700;
+}
+
+[data-theme="dark"] .teacher-msg-filter-btn {
+  border-color: rgba(255, 255, 255, 0.15);
+  color: #E2E8F0;
+}
+
+[data-theme="dark"] .teacher-msg-filter-btn.active {
+  background: var(--gold-400);
+  border-color: var(--gold-400);
+  color: #0D0E12;
+}

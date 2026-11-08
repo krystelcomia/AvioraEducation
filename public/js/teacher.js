@@ -453,7 +453,16 @@ const Teacher = {
     if (typeof Router !== 'undefined' && Router.updateActiveNav) Router.updateActiveNav();
   },
 
-  // 4. Dedicated Aviora Buddy Page (Removed from Teacher)
+  // 4. Dedicated Messages Page (Student Chats Hub)
+  async loadMessagesPage() {
+    this.currentTab = 'messages';
+    await this.ensureTeacherStatus();
+    this.renderStatusBanner('teacher-banner-messages');
+    await this.loadTeacherMessages();
+    if (typeof Router !== 'undefined' && Router.updateActiveNav) Router.updateActiveNav();
+  },
+
+  // 5. Dedicated Aviora Buddy Page (Removed from Teacher)
   async loadBuddyPage() {
     window.location.hash = '#teacher-dashboard';
   },
@@ -777,6 +786,8 @@ const Teacher = {
       await this.loadStudentsPage();
     } else if (currentHash === '#teacher-schedule') {
       await this.loadSchedulePage();
+    } else if (currentHash === '#teacher-messages') {
+      await this.loadMessagesPage();
     } else if (currentHash === '#teacher-buddy') {
       window.location.hash = '#teacher-dashboard';
     } else if (currentHash === '#teacher-application') {
@@ -793,6 +804,7 @@ const Teacher = {
     if (tabId === 'classes') window.location.hash = '#teacher-classes';
     else if (tabId === 'students') window.location.hash = '#teacher-students';
     else if (tabId === 'schedule') window.location.hash = '#teacher-schedule';
+    else if (tabId === 'messages') window.location.hash = '#teacher-messages';
     else if (tabId === 'profile') window.location.hash = '#teacher-profile';
     else {
       window.location.hash = '#teacher-dashboard';
@@ -4330,6 +4342,21 @@ const Teacher = {
   // ==========================================
   teacherMessages: [],
   teacherMessagesPollInterval: null,
+  teacherMessageFilter: 'all',
+  teacherMessageSearchQuery: '',
+
+  filterMessages(filterType, btnEl) {
+    this.teacherMessageFilter = filterType;
+    document.querySelectorAll('.teacher-msg-filter-btn').forEach(b => {
+      b.classList.toggle('active', b === btnEl || b.dataset.filter === filterType);
+    });
+    this.renderTeacherMessages();
+  },
+
+  searchMessages(query) {
+    this.teacherMessageSearchQuery = (query || '').toLowerCase().trim();
+    this.renderTeacherMessages();
+  },
 
   async loadTeacherMessages() {
     try {
@@ -4343,7 +4370,10 @@ const Teacher = {
     if (!this.teacherMessagesPollInterval) {
       this.teacherMessagesPollInterval = setInterval(async () => {
         const dashboard = document.getElementById('view-teacher-dashboard');
-        if (dashboard && dashboard.style.display !== 'none') {
+        const messagesPage = document.getElementById('view-teacher-messages');
+        const isDashboardOpen = dashboard && dashboard.style.display !== 'none';
+        const isMessagesPageOpen = messagesPage && messagesPage.style.display !== 'none';
+        if (isDashboardOpen || isMessagesPageOpen) {
           try {
             const res = await API.getTeacherMessages();
             this.teacherMessages = res.messages || [];
@@ -4355,44 +4385,68 @@ const Teacher = {
   },
 
   renderTeacherMessages() {
-    const tbody = document.getElementById('teacher-messages-table-body');
-    if (!tbody) return;
+    const dashboardTbody = document.getElementById('teacher-messages-table-body');
+    const pageTbody = document.getElementById('teacher-messages-page-tbody');
+    const countBadge = document.getElementById('teacher-messages-page-count-badge');
 
-    if (!this.teacherMessages || this.teacherMessages.length === 0) {
-      tbody.innerHTML = `
-        <tr>
-          <td colspan="5" style="text-align: center; padding: 2.5rem 1rem;">
-            <div style="color: var(--gold-700); margin-bottom: 0.35rem;">${Icons.message(24)}</div>
-            <h4 style="font-size: 0.95rem; font-weight: 700; color: var(--charcoal-900); margin: 0 0 0.25rem;">No Direct Student Messages</h4>
-            <p style="font-size: 0.82rem; color: var(--text-secondary); margin: 0;">When students send you a 1-on-1 private message, it will arrive here in real time for you to reply.</p>
-          </td>
-        </tr>
-      `;
-      return;
+    const totalCount = (this.teacherMessages || []).length;
+    if (countBadge) {
+      countBadge.textContent = `${totalCount} ${totalCount === 1 ? 'Message' : 'Messages'}`;
     }
 
-    tbody.innerHTML = this.teacherMessages.map(m => {
+    let filtered = this.teacherMessages || [];
+    if (this.teacherMessageFilter === 'unread') {
+      filtered = filtered.filter(m => Number(m.is_read) === 0);
+    } else if (this.teacherMessageFilter === 'seen') {
+      filtered = filtered.filter(m => Number(m.is_read) === 1 || m.status === 'seen');
+    }
+
+    const q = this.teacherMessageSearchQuery;
+    if (q) {
+      filtered = filtered.filter(m => {
+        const sName = String(m.student_name || m.sender_name || '').toLowerCase();
+        const sEmail = String(m.student_email || m.sender_email || '').toLowerCase();
+        const sContent = String(m.content || '').toLowerCase();
+        return sName.includes(q) || sEmail.includes(q) || sContent.includes(q);
+      });
+    }
+
+    const renderEmpty = () => `
+      <tr>
+        <td colspan="5" style="text-align: center; padding: 3rem 1.5rem;">
+          <div style="color: var(--gold-700); margin-bottom: 0.5rem;">${Icons.message(28)}</div>
+          <h4 style="font-size: 1rem; font-weight: 700; color: var(--text-primary); margin: 0 0 0.35rem;">
+            ${q ? 'No Matching Student Chats' : 'No Direct Student Messages Yet'}
+          </h4>
+          <p style="font-size: 0.85rem; color: var(--text-secondary); max-width: 460px; margin: 0 auto;">
+            ${q ? 'Try searching with a different student name or keyword.' : "This is where all of a student's chats can be found. When students message you, their conversations will arrive here in real time for you to reply."}
+          </p>
+        </td>
+      </tr>
+    `;
+
+    const renderRow = (m) => {
       const studentName = m.student_name || m.sender_name || 'Student';
       const studentEmail = m.student_email || m.sender_email || '';
       const timeStr = m.created_at ? new Date(m.created_at).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Recent';
       const isUnread = Number(m.is_read) === 0;
 
       return `
-        <tr>
+        <tr style="${isUnread ? 'background: rgba(198, 138, 40, 0.05);' : ''}">
           <td>
-            <div style="display: flex; align-items: center; gap: 0.6rem;">
-              <div style="width: 32px; height: 32px; border-radius: 50%; background: rgba(198, 138, 40, 0.15); display: flex; align-items: center; justify-content: center; font-weight: 700; color: var(--gold-800); font-size: 0.85rem;">
+            <div style="display: flex; align-items: center; gap: 0.65rem;">
+              <div style="width: 34px; height: 34px; border-radius: 50%; background: rgba(198, 138, 40, 0.15); display: flex; align-items: center; justify-content: center; font-weight: 700; color: var(--gold-800); font-size: 0.85rem; border: 1px solid var(--gold-400);">
                 ${studentName.charAt(0).toUpperCase()}
               </div>
               <div>
-                <strong style="color: var(--charcoal-950); font-size: 0.88rem;">${studentName}</strong>
-                <div style="font-size: 0.74rem; color: var(--text-muted);">${studentEmail}</div>
+                <strong style="color: var(--text-primary); font-size: 0.88rem; display: block;">${this.escapeHtml(studentName)}</strong>
+                <div style="font-size: 0.74rem; color: var(--text-secondary);">${this.escapeHtml(studentEmail)}</div>
               </div>
             </div>
           </td>
           <td style="max-width: 320px;">
-            <div style="font-size: 0.85rem; color: var(--charcoal-900); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${m.content}">
-              ${m.content}
+            <div style="font-size: 0.85rem; color: var(--text-primary); line-height: 1.45; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;" title="${this.escapeHtml(m.content)}">
+              ${this.escapeHtml(m.content)}
             </div>
           </td>
           <td style="font-size: 0.8rem; color: var(--text-secondary); white-space: nowrap;">
@@ -4405,19 +4459,28 @@ const Teacher = {
               } else if (m.status === 'sent') {
                 return '<span class="badge-outline" style="font-size: 0.72rem; color: #6B7280; border-color: rgba(156, 163, 175, 0.4);">Sent</span>';
               } else {
-                return '<span class="badge-accent" style="font-size: 0.72rem;">Delivered</span>';
+                return '<span class="badge-accent" style="font-size: 0.72rem; background: rgba(198, 138, 40, 0.18); font-weight: 700;">Delivered</span>';
               }
             })()}
           </td>
-          <td style="text-align: right;">
-            <button type="button" class="btn btn-outline-gold btn-sm" onclick="Teacher.openReplyModal(${m.id}, ${m.sender_id || 'null'}, '${studentName.replace(/'/g, "\\'")}', '${m.content.replace(/'/g, "\\'").replace(/\n/g, ' ')}')">
+          <td style="text-align: right; white-space: nowrap;">
+            <button type="button" class="btn btn-outline-gold btn-sm" onclick="Teacher.openReplyModal(${m.id}, ${m.sender_id || 'null'}, '${this.escapeHtml(studentName).replace(/'/g, "\\'")}', '${this.escapeHtml(m.content).replace(/'/g, "\\'").replace(/\n/g, ' ')}')">
               ${Icons.message(13)}
               <span>Reply</span>
             </button>
           </td>
         </tr>
       `;
-    }).join('');
+    };
+
+    const rowsHtml = filtered.length === 0 ? renderEmpty() : filtered.map(renderRow).join('');
+
+    if (dashboardTbody) {
+      dashboardTbody.innerHTML = rowsHtml;
+    }
+    if (pageTbody) {
+      pageTbody.innerHTML = rowsHtml;
+    }
   },
 
   openReplyModal(messageId, studentId, studentName, content) {
@@ -4460,8 +4523,8 @@ const Teacher = {
   async toggleOnlinePresence() {
     try {
       const res = await API.toggleTeacherPresence();
-      const btn = document.getElementById('btn-tutor-presence-toggle');
-      if (btn) {
+      const btns = document.querySelectorAll('#btn-tutor-presence-toggle, #btn-tutor-presence-toggle-page, .btn-tutor-presence-toggle');
+      btns.forEach(btn => {
         if (res.is_online) {
           btn.innerHTML = '● Online (Account Open)';
           btn.style.color = '#059669';
@@ -4471,7 +4534,7 @@ const Teacher = {
           btn.style.color = '#6B7280';
           btn.style.borderColor = 'rgba(156, 163, 175, 0.4)';
         }
-      }
+      });
       showToast(res.is_online ? 'Your status is now Online (Account Open).' : 'Your status is now Offline.', 'info');
     } catch (e) {
       showToast('Failed to toggle status.', 'error');

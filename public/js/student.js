@@ -1742,5 +1742,70 @@ const Student = {
     } catch (err) {
       if (contentBox) contentBox.innerHTML = `<span style="color: #EF4444;">Failed to load lesson summary: ${err.message}</span>`;
     }
+  },
+
+  // 1-on-1 Messages & Tutor Chats Page
+  async loadMessagesPage() {
+    const container = document.getElementById('student-messages-container');
+    if (!container) return;
+
+    if (!this.requests || this.requests.length === 0) {
+      await this.loadDashboard();
+    }
+
+    const tutorMap = new Map();
+    (this.requests || []).forEach(r => {
+      if (r.tutor_id && !tutorMap.has(r.tutor_id)) {
+        tutorMap.set(r.tutor_id, {
+          id: r.tutor_id,
+          name: r.tutor_name || 'Academic Tutor',
+          avatar: r.tutor_avatar,
+          subject: r.subject,
+          lastDate: r.requested_date,
+          lastTime: r.requested_time
+        });
+      }
+    });
+
+    const tutorsList = Array.from(tutorMap.values());
+
+    if (tutorsList.length === 0) {
+      container.innerHTML = `
+        <div style="grid-column: 1 / -1; text-align: center; padding: 4rem 1.5rem; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-xl);">
+          <div style="color: var(--gold-600); margin-bottom: 0.75rem;">${Icons.message(40)}</div>
+          <h3 style="color: var(--text-primary); font-size: 1.25rem;">No Direct Chats Yet</h3>
+          <p style="color: var(--text-secondary); font-size: 0.9rem; max-width: 480px; margin: 0.5rem auto 1.5rem;">
+            This is where all of a student's chats can be found. You can chat 1-on-1 with any verified educator before or after booking lessons.
+          </p>
+          <a href="#tutors" class="btn btn-primary btn-sm" style="display: inline-flex; align-items: center; gap: 0.35rem;">
+            Explore Verified Tutors →
+          </a>
+        </div>
+      `;
+      return;
+    }
+
+    container.innerHTML = tutorsList.map(t => `
+      <div class="teacher-student-card" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: 1.25rem; display: flex; flex-direction: column; justify-content: space-between; gap: 1rem;">
+        <div style="display: flex; align-items: center; gap: 0.85rem;">
+          <img src="${t.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80'}" alt="${escapeHtmlStr(t.name)}" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 1.5px solid var(--gold-400);" />
+          <div style="flex: 1; min-width: 0;">
+            <h4 style="margin: 0 0 0.15rem; font-size: 1rem; color: var(--text-primary); font-weight: 700;">${escapeHtmlStr(t.name)}</h4>
+            <div style="font-size: 0.78rem; color: var(--text-secondary);">${escapeHtmlStr(t.subject || 'Verified Educator')}</div>
+            <div style="font-size: 0.74rem; color: #059669; font-weight: 600; margin-top: 0.15rem; display: inline-flex; align-items: center; gap: 0.3rem;">
+              <span style="width: 6px; height: 6px; border-radius: 50%; background: #10B981;"></span> Direct 1-on-1 Messenger Available
+            </div>
+          </div>
+        </div>
+        <div style="padding-top: 0.75rem; border-top: 1px solid var(--border-color); display: flex; gap: 0.5rem;">
+          <button type="button" class="btn btn-primary btn-sm" style="flex: 1; justify-content: center; display: inline-flex; align-items: center; gap: 0.35rem;" onclick="Tutors.openMessageModal(${t.id})">
+            ${Icons.message(14)} Open Chat
+          </button>
+          <a href="#tutor-profile?id=${t.id}" class="btn btn-outline-gold btn-sm" style="display: inline-flex; align-items: center;">
+            Profile
+          </a>
+        </div>
+      </div>
+    `).join('');
   }
 };

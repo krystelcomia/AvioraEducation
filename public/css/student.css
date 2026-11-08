@@ -2491,3 +2491,190 @@
   background: rgba(255, 255, 255, 0.02);
   border-color: rgba(255, 255, 255, 0.1);
 }
+
+/* ========================================================
+   LIVE VIRTUAL CLASSROOM & REAL-TIME 1-ON-1 CALL STYLES
+   ======================================================== */
+
+/* Student Global Live Class Alert Banner */
+.student-global-live-bar {
+  background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
+  border-bottom: 2px solid #10B981;
+  box-shadow: 0 4px 20px rgba(16, 185, 129, 0.25);
+  color: #FFFFFF;
+  padding: 0.75rem 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  z-index: 9999;
+  position: sticky;
+  top: 0;
+  animation: vroomSlideDownBanner 0.3s ease-out;
+}
+
+@keyframes vroomSlideDownBanner {
+  from { transform: translateY(-100%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.student-live-bar-left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.live-pulse-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  background: rgba(239, 68, 68, 0.2);
+  border: 1px solid #EF4444;
+  color: #F87171;
+  padding: 0.3rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.live-pulse-dot-red {
+  width: 8px;
+  height: 8px;
+  background: #EF4444;
+  border-radius: 50%;
+  animation: vroomPulseDotRed 1.4s infinite;
+}
+
+@keyframes vroomPulseDotRed {
+  0% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+  70% { transform: scale(1.15); box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); }
+  100% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+}
+
+.student-live-bar-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.student-live-bar-text strong {
+  font-size: 0.95rem;
+  color: #FFFFFF;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.student-live-bar-text span {
+  font-size: 0.8rem;
+  color: #9CA3AF;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.btn-student-live-join {
+  background: linear-gradient(135deg, #10B981 0%, #059669 100%) !important;
+  color: #FFFFFF !important;
+  border: none !important;
+  padding: 0.55rem 1.25rem !important;
+  font-size: 0.85rem !important;
+  font-weight: 700 !important;
+  border-radius: 8px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 0.5rem !important;
+  cursor: pointer !important;
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.4) !important;
+  transition: transform 0.2s, box-shadow 0.2s !important;
+  flex-shrink: 0;
+}
+
+.btn-student-live-join:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(16, 185, 129, 0.55) !important;
+}
+
+/* Virtual Room Waiting State */
+.vroom-waiting-dot {
+  width: 8px;
+  height: 8px;
+  background: #F59E0B;
+  border-radius: 50%;
+  display: inline-block;
+  animation: vroomPulseDotAmber 1.5s infinite;
+}
+
+@keyframes vroomPulseDotAmber {
+  0% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7); }
+  70% { transform: scale(1.2); box-shadow: 0 0 0 7px rgba(245, 158, 11, 0); }
+  100% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+}
+
+.vroom-peer-waiting-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.85rem 1.2rem;
+  background: rgba(17, 24, 39, 0.85);
+  border: 1px dashed rgba(245, 158, 11, 0.4);
+  border-radius: 12px;
+  margin-top: 0.65rem;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.35);
+}
+
+.vroom-waiting-spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(245, 158, 11, 0.2);
+  border-top-color: #F59E0B;
+  border-radius: 50%;
+  animation: vroomSpin 1s linear infinite;
+}
+
+@keyframes vroomSpin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Audio Visualizer & Speaking indicator (Google Meet style) */
+.vroom-video-card.vroom-speaking {
+  box-shadow: 0 0 0 3px #10B981, inset 0 0 25px rgba(16, 185, 129, 0.35) !important;
+  transition: box-shadow 0.15s ease-in-out;
+}
+
+.vroom-avatar-fallback img.vroom-speaking-avatar {
+  border-color: #10B981 !important;
+  box-shadow: 0 0 25px rgba(16, 185, 129, 0.75) !important;
+  animation: vroomPulseSpeaking 1s infinite alternate;
+}
+
+@keyframes vroomPulseSpeaking {
+  from { transform: scale(1); }
+  to { transform: scale(1.05); }
+}
+
+/* Unread chat badge */
+.vroom-unread-dot {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 8px;
+  height: 8px;
+  background: #EF4444;
+  border-radius: 50%;
+  box-shadow: 0 0 8px #EF4444;
+}
+
+/* Highlighted Spotlight Session when room is open */
+.spotlight-card.room-is-live {
+  border: 2px solid #10B981 !important;
+  box-shadow: 0 0 25px rgba(16, 185, 129, 0.25) !important;
+}

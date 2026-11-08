@@ -205,5 +205,9 @@ const API = {
   getRoomMessages: (id) => apiRequest(`/sessions/${id}/room/messages`),
   sendRoomMessage: (id, body) => apiRequest(`/sessions/${id}/room/messages`, { method: 'POST', body }),
   sendRoomSignal: (id, body) => apiRequest(`/sessions/${id}/room/signal`, { method: 'POST', body }),
-  getRoomSignals: (id, since = 0) => apiRequest(`/sessions/${id}/room/signal?since=${since}`)
+  getRoomSignals: (id, since = 0) => apiRequest(`/sessions/${id}/room/signal?since=${since}`),
+  sendRoomHeartbeat: (id, body) => apiRequest(`/sessions/${id}/room/heartbeat`, { method: 'POST', body }),
+  leaveRoomPresence: (id) => apiRequest(`/sessions/${id}/room/leave`, { method: 'POST' }),
+  notifyStudentToJoinRoom: (id) => apiRequest(`/sessions/${id}/room/notify-join`, { method: 'POST' }),
+  getStudentLiveClass: () => apiRequest('/student/live-class')
 };

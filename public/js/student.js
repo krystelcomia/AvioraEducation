@@ -401,14 +401,20 @@ const Student = {
     }
 
     container.innerHTML = `
-      <div class="spotlight-mission-control">
+      <div class="spotlight-mission-control ${nextSession.room_status === 'open' ? 'room-is-live' : ''}">
         <div class="mission-control-header">
           <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
-
-            <span class="mission-countdown-badge" title="Estimated countdown to session start" style="${nextSession.room_status === 'open' ? 'background: rgba(16, 185, 129, 0.12); color: #059669; border-color: rgba(16, 185, 129, 0.3);' : ''}">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-              <span>${nextSession.room_status === 'open' ? 'Room Open • Join Live' : countdownStr}</span>
-            </span>
+            ${nextSession.room_status === 'open' ? `
+              <span class="live-pulse-badge" style="background: rgba(16, 185, 129, 0.15); border-color: #10B981; color: #059669;">
+                <span class="live-pulse-dot-red" style="background: #10B981;"></span>
+                <span>CLASS IS LIVE NOW • TUTOR WAITING</span>
+              </span>
+            ` : `
+              <span class="mission-countdown-badge" title="Estimated countdown to session start">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                <span>${countdownStr}</span>
+              </span>
+            `}
           </div>
 
           <span class="mission-type-pill">
@@ -1635,45 +1641,92 @@ const Student = {
     }
   },
 
+  activeLiveSessionId: null,
+
   setupRealTimeRoomPolling() {
     if (this.roomStatusPollTimer) {
       clearInterval(this.roomStatusPollTimer);
       this.roomStatusPollTimer = null;
     }
 
-    const nextAccepted = (this.requests || []).find(r => r.status === 'accepted' && r.room_status !== 'ended');
-    if (!nextAccepted) return;
-
-    this.roomStatusPollTimer = setInterval(async () => {
-      const currentHash = window.location.hash || '';
-      if (!currentHash.includes('student') && !currentHash.includes('dashboard') && currentHash !== '') {
-        clearInterval(this.roomStatusPollTimer);
-        this.roomStatusPollTimer = null;
+    const checkLiveClass = async () => {
+      const user = (typeof Auth !== 'undefined' && Auth.currentUser) || null;
+      if (!user || user.role !== 'student') {
+        const bar = document.getElementById('student-global-live-bar');
+        if (bar) bar.style.display = 'none';
         return;
       }
 
       try {
-        const check = await API.getRoomDetails(nextAccepted.id);
-        const isOpen = !!(check && (check.is_open || check.room_status === 'open'));
-        if (isOpen && nextAccepted.room_status !== 'open') {
-          nextAccepted.room_status = 'open';
-          this.renderSpotlightSession();
-          this.renderSchedule();
-          this.renderRequestsList();
-          showToast(`${nextAccepted.tutor_name} has opened the virtual classroom! Click "Join Class" to enter.`, 'success');
-          if (typeof Auth !== 'undefined' && Auth.loadNotifications) {
-            Auth.loadNotifications();
+        const res = await API.getStudentLiveClass();
+        const live = res ? res.liveSession : null;
+        const bar = document.getElementById('student-global-live-bar');
+        const subjEl = document.getElementById('student-live-subject');
+        const tutorEl = document.getElementById('student-live-tutor');
+
+        if (live) {
+          this.activeLiveSessionId = live.id;
+          if (subjEl) subjEl.textContent = `${live.subject} Virtual Classroom is Live!`;
+          if (tutorEl) tutorEl.textContent = `Educator ${live.tutor_name} is in the classroom waiting for you. (50-Min Session)`;
+          if (bar) bar.style.display = 'flex';
+
+          // Trigger high-priority alert on first detection
+          const alertKey = `live_alerted_session_${live.id}`;
+          if (!sessionStorage.getItem(alertKey)) {
+            sessionStorage.setItem(alertKey, 'true');
+            showToast(`🔴 Virtual Classroom Open! ${live.tutor_name} is waiting for you in ${live.subject}. Click "Join Live Call Now" to enter.`, 'success');
+            if (typeof Auth !== 'undefined' && Auth.loadNotifications) {
+              Auth.loadNotifications();
+            }
           }
-        } else if (!isOpen && nextAccepted.room_status === 'open') {
-          nextAccepted.room_status = 'closed';
-          this.renderSpotlightSession();
-          this.renderSchedule();
-          this.renderRequestsList();
+
+          // Update requests list if cached
+          if (this.requests) {
+            let changed = false;
+            this.requests.forEach(r => {
+              if (r.id === live.id && r.room_status !== 'open') {
+                r.room_status = 'open';
+                changed = true;
+              }
+            });
+            if (changed) {
+              this.renderSpotlightSession();
+              this.renderSchedule();
+              this.renderRequestsList();
+            }
+          }
+        } else {
+          this.activeLiveSessionId = null;
+          if (bar) bar.style.display = 'none';
         }
       } catch (e) {
         // Silently catch background poll issues
       }
-    }, 3000);
+    };
+
+    // Immediate check + recurring poll every 2.5s
+    checkLiveClass();
+    this.roomStatusPollTimer = setInterval(checkLiveClass, 2500);
+  },
+
+  joinCurrentLiveClass() {
+    if (this.activeLiveSessionId && typeof VirtualRoom !== 'undefined') {
+      VirtualRoom.joinRoom(this.activeLiveSessionId, 'student');
+    } else {
+      const nextAccepted = (this.requests || []).find(r => r.room_status === 'open');
+      if (nextAccepted && typeof VirtualRoom !== 'undefined') {
+        VirtualRoom.joinRoom(nextAccepted.id, 'student');
+      } else {
+        showToast('Checking for active virtual classroom session...', 'info');
+        API.getStudentLiveClass().then(res => {
+          if (res && res.liveSession) {
+            VirtualRoom.joinRoom(res.liveSession.id, 'student');
+          } else {
+            showToast('No active class session is currently open.', 'info');
+          }
+        }).catch(() => {});
+      }
+    }
   },
 
   checkClassStartingSoonReminder(nextSession) {

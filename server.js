@@ -6104,8 +6104,9 @@ app.post('/api/teacher/requests/:id/status', authenticateToken, requireRole('tea
 // VIRTUAL CLASSROOM / CALL ROUTES
 // ==========================================
 
-// In-memory WebRTC signaling cache
+// In-memory WebRTC signaling cache & room participant tracking
 const roomSignals = new Map();
+const roomParticipants = new Map();
 
 // Get Virtual Room Details & Access State
 app.get('/api/sessions/:id/room', authenticateToken, (req, res) => {
@@ -6197,7 +6198,9 @@ app.get('/api/sessions/:id/room', authenticateToken, (req, res) => {
       elapsed_seconds: elapsedSeconds,
       remaining_seconds: remainingSeconds,
       is_open: isOpen,
-      current_user_role: (userId === request.tutor_id) ? 'tutor' : (userId === request.student_id ? 'student' : userRole)
+      current_user_role: (userId === request.tutor_id) ? 'tutor' : (userId === request.student_id ? 'student' : userRole),
+      peer_online: !!(roomParticipants.has(String(requestId)) && Array.from(roomParticipants.get(String(requestId)).values()).some(p => p.userId !== userId && (Date.now() - p.lastSeen <= 8000))),
+      participants: roomParticipants.has(String(requestId)) ? Array.from(roomParticipants.get(String(requestId)).values()).filter(p => Date.now() - p.lastSeen <= 8000) : []
     });
   } catch (error) {
     console.error('Get virtual room error:', error);
@@ -6264,6 +6267,10 @@ app.post('/api/sessions/:id/room/open', authenticateToken, (req, res) => {
       `#student-portal?session=${requestId}`
     );
 
+    // Reset signaling and presence maps for fresh session
+    roomSignals.delete(String(requestId));
+    roomParticipants.delete(String(requestId));
+
     res.json({
       success: true,
       message: 'Virtual room opened successfully. Class is now live!',
@@ -6297,6 +6304,9 @@ app.post('/api/sessions/:id/room/end', authenticateToken, (req, res) => {
       SET room_status = 'ended', status = 'completed', updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
     `).run(requestId);
+
+    roomSignals.delete(String(requestId));
+    roomParticipants.delete(String(requestId));
 
     res.json({ success: true, message: 'Virtual room session ended.' });
   } catch (error) {
@@ -6391,6 +6401,122 @@ app.get('/api/sessions/:id/room/signal', authenticateToken, (req, res) => {
   const since = parseInt(req.query.since || '0', 10);
   const signals = (roomSignals.get(requestId) || []).filter(s => s.fromId !== userId && s.timestamp > since);
   res.json({ signals });
+});
+
+// Room Presence Heartbeat
+app.post('/api/sessions/:id/room/heartbeat', authenticateToken, (req, res) => {
+  try {
+    const requestId = String(req.params.id);
+    const userId = req.user.id;
+    const { role, micActive, cameraActive, isScreenSharing } = req.body;
+
+    if (!roomParticipants.has(requestId)) {
+      roomParticipants.set(requestId, new Map());
+    }
+    const room = roomParticipants.get(requestId);
+    room.set(userId, {
+      userId,
+      role: role || req.user.role,
+      name: req.user.name,
+      avatar: req.user.avatar_url,
+      micActive: micActive !== false,
+      cameraActive: cameraActive !== false,
+      isScreenSharing: !!isScreenSharing,
+      lastSeen: Date.now()
+    });
+
+    // Prune stale participants (inactive for > 7s)
+    const now = Date.now();
+    for (const [pId, p] of room.entries()) {
+      if (now - p.lastSeen > 7000) {
+        room.delete(pId);
+      }
+    }
+
+    const participants = Array.from(room.values());
+    const peer = participants.find(p => p.userId !== userId);
+
+    res.json({
+      success: true,
+      participants,
+      peerOnline: !!peer,
+      peer: peer || null
+    });
+  } catch (err) {
+    console.error('Room heartbeat error:', err);
+    res.status(500).json({ error: 'Failed to record heartbeat.' });
+  }
+});
+
+// Leave Virtual Room Presence
+app.post('/api/sessions/:id/room/leave', authenticateToken, (req, res) => {
+  try {
+    const requestId = String(req.params.id);
+    const userId = req.user.id;
+    if (roomParticipants.has(requestId)) {
+      roomParticipants.get(requestId).delete(userId);
+    }
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to leave room.' });
+  }
+});
+
+// Re-notify Student to Join Room
+app.post('/api/sessions/:id/room/notify-join', authenticateToken, (req, res) => {
+  try {
+    const requestId = req.params.id;
+    const userId = req.user.id;
+
+    const request = db.prepare(`
+      SELECT tr.*, tu.name as tutor_name
+      FROM tutoring_requests tr
+      JOIN users tu ON tr.tutor_id = tu.id
+      WHERE tr.id = ?
+    `).get(requestId);
+
+    if (!request) return res.status(404).json({ error: 'Session not found.' });
+
+    sendNotification(
+      request.student_id,
+      'Class is Live — Join Class Now!',
+      `${request.tutor_name} is in the virtual classroom waiting for you for ${request.subject}. Click to join the call now!`,
+      'booking',
+      `#student-portal?session=${requestId}`
+    );
+
+    res.json({ success: true, message: 'Notification sent to student.' });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to notify student.' });
+  }
+});
+
+// Student Live Class Check (Lightweight real-time poll)
+app.get('/api/student/live-class', authenticateToken, requireRole('student'), (req, res) => {
+  try {
+    checkAndAutoEndElapsedRooms();
+    const studentId = req.user.id;
+    const liveSession = db.prepare(`
+      SELECT 
+        tr.*,
+        u.name as tutor_name,
+        u.avatar_url as tutor_avatar,
+        tp.headline as tutor_headline
+      FROM tutoring_requests tr
+      JOIN users u ON tr.tutor_id = u.id
+      LEFT JOIN tutor_profiles tp ON tp.user_id = u.id
+      WHERE tr.student_id = ? 
+        AND tr.room_status = 'open' 
+        AND tr.status != 'cancelled'
+      ORDER BY tr.room_started_at DESC
+      LIMIT 1
+    `).get(studentId);
+
+    res.json({ liveSession: liveSession || null });
+  } catch (error) {
+    console.error('Check student live class error:', error);
+    res.status(500).json({ error: 'Failed to check live class.' });
+  }
 });
 
 // ==========================================

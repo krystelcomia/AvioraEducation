@@ -177,6 +177,53 @@ const Teacher = {
   // ==============================================================
   // DEDICATED SEPARATE PAGE LOADERS (Class, Students, Schedule, Buddy, Dashboard)
   // ==============================================================
+  // Helper methods to track and enforce permanently deleted subjects across local and server states
+  getDeletedSubjects() {
+    try {
+      const user = (typeof Auth !== 'undefined' && Auth.currentUser) ? Auth.currentUser : null;
+      const key = user ? `aviora_deleted_subjects_${user.id || user.email}` : 'aviora_deleted_subjects';
+      const raw = localStorage.getItem(key);
+      const list = raw ? JSON.parse(raw) : [];
+      return Array.isArray(list) ? list.map(s => String(s || '').trim().toLowerCase()) : [];
+    } catch (e) {
+      return [];
+    }
+  },
+
+  addDeletedSubject(subject) {
+    if (!subject) return;
+    try {
+      const user = (typeof Auth !== 'undefined' && Auth.currentUser) ? Auth.currentUser : null;
+      const key = user ? `aviora_deleted_subjects_${user.id || user.email}` : 'aviora_deleted_subjects';
+      const list = this.getDeletedSubjects();
+      const lower = String(subject).trim().toLowerCase();
+      if (!list.includes(lower)) {
+        list.push(lower);
+        localStorage.setItem(key, JSON.stringify(list));
+      }
+    } catch (e) {}
+  },
+
+  restoreDeletedSubject(subject) {
+    if (!subject) return;
+    try {
+      const user = (typeof Auth !== 'undefined' && Auth.currentUser) ? Auth.currentUser : null;
+      const key = user ? `aviora_deleted_subjects_${user.id || user.email}` : 'aviora_deleted_subjects';
+      const list = this.getDeletedSubjects().filter(s => s !== String(subject).trim().toLowerCase());
+      localStorage.setItem(key, JSON.stringify(list));
+    } catch (e) {}
+  },
+
+  filterOutDeletedSubjects(list) {
+    if (!Array.isArray(list)) return [];
+    const deleted = this.getDeletedSubjects();
+    if (deleted.length === 0) return list;
+    return list.filter(s => {
+      const lower = String(s || '').trim().toLowerCase();
+      return !deleted.includes(lower);
+    });
+  },
+
   async ensureTeacherStatus() {
     const user = Auth.currentUser;
     if (!user || (user.role !== 'teacher' && user.role !== 'tutor')) return null;
@@ -185,6 +232,12 @@ const Teacher = {
       const statusData = await API.getTeacherStatus();
       this.application = statusData.application;
       this.tutorProfile = statusData.tutorProfile;
+      if (this.application && Array.isArray(this.application.subjects)) {
+        this.application.subjects = this.filterOutDeletedSubjects(this.application.subjects);
+      }
+      if (this.tutorProfile && Array.isArray(this.tutorProfile.subjects)) {
+        this.tutorProfile.subjects = this.filterOutDeletedSubjects(this.tutorProfile.subjects);
+      }
       return statusData;
     } catch (err) {
       console.error('Failed to get teacher status:', err);
@@ -515,7 +568,8 @@ const Teacher = {
       interviewNotice = `Virtual interview is scheduled for <strong>${this.formatInterviewDate(app.interview_scheduled_at)}</strong>. Please check your notification bell in the top header for instructions.`;
     }
 
-    const subjectsArr = Array.isArray(app.subjects) ? app.subjects : (typeof app.subjects === 'string' ? app.subjects.split(',').map(s => s.trim()).filter(Boolean) : ['Mathematics', 'Algebra', 'Calculus']);
+    const currentSubjs = (this.subjects && this.subjects.length > 0) ? this.subjects : (app.subjects || []);
+    const subjectsArr = this.filterOutDeletedSubjects(Array.isArray(currentSubjs) ? currentSubjs : (typeof currentSubjs === 'string' ? currentSubjs.split(',').map(s => s.trim()).filter(Boolean) : ['Mathematics', 'Algebra']));
     const subjectsBadges = subjectsArr.map(s => `<span class="badge-gold" style="font-size: 0.8rem; margin-right: 0.35rem; margin-bottom: 0.35rem; display: inline-block;">${s}</span>`).join('');
 
     appSection.innerHTML = `
@@ -1199,24 +1253,40 @@ const Teacher = {
     try {
       const data = await API.getTeacherClasses();
       this.classes = data.classes || [];
-      if (Array.isArray(data.subjects)) {
-        this.subjects = data.subjects;
-      } else if (Array.isArray(this.tutorProfile?.subjects)) {
-        this.subjects = this.tutorProfile.subjects;
-      } else if (Array.isArray(this.application?.subjects)) {
-        this.subjects = this.application.subjects;
+
+      const rawSubjs = Array.isArray(data.subjects)
+        ? data.subjects
+        : (Array.isArray(this.tutorProfile?.subjects)
+          ? this.tutorProfile.subjects
+          : (Array.isArray(this.application?.subjects) ? this.application.subjects : []));
+      this.subjects = this.filterOutDeletedSubjects(rawSubjs);
+
+      const rawRates = (data.subject_rates && typeof data.subject_rates === 'object')
+        ? data.subject_rates
+        : (this.tutorProfile?.subject_rates || this.application?.subject_rates || {});
+      const cleanRates = {};
+      const deletedSet = new Set(this.getDeletedSubjects());
+      for (const [k, v] of Object.entries(rawRates)) {
+        if (!deletedSet.has(k.toLowerCase())) {
+          cleanRates[k] = v;
+        }
       }
-      if (data.subject_rates && typeof data.subject_rates === 'object') {
-        this.subjectRates = data.subject_rates;
-      } else if (this.tutorProfile?.subject_rates && typeof this.tutorProfile.subject_rates === 'object') {
-        this.subjectRates = this.tutorProfile.subject_rates;
-      } else if (this.application?.subject_rates && typeof this.application.subject_rates === 'object') {
-        this.subjectRates = this.application.subject_rates;
-      }
+      this.subjectRates = cleanRates;
+
       this.renderTeacherSubjects();
       this.renderClasses();
     } catch (err) {
       console.error('Failed to load teacher classes:', err);
+    }
+  },
+
+  async refreshClassesList() {
+    try {
+      const data = await API.getTeacherClasses();
+      this.classes = data.classes || [];
+      this.renderClasses();
+    } catch (err) {
+      console.error('Failed to refresh classes list:', err);
     }
   },
 
@@ -1236,7 +1306,9 @@ const Teacher = {
     if (!grid) return;
 
     const approved = this.isApproved();
-    const subjectsList = Array.isArray(this.subjects) ? this.subjects : [];
+    const rawList = Array.isArray(this.subjects) ? this.subjects : [];
+    const subjectsList = this.filterOutDeletedSubjects(rawList);
+    this.subjects = subjectsList;
     const ratesMap = this.subjectRates || {};
     const defaultRate = Number(this.tutorProfile?.hourly_rate || this.application?.hourly_rate || 45);
 
@@ -1326,8 +1398,17 @@ const Teacher = {
 
   syncUpdatedSubjectsAcrossApp(res) {
     if (!res) return;
-    if (Array.isArray(res.subjects)) this.subjects = res.subjects;
-    if (res.subject_rates && typeof res.subject_rates === 'object') this.subjectRates = res.subject_rates;
+    if (Array.isArray(res.subjects)) {
+      this.subjects = this.filterOutDeletedSubjects(res.subjects);
+    }
+    if (res.subject_rates && typeof res.subject_rates === 'object') {
+      const cleanRates = {};
+      const deletedSet = new Set(this.getDeletedSubjects());
+      for (const [k, v] of Object.entries(res.subject_rates)) {
+        if (!deletedSet.has(k.toLowerCase())) cleanRates[k] = v;
+      }
+      this.subjectRates = cleanRates;
+    }
 
     if (this.tutorProfile) {
       this.tutorProfile.subjects = this.subjects;
@@ -1478,6 +1559,9 @@ const Teacher = {
         submitBtn.textContent = 'Verifying & Adding...';
       }
 
+      // If this subject was previously marked as deleted, restore it
+      this.restoreDeletedSubject(subject);
+
       const res = await API.updateTeacherSubjects({
         action: 'add',
         subject,
@@ -1489,7 +1573,7 @@ const Teacher = {
 
       this.syncUpdatedSubjectsAcrossApp(res);
       this.closeAddSubjectModal();
-      await this.loadClasses();
+      await this.refreshClassesList();
 
       showToast(`"${subject}" ($${rate.toFixed(2)}/hr) added to your teaching profile and is now bookable by students!`, 'success');
     } catch (err) {
@@ -1528,6 +1612,9 @@ const Teacher = {
         btn.disabled = true;
         btn.textContent = 'Saving...';
       }
+
+      this.restoreDeletedSubject(subject);
+
       const res = await API.updateTeacherSubjects({
         action: 'add',
         subject,
@@ -1535,7 +1622,7 @@ const Teacher = {
       });
       this.syncUpdatedSubjectsAcrossApp(res);
       if (nameInput) nameInput.value = '';
-      await this.loadClasses();
+      await this.refreshClassesList();
       showToast(`"${subject}" ($${rate.toFixed(2)}/hr) saved and synced to Student & Admin portals!`, 'success');
     } catch (err) {
       showToast(err.message || 'Failed to add subject.', 'error');
@@ -1575,7 +1662,7 @@ const Teacher = {
         rate
       });
       this.syncUpdatedSubjectsAcrossApp(res);
-      await this.loadClasses();
+      await this.refreshClassesList();
       showToast(`Updated "${subject}" rate to $${rate.toFixed(2)}/hr (synced to Student & Admin).`, 'success');
     } catch (err) {
       showToast(err.message || 'Failed to update subject rate.', 'error');
@@ -1620,14 +1707,57 @@ const Teacher = {
     }
     if (!subject) return;
 
+    const cleanSubj = String(subject).trim();
+
+    // 1. Permanently register this subject into the deleted blacklist immediately
+    this.addDeletedSubject(cleanSubj);
+
+    // 2. Optimistically remove it from memory so the UI updates instantly
+    if (Array.isArray(this.subjects)) {
+      this.subjects = this.subjects.filter(s => s.toLowerCase() !== cleanSubj.toLowerCase());
+    }
+    if (this.subjectRates && typeof this.subjectRates === 'object') {
+      const updatedRates = { ...this.subjectRates };
+      for (const k of Object.keys(updatedRates)) {
+        if (k.toLowerCase() === cleanSubj.toLowerCase()) delete updatedRates[k];
+      }
+      this.subjectRates = updatedRates;
+    }
+
+    if (this.tutorProfile) {
+      this.tutorProfile.subjects = this.subjects;
+      this.tutorProfile.subject_rates = this.subjectRates;
+    }
+    if (this.application) {
+      this.application.subjects = this.subjects;
+      this.application.subject_rates = this.subjectRates;
+    }
+    if (typeof Auth !== 'undefined' && Auth.currentUser) {
+      Auth.currentUser.subjects = this.subjects.join(', ');
+      if (typeof Storage !== 'undefined' && Storage.setUser) {
+        Storage.setUser(Auth.currentUser);
+      }
+      try {
+        const accounts = JSON.parse(localStorage.getItem('aviora_created_accounts') || '{}');
+        const emailKey = (Auth.currentUser.email || '').toLowerCase();
+        if (accounts[emailKey]) {
+          accounts[emailKey].subjects = this.subjects.join(', ');
+          localStorage.setItem('aviora_created_accounts', JSON.stringify(accounts));
+        }
+      } catch (e) {}
+    }
+
+    // 3. Immediately re-render cards in UI so deleted card disappears with zero latency
+    this.renderTeacherSubjects();
+
     try {
       const res = await API.updateTeacherSubjects({
         action: 'remove',
-        subject
+        subject: cleanSubj
       });
       this.syncUpdatedSubjectsAcrossApp(res);
-      await this.loadClasses();
-      showToast(`"${subject}" has been successfully deleted from your account.`, 'success');
+      await this.refreshClassesList();
+      showToast(`"${cleanSubj}" has been successfully deleted from your account.`, 'success');
     } catch (err) {
       showToast(err.message || 'Failed to delete subject.', 'error');
     }
@@ -3888,9 +4018,12 @@ const Teacher = {
       if (headlineInp) headlineInp.value = tp.headline || app.headline || '';
       if (instInp) instInp.value = `${app.highest_degree || tp.highest_degree || ''}${app.institution ? ' • ' + app.institution : ''}`;
 
-      const subjectsList = Array.isArray(tp.subjects || app.subjects)
-        ? (tp.subjects || app.subjects).join(', ')
-        : (tp.subjects || app.subjects || '');
+      const activeSubjs = this.filterOutDeletedSubjects(
+        (this.subjects && this.subjects.length > 0) ? this.subjects : (tp.subjects || app.subjects || [])
+      );
+      const subjectsList = Array.isArray(activeSubjs)
+        ? activeSubjs.join(', ')
+        : (typeof activeSubjs === 'string' ? activeSubjs : '');
       if (subjInp) subjInp.value = subjectsList;
 
       if (bioInp) bioInp.value = tp.bio || app.bio || '';

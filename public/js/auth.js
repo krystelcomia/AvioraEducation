@@ -232,15 +232,19 @@ const Auth = {
   // ==========================================
 
   ensurePersistentAccounts() {
-    this.saveCreatedAccount({
-      name: 'Joshua Garcia',
-      email: 'joshuagarcia@gmail.com',
-      password: 'Joshua123_',
-      role: 'teacher',
-      phone: '+1 (555) 234-5678',
-      headline: 'Mathematics & Calculus Specialist',
-      subjects: 'Mathematics, Algebra, Calculus'
-    });
+    const accounts = this.getCreatedAccounts();
+    const joshuaEmail = 'joshuagarcia@gmail.com';
+    if (!accounts[joshuaEmail]) {
+      this.saveCreatedAccount({
+        name: 'Joshua Garcia',
+        email: joshuaEmail,
+        password: 'Joshua123_',
+        role: 'teacher',
+        phone: '+1 (555) 234-5678',
+        headline: 'Mathematics & Calculus Specialist',
+        subjects: 'Mathematics, Algebra'
+      });
+    }
   },
 
   saveCreatedAccount(account) {

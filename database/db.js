@@ -1313,8 +1313,8 @@ function ensureJoshuaAccount(customPassword) {
       friday: { available: true, start: '09:00', end: '17:00' }
     });
 
-    const defaultSubjects = JSON.stringify(['Mathematics', 'Algebra', 'Calculus']);
-    const defaultSubjectRates = JSON.stringify({ Mathematics: 45, Algebra: 45, Calculus: 45 });
+    const defaultSubjects = JSON.stringify(['Mathematics', 'Algebra']);
+    const defaultSubjectRates = JSON.stringify({ Mathematics: 45, Algebra: 45 });
 
     let app = db.prepare('SELECT id, subjects, subject_rates, hourly_rate FROM teacher_applications WHERE user_id = ?').get(userId);
     if (!app) {

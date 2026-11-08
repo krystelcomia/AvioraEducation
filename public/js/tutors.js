@@ -169,10 +169,37 @@ const Tutors = {
     }
   },
 
+  getTutorActiveSubjects(tutor) {
+    if (!tutor || !Array.isArray(tutor.subjects)) return [];
+    try {
+      const keys = [
+        tutor.user_id ? `aviora_deleted_subjects_${tutor.user_id}` : null,
+        tutor.id ? `aviora_deleted_subjects_${tutor.id}` : null,
+        tutor.email ? `aviora_deleted_subjects_${tutor.email.toLowerCase()}` : null
+      ].filter(Boolean);
+      for (const k of keys) {
+        const raw = localStorage.getItem(k);
+        if (raw) {
+          const deleted = JSON.parse(raw);
+          if (Array.isArray(deleted) && deleted.length > 0) {
+            const lowerDeleted = deleted.map(s => String(s || '').trim().toLowerCase());
+            return tutor.subjects.filter(s => !lowerDeleted.includes(String(s || '').trim().toLowerCase()));
+          }
+        }
+      }
+      return tutor.subjects;
+    } catch (e) {
+      return tutor.subjects;
+    }
+  },
+
   async fetchTutors() {
     try {
       const data = await API.getTutors();
-      this.allTutors = data.tutors || [];
+      this.allTutors = (data.tutors || []).map(t => ({
+        ...t,
+        subjects: this.getTutorActiveSubjects(t)
+      }));
 
       // Dynamically sync all qualified subjects to the subject filter dropdown
       const subjectFilterEl = document.getElementById('tutor-subject-filter');

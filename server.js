@@ -176,6 +176,14 @@ app.use(express.static(path.join(__dirname, 'public'), {
 }));
 app.use('/uploads', express.static(uploadsDir));
 
+// Disallow caching on dynamic API routes to prevent stale data across serverless instances
+app.use('/api', (req, res, next) => {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  next();
+});
+
 // Safe parsers for JSON arrays and objects stored in database fields
 function safeParseArray(val) {
   if (!val) return [];
@@ -4800,9 +4808,15 @@ app.get('/api/teacher/classes', authenticateToken, requireRole('teacher'), (req,
     const tutorProfile = db.prepare('SELECT subjects, subject_rates, hourly_rate FROM tutor_profiles WHERE user_id = ?').get(teacherId);
     const teacherApp = db.prepare('SELECT subjects, subject_rates, hourly_rate FROM teacher_applications WHERE user_id = ?').get(teacherId);
     const sourceRec = tutorProfile || teacherApp || { subjects: '[]', subject_rates: '{}', hourly_rate: 45 };
+    const subjsToUse = (tutorProfile && tutorProfile.subjects && tutorProfile.subjects !== '[]')
+      ? tutorProfile.subjects
+      : (teacherApp?.subjects || '[]');
+    const ratesToUse = (tutorProfile && tutorProfile.subject_rates && tutorProfile.subject_rates !== '{}')
+      ? tutorProfile.subject_rates
+      : (teacherApp?.subject_rates || '{}');
     const norm = normalizeSubjectRates(
-      sourceRec.subjects || teacherApp?.subjects,
-      sourceRec.subject_rates || teacherApp?.subject_rates,
+      subjsToUse,
+      ratesToUse,
       sourceRec.hourly_rate || teacherApp?.hourly_rate || 45
     );
 
@@ -4825,9 +4839,15 @@ app.get('/api/teacher/subjects', authenticateToken, requireRole('teacher'), (req
     const tutorProfile = db.prepare('SELECT subjects, subject_rates, hourly_rate FROM tutor_profiles WHERE user_id = ?').get(teacherId);
     const teacherApp = db.prepare('SELECT subjects, subject_rates, hourly_rate FROM teacher_applications WHERE user_id = ?').get(teacherId);
     const sourceRec = tutorProfile || teacherApp || { subjects: '[]', subject_rates: '{}', hourly_rate: 45 };
+    const subjsToUse = (tutorProfile && tutorProfile.subjects && tutorProfile.subjects !== '[]')
+      ? tutorProfile.subjects
+      : (teacherApp?.subjects || '[]');
+    const ratesToUse = (tutorProfile && tutorProfile.subject_rates && tutorProfile.subject_rates !== '{}')
+      ? tutorProfile.subject_rates
+      : (teacherApp?.subject_rates || '{}');
     const norm = normalizeSubjectRates(
-      sourceRec.subjects || teacherApp?.subjects,
-      sourceRec.subject_rates || teacherApp?.subject_rates,
+      subjsToUse,
+      ratesToUse,
       sourceRec.hourly_rate || teacherApp?.hourly_rate || 45
     );
     res.json({
@@ -4954,6 +4974,28 @@ app.put('/api/teacher/subjects', authenticateToken, requireRole('teacher'), (req
         SET subjects = ?, subject_rates = ?, hourly_rate = ?, updated_at = CURRENT_TIMESTAMP
         WHERE user_id = ?
       `).run(subjectsJson, subjectRatesJson, primaryHourlyRate, teacherId);
+    } else {
+      try {
+        db.prepare(`
+          INSERT INTO tutor_profiles (
+            user_id, application_id, headline, bio, highest_degree, institution, years_experience,
+            subjects, subject_rates, grade_levels, hourly_rate, availability_schedule, is_featured, is_active, rating, reviews_count, total_sessions
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 1, 5.0, 0, 0)
+        `).run(
+          teacherId,
+          appRecord.id,
+          appRecord.headline || 'Educator & Academic Specialist',
+          appRecord.bio || '',
+          appRecord.highest_degree || 'Bachelor of Science in Education',
+          appRecord.institution || 'University of California, Berkeley',
+          appRecord.years_experience || 3,
+          subjectsJson,
+          subjectRatesJson,
+          appRecord.grade_levels || '[]',
+          primaryHourlyRate,
+          appRecord.availability_schedule || '{}'
+        );
+      } catch (e) {}
     }
 
     db.prepare(`

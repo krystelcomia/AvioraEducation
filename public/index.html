@@ -7073,6 +7073,9 @@
             <button type="button" class="btn btn-primary" id="vroom-submit-review-btn" onclick="VirtualRoom.submitPostClassRating()" style="width: 100%; padding: 0.8rem; font-weight: 700; font-size: 0.95rem;">
               Submit Rating &amp; Feedback →
             </button>
+            <button type="button" class="btn btn-secondary vroom-btn-later" id="vroom-btn-student-rating-later" onclick="VirtualRoom.skipStudentRatingForLater()" style="width: 100%; padding: 0.65rem; font-size: 0.88rem; font-weight: 600;">
+              Later
+            </button>
           </div>
         </div>
 
@@ -7142,16 +7145,19 @@
           <textarea id="vroom-tutor-ended-comments" rows="5" class="form-control" style="width: 100%; box-sizing: border-box; background: rgba(0, 0, 0, 0.45); border: 1.5px solid rgba(255, 255, 255, 0.18); border-radius: 8px; color: #FFFFFF; padding: 0.75rem 0.9rem; font-size: 0.86rem; line-height: 1.5; resize: vertical;" placeholder="Provide comprehensive comments for your student covering topics mastered, practice problems solved, areas for improvement, and next steps before returning to your dashboard..."></textarea>
 
           <div id="vroom-tutor-comments-error" style="display: none; color: #F87171; font-size: 0.82rem; margin-top: 0.4rem; text-align: left; font-weight: 600;">
-            ⚠️ Providing comments for the student is required before returning to the dashboard.
+            ⚠️ Please enter comments for your student or select "Later" to return to the dashboard.
           </div>
 
-          <!-- Submit Comments & Return to Dashboard Button -->
-          <div style="margin-top: 1.15rem;">
+          <!-- Submit Comments & Return to Dashboard Actions -->
+          <div style="margin-top: 1.15rem; display: flex; flex-direction: column; gap: 0.55rem;">
             <button type="button" class="btn btn-primary" id="vroom-btn-submit-tutor-comments" onclick="VirtualRoom.submitTutorCommentsAndExit()" style="width: 100%; padding: 0.8rem; font-size: 0.95rem; font-weight: 700;">
               Submit Comments &amp; Return to Dashboard →
             </button>
-            <span style="font-size: 0.75rem; color: var(--charcoal-400); display: block; margin-top: 0.55rem;">
-              Your comments will be sent to the student and saved to their official lesson records.
+            <button type="button" class="btn btn-secondary vroom-btn-later" id="vroom-btn-tutor-comments-later" onclick="VirtualRoom.skipTutorCommentsForLater()" style="width: 100%; padding: 0.65rem; font-size: 0.88rem; font-weight: 600;">
+              Later
+            </button>
+            <span style="font-size: 0.75rem; color: var(--charcoal-400); display: block; margin-top: 0.25rem;">
+              Your comments will be sent to the student and saved to their official lesson records. You can also provide or edit comments later from your Class Records.
             </span>
           </div>
         </div>

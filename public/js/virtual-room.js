@@ -1679,7 +1679,7 @@ const VirtualRoom = {
         commentsInput.style.borderColor = '#F87171';
         commentsInput.focus();
       }
-      showToast('Comments are required before returning to the dashboard.', 'warning');
+      showToast('Please enter comments or choose "Later" to return to the dashboard.', 'warning');
       return;
     }
 
@@ -1718,6 +1718,46 @@ const VirtualRoom = {
         submitBtn.innerHTML = origHtml;
       }
     }
+  },
+
+  /**
+   * Tutor chooses "Later" on post-class comments dialog
+   * Allows returning to dashboard without blocking; saves draft if present
+   */
+  skipTutorCommentsForLater() {
+    // 1. If any transcript was generated during the session, auto-save it
+    if (this.transcriptItems && this.transcriptItems.length > 0 && this.activeSessionId) {
+      const fullTranscript = this.transcriptItems.map(i => `[${i.time}] ${i.speaker}: ${i.text}`).join('\n\n');
+      API.saveRoomTranscript(this.activeSessionId, { transcript: fullTranscript }).catch(() => {});
+    }
+
+    // 2. If tutor entered comments, preserve as draft
+    const commentsInput = document.getElementById('vroom-tutor-ended-comments');
+    const draft = commentsInput ? commentsInput.value.trim() : '';
+    if (draft && this.activeSessionId) {
+      API.saveAndSendLessonSummary(this.activeSessionId, { summary: draft }).catch(() => {});
+    }
+
+    showToast('You can add or update lesson comments later from Class Record & Summary.', 'info');
+
+    // 3. Close room and return to classes list
+    this.leaveRoom();
+    window.location.hash = '#teacher-classes';
+    if (typeof Teacher !== 'undefined' && Teacher.loadClasses) {
+      Teacher.loadClasses();
+    }
+  },
+
+  /**
+   * Student chooses "Later" on post-class rating dialog
+   */
+  skipStudentRatingForLater() {
+    this.leaveRoom();
+    window.location.hash = '#student-lessons';
+    if (typeof Student !== 'undefined' && Student.init) {
+      Student.init();
+    }
+    showToast('You can rate your tutor and leave feedback later from Lesson History.', 'info');
   },
 
   renderPostClassStars() {

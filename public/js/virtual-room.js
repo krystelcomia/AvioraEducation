@@ -273,24 +273,25 @@ const VirtualRoom = {
       pingBtn.style.display = isTutor ? 'inline-flex' : 'none';
     }
 
-    // USER REQUIREMENT: "Remove the 'end call' option for the student; only the teacher should have the ability to end the call."
+    // USER REQUIREMENT:
+    // "At the end of a class, the tutor is required to provide comments before returning to the dashboard. 
+    //  When the student ends the call, they will rate the tutor and provide feedback, which will then be reflected in the tutor's overall rating and the ratings displayed on their profile."
     const endBtn = document.getElementById('vroom-end-call-btn');
     if (endBtn) {
+      endBtn.style.display = 'inline-flex';
       if (isTutor) {
-        endBtn.style.display = 'inline-flex';
         endBtn.innerHTML = `${Icons.phoneOff(16)} <span>End Class</span>`;
         endBtn.onclick = () => this.confirmEndClass();
       } else {
-        // Completely removed / hidden for student!
-        endBtn.style.display = 'none';
-        endBtn.onclick = null;
+        endBtn.innerHTML = `${Icons.phoneOff(16)} <span>End Call</span>`;
+        endBtn.onclick = () => this.confirmStudentEndCall();
       }
     }
 
     const topCloseBtn = document.getElementById('vroom-top-close-btn');
     if (topCloseBtn) {
-      // Only the teacher can close or end the room from the top bar
-      topCloseBtn.style.display = isTutor ? 'inline-flex' : 'none';
+      topCloseBtn.style.display = 'inline-flex';
+      topCloseBtn.onclick = () => this.handleCloseClick();
     }
 
     // Role-specific action panel for transcript
@@ -328,14 +329,54 @@ const VirtualRoom = {
 
   /**
    * Top bar close handler
-   * Enforces that only the teacher has the ability to end the call.
    */
   handleCloseClick() {
-    if (this.currentUserRole !== 'tutor') {
-      showToast('Only your educator has the ability to end this virtual lesson session.', 'info');
+    if (this.currentUserRole === 'student') {
+      this.confirmStudentEndCall();
       return;
     }
+
+    // For tutor: if overlay is active, enforce required comments before returning
+    const overlay = document.getElementById('vroom-ended-overlay');
+    if (overlay && overlay.style.display === 'flex') {
+      const commentsInput = document.getElementById('vroom-tutor-ended-comments');
+      const comments = commentsInput ? commentsInput.value.trim() : '';
+      if (!comments) {
+        const errorEl = document.getElementById('vroom-tutor-comments-error');
+        if (errorEl) errorEl.style.display = 'block';
+        if (commentsInput) {
+          commentsInput.style.borderColor = '#F87171';
+          commentsInput.focus();
+        }
+        showToast('Please provide required comments for your student before returning to the dashboard.', 'warning');
+        return;
+      }
+    }
+
     this.confirmEndClass();
+  },
+
+  /**
+   * When student ends the call:
+   * Prompt, stop tracks, and open the post-class rating and feedback overlay
+   */
+  confirmStudentEndCall() {
+    if (this.sessionData?.session?.has_reviewed) {
+      this.leaveRoom();
+      return;
+    }
+
+    if (!confirm('Are you sure you want to end this class? You will now rate your tutor and provide feedback.')) {
+      return;
+    }
+
+    this.stopAllMediaTracks();
+    if (this.activeSessionId) {
+      API.leaveRoomPresence(this.activeSessionId).catch(() => {});
+    }
+
+    this.showPostClassOverlay();
+    showToast('Call ended. Please rate your educator and provide feedback.', 'info');
   },
 
   /**
@@ -1498,12 +1539,18 @@ const VirtualRoom = {
       if (subjectBadge) subjectBadge.textContent = `${session.subject || 'Academic Mentorship'} • 50-Min Class`;
 
       const commentInput = document.getElementById('vroom-rating-comment');
-      if (commentInput) commentInput.value = '';
+      if (commentInput) {
+        commentInput.value = '';
+        commentInput.style.borderColor = 'rgba(255, 255, 255, 0.15)';
+      }
+
+      const ratingError = document.getElementById('vroom-student-rating-error');
+      if (ratingError) ratingError.style.display = 'none';
 
       const submitBtn = document.getElementById('vroom-submit-review-btn');
       if (submitBtn) {
         submitBtn.disabled = false;
-        submitBtn.innerHTML = `Submit Rating &amp; Reflect on Profile →`;
+        submitBtn.innerHTML = `Submit Rating &amp; Feedback →`;
       }
 
       this.setPostClassRating(5);
@@ -1511,6 +1558,165 @@ const VirtualRoom = {
     } else if (tutorView) {
       if (studentView) studentView.style.display = 'none';
       tutorView.style.display = 'block';
+
+      const session = this.sessionData?.session || {};
+      const studentNameEl = document.getElementById('vroom-tutor-ended-student-name');
+      const studentAvatarEl = document.getElementById('vroom-tutor-ended-student-avatar');
+      const subjectBadge = document.getElementById('vroom-tutor-ended-subject-badge');
+      const commentsInput = document.getElementById('vroom-tutor-ended-comments');
+      const errorEl = document.getElementById('vroom-tutor-comments-error');
+      const transcriptBtn = document.getElementById('vroom-btn-use-transcript');
+      const submitBtn = document.getElementById('vroom-btn-submit-tutor-comments');
+
+      if (studentNameEl) studentNameEl.textContent = session.student_name || 'Student Scholar';
+      if (studentAvatarEl) studentAvatarEl.src = session.student_avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=80&q=80';
+      if (subjectBadge) subjectBadge.textContent = `${session.subject || 'Academic Lesson'} • 50-Min Class`;
+
+      if (commentsInput) {
+        commentsInput.value = session.lesson_summary || '';
+        commentsInput.style.borderColor = 'rgba(255, 255, 255, 0.18)';
+        setTimeout(() => commentsInput.focus(), 120);
+      }
+      if (errorEl) errorEl.style.display = 'none';
+
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = `Submit Comments &amp; Return to Dashboard →`;
+      }
+
+      const hasTranscript = (this.transcriptItems && this.transcriptItems.length > 0) || (session.lesson_transcript && session.lesson_transcript.trim().length > 0);
+      if (transcriptBtn) {
+        transcriptBtn.style.display = hasTranscript ? 'inline-flex' : 'none';
+      }
+    }
+  },
+
+  async generateTutorPostComments() {
+    if (!this.activeSessionId) return;
+    const btn = document.getElementById('vroom-btn-ai-comments');
+    const commentsInput = document.getElementById('vroom-tutor-ended-comments');
+    const origHtml = btn ? btn.innerHTML : '';
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '✨ Generating...';
+    }
+    try {
+      const res = await API.generateAISummary(this.activeSessionId);
+      if (res && res.summary && commentsInput) {
+        commentsInput.value = res.summary;
+        commentsInput.style.borderColor = 'var(--gold-500)';
+        const errorEl = document.getElementById('vroom-tutor-comments-error');
+        if (errorEl) errorEl.style.display = 'none';
+        showToast('AI lesson comments generated! Review and submit to conclude.', 'success');
+      }
+    } catch (e) {
+      showToast(e.message || 'Failed to generate AI comments.', 'error');
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = origHtml;
+      }
+    }
+  },
+
+  applyTutorPostTemplate() {
+    const commentsInput = document.getElementById('vroom-tutor-ended-comments');
+    if (!commentsInput) return;
+    const session = this.sessionData?.session || {};
+    const studentName = session.student_name || 'Student';
+    const subject = session.subject || 'Lesson';
+    const focus = session.notes || 'Curriculum mastery and problem-solving practice';
+
+    commentsInput.value = `### 📚 ${subject} — 1-on-1 Lesson Summary & Comments\n` +
+      `**Student:** ${studentName}\n` +
+      `**Session Focus:** "${focus}"\n\n` +
+      `#### 1. 🎯 Key Concepts Mastered\n` +
+      `• Thorough review of foundational principles and diagnostic definitions.\n` +
+      `• Addressed targeted questions regarding ${focus}.\n\n` +
+      `#### 2. 💡 Recommendations & Next Steps\n` +
+      `• Rework problems covered in today's class independently.\n` +
+      `• Prepare follow-up questions before our next session.\n\n` +
+      `#### 3. 🌟 Educator Feedback\n` +
+      `Great engagement and focus today, ${studentName.split(' ')[0]}! Keep up the dedicated effort.`;
+
+    commentsInput.style.borderColor = 'var(--gold-500)';
+    const errorEl = document.getElementById('vroom-tutor-comments-error');
+    if (errorEl) errorEl.style.display = 'none';
+    showToast('Applied standard lesson comments template.', 'info');
+  },
+
+  useTranscriptInPostComments() {
+    const commentsInput = document.getElementById('vroom-tutor-ended-comments');
+    if (!commentsInput) return;
+    let transcriptText = '';
+    if (this.transcriptItems && this.transcriptItems.length > 0) {
+      transcriptText = this.transcriptItems.map(i => `• [${i.time}] ${i.text}`).join('\n');
+    } else if (this.sessionData?.session?.lesson_transcript) {
+      transcriptText = this.sessionData.session.lesson_transcript;
+    }
+    if (!transcriptText) {
+      showToast('No transcript remarks available.', 'info');
+      return;
+    }
+    const appendStr = `\n\n#### 🎙️ Session Spoken Remarks Excerpts:\n${transcriptText}`;
+    commentsInput.value = (commentsInput.value ? commentsInput.value.trim() : '') + appendStr;
+    commentsInput.style.borderColor = 'var(--gold-500)';
+    const errorEl = document.getElementById('vroom-tutor-comments-error');
+    if (errorEl) errorEl.style.display = 'none';
+    showToast('Inserted transcript remarks into comments.', 'success');
+  },
+
+  async submitTutorCommentsAndExit() {
+    if (!this.activeSessionId) return;
+    const commentsInput = document.getElementById('vroom-tutor-ended-comments');
+    const errorEl = document.getElementById('vroom-tutor-comments-error');
+    const submitBtn = document.getElementById('vroom-btn-submit-tutor-comments');
+
+    const comments = commentsInput ? commentsInput.value.trim() : '';
+    if (!comments) {
+      if (errorEl) errorEl.style.display = 'block';
+      if (commentsInput) {
+        commentsInput.style.borderColor = '#F87171';
+        commentsInput.focus();
+      }
+      showToast('Comments are required before returning to the dashboard.', 'warning');
+      return;
+    }
+
+    if (errorEl) errorEl.style.display = 'none';
+    const origHtml = submitBtn ? submitBtn.innerHTML : '';
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = 'Submitting Comments...';
+    }
+
+    try {
+      // 1. Save and send lesson summary comments to student
+      await API.saveAndSendLessonSummary(this.activeSessionId, { summary: comments });
+
+      // 2. If transcript was generated and unsaved, save it
+      if (this.transcriptItems && this.transcriptItems.length > 0) {
+        const fullTranscript = this.transcriptItems.map(i => `[${i.time}] ${i.speaker}: ${i.text}`).join('\n\n');
+        await API.saveRoomTranscript(this.activeSessionId, { transcript: fullTranscript }).catch(() => {});
+      }
+
+      showToast('Comments submitted and sent to student! Concluding session...', 'success');
+
+      // 3. Leave the room and return to dashboard
+      setTimeout(() => {
+        this.leaveRoom();
+        window.location.hash = '#teacher-classes';
+        if (typeof Teacher !== 'undefined' && Teacher.loadClasses) {
+          Teacher.loadClasses();
+        }
+      }, 700);
+    } catch (err) {
+      console.error('Failed to submit tutor comments:', err);
+      showToast(err.message || 'Failed to submit comments. Please try again.', 'error');
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = origHtml;
+      }
     }
   },
 
@@ -1590,7 +1796,20 @@ const VirtualRoom = {
     const rating = this.postClassRating || 5;
     const commentEl = document.getElementById('vroom-rating-comment');
     const comment = commentEl ? commentEl.value.trim() : '';
+    const ratingError = document.getElementById('vroom-student-rating-error');
     const submitBtn = document.getElementById('vroom-submit-review-btn');
+
+    if (!comment) {
+      if (ratingError) ratingError.style.display = 'block';
+      if (commentEl) {
+        commentEl.focus();
+        commentEl.style.borderColor = '#F87171';
+      }
+      showToast('Please provide feedback for your tutor before submitting.', 'warning');
+      return;
+    }
+
+    if (ratingError) ratingError.style.display = 'none';
 
     try {
       if (submitBtn) {
@@ -1604,34 +1823,46 @@ const VirtualRoom = {
         this.sessionData.session.has_reviewed = true;
         this.sessionData.session.review_rating = rating;
         this.sessionData.session.review_comment = comment;
+        if (res.tutor_profile_id) {
+          this.sessionData.session.tutor_profile_id = res.tutor_profile_id;
+        }
       }
 
       const studentView = document.getElementById('vroom-ended-student-view');
       const successView = document.getElementById('vroom-ended-success-view');
       const successStarsText = document.getElementById('vroom-success-stars-text');
       const successTutorName = document.getElementById('vroom-success-tutor-name');
+      const successCommentQuote = document.getElementById('vroom-success-comment-quote');
 
       if (studentView) studentView.style.display = 'none';
       if (successView) successView.style.display = 'block';
 
       if (successStarsText) {
-        successStarsText.innerHTML = `${Icons.star(16)} ${rating}-Star Rating (${rating}.0)`;
+        const starIcons = Array.from({ length: rating }).map(() => Icons.star(16)).join('');
+        successStarsText.innerHTML = `${starIcons} ${rating}-Star Rating (${rating}.0)`;
       }
       if (successTutorName) {
         successTutorName.textContent = this.sessionData?.session?.tutor_name || 'your educator';
       }
+      if (successCommentQuote) {
+        successCommentQuote.style.display = 'block';
+        successCommentQuote.textContent = `"${comment}"`;
+      }
 
-      showToast(res.message || 'Rating submitted! Reflected on tutor\'s profile.', 'success');
+      showToast(res.message || 'Rating & feedback submitted! Reflected on tutor\'s profile.', 'success');
 
       if (typeof Student !== 'undefined' && Student.init) {
         Student.init();
+      }
+      if (typeof Tutors !== 'undefined' && Tutors.fetchTutors) {
+        Tutors.fetchTutors();
       }
     } catch (err) {
       console.error('Failed to submit post-class review:', err);
       showToast(err.message || 'Failed to submit review.', 'error');
       if (submitBtn) {
         submitBtn.disabled = false;
-        submitBtn.innerHTML = `Submit Rating &amp; Reflect on Profile →`;
+        submitBtn.innerHTML = `Submit Rating &amp; Feedback →`;
       }
     }
   },

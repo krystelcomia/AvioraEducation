@@ -7020,18 +7020,18 @@
 
       <!-- 50-Minute Expired Auto-End / Post-Class Rating Overlay -->
       <div class="vroom-ended-overlay" id="vroom-ended-overlay">
-        <!-- Student Post-Class Rating View -->
-        <div class="vroom-rating-box" id="vroom-ended-student-view" style="display: none;">
+        <!-- Student Post-Class Rating & Feedback View -->
+        <div class="vroom-rating-box" id="vroom-ended-student-view" style="display: none; max-width: 580px; width: 95%;">
           <div style="display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.3rem 0.85rem; border-radius: 999px; background: rgba(198, 138, 40, 0.2); border: 1px solid var(--gold-500); color: var(--gold-400); font-size: 0.76rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.85rem;">
             <span>★</span>
-            <span>50-Minute Class Concluded</span>
+            <span>Class Concluded</span>
           </div>
 
           <h2 style="font-family: var(--font-heading); color: #FFFFFF; font-size: 1.55rem; font-weight: 800; margin-bottom: 0.3rem;">
             Rate Your Tutor: <span id="vroom-rate-tutor-name" style="color: var(--gold-400);">Educator</span>
           </h2>
           <p style="color: var(--charcoal-300); font-size: 0.86rem; margin-bottom: 1.15rem; line-height: 1.45;">
-            Your feedback directly reflects on their verified educator profile and helps the Aviora learning community.
+            Your feedback and rating will be submitted directly to your educator's public profile and reflected in their overall score.
           </p>
 
           <!-- Tutor Snippet Card -->
@@ -7047,7 +7047,7 @@
           <!-- Star Rating Selector (Up to 5 stars) -->
           <div style="margin-bottom: 1.15rem;">
             <label style="display: block; color: var(--charcoal-300); font-size: 0.8rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 0.35rem;">
-              Select Rating (Up to 5 Stars)
+              Select Rating (Up to 5 Stars) <span style="color: #F87171;">*</span>
             </label>
             <div id="vroom-star-row" style="display: flex; justify-content: center; gap: 0.4rem; margin-bottom: 0.35rem;">
               <!-- Dynamically populated 5 stars -->
@@ -7060,36 +7060,37 @@
           <!-- Review Comment Textarea -->
           <div style="margin-bottom: 1.25rem; text-align: left;">
             <label for="vroom-rating-comment" style="display: block; color: var(--charcoal-300); font-size: 0.8rem; font-weight: 600; margin-bottom: 0.35rem;">
-              Review Feedback for Tutor's Profile:
+              Feedback for Tutor's Profile <span style="color: #F87171; font-weight: 700;">* (Required)</span>:
             </label>
-            <textarea id="vroom-rating-comment" rows="3" style="width: 100%; box-sizing: border-box; background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 8px; color: #FFFFFF; padding: 0.65rem 0.85rem; font-size: 0.85rem; line-height: 1.4; resize: vertical;" placeholder="How was your tutor's explanation, pacing, and approach?"></textarea>
+            <textarea id="vroom-rating-comment" rows="3" style="width: 100%; box-sizing: border-box; background: rgba(0, 0, 0, 0.4); border: 1.5px solid rgba(255, 255, 255, 0.15); border-radius: 8px; color: #FFFFFF; padding: 0.65rem 0.85rem; font-size: 0.85rem; line-height: 1.4; resize: vertical;" placeholder="How was your tutor's explanation, pacing, and approach? Share your feedback for their profile..."></textarea>
+            <div id="vroom-student-rating-error" style="display: none; color: #F87171; font-size: 0.82rem; margin-top: 0.35rem; font-weight: 600;">
+              Please provide feedback for your tutor before submitting.
+            </div>
           </div>
 
           <!-- Actions -->
           <div style="display: flex; flex-direction: column; gap: 0.55rem;">
-            <button type="button" class="btn btn-primary" id="vroom-submit-review-btn" onclick="VirtualRoom.submitPostClassRating()" style="width: 100%; padding: 0.75rem; font-weight: 700; font-size: 0.95rem;">
-              Submit Rating &amp; Reflect on Profile →
-            </button>
-            <button type="button" class="btn btn-secondary" onclick="VirtualRoom.leaveRoom()" style="background: transparent; border-color: rgba(255, 255, 255, 0.15); color: var(--charcoal-400); font-size: 0.85rem;">
-              Skip &amp; Return to Dashboard
+            <button type="button" class="btn btn-primary" id="vroom-submit-review-btn" onclick="VirtualRoom.submitPostClassRating()" style="width: 100%; padding: 0.8rem; font-weight: 700; font-size: 0.95rem;">
+              Submit Rating &amp; Feedback →
             </button>
           </div>
         </div>
 
         <!-- Student Rating Success Confirmation View -->
-        <div class="vroom-rating-box" id="vroom-ended-success-view" style="display: none;">
+        <div class="vroom-rating-box" id="vroom-ended-success-view" style="display: none; max-width: 580px; width: 95%;">
           <div style="width: 64px; height: 64px; border-radius: 50%; background: rgba(16, 185, 129, 0.2); border: 2px solid #10B981; color: #10B981; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.15rem auto;">
             <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
           </div>
           <h2 style="font-family: var(--font-heading); color: #FFFFFF; font-size: 1.55rem; font-weight: 800; margin-bottom: 0.4rem;">
-            Rating Published!
+            Rating &amp; Feedback Published!
           </h2>
-          <p style="color: var(--charcoal-300); font-size: 0.9rem; line-height: 1.55; margin-bottom: 1.5rem;">
-            Your <span id="vroom-success-stars-text" style="color: #F59E0B; font-weight: 700;">5-Star Rating</span> has been submitted. It is now proudly reflected on <strong id="vroom-success-tutor-name" style="color: #FFFFFF;">your educator's</strong> public profile and reviews list!
+          <p style="color: var(--charcoal-300); font-size: 0.9rem; line-height: 1.55; margin-bottom: 1rem;">
+            Your <span id="vroom-success-stars-text" style="color: #F59E0B; font-weight: 700;">5-Star Rating</span> and feedback have been published. It is now proudly reflected in <strong id="vroom-success-tutor-name" style="color: #FFFFFF;">your educator's</strong> overall score and displayed on their profile!
           </p>
+          <div id="vroom-success-comment-quote" style="display: none; font-style: italic; color: var(--gold-400); background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); padding: 0.65rem 0.9rem; border-radius: 8px; font-size: 0.84rem; margin-bottom: 1.25rem; text-align: left;"></div>
           <div style="display: flex; flex-direction: column; gap: 0.55rem;">
             <button type="button" class="btn btn-primary" onclick="VirtualRoom.goToTutorProfile()" style="width: 100%; padding: 0.75rem; font-weight: 700;">
-              View Tutor's Updated Profile →
+              View Tutor's Updated Profile &amp; Reviews →
             </button>
             <button type="button" class="btn btn-secondary" onclick="VirtualRoom.leaveRoom()" style="background: transparent; border-color: rgba(255, 255, 255, 0.15); color: var(--charcoal-400);">
               Back to Student Dashboard
@@ -7097,21 +7098,64 @@
           </div>
         </div>
 
-        <!-- Tutor Class Concluded View -->
-        <div class="vroom-rating-box" id="vroom-ended-tutor-view" style="display: none;">
-          <div style="width: 72px; height: 72px; border-radius: 50%; background: rgba(198, 138, 40, 0.15); border: 2px solid var(--gold-500); display: flex; align-items: center; justify-content: center; margin: 0 auto 1.25rem auto; color: var(--gold-400);">
-            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+        <!-- Tutor Class Concluded View (Comments Required Before Returning) -->
+        <div class="vroom-rating-box" id="vroom-ended-tutor-view" style="display: none; max-width: 600px; width: 95%;">
+          <div style="width: 64px; height: 64px; border-radius: 50%; background: rgba(198, 138, 40, 0.15); border: 2px solid var(--gold-500); display: flex; align-items: center; justify-content: center; margin: 0 auto 0.85rem auto; color: var(--gold-400);">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
           </div>
-          <h2 style="font-family: var(--font-heading); color: #FFFFFF; font-size: 1.6rem; font-weight: 800; margin-bottom: 0.5rem;">
-            50-Minute Class Concluded
+          <h2 style="font-family: var(--font-heading); color: #FFFFFF; font-size: 1.55rem; font-weight: 800; margin-bottom: 0.3rem;">
+            Class Concluded
           </h2>
-          <p style="color: var(--charcoal-300); font-size: 0.92rem; line-height: 1.6; margin-bottom: 1.75rem;">
-            The allocated 50-minute virtual classroom duration has elapsed and the call has automatically ended. All camera and audio streams have been closed. Thank you for mentoring with Aviora!
+          <p style="color: var(--charcoal-300); font-size: 0.86rem; line-height: 1.5; margin-bottom: 0.85rem;">
+            The virtual classroom session has completed. You are required to provide lesson comments and feedback for your student before returning to the dashboard.
           </p>
-          <button type="button" class="btn btn-primary" onclick="VirtualRoom.leaveRoom()" style="padding: 0.75rem 2rem; font-size: 0.95rem;">
-            Return to Dashboard →
-          </button>
+
+          <!-- Student Card -->
+          <div style="display: flex; align-items: center; gap: 0.85rem; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); padding: 0.65rem 0.95rem; border-radius: 12px; margin-bottom: 1rem; text-align: left;">
+            <img id="vroom-tutor-ended-student-avatar" src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=80&q=80" style="width: 42px; height: 42px; border-radius: 50%; object-fit: cover; border: 2px solid var(--gold-500);" alt="Student" />
+            <div style="flex: 1; min-width: 0;">
+              <div style="color: #FFFFFF; font-weight: 700; font-size: 0.92rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" id="vroom-tutor-ended-student-name">Student Scholar</div>
+              <div style="color: var(--gold-400); font-size: 0.76rem;" id="vroom-tutor-ended-subject-badge">Calculus BC • 50-Min Class</div>
+            </div>
+          </div>
+
+          <!-- Quick Helpers Bar -->
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.45rem; flex-wrap: wrap; gap: 0.4rem;">
+            <label for="vroom-tutor-ended-comments" style="margin: 0; font-weight: 700; color: #FFFFFF; font-size: 0.84rem; display: flex; align-items: center; gap: 0.35rem;">
+              <span>📝 Lesson Comments &amp; Feedback</span>
+              <span style="color: #F87171; font-size: 0.76rem; font-weight: 700;">* Required</span>
+            </label>
+            <div style="display: flex; gap: 0.35rem; align-items: center;">
+              <button type="button" class="btn btn-outline-gold btn-sm" onclick="VirtualRoom.generateTutorPostComments()" id="vroom-btn-ai-comments" style="font-size: 0.74rem; padding: 0.2rem 0.55rem; font-weight: 700; display: inline-flex; align-items: center; gap: 0.25rem;">
+                ✨ Generate with AI
+              </button>
+              <button type="button" class="btn btn-secondary btn-sm" onclick="VirtualRoom.applyTutorPostTemplate()" style="font-size: 0.74rem; padding: 0.2rem 0.5rem; background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.15); color: #E5E7EB;">
+                Template
+              </button>
+              <button type="button" class="btn btn-secondary btn-sm" id="vroom-btn-use-transcript" onclick="VirtualRoom.useTranscriptInPostComments()" style="font-size: 0.74rem; padding: 0.2rem 0.5rem; display: none; background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.15); color: #E5E7EB;" title="Insert remarks from auto-transcribed voice session">
+                Insert Transcript
+              </button>
+            </div>
+          </div>
+
+          <!-- Required Comments Textarea -->
+          <textarea id="vroom-tutor-ended-comments" rows="5" class="form-control" style="width: 100%; box-sizing: border-box; background: rgba(0, 0, 0, 0.45); border: 1.5px solid rgba(255, 255, 255, 0.18); border-radius: 8px; color: #FFFFFF; padding: 0.75rem 0.9rem; font-size: 0.86rem; line-height: 1.5; resize: vertical;" placeholder="Provide comprehensive comments for your student covering topics mastered, practice problems solved, areas for improvement, and next steps before returning to your dashboard..."></textarea>
+
+          <div id="vroom-tutor-comments-error" style="display: none; color: #F87171; font-size: 0.82rem; margin-top: 0.4rem; text-align: left; font-weight: 600;">
+            ⚠️ Providing comments for the student is required before returning to the dashboard.
+          </div>
+
+          <!-- Submit Comments & Return to Dashboard Button -->
+          <div style="margin-top: 1.15rem;">
+            <button type="button" class="btn btn-primary" id="vroom-btn-submit-tutor-comments" onclick="VirtualRoom.submitTutorCommentsAndExit()" style="width: 100%; padding: 0.8rem; font-size: 0.95rem; font-weight: 700;">
+              Submit Comments &amp; Return to Dashboard →
+            </button>
+            <span style="font-size: 0.75rem; color: var(--charcoal-400); display: block; margin-top: 0.55rem;">
+              Your comments will be sent to the student and saved to their official lesson records.
+            </span>
+          </div>
         </div>
+      </div>
       </div>
     </div>
   </div>

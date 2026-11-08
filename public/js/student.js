@@ -1581,6 +1581,12 @@ const Student = {
     const comment = commentEl ? commentEl.value.trim() : '';
     const submitBtn = e.target.querySelector('button[type="submit"]');
 
+    if (!comment) {
+      showToast('Please provide feedback for your tutor before submitting.', 'warning');
+      if (commentEl) commentEl.focus();
+      return;
+    }
+
     try {
       if (submitBtn) {
         submitBtn.disabled = true;

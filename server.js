@@ -3016,6 +3016,13 @@ app.get('/api/tutors/:id', (req, res) => {
       ORDER BY r.created_at DESC
     `).all(tutor.user_id);
 
+    // Ensure live overall rating and review count directly reflect submitted reviews
+    if (reviews && reviews.length > 0) {
+      const sum = reviews.reduce((acc, rev) => acc + (Number(rev.rating) || 5), 0);
+      tutor.rating = Math.round((sum / reviews.length) * 10) / 10;
+      tutor.reviews_count = reviews.length;
+    }
+
     const normTutor = normalizeSubjectRates(tutor.subjects, tutor.subject_rates, tutor.hourly_rate);
     tutor.subjects = normTutor.subjects;
     tutor.subject_rates = normTutor.subject_rates;
@@ -4251,11 +4258,19 @@ app.post('/api/student/requests/:id/review', authenticateToken, requireRole('stu
       WHERE tutor_id = ? AND status = 'completed'
     `).get(request.tutor_id);
 
-    db.prepare(`
+    const updatedProfile = db.prepare(`
       UPDATE tutor_profiles 
       SET rating = ?, reviews_count = ?, total_sessions = MAX(total_sessions, ?), updated_at = CURRENT_TIMESTAMP 
       WHERE user_id = ?
     `).run(roundedRating, stats.count, sessionStats?.completed_count || 1, request.tutor_id);
+
+    if (updatedProfile.changes === 0) {
+      db.prepare(`
+        UPDATE tutor_profiles 
+        SET rating = ?, reviews_count = ?, total_sessions = MAX(total_sessions, ?), updated_at = CURRENT_TIMESTAMP 
+        WHERE id = ?
+      `).run(roundedRating, stats.count, sessionStats?.completed_count || 1, request.tutor_id);
+    }
 
     // Fetch tutor profile and student user for notification & UI navigation
     const student = db.prepare('SELECT name FROM users WHERE id = ?').get(studentId);

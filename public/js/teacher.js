@@ -59,7 +59,7 @@ const Teacher = {
     }
 
     // Close modals on overlay click or Escape key
-    ['modal-teacher-assign-task', 'modal-teacher-grade-task', 'modal-teacher-instant-class'].forEach(id => {
+    ['modal-teacher-assign-task', 'modal-teacher-grade-task', 'modal-teacher-instant-class', 'modal-teacher-class-record'].forEach(id => {
       const el = document.getElementById(id);
       if (el) {
         el.addEventListener('click', (e) => {
@@ -70,7 +70,7 @@ const Teacher = {
 
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
-        ['modal-teacher-assign-task', 'modal-teacher-grade-task', 'modal-teacher-instant-class'].forEach(id => {
+        ['modal-teacher-assign-task', 'modal-teacher-grade-task', 'modal-teacher-instant-class', 'modal-teacher-class-record'].forEach(id => {
           this.closeModal(id);
         });
       }
@@ -1306,6 +1306,16 @@ const Teacher = {
       .replace(/'/g, '&#39;')
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;');
+  },
+
+  escapeHtml(str) {
+    if (str === null || str === undefined) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
   },
 
   renderTeacherSubjects() {
@@ -4533,3 +4543,4 @@ const Teacher = {
 };
 
 window.Teacher = Teacher;
+window.escapeHtml = window.escapeHtml || Teacher.escapeHtml;

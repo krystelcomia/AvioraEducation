@@ -5110,7 +5110,7 @@ app.get('/api/teacher/students', authenticateToken, requireRole('teacher'), (req
         sp.grade_level as student_grade,
         GROUP_CONCAT(DISTINCT tr.subject) as enrolled_subjects,
         COUNT(CASE WHEN tr.status = 'completed' THEN 1 END) as completed_sessions,
-        COUNT(CASE WHEN tr.status = 'accepted' THEN 1 END) as upcoming_sessions
+        COUNT(CASE WHEN tr.status IN ('pending', 'accepted') THEN 1 END) as upcoming_sessions
       FROM tutoring_requests tr
       JOIN users u ON tr.student_id = u.id
       LEFT JOIN student_profiles sp ON sp.user_id = u.id
@@ -5328,7 +5328,7 @@ app.get('/api/teacher/schedule', authenticateToken, requireRole('teacher'), (req
       FROM tutoring_requests tr
       JOIN users u ON tr.student_id = u.id
       LEFT JOIN student_profiles sp ON sp.user_id = u.id
-      WHERE tr.tutor_id = ? AND tr.status IN ('accepted', 'completed')
+      WHERE tr.tutor_id = ? AND tr.status IN ('pending', 'accepted', 'completed')
       ORDER BY tr.requested_date ASC, tr.requested_time ASC
     `).all(teacherId);
 

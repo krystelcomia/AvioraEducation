@@ -979,7 +979,7 @@
   border: 1px solid rgba(245, 158, 11, 0.3);
 }
 
-.status-pill.approved, .status-pill.accepted, .status-pill.completed, .status-pill.active {
+.status-pill.approved, .status-pill.accepted, .status-pill.completed, .status-pill.done, .status-pill.active {
   background: var(--success-bg);
   color: var(--success);
   border: 1px solid rgba(16, 185, 129, 0.3);

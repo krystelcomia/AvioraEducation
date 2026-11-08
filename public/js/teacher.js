@@ -984,24 +984,23 @@ const Teacher = {
           <span style="font-weight: 700; color: var(--gold-400);">$${Number(r.total_amount || 0).toFixed(2)}</span>
         </td>
         <td>
-          <span class="status-pill ${r.status}">${r.status}</span>
+          <span class="status-pill ${r.status === 'completed' ? 'completed' : r.status === 'declined' ? 'declined' : 'pending'}">${r.status === 'completed' ? 'DONE' : r.status === 'declined' ? 'CANCELLED' : 'PENDING'}</span>
         </td>
         <td style="text-align: right;">
           <div style="display: flex; gap: 0.4rem; justify-content: flex-end; align-items: center;">
             ${!this.isApproved() ? `
               <span class="badge" style="background: rgba(245, 158, 11, 0.15); color: #D97706; font-size: 0.75rem; padding: 0.35rem 0.65rem; border-radius: 4px; display: inline-flex; align-items: center; gap: 0.25rem;" title="Operations locked while application is under review">${Icons.lock(12)} Locked (Under Review)</span>
-            ` : r.status === 'pending' ? `
-              <button class="btn btn-primary btn-sm" onclick="Teacher.updateStatus(${r.id}, 'accepted', this)">Accept</button>
-              <button class="btn btn-secondary btn-sm" onclick="Teacher.updateStatus(${r.id}, 'declined', this)">Decline</button>
-            ` : r.status === 'accepted' ? `
+            ` : r.status === 'completed' ? `
+              <span style="font-size: 0.8rem; color: #10B981; font-weight: 600; display: inline-flex; align-items: center; gap: 0.25rem;">${Icons.check(13)} Completed (Done)</span>
+            ` : r.status === 'declined' || r.status === 'cancelled' ? `
+              <span style="font-size: 0.8rem; color: #EF4444; font-weight: 600; display: inline-flex; align-items: center; gap: 0.25rem;">${Icons.x(13)} Cancelled</span>
+            ` : (r.status === 'pending' || r.status === 'accepted') ? `
               ${r.room_status === 'open' ? `
                 <button class="btn btn-primary btn-sm" onclick="VirtualRoom.joinRoom(${r.id}, 'tutor')" style="background: #10B981; border-color: #10B981;">${Icons.video(14)} Enter Room (Live)</button>
               ` : `
                 <button class="btn btn-primary btn-sm" onclick="VirtualRoom.openRoomAsTutor(${r.id})">${Icons.video(14)} Open Room</button>
               `}
               <button class="btn btn-outline-gold btn-sm" onclick="Teacher.updateStatus(${r.id}, 'completed', this)">Mark Done</button>
-            ` : r.status === 'completed' ? `
-              <span style="font-size: 0.8rem; color: #10B981; font-weight: 600; display: inline-flex; align-items: center; gap: 0.25rem;">${Icons.check(13)} Completed</span>
             ` : ''}
           </div>
         </td>
@@ -1201,7 +1200,7 @@ const Teacher = {
     const timeEl = document.getElementById(`class-update-time-${requestId}`);
     const noteEl = document.getElementById(`class-update-note-${requestId}`);
 
-    const action = actionEl ? actionEl.value : 'accept';
+    const action = actionEl ? actionEl.value : 'start_class';
     const requested_date = dateEl ? dateEl.value.trim() : '';
     const requested_time = timeEl ? timeEl.value.trim() : '';
     const note = noteEl ? noteEl.value.trim() : undefined;
@@ -1793,12 +1792,12 @@ const Teacher = {
     let filtered = this.classes;
     if (this.classFilter === 'open') {
       filtered = filtered.filter(c => c.room_status === 'open');
-    } else if (this.classFilter === 'accepted') {
-      filtered = filtered.filter(c => c.status === 'accepted' && c.room_status !== 'open');
-    } else if (this.classFilter === 'pending') {
-      filtered = filtered.filter(c => c.status === 'pending');
-    } else if (this.classFilter === 'completed') {
+    } else if (this.classFilter === 'pending' || this.classFilter === 'accepted') {
+      filtered = filtered.filter(c => (c.status === 'pending' || c.status === 'accepted') && c.room_status !== 'open');
+    } else if (this.classFilter === 'done' || this.classFilter === 'completed') {
       filtered = filtered.filter(c => c.status === 'completed');
+    } else if (this.classFilter === 'cancelled' || this.classFilter === 'declined') {
+      filtered = filtered.filter(c => c.status === 'declined' || c.status === 'cancelled');
     }
 
     const q = (this.classSearchQuery || '').toLowerCase();
@@ -1824,8 +1823,14 @@ const Teacher = {
             ${q
           ? 'No classes match your current search or filter criteria.'
           : this.classFilter === 'open'
-            ? 'No live virtual classrooms currently open. You can launch a virtual session for any accepted student booking.'
-            : 'You do not have any classes in this category yet.'}
+            ? 'No live virtual classrooms currently open. You can launch a virtual session for any scheduled student booking.'
+            : this.classFilter === 'pending'
+              ? 'No pending classes scheduled at this time.'
+              : this.classFilter === 'done'
+                ? 'No completed classes yet.'
+                : this.classFilter === 'cancelled'
+                  ? 'No cancelled classes.'
+                  : 'You do not have any classes in this category yet.'}
           </p>
           <button type="button" class="btn btn-primary btn-sm" onclick="Teacher.openInstantClassModal()" style="display: inline-flex; align-items: center; gap: 0.35rem;">
             ${Icons.video(14)} Launch Instant Class with Student
@@ -1837,27 +1842,25 @@ const Teacher = {
 
     container.innerHTML = filtered.map(c => {
       const isLive = c.room_status === 'open';
-      const isAccepted = c.status === 'accepted';
-      const isPending = c.status === 'pending';
       const isCompleted = c.status === 'completed';
-      const isDeclined = c.status === 'declined';
+      const isDeclined = c.status === 'declined' || c.status === 'cancelled';
+      const isPending = !isCompleted && !isDeclined; // automatically assigned upcoming class
       const isEditing = !isCompleted && this.editingClassId === Number(c.id);
       const cleanDateVal = String(c.requested_date || '').split('T')[0];
 
-      let actionTakenText = 'Pending — Select an action (Accept, Start Virtual Class, Reschedule, or Decline)';
+      let actionTakenText = 'Scheduled — Assigned & Added to Calendar (Awaiting Session Time)';
       if (isCompleted) {
         actionTakenText = 'Done — Lesson Complete (No further actions available)';
       } else if (isLive) {
         actionTakenText = 'Start Virtual Class — Live Classroom Active';
-      } else if (isAccepted) {
-        if (c.tutor_response_note && c.tutor_response_note.toLowerCase().includes('rescheduled')) {
-          actionTakenText = `Rescheduled — Confirmed for ${c.requested_date} • ${c.requested_time} (Student Notified)`;
-        } else {
-          actionTakenText = `Accepted — Schedule Added to Calendar • Student Notified (Waiting for Virtual Class Schedule)`;
-        }
+      } else if (c.tutor_response_note && c.tutor_response_note.toLowerCase().includes('rescheduled')) {
+        actionTakenText = `Rescheduled — Confirmed for ${c.requested_date} • ${c.requested_time} (Student Notified)`;
       } else if (isDeclined) {
-        actionTakenText = `Declined — ${c.tutor_response_note || 'Scheduling conflict'}`;
+        actionTakenText = `Cancelled — ${c.tutor_response_note || 'Scheduling conflict'}`;
       }
+
+      const statusBadgeText = isCompleted ? 'DONE' : (isDeclined ? 'CANCELLED' : 'PENDING');
+      const statusClass = isCompleted ? 'completed' : (isDeclined ? 'declined' : 'pending');
 
       return `
         <div class="teacher-class-card ${isLive ? 'is-live-room' : ''}" id="teacher-class-card-${c.id}">
@@ -1873,7 +1876,7 @@ const Teacher = {
               ` : ''}
             </div>
             <div class="class-card-header-right">
-              <span class="status-pill ${c.status}">${isCompleted ? 'DONE' : c.status.toUpperCase()}</span>
+              <span class="status-pill ${statusClass}">${statusBadgeText}</span>
             </div>
           </div>
 
@@ -1900,17 +1903,13 @@ const Teacher = {
               <span class="detail-icon">${Icons.award(14)}</span>
               <span><strong>Fee:</strong> $${Number(c.total_amount || 0).toFixed(2)} (${c.payment_method === 'subscription' ? 'Subscription Credit' : 'Card Payment'})</span>
             </div>
-            <div class="class-action-indicator-badge status-${c.status}">
+            <div class="class-action-indicator-badge status-${statusClass}">
               <strong>Update:</strong> <span>${actionTakenText}</span>
             </div>
-            ${(isAccepted || isCompleted) ? `
+            ${!isDeclined ? `
               <div class="class-calendar-sync-badge" onclick="Teacher.viewClassOnCalendar('${cleanDateVal}')" title="Open Schedule Calendar on ${cleanDateVal}">
                 <span style="display: inline-flex; align-items: center; gap: 0.35rem;">${Icons.calendar(14)} Added to Calendar (${c.requested_date} • ${c.requested_time})</span>
                 <span class="class-calendar-sync-link">View Calendar →</span>
-              </div>
-            ` : isPending ? `
-              <div class="class-calendar-pending-hint">
-                <span style="display: inline-flex; align-items: center; gap: 0.35rem;">${Icons.calendar(14)} Set schedule (${c.requested_date} • ${c.requested_time}) will be added to Calendar once accepted</span>
               </div>
             ` : ''}
             ${c.notes ? `
@@ -1930,10 +1929,9 @@ const Teacher = {
               <div class="class-update-field">
                 <label for="class-update-action-${c.id}">Action to Take</label>
                 <select id="class-update-action-${c.id}" class="form-control" onchange="Teacher.onClassUpdateActionChange(${c.id}, this.value)">
-                  <option value="accept" ${(isPending || isDeclined) ? 'selected' : ''}>Accept — Confirm Schedule on Calendar & Notify Student</option>
-                  <option value="start_class" ${isAccepted ? 'selected' : ''}>Start Virtual Class — Open Live Classroom Session</option>
+                  <option value="start_class" selected>Start Virtual Class — Open Live Classroom Session</option>
                   <option value="reschedule">Reschedule — Adjust Set Date & Time on Calendar</option>
-                  <option value="decline">Decline — Decline Lesson Request</option>
+                  <option value="decline">Cancel Class — Remove from Schedule & Notify Student</option>
                   <option value="completed">Done — Mark Lesson as Complete (Final)</option>
                 </select>
               </div>
@@ -1979,37 +1977,27 @@ const Teacher = {
               <button type="button" class="btn btn-secondary btn-sm" title="Mark lesson as done (complete)" onclick="Teacher.updateStatus(${c.id}, 'completed', this, { action: 'completed' })">
                 Done
               </button>
-              <button type="button" class="btn btn-outline-gold btn-sm class-card-update-toggle-btn ${isEditing ? 'active' : ''}" title="Choose update action (Accept, Start Virtual Class, Reschedule, Decline, Done)" onclick="Teacher.toggleClassUpdatePanel(${c.id})">
+              <button type="button" class="btn btn-outline-gold btn-sm class-card-update-toggle-btn ${isEditing ? 'active' : ''}" title="Choose update action (Start Virtual Class, Reschedule, Cancel, Done)" onclick="Teacher.toggleClassUpdatePanel(${c.id})">
                 ${isEditing ? 'Close' : 'Update'}
               </button>
-            ` : isAccepted ? `
+            ` : !isDeclined ? `
               <button type="button" class="btn btn-primary btn-sm" style="flex: 1; justify-content: center; font-weight: 700; display: inline-flex; align-items: center; gap: 0.35rem;" onclick="Teacher.updateStatus(${c.id}, 'accepted', this, { action: 'start_class' })">
                 ${Icons.video(14)} Start Virtual Class
               </button>
               <button type="button" class="btn btn-secondary btn-sm" title="Mark lesson as done (complete)" onclick="Teacher.updateStatus(${c.id}, 'completed', this, { action: 'completed' })">
                 Done
               </button>
-              <button type="button" class="btn btn-outline-gold btn-sm class-card-update-toggle-btn ${isEditing ? 'active' : ''}" title="Choose update action (Start Virtual Class, Reschedule, Decline, Done)" onclick="Teacher.toggleClassUpdatePanel(${c.id})">
+              <button type="button" class="btn btn-outline-gold btn-sm class-card-update-toggle-btn ${isEditing ? 'active' : ''}" title="Choose update action (Start Virtual Class, Reschedule, Cancel, Done)" onclick="Teacher.toggleClassUpdatePanel(${c.id})">
                 ${isEditing ? 'Close' : 'Update'}
               </button>
-            ` : isPending ? `
-              <button type="button" class="btn btn-primary btn-sm" style="flex: 1; font-weight: 700;" onclick="Teacher.updateStatus(${c.id}, 'accepted', this, { action: 'accept' })">
-                Accept
-              </button>
-              <button type="button" class="btn btn-secondary btn-sm" onclick="Teacher.updateStatus(${c.id}, 'declined', this, { action: 'decline' })">
-                Decline
-              </button>
-              <button type="button" class="btn btn-outline-gold btn-sm class-card-update-toggle-btn ${isEditing ? 'active' : ''}" title="Choose update action (Accept, Start Virtual Class, Reschedule, Decline)" onclick="Teacher.toggleClassUpdatePanel(${c.id})">
-                ${isEditing ? 'Close' : 'Update'}
-              </button>
-            ` : isDeclined ? `
+            ` : `
               <div class="class-status-summary-pill is-declined-summary" style="display: inline-flex; align-items: center; gap: 0.3rem;">
-                ${Icons.x(13)} Request Declined
+                ${Icons.x(13)} Class Cancelled
               </div>
-              <button type="button" class="btn btn-outline-gold btn-sm class-card-update-toggle-btn ${isEditing ? 'active' : ''}" title="Choose update action (Accept or Reschedule)" onclick="Teacher.toggleClassUpdatePanel(${c.id})">
+              <button type="button" class="btn btn-outline-gold btn-sm class-card-update-toggle-btn ${isEditing ? 'active' : ''}" title="Choose update action (Reschedule)" onclick="Teacher.toggleClassUpdatePanel(${c.id})">
                 ${isEditing ? 'Close' : 'Update'}
               </button>
-            ` : ''}
+            `}
           </div>
 
         </div>
@@ -3171,7 +3159,7 @@ const Teacher = {
                       <img src="${apt.student_avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=80&q=80'}" class="appointment-avatar" />
                       <div>
                         <strong style="color: var(--text-primary); font-size: 0.95rem;">${apt.student_name}</strong>
-                        <div style="font-size: 0.8rem; color: var(--text-secondary);">${apt.subject} • <span class="status-pill ${apt.status}" style="font-size: 0.68rem; padding: 0.1rem 0.45rem;">${(apt.status || 'accepted').toUpperCase()}</span></div>
+                        <div style="font-size: 0.8rem; color: var(--text-secondary);">${apt.subject} • <span class="status-pill ${apt.status === 'completed' ? 'completed' : apt.status === 'declined' ? 'declined' : 'pending'}" style="font-size: 0.68rem; padding: 0.1rem 0.45rem;">${(apt.status === 'completed' ? 'DONE' : apt.status === 'declined' ? 'CANCELLED' : 'PENDING')}</span></div>
                       </div>
                     </div>
                     <div class="appointment-meta">

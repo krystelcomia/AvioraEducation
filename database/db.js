@@ -473,6 +473,12 @@ function initSchema() {
       if (!reqCols.some(c => c.name === 'summary_sent_at')) {
         db.prepare("ALTER TABLE tutoring_requests ADD COLUMN summary_sent_at DATETIME").run();
       }
+      if (!reqCols.some(c => c.name === 'lesson_transcript')) {
+        db.prepare("ALTER TABLE tutoring_requests ADD COLUMN lesson_transcript TEXT").run();
+      }
+      if (!reqCols.some(c => c.name === 'transcript_sent_at')) {
+        db.prepare("ALTER TABLE tutoring_requests ADD COLUMN transcript_sent_at DATETIME").run();
+      }
     }
   } catch (e) {}
 

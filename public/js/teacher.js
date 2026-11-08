@@ -2170,6 +2170,46 @@ const Teacher = {
         `;
       }
     }
+
+    const transcriptSection = document.getElementById('class-record-transcript-section');
+    const transcriptPreview = document.getElementById('class-record-transcript-preview');
+    if (transcriptSection && transcriptPreview) {
+      if (record.lesson_transcript && record.lesson_transcript.trim()) {
+        transcriptSection.style.display = 'block';
+        transcriptPreview.textContent = record.lesson_transcript.trim();
+      } else {
+        transcriptSection.style.display = 'none';
+        transcriptPreview.textContent = '';
+      }
+    }
+  },
+
+  insertTranscriptToSummary() {
+    const transcriptPreview = document.getElementById('class-record-transcript-preview');
+    const summaryInput = document.getElementById('class-record-summary-input');
+    if (!transcriptPreview || !summaryInput) return;
+    const txt = transcriptPreview.textContent.trim();
+    if (!txt) {
+      showToast('No transcript available to insert.', 'info');
+      return;
+    }
+    const appendStr = `\n\n#### 🎙️ Auto-Transcribed Lesson Remarks:\n${txt}`;
+    summaryInput.value = (summaryInput.value ? summaryInput.value.trim() : '') + appendStr;
+    showToast('Appended lesson transcript into summary.', 'success');
+  },
+
+  async copyClassTranscript() {
+    const transcriptPreview = document.getElementById('class-record-transcript-preview');
+    if (!transcriptPreview || !transcriptPreview.textContent.trim()) {
+      showToast('No transcript to copy.', 'info');
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(transcriptPreview.textContent.trim());
+      showToast('Session transcript copied to clipboard!', 'success');
+    } catch (e) {
+      showToast('Unable to copy to clipboard.', 'error');
+    }
   },
 
   async generateAISummary() {

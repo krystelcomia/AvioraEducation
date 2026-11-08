@@ -100,7 +100,7 @@ const Student = {
       const set = this.getStoredCancelledRequests(user.id);
       set.add(Number(requestId));
       localStorage.setItem(`aviora_cancelled_requests_${user.id}`, JSON.stringify(Array.from(set)));
-    } catch (e) {}
+    } catch (e) { }
   },
 
   handleNotificationNavigation(params) {
@@ -136,8 +136,8 @@ const Student = {
     if (!sessionId) return;
     setTimeout(() => {
       let target = document.getElementById('schedule-item-' + sessionId) ||
-                   document.getElementById('request-item-' + sessionId) ||
-                   document.querySelector(`.request-item-card[data-id="${sessionId}"]`);
+        document.getElementById('request-item-' + sessionId) ||
+        document.querySelector(`.request-item-card[data-id="${sessionId}"]`);
       if (target) {
         target.scrollIntoView({ behavior: 'smooth', block: 'center' });
         target.classList.add('highlight-pulse');
@@ -907,42 +907,42 @@ const Student = {
 
           <div style="max-height: 280px; overflow-y: auto; padding-right: 0.35rem;">
             ${hours.map(slot => {
-              const bookedClass = dayApts.find(a => {
-                const t = a.time || a.requested_time || '';
-                return t.includes(slot.start) || t.startsWith(String(slot.hour).padStart(2, '0'));
-              });
+      const bookedClass = dayApts.find(a => {
+        const t = a.time || a.requested_time || '';
+        return t.includes(slot.start) || t.startsWith(String(slot.hour).padStart(2, '0'));
+      });
 
-              const isSlotOccupied = occupiedSlots.some(o => {
-                if (o.time_slot === 'ALL_DAY' && (o.date === dateStr || (!o.date && o.day_of_week === dayOfWeekName))) return true;
-                const matchesDate = o.date === dateStr || (!o.date && o.day_of_week === dayOfWeekName);
-                if (!matchesDate) return false;
-                const occH = parseInt(o.time_slot.split(':')[0], 10);
-                return occH === slot.hour;
-              });
+      const isSlotOccupied = occupiedSlots.some(o => {
+        if (o.time_slot === 'ALL_DAY' && (o.date === dateStr || (!o.date && o.day_of_week === dayOfWeekName))) return true;
+        const matchesDate = o.date === dateStr || (!o.date && o.day_of_week === dayOfWeekName);
+        if (!matchesDate) return false;
+        const occH = parseInt(o.time_slot.split(':')[0], 10);
+        return occH === slot.hour;
+      });
 
-              if (bookedClass) {
-                return `
+      if (bookedClass) {
+        return `
                   <button type="button" class="student-slot-btn is-booked" disabled title="Scheduled Class: ${bookedClass.subject} with ${bookedClass.tutor_name}">
                     <span>${slot.label} (50 min)</span>
                     <span style="font-size: 0.72rem; font-weight: 700;">${Icons.calendar(11)} ${bookedClass.subject} (${bookedClass.tutor_name || 'Tutor'})</span>
                   </button>
                 `;
-              } else if (isSlotOccupied || isDateOccupied) {
-                return `
+      } else if (isSlotOccupied || isDateOccupied) {
+        return `
                   <button type="button" class="student-slot-btn is-occupied" onclick="Student.toggleSlot('${dateStr}', '${slot.key}')" title="Click to mark this slot as Available">
                     <span>${slot.label}</span>
                     <span style="display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.72rem; font-weight: 700;">${Icons.ban(11)} Unavailable / Occupied</span>
                   </button>
                 `;
-              } else {
-                return `
+      } else {
+        return `
                   <button type="button" class="student-slot-btn" onclick="Student.toggleSlot('${dateStr}', '${slot.key}')" title="Click to mark this slot as Unavailable / Occupied">
                     <span>${slot.label}</span>
                     <span style="font-size: 0.72rem; color: #047857; font-weight: 700;">${Icons.check(11)} Available</span>
                   </button>
                 `;
-              }
-            }).join('')}
+      }
+    }).join('')}
           </div>
         </div>
 
@@ -950,9 +950,9 @@ const Student = {
         <div>
           <!-- Personal Schedule Note Manager with Dedicated Save, Edit, and Delete -->
           ${(() => {
-            const isEditing = this.editingDateNote === dateStr;
-            if (isEditing) {
-              return `
+        const isEditing = this.editingDateNote === dateStr;
+        if (isEditing) {
+          return `
                 <div class="student-note-box is-editing" style="background: rgba(198, 138, 40, 0.05); border: 1.5px solid var(--gold-500, #C68A28); border-radius: var(--radius-md); padding: 1.1rem; margin-bottom: 1.25rem;">
                   <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.45rem;">
                     <label style="font-size: 0.86rem; font-weight: 700; color: var(--charcoal-900); display: flex; align-items: center; gap: 0.4rem; margin: 0;">
@@ -981,8 +981,8 @@ const Student = {
                   </div>
                 </div>
               `;
-            } else if (dayNote) {
-              return `
+        } else if (dayNote) {
+          return `
                 <div class="student-note-box is-saved" style="background: rgba(198, 138, 40, 0.04); border: 1.5px solid rgba(198, 138, 40, 0.32); border-radius: var(--radius-md); padding: 1.1rem; margin-bottom: 1.25rem;">
                   <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.6rem; flex-wrap: wrap; gap: 0.5rem;">
                     <div style="display: flex; align-items: center; gap: 0.45rem;">
@@ -1007,8 +1007,8 @@ const Student = {
                   </div>
                 </div>
               `;
-            } else {
-              return `
+        } else {
+          return `
                 <div class="student-note-box is-empty" style="background: rgba(198, 138, 40, 0.04); border: 1px solid rgba(198, 138, 40, 0.25); border-radius: var(--radius-md); padding: 1.1rem; margin-bottom: 1.25rem;">
                   <label style="font-size: 0.86rem; font-weight: 700; color: var(--charcoal-900); display: flex; align-items: center; gap: 0.35rem; margin-bottom: 0.35rem;">
                     <span>📝 Personal Date Note / Unavailability Reason:</span>
@@ -1024,8 +1024,8 @@ const Student = {
                   </div>
                 </div>
               `;
-            }
-          })()}
+        }
+      })()}
 
           <!-- Booked Classes on this date -->
           <div>
@@ -1329,6 +1329,11 @@ const Student = {
               `}
             ` : ''}
             ${(r.status === 'completed' || r.room_status === 'ended') ? `
+              ${(r.lesson_summary || r.lesson_transcript) ? `
+                <button type="button" class="btn btn-outline-gold btn-sm" onclick="Student.viewLessonSummary(${r.id})" style="font-size: 0.74rem; padding: 0.22rem 0.55rem; display: inline-flex; align-items: center; gap: 0.25rem;">
+                  ${Icons.fileText(12)} Lesson Notes
+                </button>
+              ` : ''}
               ${r.review_rating ? `
                 <span style="font-size: 0.82rem; color: #F59E0B; font-weight: 700; display: inline-flex; align-items: center; gap: 0.25rem;">${Icons.star(13)} ${r.review_rating}/5</span>
               ` : `
@@ -1385,15 +1390,15 @@ const Student = {
         </div>
 
         <div style="display: flex; flex-direction: column; justify-content: center; align-items: flex-end; min-width: 0; gap: 0.35rem;">
-          ${r.lesson_summary ? `
+          ${(r.lesson_summary || r.lesson_transcript) ? `
             <button type="button" class="btn btn-outline-gold btn-sm" onclick="Student.viewLessonSummary(${r.id})" style="font-size: 0.74rem; padding: 0.22rem 0.55rem; display: inline-flex; align-items: center; gap: 0.25rem;">
-              ${Icons.fileText(12)} Lesson Summary
+              ${Icons.fileText(12)} Lesson Notes &amp; Transcript
             </button>
           ` : ''}
           ${r.review_rating ? `
             <div style="text-align: right;">
               <div style="color: #F59E0B; display: inline-flex; align-items: center; gap: 2px;">
-                ${Array.from({length: Math.min(5, Math.max(1, r.review_rating))}).map(() => Icons.star(13)).join('')}
+                ${Array.from({ length: Math.min(5, Math.max(1, r.review_rating)) }).map(() => Icons.star(13)).join('')}
               </div>
               <span style="font-size: 0.74rem; color: var(--text-muted); display: block;">Your Rating (${r.review_rating}/5)</span>
               ${r.review_comment ? `<p style="font-size: 0.75rem; color: var(--charcoal-700); margin-top: 0.15rem; font-style: italic; max-width: 220px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${escapeHtmlStr(r.review_comment)}">"${escapeHtmlStr(r.review_comment)}"</p>` : ''}
@@ -1724,7 +1729,7 @@ const Student = {
           } else {
             showToast('No active class session is currently open.', 'info');
           }
-        }).catch(() => {});
+        }).catch(() => { });
       }
     }
   },
@@ -1760,18 +1765,18 @@ const Student = {
     if (!modal) return;
 
     this.openModal('modal-student-lesson-summary');
-    if (contentBox) contentBox.innerHTML = '<div style="text-align: center; padding: 1.5rem; color: var(--text-secondary);">Loading lesson summary...</div>';
+    if (contentBox) contentBox.innerHTML = '<div style="text-align: center; padding: 1.5rem; color: var(--text-secondary);">Loading lesson record...</div>';
 
     try {
       const res = await API.getStudentLessonSummary(requestId);
       const record = res.record;
-      if (!record || !record.lesson_summary) {
-        if (contentBox) contentBox.innerHTML = '<em>Your instructor has not submitted a detailed lesson summary for this session yet.</em>';
+      if (!record || (!record.lesson_summary && !record.lesson_transcript)) {
+        if (contentBox) contentBox.innerHTML = '<em>Your instructor has not submitted a detailed lesson summary or transcript for this session yet.</em>';
         return;
       }
 
       if (titleEl) {
-        titleEl.textContent = `${record.subject} — Lesson Summary`;
+        titleEl.textContent = `${record.subject} — Lesson Summary & Notes`;
       }
 
       if (metaBox) {
@@ -1790,10 +1795,48 @@ const Student = {
       }
 
       if (contentBox) {
-        contentBox.textContent = record.lesson_summary;
+        let html = '';
+        if (record.lesson_summary) {
+          html += `
+            <div style="margin-bottom: 1.25rem;">
+              <h5 style="font-size: 0.9rem; font-weight: 700; color: var(--gold-700); margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.35rem;">
+                📝 Educator Lesson Summary
+              </h5>
+              <div style="white-space: pre-wrap; line-height: 1.6; color: var(--text-primary); font-size: 0.88rem;">${escapeHtmlStr(record.lesson_summary)}</div>
+            </div>
+          `;
+        }
+
+        if (record.lesson_transcript) {
+          html += `
+            <div style="${record.lesson_summary ? 'border-top: 1px dashed var(--border-color); padding-top: 1.1rem; margin-top: 1.1rem;' : ''}">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                <h5 style="font-size: 0.9rem; font-weight: 700; color: var(--gold-700); margin: 0; display: flex; align-items: center; gap: 0.35rem;">
+                  🎙️ Auto-Transcribed Lesson Voice Record
+                </h5>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="Student.copyTranscriptText()" style="font-size: 0.72rem; padding: 0.2rem 0.5rem;">
+                  Copy Transcript
+                </button>
+              </div>
+              <div id="student-rendered-transcript-text" style="font-family: monospace, sans-serif; font-size: 0.82rem; background: rgba(0,0,0,0.03); border: 1px solid var(--border-color); border-radius: 6px; padding: 0.85rem; line-height: 1.55; max-height: 240px; overflow-y: auto; white-space: pre-wrap; color: var(--text-primary);">${escapeHtmlStr(record.lesson_transcript)}</div>
+            </div>
+          `;
+        }
+        contentBox.innerHTML = html;
       }
     } catch (err) {
       if (contentBox) contentBox.innerHTML = `<span style="color: #EF4444;">Failed to load lesson summary: ${err.message}</span>`;
+    }
+  },
+
+  async copyTranscriptText() {
+    const el = document.getElementById('student-rendered-transcript-text');
+    if (!el || !el.textContent.trim()) return;
+    try {
+      await navigator.clipboard.writeText(el.textContent.trim());
+      showToast('Lesson transcript copied to clipboard!', 'success');
+    } catch (e) {
+      showToast('Could not copy transcript.', 'error');
     }
   },
 

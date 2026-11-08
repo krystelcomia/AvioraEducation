@@ -5067,6 +5067,7 @@ app.get('/api/student/classes/:id/summary', authenticateToken, (req, res) => {
       SELECT 
         tr.id, tr.subject, tr.requested_date, tr.requested_time, tr.duration_hours,
         tr.status, tr.notes, tr.lesson_summary, tr.summary_sent_at,
+        tr.lesson_transcript, tr.transcript_sent_at,
         t.name as tutor_name, t.avatar_url as tutor_avatar
       FROM tutoring_requests tr
       JOIN users t ON tr.tutor_id = t.id
@@ -6189,7 +6190,9 @@ app.get('/api/sessions/:id/room', authenticateToken, (req, res) => {
         tutor_reviews_count: request.tutor_reviews_count,
         has_reviewed: !!request.review_rating,
         review_rating: request.review_rating,
-        review_comment: request.review_comment
+        review_comment: request.review_comment,
+        lesson_transcript: request.lesson_transcript || '',
+        transcript_sent_at: request.transcript_sent_at || null
       },
       room_status: roomStatus,
       room_started_at: request.room_started_at,
@@ -6516,6 +6519,115 @@ app.get('/api/student/live-class', authenticateToken, requireRole('student'), (r
   } catch (error) {
     console.error('Check student live class error:', error);
     res.status(500).json({ error: 'Failed to check live class.' });
+  }
+});
+
+// Save Auto-Generated Lesson Transcript (Tutor voice transcript)
+app.post('/api/sessions/:id/transcript', authenticateToken, (req, res) => {
+  try {
+    const requestId = req.params.id;
+    const userId = req.user.id;
+    const { transcript } = req.body;
+
+    const request = db.prepare('SELECT student_id, tutor_id FROM tutoring_requests WHERE id = ?').get(requestId);
+    if (!request) return res.status(404).json({ error: 'Session not found.' });
+
+    if (userId !== request.tutor_id && req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Only the tutor can save the lesson transcript.' });
+    }
+
+    const cleanTranscript = String(transcript || '').trim();
+    db.prepare(`
+      UPDATE tutoring_requests 
+      SET lesson_transcript = ?, updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `).run(cleanTranscript, requestId);
+
+    res.json({ success: true, message: 'Lesson transcript saved successfully.' });
+  } catch (error) {
+    console.error('Save transcript error:', error);
+    res.status(500).json({ error: 'Failed to save lesson transcript.' });
+  }
+});
+
+// Save and Send Auto-Generated Transcript to Student
+app.post('/api/sessions/:id/transcript/send-to-student', authenticateToken, (req, res) => {
+  try {
+    const requestId = req.params.id;
+    const userId = req.user.id;
+    const { transcript } = req.body;
+
+    const request = db.prepare(`
+      SELECT tr.*, tu.name as tutor_name
+      FROM tutoring_requests tr
+      JOIN users tu ON tr.tutor_id = tu.id
+      WHERE tr.id = ?
+    `).get(requestId);
+
+    if (!request) return res.status(404).json({ error: 'Session not found.' });
+
+    if (userId !== request.tutor_id && req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Only the tutor can send the lesson transcript.' });
+    }
+
+    const cleanTranscript = String(transcript || '').trim();
+    db.prepare(`
+      UPDATE tutoring_requests 
+      SET lesson_transcript = ?, transcript_sent_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `).run(cleanTranscript, requestId);
+
+    // Notify student
+    sendNotification(
+      request.student_id,
+      `Lesson Transcript: ${request.subject}`,
+      `${request.tutor_name || 'Your educator'} has sent you the auto-generated lesson transcript for your ${request.subject} session. Click to view!`,
+      'summary',
+      `#student-history?session=${requestId}`
+    );
+
+    res.json({
+      success: true,
+      message: 'Lesson transcript saved and successfully sent to the student.',
+      transcript_sent_at: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Send transcript error:', error);
+    res.status(500).json({ error: 'Failed to send transcript to student.' });
+  }
+});
+
+// Get Lesson Transcript
+app.get('/api/sessions/:id/transcript', authenticateToken, (req, res) => {
+  try {
+    const requestId = req.params.id;
+    const userId = req.user.id;
+
+    const request = db.prepare(`
+      SELECT tr.id, tr.subject, tr.lesson_transcript, tr.transcript_sent_at, tr.student_id, tr.tutor_id,
+             tu.name as tutor_name, su.name as student_name
+      FROM tutoring_requests tr
+      JOIN users tu ON tr.tutor_id = tu.id
+      JOIN users su ON tr.student_id = su.id
+      WHERE tr.id = ?
+    `).get(requestId);
+
+    if (!request) return res.status(404).json({ error: 'Session not found.' });
+
+    if (userId !== request.student_id && userId !== request.tutor_id && req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Unauthorized to view this transcript.' });
+    }
+
+    res.json({
+      transcript: request.lesson_transcript || '',
+      transcript_sent_at: request.transcript_sent_at || null,
+      subject: request.subject,
+      tutor_name: request.tutor_name,
+      student_name: request.student_name
+    });
+  } catch (error) {
+    console.error('Get transcript error:', error);
+    res.status(500).json({ error: 'Failed to retrieve transcript.' });
   }
 });
 

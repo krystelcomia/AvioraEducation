@@ -209,5 +209,8 @@ const API = {
   sendRoomHeartbeat: (id, body) => apiRequest(`/sessions/${id}/room/heartbeat`, { method: 'POST', body }),
   leaveRoomPresence: (id) => apiRequest(`/sessions/${id}/room/leave`, { method: 'POST' }),
   notifyStudentToJoinRoom: (id) => apiRequest(`/sessions/${id}/room/notify-join`, { method: 'POST' }),
-  getStudentLiveClass: () => apiRequest('/student/live-class')
+  getStudentLiveClass: () => apiRequest('/student/live-class'),
+  saveRoomTranscript: (id, body) => apiRequest(`/sessions/${id}/transcript`, { method: 'POST', body }),
+  sendRoomTranscriptToStudent: (id, body) => apiRequest(`/sessions/${id}/transcript/send-to-student`, { method: 'POST', body }),
+  getRoomTranscript: (id) => apiRequest(`/sessions/${id}/transcript`)
 };

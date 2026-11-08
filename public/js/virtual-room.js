@@ -5,6 +5,9 @@
  * - Waiting state on tutor screen when room is open but student has not joined
  * - Dynamic status indicators: Waiting for student vs Live Feed
  * - Screen sharing with WebRTC track replacement
+ * - Option to "pin" the presentation so that it appears as the large slide
+ * - Auto-transcription feature: Only the tutor's voice is transcribed; transcript generated automatically; tutor can save and send to student
+ * - Role permission: Student cannot end the call; only the teacher has the ability to end the call
  * - Camera on/off and mic mute/unmute with visual indicators for both parties
  * - Web Audio active speaker detection & visualizer (speaking pulse)
  * - In-room live chat with unread notification badge
@@ -30,7 +33,9 @@ const VirtualRoom = {
   isMicMuted: false,
   isVideoOff: false,
   isScreenSharing: false,
+  isPresentationPinned: false,
   isChatOpen: false,
+  isTranscriptDrawerOpen: false,
   unreadChatCount: 0,
   peerInRoom: false,
   peerConnected: false,
@@ -38,6 +43,11 @@ const VirtualRoom = {
   peerVideoOff: false,
   postClassRating: 5,
   pendingIceCandidates: [],
+
+  // Auto-Transcription (Tutor Voice Only)
+  transcriptItems: [],
+  speechRecognition: null,
+  isTranscribing: false,
 
   // Google Public STUN Servers
   rtcConfig: {
@@ -194,18 +204,27 @@ const VirtualRoom = {
     this.isMicMuted = false;
     this.isVideoOff = false;
     this.isScreenSharing = false;
+    this.isPresentationPinned = false;
     this.isChatOpen = false;
+    this.isTranscriptDrawerOpen = false;
     this.unreadChatCount = 0;
     this.peerConnected = false;
     this.peerMicMuted = false;
     this.peerVideoOff = false;
     this.pendingIceCandidates = [];
     this.lastSignalTimestamp = 0;
+    this.transcriptItems = [];
 
     const chatDrawer = document.getElementById('vroom-chat-drawer');
     if (chatDrawer) chatDrawer.style.display = 'none';
+    const transcriptDrawer = document.getElementById('vroom-transcript-drawer');
+    if (transcriptDrawer) transcriptDrawer.style.display = 'none';
+    const captionBar = document.getElementById('vroom-live-caption-bar');
+    if (captionBar) captionBar.style.display = 'none';
     const chatDot = document.getElementById('vroom-chat-unread-dot');
     if (chatDot) chatDot.style.display = 'none';
+    const recDot = document.getElementById('vroom-transcript-rec-dot');
+    if (recDot) recDot.style.display = 'none';
 
     // Populate session info
     const isTutor = (this.currentUserRole === 'tutor');
@@ -254,16 +273,34 @@ const VirtualRoom = {
       pingBtn.style.display = isTutor ? 'inline-flex' : 'none';
     }
 
+    // USER REQUIREMENT: "Remove the 'end call' option for the student; only the teacher should have the ability to end the call."
     const endBtn = document.getElementById('vroom-end-call-btn');
     if (endBtn) {
       if (isTutor) {
+        endBtn.style.display = 'inline-flex';
         endBtn.innerHTML = `${Icons.phoneOff(16)} <span>End Class</span>`;
         endBtn.onclick = () => this.confirmEndClass();
       } else {
-        endBtn.innerHTML = `${Icons.phoneOff(16)} <span>Leave Call</span>`;
-        endBtn.onclick = () => this.leaveRoom();
+        // Completely removed / hidden for student!
+        endBtn.style.display = 'none';
+        endBtn.onclick = null;
       }
     }
+
+    const topCloseBtn = document.getElementById('vroom-top-close-btn');
+    if (topCloseBtn) {
+      // Only the teacher can close or end the room from the top bar
+      topCloseBtn.style.display = isTutor ? 'inline-flex' : 'none';
+    }
+
+    // Role-specific action panel for transcript
+    const transcriptActions = document.getElementById('vroom-transcript-actions');
+    if (transcriptActions) {
+      transcriptActions.style.display = isTutor ? 'flex' : 'none';
+    }
+
+    // Reset presentation pinned layout
+    this.togglePinPresentation(false);
 
     modal.classList.add('active');
 
@@ -272,6 +309,11 @@ const VirtualRoom = {
 
     // Initialize local camera and microphone
     await this.initLocalMedia();
+
+    // Initialize auto-transcription for the tutor's voice ONLY
+    if (isTutor) {
+      this.initAutoTranscription();
+    }
 
     // In-room live chat
     await this.loadMessages();
@@ -282,6 +324,18 @@ const VirtualRoom = {
 
     // Start WebRTC connection & signaling
     await this.initWebRTC();
+  },
+
+  /**
+   * Top bar close handler
+   * Enforces that only the teacher has the ability to end the call.
+   */
+  handleCloseClick() {
+    if (this.currentUserRole !== 'tutor') {
+      showToast('Only your educator has the ability to end this virtual lesson session.', 'info');
+      return;
+    }
+    this.confirmEndClass();
   },
 
   /**
@@ -460,7 +514,6 @@ const VirtualRoom = {
 
   /**
    * Generates a 640x360 canvas video track with user's name and animated waves
-   * Guarantees 100% WebRTC negotiation success even during multi-window testing on 1 webcam
    */
   createFallbackVideoTrack(name) {
     const canvas = document.createElement('canvas');
@@ -598,6 +651,20 @@ const VirtualRoom = {
       badge.style.display = this.isMicMuted ? 'inline' : 'none';
     }
 
+    // Pause/Resume Speech Recognition for tutor voice
+    if (this.speechRecognition && this.currentUserRole === 'tutor') {
+      if (this.isMicMuted) {
+        try { this.speechRecognition.stop(); } catch (e) {}
+        const tag = document.getElementById('vroom-transcript-status-tag');
+        if (tag) {
+          tag.textContent = '⏸️ Paused (Mic Muted)';
+          tag.style.color = '#F59E0B';
+        }
+      } else {
+        try { this.speechRecognition.start(); } catch (e) {}
+      }
+    }
+
     // Broadcast state to peer
     this.sendRoomSignal({
       type: 'media-status',
@@ -670,6 +737,12 @@ const VirtualRoom = {
           btn.title = 'Stop Sharing Screen';
         }
 
+        const pinCtrlBtn = document.getElementById('vroom-btn-pin-ctrl');
+        if (pinCtrlBtn) pinCtrlBtn.style.display = 'inline-flex';
+
+        // Auto-pin presentation as large slide whenever presenting
+        this.togglePinPresentation(true);
+
         // Replace track on WebRTC sender so the other party sees the screen in real-time
         if (this.peerConnection) {
           const screenTrack = this.screenStream.getVideoTracks()[0];
@@ -687,7 +760,7 @@ const VirtualRoom = {
           this.stopScreenShare();
         };
 
-        showToast('Screen presentation started — visible to participants.', 'success');
+        showToast('Screen presentation started — pinned as large slide.', 'success');
       }
     } catch (err) {
       console.warn('Screen share canceled or failed:', err);
@@ -710,6 +783,12 @@ const VirtualRoom = {
       btn.title = 'Share Screen';
     }
 
+    const pinCtrlBtn = document.getElementById('vroom-btn-pin-ctrl');
+    if (pinCtrlBtn) pinCtrlBtn.style.display = 'none';
+
+    // Unpin presentation layout
+    this.togglePinPresentation(false);
+
     // Revert WebRTC sender track back to local camera track
     if (this.peerConnection && this.localStream) {
       const cameraTrack = this.localStream.getVideoTracks()[0];
@@ -722,6 +801,277 @@ const VirtualRoom = {
 
     this.sendRoomSignal({ type: 'screen-status', active: false });
     showToast('Screen presentation ended.', 'info');
+  },
+
+  /**
+   * USER REQUIREMENT: Option to "pin" the presentation so that it appears as the large slide
+   */
+  togglePinPresentation(forcedState = null) {
+    if (forcedState !== null) {
+      this.isPresentationPinned = forcedState;
+    } else {
+      this.isPresentationPinned = !this.isPresentationPinned;
+    }
+
+    const grid = document.querySelector('.vroom-video-grid');
+    const pinBtn = document.getElementById('vroom-btn-pin-screen');
+    const pinCtrlBtn = document.getElementById('vroom-btn-pin-ctrl');
+    const pinIcon = document.getElementById('vroom-pin-icon');
+    const pinText = document.getElementById('vroom-pin-text');
+
+    if (grid) {
+      if (this.isPresentationPinned) {
+        grid.classList.add('presentation-pinned');
+      } else {
+        grid.classList.remove('presentation-pinned');
+      }
+    }
+
+    if (pinBtn) {
+      if (this.isPresentationPinned) {
+        pinBtn.classList.add('pinned');
+        if (pinText) pinText.textContent = 'Unpin Slide';
+        if (pinIcon) pinIcon.textContent = '📌';
+      } else {
+        pinBtn.classList.remove('pinned');
+        if (pinText) pinText.textContent = 'Pin as Large Slide';
+        if (pinIcon) pinIcon.textContent = '📍';
+      }
+    }
+
+    if (pinCtrlBtn) {
+      pinCtrlBtn.style.background = this.isPresentationPinned ? 'var(--gold-600)' : 'rgba(255, 255, 255, 0.12)';
+      pinCtrlBtn.title = this.isPresentationPinned ? 'Unpin Presentation' : 'Pin Presentation to Large Slide';
+    }
+
+    this.sendRoomSignal({
+      type: 'pin-status',
+      isPinned: this.isPresentationPinned
+    });
+  },
+
+  /**
+   * USER REQUIREMENT: Auto-Transcription for Lesson Session (Tutor Voice Only)
+   * Only the tutor's voice is transcribed; transcript is generated automatically.
+   */
+  initAutoTranscription() {
+    if (this.currentUserRole !== 'tutor') {
+      console.log('Auto-transcription is disabled for students: only the tutor voice is transcribed.');
+      return;
+    }
+
+    const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRec) {
+      console.warn('SpeechRecognition API not supported in this browser.');
+      const tag = document.getElementById('vroom-transcript-status-tag');
+      if (tag) {
+        tag.textContent = '● Web Speech API unavailable in browser';
+        tag.style.color = '#9CA3AF';
+      }
+      return;
+    }
+
+    try {
+      this.speechRecognition = new SpeechRec();
+      this.speechRecognition.continuous = true;
+      this.speechRecognition.interimResults = true;
+      this.speechRecognition.lang = 'en-US';
+
+      this.speechRecognition.onstart = () => {
+        this.isTranscribing = true;
+        const recDot = document.getElementById('vroom-transcript-rec-dot');
+        if (recDot) recDot.style.display = 'block';
+        const tag = document.getElementById('vroom-transcript-status-tag');
+        if (tag) {
+          tag.textContent = '● Transcribing Tutor Voice (Live)';
+          tag.style.color = '#10B981';
+        }
+      };
+
+      this.speechRecognition.onresult = (event) => {
+        let interim = '';
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const res = event.results[i];
+          const text = res[0].transcript.trim();
+          if (res.isFinal) {
+            if (text) {
+              this.addTranscriptLine(text);
+            }
+          } else {
+            interim += ' ' + text;
+          }
+        }
+
+        // Live floating subtitle bar
+        const captionBar = document.getElementById('vroom-live-caption-bar');
+        const captionText = document.getElementById('vroom-live-caption-text');
+        if (interim.trim() && !this.isMicMuted) {
+          if (captionBar) captionBar.style.display = 'flex';
+          if (captionText) captionText.textContent = interim.trim();
+        } else {
+          if (captionBar) captionBar.style.display = 'none';
+        }
+      };
+
+      this.speechRecognition.onerror = (event) => {
+        console.warn('Speech recognition status:', event.error);
+      };
+
+      this.speechRecognition.onend = () => {
+        // Auto-restart if session is still active and tutor is unmuted
+        if (this.activeSessionId && !this.isMicMuted && this.currentUserRole === 'tutor') {
+          try {
+            this.speechRecognition.start();
+          } catch (e) {}
+        } else {
+          this.isTranscribing = false;
+          const tag = document.getElementById('vroom-transcript-status-tag');
+          if (tag) {
+            tag.textContent = this.isMicMuted ? '⏸️ Paused (Microphone Muted)' : '● Paused';
+            tag.style.color = '#F59E0B';
+          }
+        }
+      };
+
+      this.speechRecognition.start();
+    } catch (e) {
+      console.warn('Failed to start speech recognition:', e);
+    }
+  },
+
+  addTranscriptLine(text) {
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const item = {
+      time: timeStr,
+      speaker: this.sessionData?.session?.tutor_name || 'Educator',
+      text: text
+    };
+
+    this.transcriptItems.push(item);
+    this.renderTranscriptList();
+
+    // Broadcast transcript snippet to student
+    this.sendRoomSignal({
+      type: 'transcript-item',
+      item: item
+    });
+  },
+
+  renderTranscriptList() {
+    const list = document.getElementById('vroom-transcript-list');
+    if (!list) return;
+
+    if (this.transcriptItems.length === 0) {
+      list.innerHTML = `
+        <div id="vroom-transcript-placeholder" style="color: #9CA3AF; font-size: 0.8rem; text-align: center; padding: 2rem 1rem;">
+          Listening to educator speech... The live transcript will generate automatically here as the tutor teaches.
+        </div>
+      `;
+      return;
+    }
+
+    list.innerHTML = this.transcriptItems.map(item => `
+      <div style="margin-bottom: 0.65rem; padding: 0.5rem 0.75rem; background: rgba(255, 255, 255, 0.04); border-left: 2px solid var(--gold-500); border-radius: 6px;">
+        <div style="font-size: 0.72rem; color: var(--gold-400); font-weight: 700; margin-bottom: 0.2rem; display: flex; justify-content: space-between;">
+          <span>🎙️ ${escapeHtmlStr(item.speaker)}</span>
+          <span style="color: #9CA3AF; font-size: 0.66rem;">${item.time}</span>
+        </div>
+        <div style="font-size: 0.84rem; color: #FFFFFF; line-height: 1.5; word-break: break-word;">
+          ${escapeHtmlStr(item.text)}
+        </div>
+      </div>
+    `).join('');
+
+    list.scrollTop = list.scrollHeight;
+  },
+
+  toggleTranscriptDrawer() {
+    this.isTranscriptDrawerOpen = !this.isTranscriptDrawerOpen;
+    const drawer = document.getElementById('vroom-transcript-drawer');
+    const btn = document.getElementById('vroom-btn-transcript');
+
+    // Close chat drawer if open so they don't overlap
+    if (this.isTranscriptDrawerOpen && this.isChatOpen) {
+      this.toggleChat();
+    }
+
+    if (drawer) {
+      drawer.style.display = this.isTranscriptDrawerOpen ? 'flex' : 'none';
+    }
+    if (btn) {
+      btn.style.background = this.isTranscriptDrawerOpen ? 'var(--gold-600)' : 'rgba(255, 255, 255, 0.12)';
+    }
+  },
+
+  /**
+   * USER REQUIREMENT: Tutor can save transcript and send it to the student
+   */
+  async saveTranscript(andSendToStudent = false) {
+    if (!this.activeSessionId) return;
+
+    const fullText = this.transcriptItems.map(i => `[${i.time}] ${i.speaker}: ${i.text}`).join('\n\n');
+    if (!fullText.trim()) {
+      showToast('No transcript text generated yet. Speak into your microphone to record the session transcript.', 'info');
+      return;
+    }
+
+    const btnId = andSendToStudent ? 'vroom-btn-send-transcript' : 'vroom-btn-save-transcript';
+    const btn = document.getElementById(btnId);
+    const origHtml = btn ? btn.innerHTML : '';
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = andSendToStudent ? 'Sending to Student...' : 'Saving...';
+    }
+
+    try {
+      if (andSendToStudent) {
+        await API.sendRoomTranscriptToStudent(this.activeSessionId, { transcript: fullText });
+        showToast('Lesson transcript successfully saved and sent to the student!', 'success');
+      } else {
+        await API.saveRoomTranscript(this.activeSessionId, { transcript: fullText });
+        showToast('Lesson transcript saved successfully.', 'success');
+      }
+    } catch (err) {
+      showToast(err.message || 'Failed to save transcript.', 'error');
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = origHtml;
+      }
+    }
+  },
+
+  copyTranscript() {
+    const fullText = this.transcriptItems.map(i => `[${i.time}] ${i.speaker}: ${i.text}`).join('\n\n');
+    if (!fullText.trim()) {
+      showToast('No transcript to copy.', 'info');
+      return;
+    }
+    navigator.clipboard.writeText(fullText).then(() => {
+      showToast('Lesson transcript copied to clipboard!', 'success');
+    }).catch(() => {
+      showToast('Could not copy to clipboard.', 'error');
+    });
+  },
+
+  downloadTranscript() {
+    const fullText = this.transcriptItems.map(i => `[${i.time}] ${i.speaker}: ${i.text}`).join('\n\n');
+    if (!fullText.trim()) {
+      showToast('No transcript to download.', 'info');
+      return;
+    }
+    const subject = (this.sessionData?.session?.subject || 'Lesson').replace(/\s+/g, '_');
+    const blob = new Blob([fullText], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${subject}_Auto_Transcript.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast('Downloaded transcript file.', 'success');
   },
 
   /**
@@ -746,6 +1096,11 @@ const VirtualRoom = {
     const chatDrawer = document.getElementById('vroom-chat-drawer');
     const btn = document.getElementById('vroom-btn-chat');
     const dot = document.getElementById('vroom-chat-unread-dot');
+
+    // Close transcript drawer if open so they don't overlap
+    if (this.isChatOpen && this.isTranscriptDrawerOpen) {
+      this.toggleTranscriptDrawer();
+    }
 
     if (chatDrawer) {
       chatDrawer.style.display = this.isChatOpen ? 'flex' : 'none';
@@ -987,6 +1342,36 @@ const VirtualRoom = {
               if (remoteVideo) remoteVideo.style.display = 'block';
               if (remoteFallback) remoteFallback.style.display = 'none';
             }
+          } else if (signal.type === 'pin-status') {
+            this.togglePinPresentation(signal.isPinned);
+          } else if (signal.type === 'screen-status') {
+            const screenContainer = document.getElementById('vroom-screen-share-container');
+            const pinCtrlBtn = document.getElementById('vroom-btn-pin-ctrl');
+            if (signal.active) {
+              if (screenContainer) screenContainer.style.display = 'block';
+              if (pinCtrlBtn) pinCtrlBtn.style.display = 'inline-flex';
+              this.togglePinPresentation(true);
+            } else {
+              if (screenContainer) screenContainer.style.display = 'none';
+              if (pinCtrlBtn) pinCtrlBtn.style.display = 'none';
+              this.togglePinPresentation(false);
+            }
+          } else if (signal.type === 'transcript-item') {
+            // Student receives live transcript line from tutor
+            if (this.currentUserRole !== 'tutor') {
+              this.transcriptItems.push(signal.item);
+              this.renderTranscriptList();
+
+              const captionBar = document.getElementById('vroom-live-caption-bar');
+              const captionText = document.getElementById('vroom-live-caption-text');
+              if (captionBar && captionText) {
+                captionBar.style.display = 'flex';
+                captionText.textContent = signal.item.text;
+                setTimeout(() => {
+                  if (captionBar) captionBar.style.display = 'none';
+                }, 4000);
+              }
+            }
           }
         }
       } catch (err) {}
@@ -1058,6 +1443,13 @@ const VirtualRoom = {
    */
   async onTimerExpired() {
     console.log('50-minute class duration has elapsed. Concluding virtual room.');
+    
+    // Auto-save transcript for tutor if generated
+    if (this.transcriptItems && this.transcriptItems.length > 0 && this.currentUserRole === 'tutor' && this.activeSessionId) {
+      const fullText = this.transcriptItems.map(i => `[${i.time}] ${i.speaker}: ${i.text}`).join('\n\n');
+      API.saveRoomTranscript(this.activeSessionId, { transcript: fullText }).catch(() => {});
+    }
+
     this.stopAllMediaTracks();
 
     if (this.activeSessionId) {
@@ -1260,7 +1652,7 @@ const VirtualRoom = {
   },
 
   /**
-   * Leave call
+   * Leave classroom (Only triggered when session ends or educator concludes)
    */
   leaveRoom() {
     if (this.activeSessionId) {
@@ -1268,7 +1660,7 @@ const VirtualRoom = {
     }
     this.stopAllMediaTracks();
     this.closeModal('virtual-room-modal');
-    showToast('Left the virtual classroom.', 'info');
+    showToast('Closed the virtual classroom.', 'info');
 
     if (typeof Student !== 'undefined' && Student.init) Student.init();
     if (typeof Teacher !== 'undefined' && Teacher.loadTeacherDashboard) Teacher.loadTeacherDashboard();
@@ -1276,13 +1668,25 @@ const VirtualRoom = {
 
   /**
    * Tutor ending class for everyone
+   * USER REQUIREMENT: Only the teacher should have the ability to end the call.
    */
   async confirmEndClass() {
+    if (this.currentUserRole !== 'tutor') {
+      showToast('Only your educator has the ability to end this virtual lesson session.', 'info');
+      return;
+    }
+
     if (!confirm('Are you sure you want to end this 50-minute class session for all participants?')) {
       return;
     }
 
     try {
+      // Auto-save transcript before ending
+      if (this.transcriptItems && this.transcriptItems.length > 0 && this.activeSessionId) {
+        const fullText = this.transcriptItems.map(i => `[${i.time}] ${i.speaker}: ${i.text}`).join('\n\n');
+        await API.saveRoomTranscript(this.activeSessionId, { transcript: fullText }).catch(() => {});
+      }
+
       if (this.activeSessionId) {
         await API.endRoom(this.activeSessionId);
       }
@@ -1292,7 +1696,21 @@ const VirtualRoom = {
     }
   },
 
+  leaveRoomAndOpenSummary() {
+    const sId = this.activeSessionId;
+    this.leaveRoom();
+    if (typeof Teacher !== 'undefined' && Teacher.openSummaryModal && sId) {
+      Teacher.openSummaryModal(sId);
+    }
+  },
+
   stopAllMediaTracks() {
+    if (this.speechRecognition) {
+      try { this.speechRecognition.stop(); } catch (e) {}
+      this.speechRecognition = null;
+    }
+    this.isTranscribing = false;
+
     if (this.localStream) {
       this.localStream.getTracks().forEach(t => t.stop());
       this.localStream = null;

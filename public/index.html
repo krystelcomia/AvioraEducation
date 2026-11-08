@@ -3761,14 +3761,6 @@
     <div id="view-teacher-classes" class="app-page-view" style="display: none;">
       <div class="container portal-wrapper">
         <div id="teacher-banner-classes"></div>
-        <div class="teacher-tab-header" style="margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center;">
-          <div>
-            <span class="badge-gold">Live Virtual Classroom</span>
-            <h2 style="color: var(--text-primary); font-size: 1.6rem; margin-top: 0.35rem; font-weight: 700;">
-              Virtual Classes &amp; Live Rooms
-            </h2>
-          </div>
-        </div>
 
         <!-- Tutor Subjects, Areas of Specialization & Individual Rates Management -->
         <div class="teacher-subjects-panel" id="teacher-subjects-panel">
@@ -3823,19 +3815,8 @@
     <div id="view-teacher-students" class="app-page-view" style="display: none;">
       <div class="container portal-wrapper">
         <div id="teacher-banner-students"></div>
-        <div class="teacher-tab-header">
-              <div>
-                <span class="badge-gold">Student Roster & Coursework</span>
-                <h2 style="color: var(--text-primary); font-size: 1.6rem; margin-top: 0.35rem;">
-                  Students & Academic Task Management
-                </h2>
-                <p style="color: var(--text-secondary); font-size: 0.925rem; max-width: 800px; margin-top: 0.35rem; line-height: 1.55;">
-                  Manage your students, view the list of students and their respective subjects, assign homework and diagnostic tasks, and grade their submitted coursework with educator feedback.
-                </p>
-              </div>
-            </div>
 
-            <!-- Section 1: Enrolled Students Directory -->
+        <!-- Section 1: Enrolled Students Directory -->
             <div class="teacher-section-title-wrap">
               <h3 style="color: var(--text-primary); font-size: 1.25rem; margin: 0;">Enrolled Students & Respective Subjects</h3>
               <span class="badge-gold" id="teacher-students-count-badge">0 Students Enrolled</span>
@@ -3883,19 +3864,8 @@
     <div id="view-teacher-schedule" class="app-page-view" style="display: none;">
       <div class="container portal-wrapper">
         <div id="teacher-banner-schedule"></div>
-        <div class="teacher-tab-header">
-              <div>
-                <span class="badge-gold">Calendar & Availability</span>
-                <h2 style="color: var(--text-primary); font-size: 1.6rem; margin-top: 0.35rem;">
-                  Schedule & Availability Management
-                </h2>
-                <p style="color: var(--text-secondary); font-size: 0.925rem; max-width: 800px; margin-top: 0.35rem; line-height: 1.55;">
-                  Interactive monthly schedule calendar. Click on any date to set or adjust your available schedule hours, and your upcoming classes will automatically appear directly on the calendar.
-                </p>
-              </div>
-            </div>
 
-            <!-- Schedule Legend & Quick Status -->
+        <!-- Schedule Legend & Quick Status -->
             <div class="schedule-legend-bar">
               <div class="schedule-legend-item">
                 <span class="legend-color-box slot-booked"></span>
@@ -3983,21 +3953,12 @@
       <div class="container portal-wrapper">
         <div id="teacher-banner-messages"></div>
         
-        <!-- Tab Header -->
-        <div class="teacher-tab-header" style="margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
-          <div>
-            <span class="badge-gold">Student Inquiries &amp; Live Chats</span>
-            <h2 class="portal-heading">Messages</h2>
-            <p class="portal-subheading" style="color: var(--text-secondary); margin-top: 0.25rem;">
-              This is where all of a student's chats can be found.
-            </p>
-          </div>
-          <div style="display: flex; align-items: center; gap: 0.75rem;">
-            <button type="button" class="btn btn-outline-gold btn-sm btn-tutor-presence-toggle" id="btn-tutor-presence-toggle-page" onclick="Teacher.toggleOnlinePresence()" title="Toggle your real-time messenger availability status" style="font-size: 0.8rem; padding: 0.4rem 0.85rem; color: #059669; border-color: rgba(16, 185, 129, 0.4);">
-              ● Online (Account Open)
-            </button>
-            <span class="badge-accent" id="teacher-messages-page-count-badge">0 Messages</span>
-          </div>
+        <!-- Presence & Status Toolbar -->
+        <div style="margin-bottom: 1.25rem; display: flex; justify-content: flex-end; align-items: center; gap: 0.75rem;">
+          <button type="button" class="btn btn-outline-gold btn-sm btn-tutor-presence-toggle" id="btn-tutor-presence-toggle-page" onclick="Teacher.toggleOnlinePresence()" title="Toggle your real-time messenger availability status" style="font-size: 0.8rem; padding: 0.4rem 0.85rem; color: #059669; border-color: rgba(16, 185, 129, 0.4);">
+            ● Online (Account Open)
+          </button>
+          <span class="badge-accent" id="teacher-messages-page-count-badge">0 Messages</span>
         </div>
 
         <!-- Filter & Search Toolbar -->

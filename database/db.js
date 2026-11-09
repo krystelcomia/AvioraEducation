@@ -194,6 +194,8 @@ function initSchema() {
       delivered_at DATETIME,
       read_at DATETIME,
       is_read INTEGER DEFAULT 0,
+      is_edited INTEGER DEFAULT 0,
+      edited_at DATETIME,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
@@ -407,6 +409,12 @@ function initSchema() {
       }
       if (!msgCols.some(c => c.name === 'read_at')) {
         db.prepare("ALTER TABLE messages ADD COLUMN read_at DATETIME").run();
+      }
+      if (!msgCols.some(c => c.name === 'is_edited')) {
+        db.prepare("ALTER TABLE messages ADD COLUMN is_edited INTEGER DEFAULT 0").run();
+      }
+      if (!msgCols.some(c => c.name === 'edited_at')) {
+        db.prepare("ALTER TABLE messages ADD COLUMN edited_at DATETIME").run();
       }
     }
   } catch (e) {}
@@ -1480,6 +1488,15 @@ function ensureJoshuaAccount(customPassword) {
           SET status = 'completed', room_status = 'ended', updated_at = CURRENT_TIMESTAMP
           WHERE id = ? AND (status != 'completed' OR room_status != 'ended')
         `).run(existingReq.id);
+      }
+
+      // Ensure conversation history with Krystel Comia exists and is preserved
+      const existingKrystelMsg = db.prepare('SELECT id FROM messages WHERE (sender_id = ? AND receiver_id = ?) OR (sender_id = ? AND receiver_id = ?)').get(krystel.id, userId, userId, krystel.id);
+      if (!existingKrystelMsg) {
+        db.prepare(`
+          INSERT INTO messages (sender_id, receiver_id, sender_name, sender_email, subject, content, status, is_read, created_at)
+          VALUES (?, ?, 'Krystel Comia', 'comiakrystel65@gmail.com', 'Calculus BC Question', 'heello', 'seen', 1, '2026-11-09 02:06:00')
+        `).run(krystel.id, userId);
       }
     }
 

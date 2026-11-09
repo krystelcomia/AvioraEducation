@@ -4869,12 +4869,13 @@ const Teacher = {
   },
 
   // ==========================================
-  // DIRECT STUDENT MESSAGES & REPLIES
+  // DIRECT STUDENT MESSAGES & MESSENGER HUB
   // ==========================================
   teacherMessages: [],
   teacherMessagesPollInterval: null,
   teacherMessageFilter: 'all',
   teacherMessageSearchQuery: '',
+  activeConversationKey: null,
 
   filterMessages(filterType, btnEl) {
     this.teacherMessageFilter = filterType;
@@ -4915,109 +4916,462 @@ const Teacher = {
     }
   },
 
+  getConversations() {
+    const convMap = new Map();
+    (this.teacherMessages || []).forEach(m => {
+      const key = String(m.student_id || m.sender_id || m.student_email || 'student');
+      if (!convMap.has(key)) {
+        convMap.set(key, {
+          id: m.student_id,
+          key: key,
+          name: m.student_name || 'Student',
+          email: m.student_email || '',
+          avatar: m.student_avatar || null,
+          messages: [],
+          unreadCount: 0,
+          lastMessage: null
+        });
+      }
+      const conv = convMap.get(key);
+      conv.messages.push(m);
+      if (m.sender_role === 'student' && Number(m.is_read) === 0) {
+        conv.unreadCount++;
+      }
+    });
+
+    const convs = Array.from(convMap.values());
+    convs.forEach(c => {
+      c.messages.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+      c.lastMessage = c.messages[c.messages.length - 1];
+    });
+
+    // Sort by latest message descending
+    convs.sort((a, b) => new Date(b.lastMessage?.created_at || 0) - new Date(a.lastMessage?.created_at || 0));
+    return convs;
+  },
+
+  selectConversation(convKey) {
+    this.activeConversationKey = convKey;
+    const conv = this.getConversations().find(c => c.key === convKey);
+    if (conv && conv.id) {
+      // Mark messages as read
+      API.markConversationRead(conv.id).catch(() => {});
+      (this.teacherMessages || []).forEach(m => {
+        if (m.student_id == conv.id || m.sender_id == conv.id) {
+          m.is_read = 1;
+          m.status = 'seen';
+        }
+      });
+    }
+    this.renderTeacherMessages();
+    setTimeout(() => {
+      this.scrollTeacherMessengerToBottom();
+      const input = document.getElementById('teacher-composer-input');
+      if (input) input.focus();
+    }, 100);
+  },
+
+  scrollTeacherMessengerToBottom() {
+    const stream = document.getElementById('teacher-messages-stream');
+    if (stream) {
+      stream.scrollTop = stream.scrollHeight;
+    }
+  },
+
   renderTeacherMessages() {
-    const dashboardTbody = document.getElementById('teacher-messages-table-body');
-    const pageTbody = document.getElementById('teacher-messages-page-tbody');
+    const convListEl = document.getElementById('teacher-messenger-conv-list');
+    const mainPaneEl = document.getElementById('teacher-messenger-main-pane');
     const countBadge = document.getElementById('teacher-messages-page-count-badge');
+    const dashboardTbody = document.getElementById('teacher-messages-table-body');
 
     const totalCount = (this.teacherMessages || []).length;
     if (countBadge) {
       countBadge.textContent = `${totalCount} ${totalCount === 1 ? 'Message' : 'Messages'}`;
     }
 
-    let filtered = this.teacherMessages || [];
+    let convs = this.getConversations();
+
+    // Filtering
     if (this.teacherMessageFilter === 'unread') {
-      filtered = filtered.filter(m => Number(m.is_read) === 0);
+      convs = convs.filter(c => c.unreadCount > 0);
     } else if (this.teacherMessageFilter === 'seen') {
-      filtered = filtered.filter(m => Number(m.is_read) === 1 || m.status === 'seen');
+      convs = convs.filter(c => c.unreadCount === 0);
     }
 
     const q = this.teacherMessageSearchQuery;
     if (q) {
-      filtered = filtered.filter(m => {
-        const sName = String(m.student_name || m.sender_name || '').toLowerCase();
-        const sEmail = String(m.student_email || m.sender_email || '').toLowerCase();
-        const sContent = String(m.content || '').toLowerCase();
-        return sName.includes(q) || sEmail.includes(q) || sContent.includes(q);
+      convs = convs.filter(c => {
+        const sName = String(c.name || '').toLowerCase();
+        const sEmail = String(c.email || '').toLowerCase();
+        const hasMatchingMsg = c.messages.some(m => String(m.content || '').toLowerCase().includes(q));
+        return sName.includes(q) || sEmail.includes(q) || hasMatchingMsg;
       });
     }
 
-    const renderEmpty = () => `
-      <tr>
-        <td colspan="5" style="text-align: center; padding: 3rem 1.5rem;">
-          <div style="color: var(--gold-700); margin-bottom: 0.5rem;">${Icons.message(28)}</div>
-          <h4 style="font-size: 1rem; font-weight: 700; color: var(--text-primary); margin: 0 0 0.35rem;">
-            ${q ? 'No Matching Student Chats' : 'No Direct Student Messages Yet'}
-          </h4>
-          <p style="font-size: 0.85rem; color: var(--text-secondary); max-width: 460px; margin: 0 auto;">
-            ${q ? 'Try searching with a different student name or keyword.' : "This is where all of a student's chats can be found. When students message you, their conversations will arrive here in real time for you to reply."}
+    // Default active conversation
+    if (!this.activeConversationKey && convs.length > 0) {
+      this.activeConversationKey = convs[0].key;
+    } else if (this.activeConversationKey && !convs.some(c => c.key === this.activeConversationKey) && convs.length > 0) {
+      this.activeConversationKey = convs[0].key;
+    }
+
+    // 1. Render Left Sidebar Conversations List
+    if (convListEl) {
+      if (convs.length === 0) {
+        convListEl.innerHTML = `
+          <div style="text-align: center; padding: 3rem 1.5rem; color: var(--text-secondary);">
+            <div style="color: var(--gold-600); margin-bottom: 0.5rem;">${Icons.message(28)}</div>
+            <h5 style="font-size: 0.95rem; font-weight: 700; color: var(--text-primary); margin: 0 0 0.35rem;">
+              ${q ? 'No Matching Chats' : 'No Messages Yet'}
+            </h5>
+            <p style="font-size: 0.8rem; margin: 0;">
+              ${q ? 'Try searching with a different name or keyword.' : 'When students reach out, their private 1-on-1 chats will appear here.'}
+            </p>
+          </div>
+        `;
+      } else {
+        convListEl.innerHTML = convs.map(c => {
+          const isActive = c.key === this.activeConversationKey;
+          const isUnread = c.unreadCount > 0;
+          const lastText = c.lastMessage ? (c.lastMessage.sender_role === 'teacher' ? 'You: ' + c.lastMessage.content : c.lastMessage.content) : 'Started a conversation';
+          const timeStr = c.lastMessage?.created_at ? new Date(c.lastMessage.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+
+          return `
+            <div class="messenger-conv-item ${isActive ? 'active' : ''} ${isUnread ? 'unread' : ''}" onclick="Teacher.selectConversation('${c.key}')">
+              <div class="messenger-conv-avatar-wrap">
+                ${c.avatar ? `
+                  <img src="${c.avatar}" alt="${this.escapeHtml(c.name)}" class="messenger-conv-avatar" />
+                ` : `
+                  <div class="messenger-conv-avatar">
+                    ${this.escapeHtml(c.name.charAt(0).toUpperCase())}
+                  </div>
+                `}
+                <span class="messenger-status-dot" style="bottom: -2px; right: -2px; border-color: var(--bg-card);" title="Active now"></span>
+              </div>
+              <div class="messenger-conv-details">
+                <div class="messenger-conv-name-row">
+                  <span class="messenger-conv-name">${this.escapeHtml(c.name)}</span>
+                  <span class="messenger-conv-time">${timeStr}</span>
+                </div>
+                <div class="messenger-conv-snippet-row">
+                  <span class="messenger-conv-snippet">${this.escapeHtml(lastText)}</span>
+                  ${isUnread ? `<span class="messenger-conv-badge"></span>` : ''}
+                </div>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+    }
+
+    // 2. Render Right Active Chat Pane
+    this.renderTeacherActiveConversation(mainPaneEl);
+
+    // 3. Render Dashboard Table / Recent Inquiries List
+    if (dashboardTbody) {
+      if (convs.length === 0) {
+        dashboardTbody.innerHTML = `
+          <tr>
+            <td colspan="5" style="text-align: center; padding: 2.5rem 1rem; color: var(--text-secondary);">
+              <div style="color: var(--gold-600); margin-bottom: 0.5rem;">${Icons.message(24)}</div>
+              <strong>No Direct Student Messages Yet</strong>
+            </td>
+          </tr>
+        `;
+      } else {
+        dashboardTbody.innerHTML = convs.map(c => {
+          const lastMsg = c.lastMessage;
+          const timeStr = lastMsg?.created_at ? new Date(lastMsg.created_at).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Recent';
+          const isSeen = c.unreadCount === 0;
+
+          return `
+            <tr>
+              <td>
+                <div style="display: flex; align-items: center; gap: 0.65rem;">
+                  <div style="width: 32px; height: 32px; border-radius: 50%; background: rgba(198, 138, 40, 0.15); display: flex; align-items: center; justify-content: center; font-weight: 700; color: var(--gold-800); font-size: 0.85rem; border: 1px solid var(--gold-400);">
+                    ${c.name.charAt(0).toUpperCase()}
+                  </div>
+                  <div>
+                    <strong style="color: var(--text-primary); font-size: 0.88rem; display: block;">${this.escapeHtml(c.name)}</strong>
+                    <div style="font-size: 0.74rem; color: var(--text-secondary);">${this.escapeHtml(c.email)}</div>
+                  </div>
+                </div>
+              </td>
+              <td style="max-width: 300px;">
+                <div style="font-size: 0.85rem; color: var(--text-primary); line-height: 1.45; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                  ${this.escapeHtml(lastMsg?.content || '')}
+                </div>
+              </td>
+              <td style="font-size: 0.8rem; color: var(--text-secondary); white-space: nowrap;">
+                ${timeStr}
+              </td>
+              <td>
+                ${isSeen 
+                  ? '<span class="badge-outline" style="font-size: 0.72rem; color: #059669; border-color: rgba(16, 185, 129, 0.4); background: rgba(16, 185, 129, 0.08); font-weight: 700;">Seen</span>' 
+                  : '<span class="badge-accent" style="font-size: 0.72rem; background: rgba(198, 138, 40, 0.18); font-weight: 700;">Unread</span>'}
+              </td>
+              <td style="text-align: right; white-space: nowrap;">
+                <a href="#teacher-messages" class="btn btn-outline-gold btn-sm" onclick="Teacher.selectConversation('${c.key}')" style="display: inline-flex; align-items: center; gap: 0.3rem;">
+                  ${Icons.message(13)}
+                  <span>Open Chat</span>
+                </a>
+              </td>
+            </tr>
+          `;
+        }).join('');
+      }
+    }
+  },
+
+  renderTeacherActiveConversation(container) {
+    if (!container) container = document.getElementById('teacher-messenger-main-pane');
+    if (!container) return;
+
+    const convs = this.getConversations();
+    const activeConv = convs.find(c => c.key === this.activeConversationKey);
+
+    if (!activeConv) {
+      container.innerHTML = `
+        <div class="messenger-empty-state">
+          <div style="color: var(--gold-600); margin-bottom: 0.75rem;">${Icons.message(44)}</div>
+          <h4 style="font-size: 1.15rem; font-weight: 700; color: var(--text-primary); margin: 0 0 0.4rem;">Select a Conversation</h4>
+          <p style="font-size: 0.88rem; color: var(--text-secondary); max-width: 340px; margin: 0;">
+            Choose a student from the left sidebar to view their full message history and reply in real time.
           </p>
-        </td>
-      </tr>
+        </div>
+      `;
+      return;
+    }
+
+    container.innerHTML = `
+      <!-- Active Conversation Header -->
+      <div class="messenger-active-header">
+        <div class="messenger-active-contact">
+          <div class="messenger-conv-avatar-wrap">
+            ${activeConv.avatar ? `
+              <img src="${activeConv.avatar}" alt="${this.escapeHtml(activeConv.name)}" class="messenger-header-avatar" />
+            ` : `
+              <div class="messenger-header-avatar" style="display: flex; align-items: center; justify-content: center; background: rgba(198, 138, 40, 0.15); font-weight: 700; color: var(--gold-700);">
+                ${this.escapeHtml(activeConv.name.charAt(0).toUpperCase())}
+              </div>
+            `}
+            <span class="messenger-status-dot" title="Active now"></span>
+          </div>
+          <div>
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+              <h4 style="margin: 0; font-size: 1.05rem; font-weight: 700; color: var(--text-primary);">${this.escapeHtml(activeConv.name)}</h4>
+              <span class="messenger-active-role-tag">Student</span>
+            </div>
+            <div class="messenger-header-status">
+              <span class="messenger-status-indicator">● Active now</span>
+              <span class="messenger-status-sep">•</span>
+              <span style="color: var(--text-secondary);">${this.escapeHtml(activeConv.email)}</span>
+            </div>
+          </div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <button type="button" class="btn btn-outline-gold btn-sm" onclick="Teacher.loadTeacherMessages()" title="Refresh Conversation" style="padding: 0.35rem 0.65rem;">
+            ${Icons.refresh(13)}
+          </button>
+        </div>
+      </div>
+
+      <!-- Messages Feed (Scrollable, All History Preserved) -->
+      <div class="messenger-body" id="teacher-messages-stream">
+        <div class="messenger-date-divider">
+          <span>Today</span>
+        </div>
+
+        <div class="messenger-thread">
+          ${activeConv.messages.map(m => {
+            const isMe = m.sender_role === 'teacher';
+            const timeStr = m.created_at ? new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+            const statusHtml = isMe ? (m.status === 'seen' || m.is_read === 1 ? '• Seen' : '• Delivered') : '';
+
+            if (!isMe) {
+              return `
+                <div class="messenger-message incoming" id="teacher-msg-row-${m.id}">
+                  <div class="messenger-conv-avatar-wrap" style="width: 32px; height: 32px;">
+                    ${activeConv.avatar ? `
+                      <img src="${activeConv.avatar}" alt="${this.escapeHtml(activeConv.name)}" class="messenger-avatar-small" />
+                    ` : `
+                      <div class="messenger-avatar-small" style="display: flex; align-items: center; justify-content: center; background: rgba(198, 138, 40, 0.15); font-size: 0.75rem; font-weight: 700; color: var(--gold-800);">
+                        ${this.escapeHtml(activeConv.name.charAt(0).toUpperCase())}
+                      </div>
+                    `}
+                  </div>
+                  <div class="messenger-bubble-wrap">
+                    <div class="messenger-bubble">
+                      <div class="messenger-bubble-sender">${this.escapeHtml(activeConv.name)}</div>
+                      <div class="messenger-bubble-text" id="teacher-msg-content-${m.id}">${this.escapeHtml(m.content)}</div>
+                      <div class="messenger-bubble-footer">
+                        <span>${timeStr}</span>
+                        ${m.is_edited ? '<span class="messenger-edited-tag">(edited)</span>' : ''}
+                        <button type="button" class="messenger-edit-btn" onclick="Teacher.startEditMessage(${m.id})" title="Edit message">
+                          ${Icons.edit(11)}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              `;
+            } else {
+              return `
+                <div class="messenger-message outgoing" id="teacher-msg-row-${m.id}">
+                  <div class="messenger-bubble-wrap">
+                    <div class="messenger-bubble">
+                      <div class="messenger-bubble-text" id="teacher-msg-content-${m.id}">${this.escapeHtml(m.content)}</div>
+                      <div class="messenger-bubble-footer">
+                        <span>${timeStr} ${statusHtml}</span>
+                        ${m.is_edited ? '<span class="messenger-edited-tag">(edited)</span>' : ''}
+                        <button type="button" class="messenger-edit-btn" onclick="Teacher.startEditMessage(${m.id})" title="Edit message">
+                          ${Icons.edit(11)}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              `;
+            }
+          }).join('')}
+        </div>
+      </div>
+
+      <!-- Message Composer Bar -->
+      <div class="messenger-footer">
+        <form class="messenger-composer-form" onsubmit="event.preventDefault(); Teacher.sendTeacherMessage();">
+          <div class="messenger-input-wrap">
+            <textarea 
+              id="teacher-composer-input" 
+              class="messenger-textarea" 
+              placeholder="Type a message to ${this.escapeHtml(activeConv.name)}..." 
+              rows="1"
+              onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault(); Teacher.sendTeacherMessage();}"
+            ></textarea>
+            <button type="submit" class="messenger-send-btn" id="teacher-send-msg-btn" title="Send Message (Enter)">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+              </svg>
+            </button>
+          </div>
+        </form>
+      </div>
     `;
 
-    const renderRow = (m) => {
-      const studentName = m.student_name || m.sender_name || 'Student';
-      const studentEmail = m.student_email || m.sender_email || '';
-      const timeStr = m.created_at ? new Date(m.created_at).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Recent';
-      const isUnread = Number(m.is_read) === 0;
+    setTimeout(() => this.scrollTeacherMessengerToBottom(), 50);
+  },
 
-      return `
-        <tr style="${isUnread ? 'background: rgba(198, 138, 40, 0.05);' : ''}">
-          <td>
-            <div style="display: flex; align-items: center; gap: 0.65rem;">
-              <div style="width: 34px; height: 34px; border-radius: 50%; background: rgba(198, 138, 40, 0.15); display: flex; align-items: center; justify-content: center; font-weight: 700; color: var(--gold-800); font-size: 0.85rem; border: 1px solid var(--gold-400);">
-                ${studentName.charAt(0).toUpperCase()}
-              </div>
-              <div>
-                <strong style="color: var(--text-primary); font-size: 0.88rem; display: block;">${this.escapeHtml(studentName)}</strong>
-                <div style="font-size: 0.74rem; color: var(--text-secondary);">${this.escapeHtml(studentEmail)}</div>
-              </div>
-            </div>
-          </td>
-          <td style="max-width: 320px;">
-            <div style="font-size: 0.85rem; color: var(--text-primary); line-height: 1.45; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;" title="${this.escapeHtml(m.content)}">
-              ${this.escapeHtml(m.content)}
-            </div>
-          </td>
-          <td style="font-size: 0.8rem; color: var(--text-secondary); white-space: nowrap;">
-            ${timeStr}
-          </td>
-          <td>
-            ${(() => {
-              if (m.is_read === 1 || m.status === 'seen') {
-                return '<span class="badge-outline" style="font-size: 0.72rem; color: #059669; border-color: rgba(16, 185, 129, 0.4); background: rgba(16, 185, 129, 0.08); font-weight: 700;">Seen</span>';
-              } else if (m.status === 'sent') {
-                return '<span class="badge-outline" style="font-size: 0.72rem; color: #6B7280; border-color: rgba(156, 163, 175, 0.4);">Sent</span>';
-              } else {
-                return '<span class="badge-accent" style="font-size: 0.72rem; background: rgba(198, 138, 40, 0.18); font-weight: 700;">Delivered</span>';
-              }
-            })()}
-          </td>
-          <td style="text-align: right; white-space: nowrap;">
-            <button type="button" class="btn btn-outline-gold btn-sm" onclick="Teacher.openReplyModal(${m.id}, ${m.sender_id || 'null'}, '${this.escapeHtml(studentName).replace(/'/g, "\\'")}', '${this.escapeHtml(m.content).replace(/'/g, "\\'").replace(/\n/g, ' ')}')">
-              ${Icons.message(13)}
-              <span>Reply</span>
-            </button>
-          </td>
-        </tr>
-      `;
+  async sendTeacherMessage() {
+    const input = document.getElementById('teacher-composer-input');
+    if (!input) return;
+    const text = input.value.trim();
+    if (!text) return;
+
+    const convs = this.getConversations();
+    const activeConv = convs.find(c => c.key === this.activeConversationKey);
+    if (!activeConv) return;
+
+    // Clear input immediately
+    input.value = '';
+    input.style.height = 'auto';
+
+    // Append to local state immediately
+    const tempMsg = {
+      id: 'temp-' + Date.now(),
+      sender_role: 'teacher',
+      student_id: activeConv.id,
+      content: text,
+      status: 'delivered',
+      is_read: 0,
+      is_edited: 0,
+      created_at: new Date().toISOString()
     };
+    this.teacherMessages.push(tempMsg);
+    this.renderTeacherMessages();
+    this.scrollTeacherMessengerToBottom();
 
-    const rowsHtml = filtered.length === 0 ? renderEmpty() : filtered.map(renderRow).join('');
+    try {
+      const res = await API.teacherReplyMessage({
+        student_id: activeConv.id,
+        message: text
+      });
 
-    if (dashboardTbody) {
-      dashboardTbody.innerHTML = rowsHtml;
+      if (res && res.data) {
+        tempMsg.id = res.data.id;
+        tempMsg.created_at = res.data.created_at;
+        tempMsg.status = res.data.status || 'delivered';
+      }
+    } catch (err) {
+      showToast(err.message || 'Failed to deliver message.', 'error');
     }
-    if (pageTbody) {
-      pageTbody.innerHTML = rowsHtml;
+  },
+
+  startEditMessage(messageId) {
+    const contentEl = document.getElementById(`teacher-msg-content-${messageId}`);
+    if (!contentEl) return;
+
+    const currentMsg = (this.teacherMessages || []).find(m => m.id == messageId);
+    const originalText = currentMsg ? currentMsg.content : contentEl.textContent.trim();
+
+    contentEl.innerHTML = `
+      <div class="messenger-inline-editor">
+        <textarea id="teacher-edit-input-${messageId}" class="messenger-inline-edit-input" rows="2">${this.escapeHtml(originalText)}</textarea>
+        <div class="messenger-inline-edit-actions">
+          <button type="button" class="btn btn-secondary btn-xs" onclick="Teacher.cancelEditMessage(${messageId}, '${this.escapeHtml(originalText).replace(/'/g, "\\'")}')">Cancel</button>
+          <button type="button" class="btn btn-primary btn-xs" onclick="Teacher.saveEditMessage(${messageId})">Save</button>
+        </div>
+      </div>
+    `;
+
+    setTimeout(() => {
+      const inp = document.getElementById(`teacher-edit-input-${messageId}`);
+      if (inp) {
+        inp.focus();
+        inp.setSelectionRange(inp.value.length, inp.value.length);
+      }
+    }, 50);
+  },
+
+  cancelEditMessage(messageId, originalText) {
+    const contentEl = document.getElementById(`teacher-msg-content-${messageId}`);
+    if (contentEl) {
+      contentEl.textContent = originalText;
+    }
+  },
+
+  async saveEditMessage(messageId) {
+    const input = document.getElementById(`teacher-edit-input-${messageId}`);
+    if (!input) return;
+    const newText = input.value.trim();
+    if (!newText) {
+      showToast('Message cannot be empty.', 'warning');
+      return;
+    }
+
+    try {
+      const res = await API.editMessage(messageId, newText);
+      const m = (this.teacherMessages || []).find(item => item.id == messageId);
+      if (m) {
+        m.content = newText;
+        m.is_edited = 1;
+        m.edited_at = new Date().toISOString();
+      }
+      showToast('Conversation message updated.', 'success');
+      this.renderTeacherMessages();
+    } catch (err) {
+      showToast(err.message || 'Failed to update message.', 'error');
     }
   },
 
   openReplyModal(messageId, studentId, studentName, content) {
+    // Switch to Messenger Hub and select this student's conversation
+    if (studentId) {
+      window.location.hash = '#teacher-messages';
+      this.selectConversation(String(studentId));
+      return;
+    }
     const modal = document.getElementById('modal-teacher-reply-message');
     if (!modal) return;
-
     const studentIdInput = document.getElementById('teacher-reply-student-id');
     const msgIdInput = document.getElementById('teacher-reply-orig-message-id');
     const nameLabel = document.getElementById('teacher-reply-orig-student-name');
@@ -5032,22 +5386,6 @@ const Teacher = {
       textarea.value = '';
       textarea.focus();
     }
-
-    // Real-Time Seen Status: Mark message as read/seen once tutor opens/reads it
-    if (messageId) {
-      try {
-        if (typeof API !== 'undefined' && API.markTeacherMessageRead) {
-          API.markTeacherMessageRead(messageId).catch(() => {});
-        }
-        const m = this.teacherMessages.find(item => item.id == messageId);
-        if (m) {
-          m.is_read = 1;
-          m.status = 'seen';
-          this.renderTeacherMessages();
-        }
-      } catch (e) {}
-    }
-
     this.openModal('modal-teacher-reply-message');
   },
 

@@ -1846,68 +1846,424 @@ const Student = {
     }
   },
 
-  // 1-on-1 Messages & Tutor Chats Page
+  // 1-on-1 Messages & Tutor Chats Page (Messenger Interface)
+  studentMessages: [],
+  activeTutorId: null,
+  studentMessageSearchQuery: '',
+  studentMessagesPollInterval: null,
+
+  searchMessages(query) {
+    this.studentMessageSearchQuery = (query || '').toLowerCase().trim();
+    this.renderStudentMessages();
+  },
+
   async loadMessagesPage() {
-    const container = document.getElementById('student-messages-container');
-    if (!container) return;
+    const hub = document.getElementById('student-messenger-hub');
+    if (!hub) return;
 
     if (!this.requests || this.requests.length === 0) {
-      await this.loadDashboard();
+      await this.loadDashboard().catch(() => {});
     }
 
-    const tutorMap = new Map();
+    try {
+      const res = await API.getStudentMessages();
+      this.studentMessages = res.messages || [];
+    } catch (e) {
+      console.warn('Could not load student messages:', e);
+    }
+
+    this.renderStudentMessages();
+
+    if (!this.studentMessagesPollInterval) {
+      this.studentMessagesPollInterval = setInterval(async () => {
+        const view = document.getElementById('view-student-messages');
+        if (view && view.style.display !== 'none') {
+          try {
+            const res = await API.getStudentMessages();
+            this.studentMessages = res.messages || [];
+            this.renderStudentMessages();
+          } catch (err) {}
+        }
+      }, 3000);
+    }
+  },
+
+  getTutorConversations() {
+    const convMap = new Map();
+
+    // 1. First add tutors from requests (students who booked lessons)
     (this.requests || []).forEach(r => {
-      if (r.tutor_id && !tutorMap.has(r.tutor_id)) {
-        tutorMap.set(r.tutor_id, {
-          id: r.tutor_id,
+      if (r.tutor_id && !convMap.has(String(r.tutor_id))) {
+        convMap.set(String(r.tutor_id), {
+          tutor_id: r.tutor_id,
           name: r.tutor_name || 'Academic Tutor',
           avatar: r.tutor_avatar,
-          subject: r.subject,
-          lastDate: r.requested_date,
-          lastTime: r.requested_time
+          subject: r.subject || 'Academic Mentor',
+          messages: [],
+          lastMessage: null,
+          unreadCount: 0
         });
       }
     });
 
-    const tutorsList = Array.from(tutorMap.values());
+    // 2. Add tutors from messages
+    (this.studentMessages || []).forEach(m => {
+      const tId = String(m.tutor_user_id || m.receiver_id || m.sender_id);
+      if (!convMap.has(tId)) {
+        convMap.set(tId, {
+          tutor_id: m.tutor_user_id || m.receiver_id,
+          name: m.tutor_name || 'Verified Educator',
+          avatar: m.tutor_avatar,
+          subject: m.tutor_headline || 'Educator',
+          messages: [],
+          lastMessage: null,
+          unreadCount: 0
+        });
+      }
+      const c = convMap.get(tId);
+      if (m.tutor_name && c.name === 'Academic Tutor') c.name = m.tutor_name;
+      if (m.tutor_avatar && !c.avatar) c.avatar = m.tutor_avatar;
+      c.messages.push(m);
+      if (m.sender_role === 'tutor' && Number(m.is_read) === 0) {
+        c.unreadCount++;
+      }
+    });
 
-    if (tutorsList.length === 0) {
-      container.innerHTML = `
-        <div style="grid-column: 1 / -1; text-align: center; padding: 4rem 1.5rem; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-xl);">
-          <div style="color: var(--gold-600); margin-bottom: 0.75rem;">${Icons.message(40)}</div>
-          <h3 style="color: var(--text-primary); font-size: 1.25rem;">No Direct Chats Yet</h3>
-          <p style="color: var(--text-secondary); font-size: 0.9rem; max-width: 480px; margin: 0.5rem auto 1.5rem;">
-            This is where all of a student's chats can be found. You can chat 1-on-1 with any verified educator before or after booking lessons.
+    const convs = Array.from(convMap.values());
+    convs.forEach(c => {
+      c.messages.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+      c.lastMessage = c.messages[c.messages.length - 1];
+    });
+
+    convs.sort((a, b) => new Date(b.lastMessage?.created_at || 0) - new Date(a.lastMessage?.created_at || 0));
+    return convs;
+  },
+
+  selectTutorConversation(tutorId) {
+    this.activeTutorId = String(tutorId);
+    API.markConversationRead(tutorId).catch(() => {});
+    (this.studentMessages || []).forEach(m => {
+      if (m.tutor_user_id == tutorId || m.sender_id == tutorId) {
+        m.is_read = 1;
+        m.status = 'seen';
+      }
+    });
+    this.renderStudentMessages();
+    setTimeout(() => {
+      this.scrollStudentMessengerToBottom();
+      const inp = document.getElementById('student-composer-input');
+      if (inp) inp.focus();
+    }, 80);
+  },
+
+  scrollStudentMessengerToBottom() {
+    const stream = document.getElementById('student-messages-stream');
+    if (stream) {
+      stream.scrollTop = stream.scrollHeight;
+    }
+  },
+
+  renderStudentMessages() {
+    const listEl = document.getElementById('student-messenger-conv-list');
+    const mainEl = document.getElementById('student-messenger-main-pane');
+    if (!listEl || !mainEl) return;
+
+    let convs = this.getTutorConversations();
+    const q = this.studentMessageSearchQuery;
+    if (q) {
+      convs = convs.filter(c => {
+        const sName = String(c.name || '').toLowerCase();
+        const sSub = String(c.subject || '').toLowerCase();
+        const hasMsg = c.messages.some(m => String(m.content || '').toLowerCase().includes(q));
+        return sName.includes(q) || sSub.includes(q) || hasMsg;
+      });
+    }
+
+    if (!this.activeTutorId && convs.length > 0) {
+      this.activeTutorId = String(convs[0].tutor_id);
+    } else if (this.activeTutorId && !convs.some(c => String(c.tutor_id) === this.activeTutorId) && convs.length > 0) {
+      this.activeTutorId = String(convs[0].tutor_id);
+    }
+
+    // 1. Render Left Sidebar
+    if (convs.length === 0) {
+      listEl.innerHTML = `
+        <div style="text-align: center; padding: 3rem 1rem; color: var(--text-secondary);">
+          <div style="color: var(--gold-600); margin-bottom: 0.5rem;">${Icons.message(30)}</div>
+          <h5 style="font-size: 0.95rem; font-weight: 700; color: var(--text-primary); margin: 0 0 0.35rem;">
+            ${q ? 'No Matching Chats' : 'No Conversations Yet'}
+          </h5>
+          <p style="font-size: 0.8rem; margin: 0 0 1rem;">
+            Connect 1-on-1 with verified academic mentors.
           </p>
-          <a href="#tutors" class="btn btn-primary btn-sm" style="display: inline-flex; align-items: center; gap: 0.35rem;">
-            Explore Verified Tutors →
-          </a>
+          <a href="#tutors" class="btn btn-primary btn-xs">Browse Tutors</a>
+        </div>
+      `;
+    } else {
+      listEl.innerHTML = convs.map(c => {
+        const isActive = String(c.tutor_id) === this.activeTutorId;
+        const isUnread = c.unreadCount > 0;
+        const lastText = c.lastMessage ? (c.lastMessage.sender_role === 'student' ? 'You: ' + c.lastMessage.content : c.lastMessage.content) : 'Start a conversation';
+        const timeStr = c.lastMessage?.created_at ? new Date(c.lastMessage.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+
+        return `
+          <div class="messenger-conv-item ${isActive ? 'active' : ''} ${isUnread ? 'unread' : ''}" onclick="Student.selectTutorConversation('${c.tutor_id}')">
+            <div class="messenger-conv-avatar-wrap">
+              <img src="${c.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80'}" alt="${this.escapeHtml(c.name)}" class="messenger-conv-avatar" />
+              <span class="messenger-status-dot" style="bottom: -2px; right: -2px; border-color: var(--bg-card);" title="Active now"></span>
+            </div>
+            <div class="messenger-conv-details">
+              <div class="messenger-conv-name-row">
+                <span class="messenger-conv-name">${this.escapeHtml(c.name)}</span>
+                <span class="messenger-conv-time">${timeStr}</span>
+              </div>
+              <div class="messenger-conv-snippet-row">
+                <span class="messenger-conv-snippet">${this.escapeHtml(lastText)}</span>
+                ${isUnread ? `<span class="messenger-conv-badge"></span>` : ''}
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // 2. Render Right Active Pane
+    this.renderStudentActiveConversation(mainEl);
+  },
+
+  renderStudentActiveConversation(container) {
+    if (!container) container = document.getElementById('student-messenger-main-pane');
+    if (!container) return;
+
+    const convs = this.getTutorConversations();
+    const activeConv = convs.find(c => String(c.tutor_id) === this.activeTutorId);
+
+    if (!activeConv) {
+      container.innerHTML = `
+        <div class="messenger-empty-state">
+          <div style="color: var(--gold-600); margin-bottom: 0.75rem;">${Icons.message(44)}</div>
+          <h4 style="font-size: 1.15rem; font-weight: 700; color: var(--text-primary); margin: 0 0 0.4rem;">Select an Educator</h4>
+          <p style="font-size: 0.88rem; color: var(--text-secondary); max-width: 340px; margin: 0;">
+            Choose a tutor from the sidebar to view your conversation history or ask questions.
+          </p>
         </div>
       `;
       return;
     }
 
-    container.innerHTML = tutorsList.map(t => `
-      <div class="teacher-student-card" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: 1.25rem; display: flex; flex-direction: column; justify-content: space-between; gap: 1rem;">
-        <div style="display: flex; align-items: center; gap: 0.85rem;">
-          <img src="${t.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80'}" alt="${escapeHtmlStr(t.name)}" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 1.5px solid var(--gold-400);" />
-          <div style="flex: 1; min-width: 0;">
-            <h4 style="margin: 0 0 0.15rem; font-size: 1rem; color: var(--text-primary); font-weight: 700;">${escapeHtmlStr(t.name)}</h4>
-            <div style="font-size: 0.78rem; color: var(--text-secondary);">${escapeHtmlStr(t.subject || 'Verified Educator')}</div>
-            <div style="font-size: 0.74rem; color: #059669; font-weight: 600; margin-top: 0.15rem; display: inline-flex; align-items: center; gap: 0.3rem;">
-              <span style="width: 6px; height: 6px; border-radius: 50%; background: #10B981;"></span> Direct 1-on-1 Messenger Available
+    container.innerHTML = `
+      <!-- Active Header -->
+      <div class="messenger-active-header">
+        <div class="messenger-active-contact">
+          <div class="messenger-conv-avatar-wrap">
+            <img src="${activeConv.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80'}" alt="${this.escapeHtml(activeConv.name)}" class="messenger-header-avatar" />
+            <span class="messenger-status-dot" title="Active now"></span>
+          </div>
+          <div>
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+              <h4 style="margin: 0; font-size: 1.05rem; font-weight: 700; color: var(--text-primary);">${this.escapeHtml(activeConv.name)}</h4>
+              <span class="messenger-active-role-tag">Tutor</span>
+            </div>
+            <div class="messenger-header-status">
+              <span class="messenger-status-indicator">● Active now</span>
+              <span class="messenger-status-sep">•</span>
+              <span style="color: var(--text-secondary);">${this.escapeHtml(activeConv.subject || 'Verified Academic Specialist')}</span>
             </div>
           </div>
         </div>
-        <div style="padding-top: 0.75rem; border-top: 1px solid var(--border-color); display: flex; gap: 0.5rem;">
-          <button type="button" class="btn btn-primary btn-sm" style="flex: 1; justify-content: center; display: inline-flex; align-items: center; gap: 0.35rem;" onclick="Tutors.openMessageModal(${t.id})">
-            ${Icons.message(14)} Open Chat
-          </button>
-          <a href="#tutor-profile?id=${t.id}" class="btn btn-outline-gold btn-sm" style="display: inline-flex; align-items: center;">
-            Profile
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <a href="#tutor-profile?id=${activeConv.tutor_id}" class="btn btn-outline-gold btn-sm" style="display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.35rem 0.75rem;">
+            View Profile
           </a>
         </div>
       </div>
-    `).join('');
+
+      <!-- Messages Feed (All History Preserved) -->
+      <div class="messenger-body" id="student-messages-stream">
+        <div class="messenger-date-divider">
+          <span>Today</span>
+        </div>
+
+        <div class="messenger-thread">
+          ${activeConv.messages.length === 0 ? `
+            <div style="text-align: center; padding: 3rem 1rem; color: var(--text-secondary);">
+              <p style="font-size: 0.88rem; margin: 0 0 0.5rem;">Say hello to <strong>${this.escapeHtml(activeConv.name)}</strong>!</p>
+              <span style="font-size: 0.8rem;">Ask about session prep, homework help, or study plans.</span>
+            </div>
+          ` : activeConv.messages.map(m => {
+            const isMe = m.sender_role === 'student' || m.sender === 'student';
+            const timeStr = m.created_at ? new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : (m.time || '');
+            const statusHtml = isMe ? (m.status === 'seen' || m.is_read === 1 ? '• Seen' : '• Delivered') : '';
+
+            if (!isMe) {
+              return `
+                <div class="messenger-message incoming" id="student-msg-row-${m.id}">
+                  <div class="messenger-conv-avatar-wrap" style="width: 32px; height: 32px;">
+                    <img src="${activeConv.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=80&q=80'}" alt="${this.escapeHtml(activeConv.name)}" class="messenger-avatar-small" />
+                  </div>
+                  <div class="messenger-bubble-wrap">
+                    <div class="messenger-bubble">
+                      <div class="messenger-bubble-sender">${this.escapeHtml(activeConv.name)}</div>
+                      <div class="messenger-bubble-text" id="student-msg-content-${m.id}">${this.escapeHtml(m.content || m.text || '')}</div>
+                      <div class="messenger-bubble-footer">
+                        <span>${timeStr}</span>
+                        ${m.is_edited ? '<span class="messenger-edited-tag">(edited)</span>' : ''}
+                        <button type="button" class="messenger-edit-btn" onclick="Student.startEditMessage(${m.id})" title="Edit message">
+                          ${Icons.edit(11)}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              `;
+            } else {
+              return `
+                <div class="messenger-message outgoing" id="student-msg-row-${m.id}">
+                  <div class="messenger-bubble-wrap">
+                    <div class="messenger-bubble">
+                      <div class="messenger-bubble-text" id="student-msg-content-${m.id}">${this.escapeHtml(m.content || m.text || '')}</div>
+                      <div class="messenger-bubble-footer">
+                        <span>${timeStr} ${statusHtml}</span>
+                        ${m.is_edited ? '<span class="messenger-edited-tag">(edited)</span>' : ''}
+                        <button type="button" class="messenger-edit-btn" onclick="Student.startEditMessage(${m.id})" title="Edit message">
+                          ${Icons.edit(11)}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              `;
+            }
+          }).join('')}
+        </div>
+      </div>
+
+      <!-- Message Composer Bar -->
+      <div class="messenger-footer">
+        <form class="messenger-composer-form" onsubmit="event.preventDefault(); Student.sendStudentMessage();">
+          <div class="messenger-input-wrap">
+            <textarea 
+              id="student-composer-input" 
+              class="messenger-textarea" 
+              placeholder="Type a message to ${this.escapeHtml(activeConv.name)}..." 
+              rows="1"
+              onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault(); Student.sendStudentMessage();}"
+            ></textarea>
+            <button type="submit" class="messenger-send-btn" id="student-send-msg-btn" title="Send Message (Enter)">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+              </svg>
+            </button>
+          </div>
+        </form>
+      </div>
+    `;
+
+    setTimeout(() => this.scrollStudentMessengerToBottom(), 50);
+  },
+
+  async sendStudentMessage() {
+    const input = document.getElementById('student-composer-input');
+    if (!input) return;
+    const text = input.value.trim();
+    if (!text) return;
+
+    const convs = this.getTutorConversations();
+    const activeConv = convs.find(c => String(c.tutor_id) === this.activeTutorId);
+    if (!activeConv) return;
+
+    input.value = '';
+    input.style.height = 'auto';
+
+    const tempMsg = {
+      id: 'temp-' + Date.now(),
+      sender_role: 'student',
+      tutor_user_id: activeConv.tutor_id,
+      content: text,
+      status: 'delivered',
+      is_read: 0,
+      is_edited: 0,
+      created_at: new Date().toISOString()
+    };
+    this.studentMessages.push(tempMsg);
+    this.renderStudentMessages();
+    this.scrollStudentMessengerToBottom();
+
+    try {
+      const user = Auth.currentUser;
+      const res = await API.sendMessageToTutor(activeConv.tutor_id, {
+        name: user?.name || 'Student',
+        email: user?.email || '',
+        subject: `Direct Mentorship Chat`,
+        message: text
+      });
+
+      if (res && res.message) {
+        tempMsg.id = res.message.id;
+        tempMsg.created_at = res.message.created_at || tempMsg.created_at;
+      }
+    } catch (err) {
+      showToast(err.message || 'Failed to send message.', 'error');
+    }
+  },
+
+  startEditMessage(messageId) {
+    const contentEl = document.getElementById(`student-msg-content-${messageId}`);
+    if (!contentEl) return;
+
+    const currentMsg = (this.studentMessages || []).find(m => m.id == messageId);
+    const originalText = currentMsg ? (currentMsg.content || currentMsg.text) : contentEl.textContent.trim();
+
+    contentEl.innerHTML = `
+      <div class="messenger-inline-editor">
+        <textarea id="student-edit-input-${messageId}" class="messenger-inline-edit-input" rows="2">${this.escapeHtml(originalText)}</textarea>
+        <div class="messenger-inline-edit-actions">
+          <button type="button" class="btn btn-secondary btn-xs" onclick="Student.cancelEditMessage(${messageId}, '${this.escapeHtml(originalText).replace(/'/g, "\\'")}')">Cancel</button>
+          <button type="button" class="btn btn-primary btn-xs" onclick="Student.saveEditMessage(${messageId})">Save</button>
+        </div>
+      </div>
+    `;
+
+    setTimeout(() => {
+      const inp = document.getElementById(`student-edit-input-${messageId}`);
+      if (inp) {
+        inp.focus();
+        inp.setSelectionRange(inp.value.length, inp.value.length);
+      }
+    }, 50);
+  },
+
+  cancelEditMessage(messageId, originalText) {
+    const contentEl = document.getElementById(`student-msg-content-${messageId}`);
+    if (contentEl) {
+      contentEl.textContent = originalText;
+    }
+  },
+
+  async saveEditMessage(messageId) {
+    const input = document.getElementById(`student-edit-input-${messageId}`);
+    if (!input) return;
+    const newText = input.value.trim();
+    if (!newText) {
+      showToast('Message cannot be empty.', 'warning');
+      return;
+    }
+
+    try {
+      await API.editMessage(messageId, newText);
+      const m = (this.studentMessages || []).find(item => item.id == messageId);
+      if (m) {
+        m.content = newText;
+        m.text = newText;
+        m.is_edited = 1;
+        m.edited_at = new Date().toISOString();
+      }
+      showToast('Conversation message updated.', 'success');
+      this.renderStudentMessages();
+    } catch (err) {
+      showToast(err.message || 'Failed to update message.', 'error');
+    }
   }
 };
+
+window.Student = Student;

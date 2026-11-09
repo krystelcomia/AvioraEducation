@@ -3197,10 +3197,10 @@ app.get('/api/tutors/:id/messages', (req, res) => {
       rows = db.prepare(`
         SELECT m.*
         FROM messages m
-        WHERE (m.sender_id = ? AND m.receiver_id = ?)
-           OR (m.sender_id = ? AND m.receiver_id = ?)
+        WHERE ((m.sender_id = ? OR (m.sender_id IS NULL AND m.sender_email = ?)) AND m.receiver_id = ?)
+           OR (m.sender_id = ? AND (m.receiver_id = ? OR (m.receiver_id IS NULL AND m.sender_email = ?)))
         ORDER BY m.created_at ASC
-      `).all(currentUserId, tutor.user_id, tutor.user_id, currentUserId);
+      `).all(currentUserId, currentUserEmail || '', tutor.user_id, tutor.user_id, currentUserId, currentUserEmail || '');
 
       // Mark incoming messages to the current user as read
       db.prepare(`
@@ -3234,7 +3234,9 @@ app.get('/api/tutors/:id/messages', (req, res) => {
         time: new Date(r.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         created_at: r.created_at,
         status: msgStatus,
-        is_read: r.is_read
+        is_read: r.is_read,
+        is_edited: r.is_edited ? 1 : 0,
+        edited_at: r.edited_at
       };
     });
 
@@ -3285,6 +3287,8 @@ app.post('/api/tutors/:id/messages', (req, res) => {
           senderName = user.name;
           senderEmail = user.email;
           markUserActive(senderId);
+          // Permanently link any previous messages from this email to the user id so history is preserved
+          db.prepare('UPDATE messages SET sender_id = ? WHERE sender_id IS NULL AND sender_email = ?').run(senderId, user.email);
         }
       } catch (e) {}
     }
@@ -4372,22 +4376,53 @@ app.post('/api/student/requests/:id/review', authenticateToken, requireRole('stu
 // TEACHER & TUTOR PORTAL ROUTES
 // ==========================================
 
-// Direct Student Messages for Teacher (Real-Time Inquiries)
+// Direct Student Messages for Teacher (Real-Time Inquiries & Full Conversation History)
 app.get('/api/teacher/messages', authenticateToken, requireRole('tutor'), (req, res) => {
   try {
     const teacherId = req.user.id;
 
-    const messages = db.prepare(`
+    // Fetch all conversation messages involving the teacher (both received and sent)
+    const rows = db.prepare(`
       SELECT 
         m.*,
-        u.name as student_name,
-        u.avatar_url as student_avatar,
-        u.email as student_email
+        CASE WHEN m.sender_id = ? THEN 'teacher' ELSE 'student' END as sender_role,
+        CASE WHEN m.sender_id = ? THEN m.receiver_id ELSE m.sender_id END as other_user_id,
+        u_other.name as other_name,
+        u_other.avatar_url as other_avatar,
+        u_other.email as other_email
       FROM messages m
-      LEFT JOIN users u ON u.id = m.sender_id
-      WHERE m.receiver_id = ?
-      ORDER BY m.created_at DESC
-    `).all(teacherId);
+      LEFT JOIN users u_other ON u_other.id = (CASE WHEN m.sender_id = ? THEN m.receiver_id ELSE m.sender_id END)
+      WHERE m.receiver_id = ? OR m.sender_id = ?
+      ORDER BY m.created_at ASC
+    `).all(teacherId, teacherId, teacherId, teacherId, teacherId);
+
+    const messages = rows.map(r => {
+      const isTeacher = r.sender_role === 'teacher';
+      const studentName = isTeacher ? (r.other_name || 'Student') : (r.other_name || r.sender_name || 'Student');
+      const studentEmail = isTeacher ? (r.other_email || '') : (r.other_email || r.sender_email || '');
+      const studentAvatar = r.other_avatar || null;
+      const studentId = r.other_user_id || (isTeacher ? r.receiver_id : r.sender_id);
+
+      return {
+        id: r.id,
+        sender_id: r.sender_id,
+        receiver_id: r.receiver_id,
+        sender_role: r.sender_role,
+        student_id: studentId,
+        student_name: studentName,
+        student_email: studentEmail,
+        student_avatar: studentAvatar,
+        sender_name: r.sender_name,
+        subject: r.subject,
+        content: r.content,
+        status: r.status || 'sent',
+        is_read: r.is_read,
+        is_edited: r.is_edited ? 1 : 0,
+        edited_at: r.edited_at,
+        created_at: r.created_at,
+        time: r.created_at ? new Date(r.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''
+      };
+    });
 
     res.json({ messages });
   } catch (error) {
@@ -4396,7 +4431,7 @@ app.get('/api/teacher/messages', authenticateToken, requireRole('tutor'), (req, 
   }
 });
 
-// Teacher Reply to Student Message
+// Teacher Reply to Student Message (Real-Time Messenger Delivery)
 app.post('/api/teacher/messages/reply', authenticateToken, requireRole('tutor'), (req, res) => {
   try {
     const teacherId = req.user.id;
@@ -4418,10 +4453,10 @@ app.post('/api/teacher/messages/reply', authenticateToken, requireRole('tutor'),
       return res.status(400).json({ error: 'Cannot reply: Student ID is unknown.' });
     }
 
-    // Insert real reply from this tutor
+    // Insert real reply from this tutor with status 'delivered'
     const info = db.prepare(`
-      INSERT INTO messages (sender_id, receiver_id, sender_name, sender_email, subject, content, is_read)
-      VALUES (?, ?, ?, ?, ?, ?, 0)
+      INSERT INTO messages (sender_id, receiver_id, sender_name, sender_email, subject, content, status, delivered_at, is_read, is_edited)
+      VALUES (?, ?, ?, ?, ?, ?, 'delivered', CURRENT_TIMESTAMP, 0, 0)
     `).run(
       teacherId,
       targetStudentId,
@@ -4431,10 +4466,8 @@ app.post('/api/teacher/messages/reply', authenticateToken, requireRole('tutor'),
       message.trim()
     );
 
-    // Mark original message as read
-    if (message_id) {
-      db.prepare("UPDATE messages SET is_read = 1, read_at = CURRENT_TIMESTAMP, status = 'seen' WHERE id = ?").run(message_id);
-    }
+    // Mark previous incoming messages from this student to teacher as seen
+    db.prepare("UPDATE messages SET is_read = 1, read_at = CURRENT_TIMESTAMP, status = 'seen' WHERE receiver_id = ? AND sender_id = ?").run(teacherId, targetStudentId);
 
     // Real-time notification to the student
     sendNotification(
@@ -4442,17 +4475,123 @@ app.post('/api/teacher/messages/reply', authenticateToken, requireRole('tutor'),
       `New Message from ${teacherUser.name}`,
       message.trim().substring(0, 120) + (message.length > 120 ? '...' : ''),
       'message',
-      '#tutors'
+      '#student-messages'
     );
+
+    const insertedMsg = db.prepare('SELECT * FROM messages WHERE id = ?').get(info.lastInsertRowid);
 
     res.json({
       success: true,
       messageId: info.lastInsertRowid,
-      message: 'Reply delivered directly to the student in real time.'
+      message: 'Reply delivered directly to the student in real time.',
+      data: {
+        ...insertedMsg,
+        time: new Date(insertedMsg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      }
     });
   } catch (error) {
     console.error('Teacher reply message error:', error);
     res.status(500).json({ error: 'Failed to send reply: ' + error.message });
+  }
+});
+
+// Edit Message Content (Messenger Conversation Editing)
+const handleEditMessageEndpoint = (req, res) => {
+  try {
+    const messageId = req.params.id;
+    const { content } = req.body;
+    const userId = req.user.id;
+
+    if (!content || !content.trim()) {
+      return res.status(400).json({ error: 'Message content cannot be empty.' });
+    }
+
+    const msg = db.prepare('SELECT * FROM messages WHERE id = ?').get(messageId);
+    if (!msg) {
+      return res.status(404).json({ error: 'Message not found.' });
+    }
+
+    // Allow sender, or participating party / admin to edit
+    if (msg.sender_id !== userId && msg.receiver_id !== userId && req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'You do not have permission to edit this message.' });
+    }
+
+    db.prepare(`
+      UPDATE messages 
+      SET content = ?, is_edited = 1, edited_at = CURRENT_TIMESTAMP 
+      WHERE id = ?
+    `).run(content.trim(), messageId);
+
+    const updated = db.prepare('SELECT * FROM messages WHERE id = ?').get(messageId);
+
+    res.json({
+      success: true,
+      message: 'Message updated successfully.',
+      data: {
+        ...updated,
+        time: new Date(updated.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      }
+    });
+  } catch (error) {
+    console.error('Edit message error:', error);
+    res.status(500).json({ error: 'Failed to edit message: ' + error.message });
+  }
+};
+
+app.post('/api/messages/:id/edit', authenticateToken, handleEditMessageEndpoint);
+app.put('/api/messages/:id', authenticateToken, handleEditMessageEndpoint);
+
+// Student All Direct Messages (Real-Time Messenger Feed)
+app.get('/api/student/messages', authenticateToken, (req, res) => {
+  try {
+    const studentId = req.user.id;
+    const studentEmail = req.user.email;
+
+    const rows = db.prepare(`
+      SELECT 
+        m.*,
+        CASE WHEN m.sender_id = ? THEN 'student' ELSE 'tutor' END as sender_role,
+        CASE WHEN m.sender_id = ? THEN m.receiver_id ELSE m.sender_id END as tutor_user_id,
+        u_tutor.name as tutor_name,
+        u_tutor.avatar_url as tutor_avatar,
+        u_tutor.email as tutor_email,
+        tp.id as tutor_profile_id,
+        tp.headline as tutor_headline
+      FROM messages m
+      LEFT JOIN users u_tutor ON u_tutor.id = (CASE WHEN m.sender_id = ? THEN m.receiver_id ELSE m.sender_id END)
+      LEFT JOIN tutor_profiles tp ON tp.user_id = u_tutor.id
+      WHERE (m.receiver_id = ? OR m.sender_id = ? OR (m.sender_id IS NULL AND m.sender_email = ?))
+      ORDER BY m.created_at ASC
+    `).all(studentId, studentId, studentId, studentId, studentId, studentEmail || '');
+
+    const messages = rows.map(r => ({
+      ...r,
+      is_edited: r.is_edited ? 1 : 0,
+      time: r.created_at ? new Date(r.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''
+    }));
+
+    res.json({ messages });
+  } catch (error) {
+    console.error('Student get messages error:', error);
+    res.status(500).json({ error: 'Failed to fetch student messages.' });
+  }
+});
+
+// Mark conversation messages as read
+app.post('/api/messages/mark-read', authenticateToken, (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { partner_id } = req.body;
+    if (partner_id) {
+      db.prepare(`
+        UPDATE messages 
+        SET is_read = 1, read_at = CURRENT_TIMESTAMP, status = 'seen' 
+        WHERE receiver_id = ? AND sender_id = ? AND is_read = 0
+      `).run(userId, partner_id);
+    }
+    res.json({ success: true });
+  } catch (e) {
+    res.json({ success: false });
   }
 });
 

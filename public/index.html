@@ -2812,15 +2812,39 @@
          ======================================= -->
     <div id="view-student-messages" class="app-page-view" style="display: none;">
       <div class="container portal-wrapper">
-        <div style="margin-bottom: 1.25rem; display: flex; justify-content: flex-end; align-items: center;">
+        <div style="margin-bottom: 1rem; display: flex; justify-content: flex-end; align-items: center; gap: 0.75rem;">
           <a href="#tutors" class="btn btn-outline-gold btn-sm" style="display: inline-flex; align-items: center; gap: 0.35rem; text-decoration: none;">
             Find More Tutors →
           </a>
         </div>
 
-        <div id="student-messages-container" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.25rem;">
-          <!-- Populated via Student.loadMessagesPage() -->
+        <!-- Messenger 2-Column Interface for Student -->
+        <div class="messenger-hub" id="student-messenger-hub">
+          <!-- Left Sidebar: Educators List -->
+          <div class="messenger-hub-sidebar">
+            <div class="messenger-sidebar-header">
+              <div class="messenger-sidebar-title-row">
+                <h3 class="messenger-sidebar-title">Chats</h3>
+              </div>
+              <div class="messenger-search-wrap">
+                <span class="messenger-search-icon">🔍</span>
+                <input type="text" id="student-messages-search-input" class="messenger-search-input" placeholder="Search chats by tutor name or message..." oninput="Student.searchMessages(this.value)" />
+              </div>
+            </div>
+
+            <!-- Tutors / Conversations List -->
+            <div class="messenger-conv-list" id="student-messenger-conv-list">
+              <!-- Dynamically populated via Student.renderStudentMessages() -->
+            </div>
+          </div>
+
+          <!-- Right Column: Active Conversation Thread -->
+          <div class="messenger-hub-main" id="student-messenger-main-pane">
+            <!-- Dynamically populated via Student.renderStudentActiveConversation() -->
+          </div>
         </div>
+
+        <div id="student-messages-container" style="display: none;"></div>
       </div>
     </div><!-- END VIEW 3D: STUDENT MESSAGES -->
 
@@ -3977,43 +4001,41 @@
         <div id="teacher-banner-messages"></div>
         
         <!-- Presence & Status Toolbar -->
-        <div style="margin-bottom: 1.25rem; display: flex; justify-content: flex-end; align-items: center; gap: 0.75rem;">
+        <div style="margin-bottom: 1rem; display: flex; justify-content: flex-end; align-items: center; gap: 0.75rem;">
           <button type="button" class="btn btn-outline-gold btn-sm btn-tutor-presence-toggle" id="btn-tutor-presence-toggle-page" onclick="Teacher.toggleOnlinePresence()" title="Toggle your real-time messenger availability status" style="font-size: 0.8rem; padding: 0.4rem 0.85rem; color: #059669; border-color: rgba(16, 185, 129, 0.4);">
             ● Online (Account Open)
           </button>
           <span class="badge-accent" id="teacher-messages-page-count-badge">0 Messages</span>
         </div>
 
-        <!-- Filter & Search Toolbar -->
-        <div class="table-toolbar" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: 1rem 1.25rem; margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
-          <div style="flex: 1; min-width: 260px; max-width: 480px; position: relative;">
-            <input type="text" id="teacher-messages-search-input" class="form-control" placeholder="Search chats by student name, email, or message..." oninput="Teacher.searchMessages(this.value)" style="padding-left: 2.25rem; font-size: 0.88rem;" />
-            <span style="position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); color: var(--text-secondary); pointer-events: none;">🔍</span>
-          </div>
-          <div style="display: flex; align-items: center; gap: 0.5rem;">
-            <button type="button" class="btn btn-sm teacher-msg-filter-btn active" data-filter="all" onclick="Teacher.filterMessages('all', this)">All Chats</button>
-            <button type="button" class="btn btn-sm teacher-msg-filter-btn" data-filter="unread" onclick="Teacher.filterMessages('unread', this)">Unread</button>
-            <button type="button" class="btn btn-sm teacher-msg-filter-btn" data-filter="seen" onclick="Teacher.filterMessages('seen', this)">Seen</button>
-          </div>
-        </div>
+        <!-- Messenger 2-Column Interface (Facebook Messenger Style) -->
+        <div class="messenger-hub" id="teacher-messenger-hub">
+          <!-- Left Sidebar: Conversations List -->
+          <div class="messenger-hub-sidebar">
+            <div class="messenger-sidebar-header">
+              <div class="messenger-sidebar-title-row">
+                <h3 class="messenger-sidebar-title">Chats</h3>
+              </div>
+              <div class="messenger-search-wrap">
+                <span class="messenger-search-icon">🔍</span>
+                <input type="text" id="teacher-messages-search-input" class="messenger-search-input" placeholder="Search chats by student name or message..." oninput="Teacher.searchMessages(this.value)" />
+              </div>
+              <div class="messenger-filter-tabs">
+                <button type="button" class="messenger-filter-pill teacher-msg-filter-btn active" data-filter="all" onclick="Teacher.filterMessages('all', this)">All Chats</button>
+                <button type="button" class="messenger-filter-pill teacher-msg-filter-btn" data-filter="unread" onclick="Teacher.filterMessages('unread', this)">Unread</button>
+                <button type="button" class="messenger-filter-pill teacher-msg-filter-btn" data-filter="seen" onclick="Teacher.filterMessages('seen', this)">Seen</button>
+              </div>
+            </div>
 
-        <!-- Messages Data Table Container -->
-        <div class="data-table-container" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg); overflow: hidden;">
-          <div style="overflow-x: auto;">
-            <table class="admin-table">
-              <thead>
-                <tr>
-                  <th style="min-width: 180px;">Student</th>
-                  <th style="min-width: 280px;">Message Preview</th>
-                  <th style="min-width: 140px;">Received</th>
-                  <th style="min-width: 110px;">Status</th>
-                  <th style="text-align: right; min-width: 130px;">Action</th>
-                </tr>
-              </thead>
-              <tbody id="teacher-messages-page-tbody">
-                <!-- Populated via teacher.js -->
-              </tbody>
-            </table>
+            <!-- Conversations List -->
+            <div class="messenger-conv-list" id="teacher-messenger-conv-list">
+              <!-- Dynamically populated via Teacher.renderTeacherMessages() -->
+            </div>
+          </div>
+
+          <!-- Right Column: Active Conversation Pane -->
+          <div class="messenger-hub-main" id="teacher-messenger-main-pane">
+            <!-- Dynamically populated via Teacher.renderTeacherActiveConversation() -->
           </div>
         </div>
 

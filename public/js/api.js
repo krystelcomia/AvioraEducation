@@ -145,6 +145,11 @@ const API = {
   setStudentDayAvailability: (body) => apiRequest('/student/schedule/set-day-availability', { method: 'POST', body }),
   toggleStudentSlot: (body) => apiRequest('/student/schedule/toggle-slot', { method: 'POST', body }),
 
+  // Messages & Real-Time Messenger
+  editMessage: (id, content) => apiRequest(`/messages/${id}/edit`, { method: 'POST', body: { content } }),
+  getStudentMessages: () => apiRequest('/student/messages'),
+  markConversationRead: (partnerId) => apiRequest('/messages/mark-read', { method: 'POST', body: { partner_id: partnerId } }),
+
   // Teacher & Tutor Portal
   getTeacherStatus: () => apiRequest('/teacher/application-status'),
   getTeacherMessages: () => apiRequest('/teacher/messages'),

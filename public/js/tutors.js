@@ -939,15 +939,18 @@ const Tutors = {
     const tutorAvatar = tutor.avatar_url || tutor.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80';
 
     threadContainer.innerHTML = thread.map(m => {
+      const msgId = m.id;
+      const isEditedTag = m.is_edited ? '<span class="messenger-edited-tag" style="margin-left: 4px;">(edited)</span>' : '';
+
       if (m.sender === 'tutor') {
         return `
-          <div class="messenger-message incoming">
+          <div class="messenger-message incoming" id="tutor-modal-msg-${msgId}">
             <img src="${tutorAvatar}" alt="${tutor.name}" class="messenger-avatar-small" />
             <div class="messenger-bubble-wrap">
               <div class="messenger-bubble">
                 <div class="messenger-bubble-sender">${this.escapeHtml(tutor.name)}</div>
-                <div class="messenger-bubble-text">${this.formatMessageText(m.text)}</div>
-                <div class="messenger-bubble-time">${m.time}</div>
+                <div class="messenger-bubble-text" id="tutor-modal-text-${msgId}">${this.formatMessageText(m.text || m.content || '')}</div>
+                <div class="messenger-bubble-time">${m.time || ''} ${isEditedTag}</div>
               </div>
             </div>
           </div>
@@ -955,20 +958,24 @@ const Tutors = {
       } else {
         let statusHtml = '';
         if (m.status === 'seen' || m.is_read === 1) {
-          statusHtml = `<span>${m.time} • Seen</span>`;
+          statusHtml = `<span>${m.time || ''} • Seen</span>`;
         } else if (m.status === 'delivered' || tutorIsOnline) {
-          statusHtml = `<span>${m.time} • Delivered</span> <span style="color: #10B981; display: inline-flex; vertical-align: middle;">${Icons.check(11)}</span>`;
+          statusHtml = `<span>${m.time || ''} • Delivered</span> <span style="color: #10B981; display: inline-flex; vertical-align: middle;">${Icons.check(11)}</span>`;
         } else {
-          statusHtml = `<span>${m.time} • Sent</span>`;
+          statusHtml = `<span>${m.time || ''} • Sent</span>`;
         }
 
         return `
-          <div class="messenger-message outgoing">
+          <div class="messenger-message outgoing" id="tutor-modal-msg-${msgId}">
             <div class="messenger-bubble-wrap">
               <div class="messenger-bubble">
-                <div class="messenger-bubble-text">${this.formatMessageText(m.text)}</div>
+                <div class="messenger-bubble-text" id="tutor-modal-text-${msgId}">${this.formatMessageText(m.text || m.content || '')}</div>
                 <div class="messenger-bubble-time" style="display: flex; align-items: center; justify-content: flex-end; gap: 4px;">
                   ${statusHtml}
+                  ${isEditedTag}
+                  <button type="button" class="messenger-edit-btn" onclick="Tutors.startEditMessage('${msgId}')" title="Edit message">
+                    ${Icons.edit(11)}
+                  </button>
                 </div>
               </div>
             </div>
@@ -1054,6 +1061,61 @@ const Tutors = {
     const chatBody = document.getElementById('messenger-chat-body');
     if (chatBody) {
       chatBody.scrollTop = chatBody.scrollHeight;
+    }
+  },
+
+  startEditMessage(messageId) {
+    const textEl = document.getElementById(`tutor-modal-text-${messageId}`);
+    if (!textEl) return;
+    const originalText = textEl.innerText.trim();
+
+    textEl.innerHTML = `
+      <div class="messenger-inline-editor">
+        <textarea id="tutor-edit-input-${messageId}" class="messenger-inline-edit-input" rows="2">${this.escapeHtml(originalText)}</textarea>
+        <div class="messenger-inline-edit-actions">
+          <button type="button" class="btn btn-secondary btn-xs" onclick="Tutors.cancelEditMessage('${messageId}', '${this.escapeHtml(originalText).replace(/'/g, "\\'")}')">Cancel</button>
+          <button type="button" class="btn btn-primary btn-xs" onclick="Tutors.saveEditMessage('${messageId}')">Save</button>
+        </div>
+      </div>
+    `;
+
+    setTimeout(() => {
+      const inp = document.getElementById(`tutor-edit-input-${messageId}`);
+      if (inp) {
+        inp.focus();
+        inp.setSelectionRange(inp.value.length, inp.value.length);
+      }
+    }, 40);
+  },
+
+  cancelEditMessage(messageId, originalText) {
+    const textEl = document.getElementById(`tutor-modal-text-${messageId}`);
+    if (textEl) {
+      textEl.innerHTML = this.formatMessageText(originalText);
+    }
+  },
+
+  async saveEditMessage(messageId) {
+    const inp = document.getElementById(`tutor-edit-input-${messageId}`);
+    if (!inp) return;
+    const newText = inp.value.trim();
+    if (!newText) {
+      showToast('Message cannot be empty.', 'warning');
+      return;
+    }
+
+    try {
+      await API.editMessage(messageId, newText);
+      showToast('Message updated.', 'success');
+      // If currently chatting with tutor, refresh thread
+      if (this.currentChatTutor) {
+        const res = await API.getTutorMessages(this.currentChatTutor.id);
+        if (res && res.messages) {
+          this.renderMessengerThread(res.messages, this.currentChatTutor, !!res.tutor?.is_online);
+        }
+      }
+    } catch (e) {
+      showToast(e.message || 'Failed to edit message.', 'error');
     }
   },
 

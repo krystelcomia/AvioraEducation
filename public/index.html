@@ -3902,7 +3902,24 @@
               <!-- Populated dynamically via teacher.js -->
             </div>
 
-            <!-- Section 2: Tasks & Grading Interface -->
+            <!-- Section 2: Student Inquiries & Direct Questions -->
+            <div class="teacher-section-title-wrap" style="margin-top: 3rem;" id="teacher-students-inquiries-header">
+              <div>
+                <h3 style="color: var(--text-primary); font-size: 1.25rem; margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+                  <span>Student Inquiries &amp; Questions</span>
+                  <span class="badge-gold" id="teacher-students-inquiries-count-badge">0 Inquiries</span>
+                </h3>
+                <p style="font-size: 0.85rem; color: var(--text-secondary); margin: 0.25rem 0 0 0;">
+                  Questions and inquiries submitted by students. Respond directly below to provide academic mentorship.
+                </p>
+              </div>
+            </div>
+
+            <div id="teacher-students-inquiries-container" class="teacher-inquiries-container" style="display: flex; flex-direction: column; gap: 1.25rem; margin-top: 1rem;">
+              <!-- Populated dynamically via teacher.js -->
+            </div>
+
+            <!-- Section 3: Tasks & Grading Interface -->
             <div class="teacher-section-title-wrap" style="margin-top: 3rem;">
               <div>
                 <h3 style="color: var(--text-primary); font-size: 1.25rem; margin: 0;">Academic Tasks & Coursework Submissions</h3>
@@ -4319,8 +4336,8 @@
                   </p>
                 </div>
                 <div style="display: flex; align-items: center; gap: 0.75rem;">
-                  <a href="#teacher-messages" class="btn btn-outline-gold btn-sm" style="font-size: 0.78rem; padding: 0.35rem 0.75rem; text-decoration: none;">
-                    Open Messages Hub →
+                  <a href="#teacher-students" class="btn btn-outline-gold btn-sm" style="font-size: 0.78rem; padding: 0.35rem 0.75rem; text-decoration: none;">
+                    View Student Inquiries →
                   </a>
                   <button type="button" class="btn btn-outline-gold btn-sm btn-tutor-presence-toggle" id="btn-tutor-presence-toggle" onclick="Teacher.toggleOnlinePresence()" title="Toggle your real-time messenger availability status" style="font-size: 0.78rem; padding: 0.35rem 0.75rem; color: #059669; border-color: rgba(16, 185, 129, 0.4);">
                     ● Online (Account Open)

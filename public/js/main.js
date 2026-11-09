@@ -425,7 +425,7 @@ const Router = {
     } else if (hash === '#student-messages' || hash === '#messages') {
       const user = Auth.currentUser;
       if (user && (user.role === 'teacher' || user.role === 'tutor')) {
-        window.location.hash = '#teacher-messages';
+        window.location.hash = '#teacher-students';
         return;
       }
       // Students do not have a dedicated messages page.
@@ -463,10 +463,8 @@ const Router = {
       window.scrollTo(0, 0);
       await Teacher.loadSchedulePage();
     } else if (hash === '#teacher-messages') {
-      const view = document.getElementById('view-teacher-messages');
-      if (view) view.style.display = 'block';
-      window.scrollTo(0, 0);
-      await Teacher.loadMessagesPage();
+      window.location.hash = '#teacher-students';
+      return;
     } else if (hash === '#teacher-buddy') {
       window.location.hash = '#teacher-dashboard';
       return;

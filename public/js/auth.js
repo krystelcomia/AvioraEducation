@@ -2041,7 +2041,6 @@ const Auth = {
             <li><a href="#teacher-classes" class="nav-link" id="nav-link-teacher-classes">Class</a></li>
             <li><a href="#teacher-students" class="nav-link" id="nav-link-teacher-students">Students</a></li>
             <li><a href="#teacher-schedule" class="nav-link" id="nav-link-teacher-schedule">Schedule</a></li>
-            <li><a href="#teacher-messages" class="nav-link" id="nav-link-teacher-messages">Messages</a></li>
             <li><a href="#teacher-dashboard" class="nav-link" id="nav-link-teacher-dashboard">Dashboard</a></li>
           `;
         } else if (user.role === 'admin') {

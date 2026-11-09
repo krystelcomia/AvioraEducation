@@ -415,7 +415,7 @@ const NotificationsUI = {
         }
         return;
       } else if (typeof Auth !== 'undefined' && Auth.currentUser && (Auth.currentUser.role === 'teacher' || Auth.currentUser.role === 'tutor')) {
-        window.location.hash = '#teacher-messages';
+        window.location.hash = '#teacher-students';
         return;
       }
     }
@@ -423,7 +423,7 @@ const NotificationsUI = {
     // 7. Inquiry
     if (title.includes('inquiry')) {
       if (typeof Auth !== 'undefined' && Auth.currentUser && (Auth.currentUser.role === 'teacher' || Auth.currentUser.role === 'tutor')) {
-        window.location.hash = '#teacher-messages';
+        window.location.hash = '#teacher-students';
       } else {
         window.location.hash = '#student-portal';
       }

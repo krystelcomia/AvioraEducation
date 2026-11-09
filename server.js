@@ -3401,7 +3401,7 @@ app.post('/api/tutors/:id/messages', (req, res) => {
       `New Message from ${senderName}`,
       (contentText || attachment_name || 'Sent an attachment').substring(0, 120),
       'message',
-      '#teacher-dashboard'
+      '#teacher-students'
     );
 
     res.json({
@@ -4743,7 +4743,7 @@ app.post('/api/student/messages', authenticateToken, (req, res) => {
       `New Inquiry from ${studentUser.name}`,
       (contentText || attachment_name || 'Sent an attachment').substring(0, 120),
       'message',
-      '#teacher-messages'
+      '#teacher-students'
     );
 
     const insertedMsg = db.prepare('SELECT * FROM messages WHERE id = ?').get(insertInfo.lastInsertRowid);
@@ -5865,7 +5865,7 @@ app.get('/api/teacher/students', authenticateToken, requireRole('teacher'), (req
   try {
     const teacherId = req.user.id;
 
-    // Get unique students from tutoring requests
+    // Get unique students from tutoring requests OR from direct messages/inquiries sent to this tutor
     const students = db.prepare(`
       SELECT 
         u.id as student_id,
@@ -5874,41 +5874,74 @@ app.get('/api/teacher/students', authenticateToken, requireRole('teacher'), (req
         u.avatar_url as student_avatar,
         sp.school as student_school,
         sp.grade_level as student_grade,
-        GROUP_CONCAT(DISTINCT tr.subject) as enrolled_subjects,
+        COALESCE(GROUP_CONCAT(DISTINCT tr.subject), 'Academic Mentorship') as enrolled_subjects,
         COUNT(CASE WHEN tr.status = 'completed' THEN 1 END) as completed_sessions,
         COUNT(CASE WHEN tr.status IN ('pending', 'accepted') THEN 1 END) as upcoming_sessions
-      FROM tutoring_requests tr
-      JOIN users u ON tr.student_id = u.id
+      FROM users u
+      LEFT JOIN tutoring_requests tr ON tr.student_id = u.id AND tr.tutor_id = ?
       LEFT JOIN student_profiles sp ON sp.user_id = u.id
-      WHERE tr.tutor_id = ?
+      WHERE (tr.tutor_id = ?)
+         OR (u.id IN (SELECT sender_id FROM messages WHERE receiver_id = ?))
+         OR (u.id IN (SELECT receiver_id FROM messages WHERE sender_id = ?))
       GROUP BY u.id
       ORDER BY u.name ASC
-    `).all(teacherId);
+    `).all(teacherId, teacherId, teacherId, teacherId);
 
-    // Attach tasks count per student
+    // Attach tasks and messages/inquiries per student
     const studentIds = students.map(s => s.student_id);
     let tasks = [];
+    let messages = [];
+
     if (studentIds.length > 0) {
       tasks = db.prepare(`
         SELECT * FROM tutor_tasks 
         WHERE tutor_id = ? 
         ORDER BY created_at DESC
       `).all(teacherId);
+
+      messages = db.prepare(`
+        SELECT * FROM messages
+        WHERE (receiver_id = ? OR sender_id = ?)
+        ORDER BY created_at ASC
+      `).all(teacherId, teacherId);
     }
 
-    const studentsWithTasks = students.map(s => {
+    const studentsWithData = students.map(s => {
       const studentTasks = tasks.filter(t => t.student_id === s.student_id);
+      const studentMsgs = messages.filter(m => 
+        (m.sender_id === s.student_id && m.receiver_id === teacherId) ||
+        (m.sender_id === teacherId && m.receiver_id === s.student_id)
+      );
+
+      const inquiries = studentMsgs.filter(m => m.sender_id === s.student_id);
+      const latestInquiry = inquiries[inquiries.length - 1] || null;
+      const latestTutorReply = studentMsgs.filter(m => m.sender_id === teacherId).pop() || null;
+
+      let hasUnansweredInquiry = false;
+      if (latestInquiry) {
+        if (!latestTutorReply) {
+          hasUnansweredInquiry = true;
+        } else {
+          hasUnansweredInquiry = new Date(latestInquiry.created_at) > new Date(latestTutorReply.created_at);
+        }
+      }
+
       return {
         ...s,
-        enrolled_subjects: s.enrolled_subjects ? s.enrolled_subjects.split(',') : [],
+        is_online: isUserOnline(s.student_id),
+        enrolled_subjects: s.enrolled_subjects ? s.enrolled_subjects.split(',') : ['Academic Mentorship'],
         total_tasks: studentTasks.length,
         pending_grade_tasks: studentTasks.filter(t => t.status === 'submitted').length,
         completed_tasks: studentTasks.filter(t => t.status === 'graded').length,
-        tasks: studentTasks
+        tasks: studentTasks,
+        inquiries: studentMsgs,
+        latest_inquiry: latestInquiry,
+        latest_reply: latestTutorReply,
+        has_unanswered_inquiry: hasUnansweredInquiry
       };
     });
 
-    res.json({ students: studentsWithTasks });
+    res.json({ students: studentsWithData });
   } catch (error) {
     console.error('Teacher students error:', error);
     res.status(500).json({ error: 'Failed to retrieve student roster.' });

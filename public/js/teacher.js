@@ -441,6 +441,27 @@ const Teacher = {
     await this.loadStudents();
     await this.loadTasks();
     if (typeof Router !== 'undefined' && Router.updateActiveNav) Router.updateActiveNav();
+
+    // Start live polling for student inquiries while on the Students page
+    if (!this.studentsInquiriesPollInterval) {
+      this.studentsInquiriesPollInterval = setInterval(async () => {
+        const view = document.getElementById('view-teacher-students');
+        if (view && view.style.display !== 'none' && document.visibilityState !== 'hidden') {
+          try {
+            const data = await API.getTeacherStudents();
+            if (data && data.students) {
+              const prevJson = JSON.stringify((this.students || []).map(s => ({ id: s.student_id, inq: s.inquiries ? s.inquiries.length : 0, last: s.latest_inquiry?.id })));
+              const nextJson = JSON.stringify((data.students || []).map(s => ({ id: s.student_id, inq: s.inquiries ? s.inquiries.length : 0, last: s.latest_inquiry?.id })));
+              if (prevJson !== nextJson) {
+                this.students = data.students;
+                this.renderStudents();
+                this.renderStudentInquiries();
+              }
+            }
+          } catch (e) {}
+        }
+      }, 3000);
+    }
   },
 
   // 3. Dedicated Schedule Page
@@ -787,7 +808,8 @@ const Teacher = {
     } else if (currentHash === '#teacher-schedule') {
       await this.loadSchedulePage();
     } else if (currentHash === '#teacher-messages') {
-      await this.loadMessagesPage();
+      window.location.hash = '#teacher-students';
+      return;
     } else if (currentHash === '#teacher-buddy') {
       window.location.hash = '#teacher-dashboard';
     } else if (currentHash === '#teacher-application') {
@@ -804,7 +826,7 @@ const Teacher = {
     if (tabId === 'classes') window.location.hash = '#teacher-classes';
     else if (tabId === 'students') window.location.hash = '#teacher-students';
     else if (tabId === 'schedule') window.location.hash = '#teacher-schedule';
-    else if (tabId === 'messages') window.location.hash = '#teacher-messages';
+    else if (tabId === 'messages') window.location.hash = '#teacher-students';
     else if (tabId === 'profile') window.location.hash = '#teacher-profile';
     else {
       window.location.hash = '#teacher-dashboard';
@@ -2412,6 +2434,7 @@ const Teacher = {
       const data = await API.getTeacherStudents();
       this.students = data.students || [];
       this.renderStudents();
+      this.renderStudentInquiries();
     } catch (err) {
       console.error('Failed to load enrolled students:', err);
     }
@@ -2474,6 +2497,30 @@ const Teacher = {
             </div>
           </div>
 
+          <!-- Student Inquiry / Question Preview -->
+          ${s.latest_inquiry ? `
+            <div class="student-inquiry-box" style="margin-top: 0.85rem; padding: 0.75rem 0.9rem; background: rgba(198, 138, 40, 0.07); border: 1.5px solid rgba(198, 138, 40, 0.25); border-radius: 10px;">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.3rem;">
+                <span style="font-size: 0.72rem; font-weight: 800; text-transform: uppercase; color: var(--gold-800); letter-spacing: 0.04em; display: inline-flex; align-items: center; gap: 4px;">
+                  ${Icons.message(12)} Student Inquiry / Question
+                </span>
+                <span style="font-size: 0.72rem; color: var(--text-secondary);">${new Date(s.latest_inquiry.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+              </div>
+              <div style="font-size: 0.86rem; color: var(--charcoal-900); font-weight: 600; line-height: 1.4;">
+                "${this.escapeHtml(s.latest_inquiry.content || s.latest_inquiry.subject || 'Student inquiry')}"
+              </div>
+              ${s.latest_reply ? `
+                <div style="margin-top: 0.45rem; padding-top: 0.45rem; border-top: 1px dashed rgba(198, 138, 40, 0.25); font-size: 0.8rem; color: var(--charcoal-700);">
+                  <strong style="color: var(--gold-800);">Your Response:</strong> "${this.escapeHtml(s.latest_reply.content)}"
+                </div>
+              ` : `
+                <div style="margin-top: 0.4rem; font-size: 0.75rem; color: #B45309; font-weight: 700;">
+                  ● Needs Response
+                </div>
+              `}
+            </div>
+          ` : ''}
+
           <!-- Actions -->
           <div class="student-card-actions">
             ${!this.isApproved() ? `
@@ -2481,6 +2528,11 @@ const Teacher = {
                 ${Icons.lock(13)} Operations Locked (Under Review)
               </button>
             ` : `
+              ${s.latest_inquiry ? `
+                <button type="button" class="btn btn-outline-gold btn-sm" onclick="Teacher.scrollToInquiry(${s.student_id})" title="Respond to Question" style="display: inline-flex; align-items: center; gap: 0.35rem; font-weight: 700;">
+                  ${Icons.message(13)} Respond to Question
+                </button>
+              ` : ''}
               <button type="button" class="btn btn-primary btn-sm" style="flex: 1; justify-content: center; display: inline-flex; align-items: center; gap: 0.35rem;" onclick="Teacher.openAssignTaskModal(${s.student_id})">
                 ${Icons.plus(13)} Assign Task
               </button>
@@ -2492,6 +2544,306 @@ const Teacher = {
         </div>
       `;
     }).join('');
+  },
+
+  renderStudentInquiries() {
+    const container = document.getElementById('teacher-students-inquiries-container');
+    const badge = document.getElementById('teacher-students-inquiries-count-badge');
+    if (!container) return;
+
+    const studentsWithInquiries = (this.students || []).filter(s => s.inquiries && s.inquiries.length > 0);
+    const unansweredCount = studentsWithInquiries.filter(s => s.has_unanswered_inquiry).length;
+
+    if (badge) {
+      if (unansweredCount > 0) {
+        badge.textContent = `${unansweredCount} Needs Response (${studentsWithInquiries.length} Total)`;
+        badge.className = 'badge-accent';
+      } else {
+        badge.textContent = `${studentsWithInquiries.length} Inquir${studentsWithInquiries.length === 1 ? 'y' : 'ies'}`;
+        badge.className = 'badge-gold';
+      }
+    }
+
+    if (studentsWithInquiries.length === 0) {
+      container.innerHTML = `
+        <div style="text-align: center; padding: 2.5rem 1rem; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-xl);">
+          <div style="margin-bottom: 0.5rem; color: var(--gold-600);">${Icons.message(32)}</div>
+          <h4 style="color: var(--text-primary); font-size: 1.05rem;">No Student Inquiries Yet</h4>
+          <p style="color: var(--text-secondary); font-size: 0.85rem; max-width: 440px; margin: 0.4rem auto 0; line-height: 1.45;">
+            When students submit questions or inquiries about your subjects, they will appear here where you can respond directly.
+          </p>
+        </div>
+      `;
+      return;
+    }
+
+    const currentTeacherId = (typeof Auth !== 'undefined' && Auth.currentUser) ? Auth.currentUser.id : null;
+
+    container.innerHTML = studentsWithInquiries.map(s => {
+      const messages = s.inquiries || [];
+      const studentAvatar = s.student_avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=120&q=80';
+      const isOnline = !!s.is_online;
+      const statusPill = s.has_unanswered_inquiry 
+        ? `<span class="badge-accent" style="background: rgba(245, 158, 11, 0.15); color: #B45309; font-weight: 700; padding: 3px 8px; border-radius: 6px; font-size: 0.75rem;">● Needs Response</span>`
+        : `<span class="badge-gold" style="background: rgba(16, 185, 129, 0.15); color: #047857; font-weight: 700; padding: 3px 8px; border-radius: 6px; font-size: 0.75rem;">✓ Answered</span>`;
+
+      return `
+        <div class="student-inquiry-card" id="student-inquiry-card-${s.student_id}" style="background: var(--bg-card); border: 1.5px solid var(--border-color); border-radius: var(--radius-xl); padding: 1.5rem; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; gap: 1rem;">
+          <!-- Inquiry Card Header -->
+          <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border-color); padding-bottom: 1rem; flex-wrap: wrap; gap: 0.75rem;">
+            <div style="display: flex; align-items: center; gap: 0.85rem;">
+              <div style="position: relative;">
+                <img src="${studentAvatar}" alt="${s.student_name}" style="width: 44px; height: 44px; border-radius: 50%; object-fit: cover; border: 2px solid var(--gold-500);" />
+                <span style="position: absolute; bottom: 0; right: 0; width: 12px; height: 12px; border-radius: 50%; background: ${isOnline ? '#10B981' : '#94A3B8'}; border: 2px solid #FFFFFF;"></span>
+              </div>
+              <div>
+                <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                  <h4 style="margin: 0; font-size: 1.05rem; color: var(--text-primary); font-weight: 700;">${this.escapeHtml(s.student_name)}</h4>
+                  <span class="badge-gold" style="font-size: 0.72rem;">${(s.enrolled_subjects || [])[0] || 'Academic Inquiry'}</span>
+                  ${statusPill}
+                </div>
+                <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 2px;">
+                  ${this.escapeHtml(s.student_email)} • ${isOnline ? '<strong style="color: #10B981;">● Online (Account Open)</strong>' : '○ Offline'}
+                </div>
+              </div>
+            </div>
+            <div>
+              <span style="font-size: 0.78rem; color: var(--text-secondary);">${messages.length} message${messages.length === 1 ? '' : 's'} in thread</span>
+            </div>
+          </div>
+
+          <!-- Messages Stream (Question & Responses) -->
+          <div style="display: flex; flex-direction: column; gap: 0.85rem; max-height: 380px; overflow-y: auto; padding-right: 0.5rem;">
+            ${messages.map(m => {
+              const isTeacher = m.sender_role === 'teacher' || (currentTeacherId && Number(m.sender_id) === Number(currentTeacherId));
+              const timeStr = m.created_at ? new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+              
+              if (isTeacher) {
+                return `
+                  <div style="display: flex; justify-content: flex-end; width: 100%;">
+                    <div style="max-width: 80%;">
+                      <div style="font-size: 0.73rem; color: var(--text-secondary); margin-bottom: 2px; text-align: right;">
+                        <strong>You (Educator)</strong> • ${timeStr}
+                      </div>
+                      <div style="background: #1E293B; border: 1px solid #334155; border-radius: 12px; border-top-right-radius: 2px; padding: 0.75rem 1rem; color: #FFFFFF; font-size: 0.88rem; line-height: 1.45; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                        ${this.formatMessageBody(m)}
+                      </div>
+                    </div>
+                  </div>
+                `;
+              } else {
+                return `
+                  <div style="display: flex; gap: 0.65rem; align-items: flex-start; max-width: 80%;">
+                    <img src="${studentAvatar}" alt="${s.student_name}" style="width: 28px; height: 28px; border-radius: 50%; object-fit: cover; flex-shrink: 0; margin-top: 2px;" />
+                    <div style="flex: 1;">
+                      <div style="font-size: 0.73rem; color: var(--text-secondary); margin-bottom: 2px;">
+                        <strong>${this.escapeHtml(s.student_name)}</strong> • ${timeStr}
+                      </div>
+                      <div style="background: #FFFFFF; border: 1.5px solid var(--border-color); border-radius: 12px; border-top-left-radius: 2px; padding: 0.75rem 1rem; color: var(--charcoal-900); font-size: 0.88rem; line-height: 1.45; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
+                        ${m.subject ? `<div style="font-size: 0.73rem; font-weight: 800; text-transform: uppercase; color: var(--gold-800); margin-bottom: 0.25rem;">${this.escapeHtml(m.subject)}</div>` : ''}
+                        ${this.formatMessageBody(m)}
+                      </div>
+                    </div>
+                  </div>
+                `;
+              }
+            }).join('')}
+          </div>
+
+          <!-- Response Composer -->
+          <div style="border-top: 1px solid var(--border-color); padding-top: 0.85rem;">
+            ${!this.isApproved() ? `
+              <div style="font-size: 0.82rem; color: var(--text-secondary); font-style: italic; display: flex; align-items: center; gap: 4px;">
+                ${Icons.lock(13)} Response operations locked while teacher application is under review.
+              </div>
+            ` : `
+              <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                <textarea 
+                  id="inquiry-reply-input-${s.student_id}" 
+                  class="form-control" 
+                  rows="2" 
+                  placeholder="Type your response to ${this.escapeHtml(s.student_name)}'s question..." 
+                  style="resize: vertical; font-size: 0.88rem; border-radius: 8px;"
+                  onkeydown="if(event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); Teacher.sendInquiryReply(${s.student_id}); }"
+                ></textarea>
+
+                <!-- Attachment preview -->
+                <div id="inquiry-attachment-preview-${s.student_id}" style="display: none;"></div>
+
+                <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
+                  <div style="display: flex; align-items: center; gap: 0.4rem;">
+                    <input type="file" id="inquiry-doc-input-${s.student_id}" accept="*/*" style="display: none;" onchange="Teacher.handleInquiryFileSelected(this, ${s.student_id}, false)" />
+                    <input type="file" id="inquiry-pic-input-${s.student_id}" accept="image/*" style="display: none;" onchange="Teacher.handleInquiryFileSelected(this, ${s.student_id}, true)" />
+
+                    <button type="button" class="btn btn-outline-secondary btn-xs" onclick="document.getElementById('inquiry-pic-input-${s.student_id}').click()" title="Attach Photo" style="font-size: 0.75rem; padding: 0.25rem 0.55rem; display: inline-flex; align-items: center; gap: 3px;">
+                      ${Icons.image(13)} Picture
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary btn-xs" onclick="document.getElementById('inquiry-doc-input-${s.student_id}').click()" title="Attach Document" style="font-size: 0.75rem; padding: 0.25rem 0.55rem; display: inline-flex; align-items: center; gap: 3px;">
+                      ${Icons.paperclip(13)} File
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary btn-xs" onclick="Teacher.insertInquiryLinkPrompt(${s.student_id})" title="Insert URL Link" style="font-size: 0.75rem; padding: 0.25rem 0.55rem; display: inline-flex; align-items: center; gap: 3px;">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg> Link
+                    </button>
+                  </div>
+
+                  <button type="button" class="btn btn-primary btn-sm" onclick="Teacher.sendInquiryReply(${s.student_id})" style="font-weight: 700; padding: 0.4rem 1rem; display: inline-flex; align-items: center; gap: 0.35rem;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg> Send Response
+                  </button>
+                </div>
+              </div>
+            `}
+          </div>
+        </div>
+      `;
+    }).join('');
+  },
+
+  scrollToInquiry(studentId) {
+    const card = document.getElementById(`student-inquiry-card-${studentId}`);
+    if (card) {
+      card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      card.style.transition = 'box-shadow 0.3s ease, border-color 0.3s ease';
+      card.style.borderColor = 'var(--gold-500)';
+      card.style.boxShadow = '0 0 0 3px rgba(198, 138, 40, 0.35)';
+      setTimeout(() => {
+        card.style.borderColor = '';
+        card.style.boxShadow = '';
+      }, 2000);
+      const input = document.getElementById(`inquiry-reply-input-${studentId}`);
+      if (input) setTimeout(() => input.focus(), 350);
+    } else {
+      const header = document.getElementById('teacher-students-inquiries-header');
+      if (header) header.scrollIntoView({ behavior: 'smooth' });
+    }
+  },
+
+  inquiryAttachments: {},
+
+  async handleInquiryFileSelected(inputEl, studentId, isImage) {
+    const file = inputEl.files && inputEl.files[0];
+    if (!file) return;
+
+    if (file.size > 25 * 1024 * 1024) {
+      showToast('File size exceeds the 25MB limit.', 'error');
+      inputEl.value = '';
+      return;
+    }
+
+    try {
+      showToast(`Uploading ${isImage ? 'picture' : 'file'}...`, 'info');
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const res = await API.uploadMessageAttachment(formData);
+      if (res && res.fileUrl) {
+        if (!this.inquiryAttachments) this.inquiryAttachments = {};
+        this.inquiryAttachments[studentId] = {
+          url: res.fileUrl,
+          name: res.fileName || file.name,
+          type: res.fileType || file.type,
+          size: res.fileSize || file.size
+        };
+        this.renderInquiryAttachmentPreview(studentId);
+        showToast(`${isImage ? 'Picture' : 'File'} ready to send.`, 'success');
+      }
+    } catch (err) {
+      showToast(err.message || 'Attachment upload failed.', 'error');
+    } finally {
+      inputEl.value = '';
+    }
+  },
+
+  renderInquiryAttachmentPreview(studentId) {
+    const previewEl = document.getElementById(`inquiry-attachment-preview-${studentId}`);
+    if (!previewEl) return;
+    const att = this.inquiryAttachments && this.inquiryAttachments[studentId];
+    if (!att) {
+      previewEl.innerHTML = '';
+      previewEl.style.display = 'none';
+      return;
+    }
+
+    const isImg = (att.type && att.type.startsWith('image/')) || /\.(png|jpe?g|gif|webp|svg|bmp)$/i.test(att.name);
+    previewEl.style.display = 'flex';
+    previewEl.style.alignItems = 'center';
+    previewEl.style.gap = '0.5rem';
+    previewEl.style.padding = '0.45rem 0.65rem';
+    previewEl.style.background = 'rgba(198, 138, 40, 0.08)';
+    previewEl.style.border = '1px solid var(--gold-500)';
+    previewEl.style.borderRadius = '8px';
+    previewEl.style.marginTop = '0.35rem';
+    previewEl.innerHTML = `
+      ${isImg ? `<img src="${att.url}" alt="Preview" style="width: 32px; height: 32px; object-fit: cover; border-radius: 4px;" />` : `<span style="font-size: 1.1rem;">📄</span>`}
+      <div style="flex: 1; font-size: 0.8rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+        <strong>${this.escapeHtml(att.name)}</strong> (${this.formatFileSize(att.size)})
+      </div>
+      <button type="button" class="btn btn-xs btn-outline-danger" onclick="Teacher.removeInquiryAttachment(${studentId})" title="Remove attachment" style="padding: 2px 6px; font-size: 0.75rem;">✕</button>
+    `;
+  },
+
+  removeInquiryAttachment(studentId) {
+    if (this.inquiryAttachments) {
+      delete this.inquiryAttachments[studentId];
+    }
+    this.renderInquiryAttachmentPreview(studentId);
+  },
+
+  insertInquiryLinkPrompt(studentId) {
+    const url = prompt('Enter website link URL (e.g. https://...):', 'https://');
+    if (url && url.trim() && url.trim() !== 'https://') {
+      const input = document.getElementById(`inquiry-reply-input-${studentId}`);
+      if (input) {
+        const val = input.value;
+        const prefix = val && !val.endsWith(' ') ? ' ' : '';
+        input.value = val + prefix + url.trim() + ' ';
+        input.focus();
+      }
+    }
+  },
+
+  async sendInquiryReply(studentId) {
+    const input = document.getElementById(`inquiry-reply-input-${studentId}`);
+    const text = input ? input.value.trim() : '';
+    const attachment = (this.inquiryAttachments && this.inquiryAttachments[studentId]) || null;
+
+    if (!text && !attachment) {
+      showToast('Please type a response or attach a file.', 'error');
+      return;
+    }
+
+    const student = (this.students || []).find(s => s.student_id === studentId);
+    if (!student) return;
+
+    try {
+      showToast(`Delivering response to ${student.student_name}...`, 'info');
+      if (input) input.value = '';
+
+      await API.teacherReplyMessage({
+        student_id: studentId,
+        subject: (student.latest_inquiry && student.latest_inquiry.subject) || 'Academic Inquiry Response',
+        message: text,
+        attachment_url: attachment ? attachment.url : null,
+        attachment_name: attachment ? attachment.name : null,
+        attachment_type: attachment ? attachment.type : null,
+        attachment_size: attachment ? attachment.size : null
+      });
+
+      if (this.inquiryAttachments) {
+        delete this.inquiryAttachments[studentId];
+      }
+      const prevEl = document.getElementById(`inquiry-attachment-preview-${studentId}`);
+      if (prevEl) {
+        prevEl.innerHTML = '';
+        prevEl.style.display = 'none';
+      }
+
+      showToast(`Response delivered to ${student.student_name} in real time.`, 'success');
+
+      // Refresh student roster and inquiry feed
+      await this.loadStudents();
+    } catch (err) {
+      showToast(err.message || 'Failed to send response.', 'error');
+    }
   },
 
   async loadTasks() {
@@ -5391,7 +5743,7 @@ const Teacher = {
                 </span>
               </td>
               <td>
-                <button type="button" class="btn btn-outline-gold btn-xs" onclick="Teacher.selectConversation('${c.key}'); window.location.hash='#teacher-messages';">
+                <button type="button" class="btn btn-outline-gold btn-xs" onclick="window.location.hash='#teacher-students'; setTimeout(() => Teacher.scrollToInquiry(${c.studentId || `'${c.key}'`}), 200);">
                   Reply
                 </button>
               </td>
@@ -6035,10 +6387,10 @@ const Teacher = {
   },
 
   openReplyModal(messageId, studentId, studentName, content) {
-    // Switch to Messenger Hub and select this student's conversation
+    // Switch to Students Page and scroll to this student's inquiry
     if (studentId) {
-      window.location.hash = '#teacher-messages';
-      this.selectConversation(String(studentId));
+      window.location.hash = '#teacher-students';
+      setTimeout(() => this.scrollToInquiry(studentId), 200);
       return;
     }
     const modal = document.getElementById('modal-teacher-reply-message');

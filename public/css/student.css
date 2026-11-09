@@ -112,6 +112,12 @@
   min-width: 280px;
 }
 
+.portal-user-meta .badge-gold,
+.portal-user-meta .badge-accent {
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+}
+
 .avatar-deck-container {
   position: relative;
   width: 72px;

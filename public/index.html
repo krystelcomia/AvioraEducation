@@ -4528,9 +4528,9 @@
 
         <!-- Hero Header -->
         <div style="margin-bottom: 1.25rem;">
-          <div class="portal-header" style="margin-bottom: 1rem; border-bottom: none; padding: 1.75rem 2.25rem;">
-            <div class="portal-user-meta" style="gap: 1.5rem;">
-              <div class="profile-avatar-wrap" id="teacher-profile-hero-avatar-wrap" title="Click to upload profile picture" style="position: relative; cursor: pointer; display: inline-block;">
+          <div class="portal-header" style="margin-bottom: 1rem; border-bottom: none; padding: 1.5rem 2rem; justify-content: flex-start;">
+            <div class="portal-user-meta" style="gap: 1.25rem; align-items: center; justify-content: flex-start;">
+              <div class="profile-avatar-wrap" id="teacher-profile-hero-avatar-wrap" title="Click to upload profile picture" style="position: relative; cursor: pointer; display: inline-block; flex-shrink: 0;">
                 <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80" alt="Tutor Profile Avatar" class="portal-avatar-lg" id="teacher-profile-hero-avatar" style="width: 76px; height: 76px; border: 3px solid var(--gold-500); box-shadow: 0 4px 14px rgba(198, 138, 40, 0.25); border-radius: 50%; object-fit: cover; display: block;" />
                 <div class="avatar-hover-overlay" style="position: absolute; inset: 0; background: rgba(0, 0, 0, 0.45); border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.2s ease; color: #FFFFFF; pointer-events: none;">
                   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
@@ -4541,29 +4541,26 @@
                 </div>
                 <input type="file" id="teacher-profile-file-input" accept="image/*" style="display: none;" />
               </div>
-              <div>
-                <div style="display: flex; align-items: center; gap: 0.65rem; flex-wrap: wrap;">
-                  <h1 class="portal-title" id="teacher-profile-hero-name" style="margin: 0; font-size: 2rem;">Dr. Elena Vance</h1>
-                  <span id="teacher-profile-status-badge" class="badge-gold" style="font-size: 0.8rem;">Verified Educator</span>
-                  <span id="teacher-profile-rate-badge" class="badge-accent" style="font-size: 0.8rem;">$45 / hr</span>
-                  <span id="teacher-profile-subject-badge" class="badge-gold" style="font-size: 0.8rem;">Stanford Ph.D. • Applied Mathematics</span>
-                  <span id="teacher-profile-country-badge" class="badge-gold" style="font-size: 0.8rem; display: inline-flex; align-items: center; gap: 0.35rem; white-space: nowrap;">
+              <div style="display: flex; flex-direction: column; gap: 0.35rem; align-items: flex-start; justify-content: center;">
+                <div style="display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;">
+                  <h1 class="portal-title" id="teacher-profile-hero-name" style="margin: 0; font-size: 1.85rem; line-height: 1.2;">Dr. Elena Vance</h1>
+                  <span id="teacher-profile-status-badge" class="badge-gold" style="font-size: 0.8rem; margin: 0 !important;">Verified Educator</span>
+                  <span id="teacher-profile-rate-badge" class="badge-accent" style="font-size: 0.8rem; font-weight: 700; margin: 0 !important;">$45 / hr</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                  <span id="teacher-profile-subject-badge" class="badge-gold" style="font-size: 0.8rem; margin: 0 !important;">Stanford Ph.D. • Applied Mathematics</span>
+                  <span id="teacher-profile-country-badge" class="badge-gold" style="font-size: 0.8rem; display: inline-flex; align-items: center; gap: 0.35rem; white-space: nowrap; margin: 0 !important;">
                     <span id="teacher-profile-country-flag">🇺🇸</span>
                     <span id="teacher-profile-country-name">United States</span>
                     <span style="opacity: 0.4;">•</span>
                     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="display:inline-block;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
                     <span id="teacher-profile-live-clock">--:-- (EST)</span>
                   </span>
-                  </span>
                 </div>
-                <p class="portal-subtitle" style="margin-top: 0.35rem; margin-bottom: 0;">
+                <p class="portal-subtitle" style="margin: 0; font-size: 0.85rem; color: var(--text-secondary);">
                   <span id="teacher-profile-hero-email" style="font-weight: 600; color: var(--charcoal-900);">elena.vance@aviora.edu</span> • Verified Educator Account
                 </p>
               </div>
-            </div>
-            <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
-              <a href="#tutors" class="btn btn-outline-gold btn-sm">Public Directory</a>
-              <button type="button" class="btn btn-primary btn-sm" onclick="Teacher.openInstantClassModal()" style="display: inline-flex; align-items: center; gap: 0.35rem;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"></polygon><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg> Launch Instant Class</button>
             </div>
           </div>
         </div>

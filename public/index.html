@@ -4670,14 +4670,42 @@
                 <input type="text" id="teacher-profile-subjects" class="form-control" readonly disabled style="opacity: 0.75;" />
               </div>
 
-              <div class="form-group" style="margin-bottom: 1.5rem;">
+              <div class="form-group" style="margin-bottom: 1.25rem;">
                 <label class="form-label" style="font-weight: 700; font-size: 0.82rem;">Public Biography &amp; Teaching Methodology</label>
                 <textarea id="t-profile-bio" class="form-control" rows="4" required></textarea>
               </div>
 
-              <button type="submit" id="btn-save-teacher-profile" class="btn btn-primary btn-lg" style="margin-top: auto; width: 100%; justify-content: center; font-weight: 700;">
+              <button type="submit" id="btn-save-teacher-profile" class="btn btn-primary btn-lg" style="width: 100%; justify-content: center; font-weight: 700; margin-top: 0;">
                 Save Profile Changes
               </button>
+
+              <!-- Backup and Recovery Feature -->
+              <div class="profile-backup-box" style="border-top: 1px solid rgba(0, 0, 0, 0.08); margin-top: 1.5rem; padding-top: 1.25rem;">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.35rem;">
+                  <label class="form-label" style="font-weight: 700; font-size: 0.85rem; margin: 0; display: flex; align-items: center; gap: 0.45rem;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--gold-600);"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                    Backup &amp; Recovery
+                  </label>
+                  <span class="badge-gold" style="font-size: 0.68rem; padding: 2px 7px;">Data Vault</span>
+                </div>
+                <p style="font-size: 0.77rem; color: var(--text-secondary); margin-bottom: 0.85rem; line-height: 1.45;">
+                  Download a complete backup of all your account data. In the event of a system crash, simply upload the file to recover everything.
+                </p>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.65rem;">
+                  <button type="button" id="btn-backup-download" class="btn btn-secondary" style="font-size: 0.82rem; font-weight: 700; justify-content: center; padding: 0.6rem 0.75rem; display: flex; align-items: center; gap: 0.45rem;">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                    Download Backup
+                  </button>
+
+                  <button type="button" id="btn-backup-restore-trigger" class="btn btn-outline" style="font-size: 0.82rem; font-weight: 700; justify-content: center; padding: 0.6rem 0.75rem; display: flex; align-items: center; gap: 0.45rem;">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                    Upload &amp; Recover
+                  </button>
+                  <input type="file" id="backup-restore-file-input" accept=".json,application/json" style="display: none;" />
+                </div>
+                <div id="backup-recovery-status" style="margin-top: 0.6rem; font-size: 0.74rem; font-weight: 600; display: none;"></div>
+              </div>
             </form>
           </div>
 

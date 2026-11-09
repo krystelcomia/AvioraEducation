@@ -2733,6 +2733,201 @@ app.put('/api/auth/change-password', authenticateToken, (req, res) => {
 });
 
 // ==========================================
+// ACCOUNT BACKUP & RECOVERY ROUTES
+// ==========================================
+
+// Download Account Backup
+app.get('/api/account/backup', authenticateToken, (req, res) => {
+  try {
+    const userId = req.user.id;
+    const user = db.prepare('SELECT id, name, email, role, phone, avatar_url, country, created_at FROM users WHERE id = ?').get(userId);
+    if (!user) return res.status(404).json({ error: 'User account not found.' });
+
+    const tutorProfile = db.prepare('SELECT * FROM tutor_profiles WHERE user_id = ?').get(userId) || null;
+    const teacherApp = db.prepare('SELECT * FROM teacher_applications WHERE user_id = ?').get(userId) || null;
+    const preferences = getUserPreferences(userId) || null;
+    const tutoringRequests = db.prepare('SELECT * FROM tutoring_requests WHERE teacher_id = ? OR tutor_id = ?').all(userId, userId);
+    const tasks = db.prepare('SELECT * FROM tutor_tasks WHERE tutor_id = ?').all(userId);
+    const occupiedSlots = db.prepare('SELECT slot_date, slot_time, label FROM tutor_occupied_slots WHERE tutor_id = ?').all(userId);
+    const dateNotes = db.prepare('SELECT note_date, note FROM tutor_date_notes WHERE tutor_id = ?').all(userId);
+    const dateHours = db.prepare('SELECT schedule_date, start_time, end_time FROM tutor_date_hours WHERE tutor_id = ?').all(userId);
+    const payoutRequests = db.prepare('SELECT * FROM tutor_payout_requests WHERE tutor_id = ?').all(userId);
+    const reviews = db.prepare('SELECT * FROM reviews WHERE tutor_id = ?').all(userId);
+
+    const backupPayload = {
+      version: '1.0',
+      exported_at: new Date().toISOString(),
+      platform: 'AvioraEducation',
+      account_type: user.role,
+      user,
+      tutorProfile,
+      teacherApplication: teacherApp,
+      preferences,
+      tutoringRequests,
+      tasks,
+      occupiedSlots,
+      dateNotes,
+      dateHours,
+      payoutRequests,
+      reviews
+    };
+
+    const safeName = (user.name || 'user').toLowerCase().replace(/[^a-z0-9]/g, '_');
+    const safeDate = new Date().toISOString().slice(0, 10);
+    return res.json({
+      success: true,
+      filename: `aviora-account-backup-${safeName}-${safeDate}.json`,
+      data: backupPayload
+    });
+  } catch (err) {
+    console.error('Account backup error:', err);
+    return res.status(500).json({ error: 'Failed to generate account backup: ' + err.message });
+  }
+});
+
+// Restore Account Backup
+app.post('/api/account/restore', authenticateToken, (req, res) => {
+  try {
+    const userId = req.user.id;
+    const payload = req.body && (req.body.data || req.body);
+    if (!payload || (!payload.user && !payload.tutorProfile && !payload.platform)) {
+      return res.status(400).json({ error: 'Invalid backup file structure. Please upload a valid Aviora backup JSON file.' });
+    }
+
+    // 1. Restore User details
+    if (payload.user) {
+      const u = payload.user;
+      db.prepare(`
+        UPDATE users
+        SET name = COALESCE(?, name),
+            phone = COALESCE(?, phone),
+            avatar_url = COALESCE(?, avatar_url),
+            country = COALESCE(?, country)
+        WHERE id = ?
+      `).run(u.name || null, u.phone || null, u.avatar_url || null, u.country || null, userId);
+    }
+
+    // 2. Restore Tutor Profile
+    if (payload.tutorProfile) {
+      const tp = payload.tutorProfile;
+      const existingProf = db.prepare('SELECT id FROM tutor_profiles WHERE user_id = ?').get(userId);
+      const subjsStr = typeof tp.subjects === 'object' ? JSON.stringify(tp.subjects) : (tp.subjects || '[]');
+      const subjRatesStr = typeof tp.subject_rates === 'object' ? JSON.stringify(tp.subject_rates) : (tp.subject_rates || '{}');
+      const gradeLevelsStr = typeof tp.grade_levels === 'object' ? JSON.stringify(tp.grade_levels) : (tp.grade_levels || '[]');
+
+      if (existingProf) {
+        db.prepare(`
+          UPDATE tutor_profiles
+          SET headline = COALESCE(?, headline),
+              bio = COALESCE(?, bio),
+              hourly_rate = COALESCE(?, hourly_rate),
+              subjects = ?,
+              subject_rates = ?,
+              grade_levels = ?,
+              country = COALESCE(?, country),
+              timezone = COALESCE(?, timezone),
+              institution = COALESCE(?, institution),
+              highest_degree = COALESCE(?, highest_degree),
+              updated_at = CURRENT_TIMESTAMP
+          WHERE user_id = ?
+        `).run(tp.headline || null, tp.bio || null, tp.hourly_rate || 45, subjsStr, subjRatesStr, gradeLevelsStr, tp.country || null, tp.timezone || null, tp.institution || null, tp.highest_degree || null, userId);
+      } else {
+        db.prepare(`
+          INSERT INTO tutor_profiles (user_id, headline, bio, hourly_rate, subjects, subject_rates, grade_levels, country, timezone, institution, highest_degree, rating, reviews_count)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `).run(userId, tp.headline || '', tp.bio || '', tp.hourly_rate || 45, subjsStr, subjRatesStr, gradeLevelsStr, tp.country || 'United States', tp.timezone || 'America/New_York', tp.institution || '', tp.highest_degree || '', tp.rating || 5.0, tp.reviews_count || 0);
+      }
+    }
+
+    // 3. Restore Teacher Application
+    if (payload.teacherApplication) {
+      const app = payload.teacherApplication;
+      const existingApp = db.prepare('SELECT id FROM teacher_applications WHERE user_id = ?').get(userId);
+      const subjsStr = typeof app.subjects === 'object' ? JSON.stringify(app.subjects) : (app.subjects || '[]');
+      const subjRatesStr = typeof app.subject_rates === 'object' ? JSON.stringify(app.subject_rates) : (app.subject_rates || '{}');
+      const gradeLevelsStr = typeof app.grade_levels === 'object' ? JSON.stringify(app.grade_levels) : (app.grade_levels || '[]');
+
+      if (existingApp) {
+        db.prepare(`
+          UPDATE teacher_applications
+          SET headline = COALESCE(?, headline),
+              bio = COALESCE(?, bio),
+              hourly_rate = COALESCE(?, hourly_rate),
+              highest_degree = COALESCE(?, highest_degree),
+              institution = COALESCE(?, institution),
+              subjects = ?,
+              subject_rates = ?,
+              grade_levels = ?,
+              updated_at = CURRENT_TIMESTAMP
+          WHERE user_id = ?
+        `).run(app.headline || null, app.bio || null, app.hourly_rate || 45, app.highest_degree || null, app.institution || null, subjsStr, subjRatesStr, gradeLevelsStr, userId);
+      }
+    }
+
+    // 4. Restore Preferences
+    if (payload.preferences) {
+      const p = payload.preferences;
+      saveUserPreferences(userId, p);
+    }
+
+    // 5. Restore Calendar occupied slots
+    if (Array.isArray(payload.occupiedSlots) && payload.occupiedSlots.length > 0) {
+      for (const slot of payload.occupiedSlots) {
+        if (slot.slot_date && slot.slot_time) {
+          const exists = db.prepare('SELECT id FROM tutor_occupied_slots WHERE tutor_id = ? AND slot_date = ? AND slot_time = ?').get(userId, slot.slot_date, slot.slot_time);
+          if (!exists) {
+            db.prepare('INSERT INTO tutor_occupied_slots (tutor_id, slot_date, slot_time, label) VALUES (?, ?, ?, ?)').run(userId, slot.slot_date, slot.slot_time, slot.label || '');
+          }
+        }
+      }
+    }
+
+    // 6. Restore Calendar date notes
+    if (Array.isArray(payload.dateNotes) && payload.dateNotes.length > 0) {
+      for (const note of payload.dateNotes) {
+        if (note.note_date) {
+          const exists = db.prepare('SELECT id FROM tutor_date_notes WHERE tutor_id = ? AND note_date = ?').get(userId, note.note_date);
+          if (exists) {
+            db.prepare('UPDATE tutor_date_notes SET note = ? WHERE tutor_id = ? AND note_date = ?').run(note.note || '', userId, note.note_date);
+          } else {
+            db.prepare('INSERT INTO tutor_date_notes (tutor_id, note_date, note) VALUES (?, ?, ?)').run(userId, note.note_date, note.note || '');
+          }
+        }
+      }
+    }
+
+    // 7. Restore Calendar date hours
+    if (Array.isArray(payload.dateHours) && payload.dateHours.length > 0) {
+      for (const dh of payload.dateHours) {
+        if (dh.schedule_date) {
+          const exists = db.prepare('SELECT id FROM tutor_date_hours WHERE tutor_id = ? AND schedule_date = ?').get(userId, dh.schedule_date);
+          if (exists) {
+            db.prepare('UPDATE tutor_date_hours SET start_time = ?, end_time = ? WHERE tutor_id = ? AND schedule_date = ?').run(dh.start_time || '09:00', dh.end_time || '17:00', userId, dh.schedule_date);
+          } else {
+            db.prepare('INSERT INTO tutor_date_hours (tutor_id, schedule_date, start_time, end_time) VALUES (?, ?, ?, ?)').run(userId, dh.schedule_date, dh.start_time || '09:00', dh.end_time || '17:00');
+          }
+        }
+      }
+    }
+
+    const updatedUser = db.prepare('SELECT id, name, email, role, phone, avatar_url, country FROM users WHERE id = ?').get(userId);
+    const updatedTutorProfile = db.prepare('SELECT * FROM tutor_profiles WHERE user_id = ?').get(userId);
+    const updatedPreferences = getUserPreferences(userId);
+
+    return res.json({
+      success: true,
+      message: 'All account data successfully recovered and restored from backup!',
+      user: updatedUser,
+      tutorProfile: updatedTutorProfile,
+      preferences: updatedPreferences
+    });
+  } catch (err) {
+    console.error('Account restore error:', err);
+    return res.status(500).json({ error: 'Failed to restore account data: ' + err.message });
+  }
+});
+
+// ==========================================
 // PUBLIC PLATFORM & TUTOR DIRECTORY ROUTES
 // ==========================================
 

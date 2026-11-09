@@ -58,6 +58,28 @@ const Teacher = {
       profileForm.addEventListener('submit', (e) => this.handleProfileSettingsSubmit(e));
     }
 
+    // Account Backup and Recovery
+    const btnBackupDownload = document.getElementById('btn-backup-download');
+    if (btnBackupDownload) {
+      btnBackupDownload.addEventListener('click', () => this.handleDownloadBackup());
+    }
+
+    const btnRestoreTrigger = document.getElementById('btn-backup-restore-trigger');
+    const fileInputRestore = document.getElementById('backup-restore-file-input');
+    if (btnRestoreTrigger && fileInputRestore) {
+      btnRestoreTrigger.addEventListener('click', () => {
+        fileInputRestore.value = '';
+        fileInputRestore.click();
+      });
+
+      fileInputRestore.addEventListener('change', (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (file) {
+          this.handleRestoreBackup(file);
+        }
+      });
+    }
+
     // Close modals on overlay click or Escape key
     ['modal-teacher-assign-task', 'modal-teacher-grade-task', 'modal-teacher-instant-class', 'modal-teacher-class-record'].forEach(id => {
       const el = document.getElementById(id);
@@ -5480,6 +5502,167 @@ const Teacher = {
       if (submitBtn) {
         submitBtn.disabled = false;
         submitBtn.textContent = 'Save Profile Changes';
+      }
+    }
+  },
+
+  async handleDownloadBackup() {
+    const btn = document.getElementById('btn-backup-download');
+    const statusEl = document.getElementById('backup-recovery-status');
+    const origText = btn ? btn.innerHTML : '';
+    try {
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = `<span class="spinner" style="width: 14px; height: 14px; display: inline-block; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: spin 0.6s linear infinite; vertical-align: middle;"></span> Generating...`;
+      }
+      if (statusEl) {
+        statusEl.style.display = 'block';
+        statusEl.style.color = 'var(--gold-600)';
+        statusEl.textContent = 'Preparing secure account data package...';
+      }
+
+      const res = await API.downloadAccountBackup();
+      if (!res || !res.data) {
+        throw new Error(res?.error || 'Failed to download account backup.');
+      }
+
+      // Augment with current local preferences from localStorage
+      const u = (typeof Auth !== 'undefined' && Auth.currentUser) || (typeof Storage !== 'undefined' ? Storage.getUser() : null);
+      if (u && u.id) {
+        res.data.client_storage = {
+          theme: localStorage.getItem(`aviora_theme_${u.id}`) || localStorage.getItem('aviora_theme'),
+          language: localStorage.getItem(`aviora_language_${u.id}`) || localStorage.getItem('aviora_language'),
+          country: localStorage.getItem(`aviora_country_${u.id}`) || localStorage.getItem('aviora_country'),
+          timezone: localStorage.getItem(`aviora_timezone_${u.id}`) || localStorage.getItem('aviora_timezone')
+        };
+      }
+
+      const jsonStr = JSON.stringify(res.data, null, 2);
+      const blob = new Blob([jsonStr], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = res.filename || `aviora-account-backup-${(u?.name || 'tutor').toLowerCase().replace(/[^a-z0-9]/g, '_')}-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      if (statusEl) {
+        statusEl.style.color = '#10B981';
+        statusEl.textContent = `✓ Backup downloaded (${(blob.size / 1024).toFixed(1)} KB). Keep this file safe!`;
+        setTimeout(() => { if (statusEl) statusEl.style.display = 'none'; }, 6000);
+      }
+      showToast('Account data backup downloaded successfully! In case of any system crash, upload this file to recover everything.', 'success');
+    } catch (err) {
+      console.error('Download backup error:', err);
+      if (statusEl) {
+        statusEl.style.color = '#EF4444';
+        statusEl.textContent = `Error: ${err.message}`;
+      }
+      showToast(err.message || 'Could not generate backup file.', 'error');
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = origText;
+      }
+    }
+  },
+
+  async handleRestoreBackup(file) {
+    if (!file) return;
+    const statusEl = document.getElementById('backup-recovery-status');
+    const triggerBtn = document.getElementById('btn-backup-restore-trigger');
+    const origTriggerText = triggerBtn ? triggerBtn.innerHTML : '';
+
+    if (!file.name.toLowerCase().endsWith('.json') && file.type !== 'application/json') {
+      showToast('Please select a valid Aviora Education JSON backup file.', 'error');
+      return;
+    }
+
+    try {
+      if (triggerBtn) {
+        triggerBtn.disabled = true;
+        triggerBtn.innerHTML = `<span class="spinner" style="width: 14px; height: 14px; display: inline-block; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: spin 0.6s linear infinite; vertical-align: middle;"></span> Restoring...`;
+      }
+      if (statusEl) {
+        statusEl.style.display = 'block';
+        statusEl.style.color = 'var(--gold-600)';
+        statusEl.textContent = 'Reading and validating backup file...';
+      }
+
+      const fileText = await file.text();
+      let parsedData;
+      try {
+        parsedData = JSON.parse(fileText);
+      } catch (parseErr) {
+        throw new Error('Invalid JSON format in the backup file.');
+      }
+
+      if (!parsedData || (!parsedData.user && !parsedData.tutorProfile && !parsedData.platform)) {
+        throw new Error('The selected file does not appear to be a valid Aviora backup archive.');
+      }
+
+      if (statusEl) {
+        statusEl.textContent = 'Uploading and recovering account records...';
+      }
+
+      const res = await API.restoreAccountBackup(parsedData);
+      if (!res || !res.success) {
+        throw new Error(res?.error || 'Failed to restore account data.');
+      }
+
+      // Restore client-side localStorage preferences if present
+      const u = (typeof Auth !== 'undefined' && Auth.currentUser) || (typeof Storage !== 'undefined' ? Storage.getUser() : null);
+      if (parsedData.client_storage && u && u.id) {
+        const uid = u.id;
+        const cs = parsedData.client_storage;
+        if (cs.theme) {
+          localStorage.setItem(`aviora_theme_${uid}`, cs.theme);
+          if (typeof Profile !== 'undefined') Profile.applyTheme(cs.theme, false, false);
+        }
+        if (cs.language) {
+          localStorage.setItem(`aviora_language_${uid}`, cs.language);
+          if (typeof I18n !== 'undefined') I18n.applyLanguage(cs.language);
+        }
+        if (cs.country) {
+          localStorage.setItem(`aviora_country_${uid}`, cs.country);
+        }
+        if (cs.timezone) {
+          localStorage.setItem(`aviora_timezone_${uid}`, cs.timezone);
+        }
+      }
+
+      if (res.user && typeof Auth !== 'undefined') {
+        Auth.currentUser = res.user;
+        if (typeof Storage !== 'undefined') Storage.setUser(res.user);
+      }
+      if (res.tutorProfile) {
+        this.tutorProfile = res.tutorProfile;
+      }
+      if (res.preferences && typeof Profile !== 'undefined') {
+        Profile.syncAllPreferences(res.preferences, false);
+      }
+
+      if (statusEl) {
+        statusEl.style.color = '#10B981';
+        statusEl.textContent = '✓ All account data successfully recovered and restored!';
+      }
+      showToast('All account data has been successfully recovered and restored from backup!', 'success');
+
+      // Reload profile view so all restored fields reflect immediately
+      await this.loadProfilePage();
+    } catch (err) {
+      console.error('Restore backup error:', err);
+      if (statusEl) {
+        statusEl.style.color = '#EF4444';
+        statusEl.textContent = `Restore failed: ${err.message}`;
+      }
+      showToast(err.message || 'Failed to restore data from backup file.', 'error');
+    } finally {
+      if (triggerBtn) {
+        triggerBtn.disabled = false;
+        triggerBtn.innerHTML = origTriggerText;
       }
     }
   },

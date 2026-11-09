@@ -2019,6 +2019,13 @@
 }
 
 /* Settings & Preferences Save Status Pill */
+.profile-backup-box {
+  transition: all var(--transition-fast);
+}
+[data-theme="dark"] .profile-backup-box {
+  border-top-color: rgba(255, 255, 255, 0.08) !important;
+}
+
 .settings-status-pill {
   font-size: 0.72rem;
   font-weight: 700;

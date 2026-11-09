@@ -123,6 +123,8 @@ const API = {
   },
   getUserPreferences: () => apiRequest('/user/preferences'),
   updateUserPreferences: (body) => apiRequest('/user/preferences', { method: 'PUT', body }),
+  downloadAccountBackup: () => apiRequest('/account/backup'),
+  restoreAccountBackup: (body) => apiRequest('/account/restore', { method: 'POST', body }),
 
   // Public
   getStats: () => apiRequest('/public/stats'),

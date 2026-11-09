@@ -1946,10 +1946,17 @@ function ensureTutorLocations() {
         u = db.prepare("SELECT id FROM users WHERE name LIKE ?").get(`%${loc.name}%`);
       }
       if (u) {
-        db.prepare("UPDATE users SET country = ? WHERE id = ?").run(loc.country, u.id);
-        db.prepare("UPDATE tutor_profiles SET country = ?, timezone = ? WHERE user_id = ?").run(loc.country, loc.timezone, u.id);
-        db.prepare("UPDATE teacher_applications SET country = ?, timezone = ? WHERE user_id = ?").run(loc.country, loc.timezone, u.id);
-        db.prepare("UPDATE user_preferences SET country = ?, timezone = ? WHERE user_id = ?").run(loc.country, loc.timezone, u.id);
+        // Only set default seed location if country or timezone is not yet set, preserving user modifications permanently
+        const existingProf = db.prepare("SELECT country, timezone FROM tutor_profiles WHERE user_id = ?").get(u.id);
+        const existingUser = db.prepare("SELECT country FROM users WHERE id = ?").get(u.id);
+        if (!existingUser?.country) {
+          db.prepare("UPDATE users SET country = ? WHERE id = ?").run(loc.country, u.id);
+        }
+        if (!existingProf?.country || !existingProf?.timezone) {
+          db.prepare("UPDATE tutor_profiles SET country = COALESCE(country, ?), timezone = COALESCE(timezone, ?) WHERE user_id = ?").run(loc.country, loc.timezone, u.id);
+          db.prepare("UPDATE teacher_applications SET country = COALESCE(country, ?), timezone = COALESCE(timezone, ?) WHERE user_id = ?").run(loc.country, loc.timezone, u.id);
+          db.prepare("UPDATE user_preferences SET country = COALESCE(country, ?), timezone = COALESCE(timezone, ?) WHERE user_id = ?").run(loc.country, loc.timezone, u.id);
+        }
       }
     }
   } catch (err) {

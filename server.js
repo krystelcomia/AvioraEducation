@@ -2549,6 +2549,21 @@ app.put('/api/auth/profile', authenticateToken, (req, res) => {
         db.prepare('UPDATE teacher_applications SET timezone = ? WHERE user_id = ?').run(tzVal, userId);
         db.prepare('UPDATE user_preferences SET timezone = ? WHERE user_id = ?').run(tzVal, userId);
       }
+      if (tutorData.institution !== undefined) {
+        db.prepare('UPDATE tutor_profiles SET institution = ? WHERE user_id = ?').run(tutorData.institution, userId);
+        db.prepare('UPDATE teacher_applications SET institution = ? WHERE user_id = ?').run(tutorData.institution, userId);
+      }
+      if (tutorData.highest_degree !== undefined) {
+        db.prepare('UPDATE tutor_profiles SET highest_degree = ? WHERE user_id = ?').run(tutorData.highest_degree, userId);
+        db.prepare('UPDATE teacher_applications SET highest_degree = ? WHERE user_id = ?').run(tutorData.highest_degree, userId);
+      }
+      if (tutorData.subjects !== undefined) {
+        const subjsJson = typeof tutorData.subjects === 'string'
+          ? JSON.stringify(tutorData.subjects.split(',').map(s => s.trim()).filter(Boolean))
+          : JSON.stringify(tutorData.subjects);
+        db.prepare('UPDATE tutor_profiles SET subjects = ? WHERE user_id = ?').run(subjsJson, userId);
+        db.prepare('UPDATE teacher_applications SET subjects = ? WHERE user_id = ?').run(subjsJson, userId);
+      }
       db.prepare(`
         UPDATE teacher_applications
         SET headline = COALESCE(?, headline), bio = COALESCE(?, bio), hourly_rate = ?, updated_at = CURRENT_TIMESTAMP
@@ -2634,6 +2649,15 @@ app.put('/api/user/preferences', authenticateToken, (req, res) => {
     if (timezone !== undefined) {
       updates.push('timezone = ?');
       params.push(timezone);
+      db.prepare('UPDATE tutor_profiles SET timezone = ? WHERE user_id = ?').run(timezone, userId);
+      db.prepare('UPDATE teacher_applications SET timezone = ? WHERE user_id = ?').run(timezone, userId);
+    }
+    if (country !== undefined) {
+      updates.push('country = ?');
+      params.push(country);
+      db.prepare('UPDATE users SET country = ? WHERE id = ?').run(country, userId);
+      db.prepare('UPDATE tutor_profiles SET country = ? WHERE user_id = ?').run(country, userId);
+      db.prepare('UPDATE teacher_applications SET country = ? WHERE user_id = ?').run(country, userId);
     }
     const parseBool = (val) => {
       if (val === true || val === 1 || val === '1' || val === 'true') return 1;

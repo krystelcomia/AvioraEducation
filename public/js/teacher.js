@@ -5441,6 +5441,8 @@ const Teacher = {
     const bio = document.getElementById('t-profile-bio')?.value.trim();
     const country = document.getElementById('teacher-profile-country')?.value || document.getElementById('teacher-country-select')?.value || 'United States';
     const timezone = document.getElementById('teacher-profile-timezone')?.value || document.getElementById('teacher-timezone-select')?.value || 'America/New_York';
+    const institution = document.getElementById('teacher-profile-institution')?.value.trim();
+    const subjects = document.getElementById('teacher-profile-subjects')?.value.trim();
     const submitBtn = e.target.querySelector('button[type="submit"]');
 
     try {
@@ -5453,7 +5455,7 @@ const Teacher = {
         name,
         phone,
         country,
-        tutorData: { headline, hourly_rate, bio, country, timezone }
+        tutorData: { headline, hourly_rate, bio, country, timezone, institution, subjects }
       });
 
       if (res && res.user && typeof Auth !== 'undefined') {

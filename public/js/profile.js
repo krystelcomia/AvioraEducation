@@ -222,9 +222,19 @@ const Profile = {
 
   applyCountry(country, notify = true, persistToServer = true) {
     const activeCountry = country || 'United States';
-    ['profile-country-select', 'teacher-country-select', 'admin-country-select', 'app-country'].forEach(id => {
+    ['profile-country-select', 'teacher-country-select', 'teacher-profile-country', 'admin-country-select', 'app-country'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.value = activeCountry;
+    });
+
+    const flag = typeof AvioraGeo !== 'undefined' ? AvioraGeo.getCountryFlag(activeCountry) : '🌐';
+    ['teacher-profile-country-flag', 'teacher-dashboard-country-flag'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = flag;
+    });
+    ['teacher-profile-country-name', 'teacher-dashboard-country-name'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = activeCountry;
     });
 
     const key = this.getUserKey();
@@ -298,10 +308,22 @@ const Profile = {
     if (tzSelect) tzSelect.value = activeTz;
     const tTzSelect = document.getElementById('teacher-timezone-select');
     if (tTzSelect) tTzSelect.value = activeTz;
+    const tpTzSelect = document.getElementById('teacher-profile-timezone');
+    if (tpTzSelect) tpTzSelect.value = activeTz;
     const aTzSelect = document.getElementById('admin-timezone-select');
     if (aTzSelect) aTzSelect.value = activeTz;
 
     this.updateTimezoneClockDisplays(activeTz);
+
+    ['teacher-profile-live-clock', 'teacher-dashboard-live-clock'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.setAttribute('data-tz', activeTz);
+        if (typeof AvioraGeo !== 'undefined') {
+          el.textContent = `${AvioraGeo.getCurrentTimeInZone(activeTz)} (${AvioraGeo.getTimezoneAbbr(activeTz)})`;
+        }
+      }
+    });
 
     const key = this.getUserKey();
     if (key) localStorage.setItem(`aviora_timezone${key}`, activeTz);
@@ -598,12 +620,27 @@ const Profile = {
       });
     }
 
-    const tTzSelect = document.getElementById('teacher-timezone-select');
-    if (tTzSelect) {
-      tTzSelect.addEventListener('change', (e) => {
-        this.applyTimezone(e.target.value);
-      });
-    }
+    ['teacher-country-select', 'teacher-profile-country'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        ['change', 'input'].forEach(evt => {
+          el.addEventListener(evt, (e) => {
+            this.applyCountry(e.target.value);
+          });
+        });
+      }
+    });
+
+    ['teacher-timezone-select', 'teacher-profile-timezone'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        ['change', 'input'].forEach(evt => {
+          el.addEventListener(evt, (e) => {
+            this.applyTimezone(e.target.value);
+          });
+        });
+      }
+    });
 
     ['teacher-notif-lessons', 'teacher-notif-calendar', 'teacher-notif-messages', 'teacher-notif-reports'].forEach(id => {
       const toggle = document.getElementById(id);

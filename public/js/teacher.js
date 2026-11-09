@@ -290,9 +290,16 @@ const Teacher = {
     }
 
     if (stage === 'approved') {
+      const currentUserId = (typeof Auth !== 'undefined' && Auth.currentUser) ? Auth.currentUser.id : null;
+      const isDismissed = currentUserId && localStorage.getItem(`aviora_dismissed_approved_banner_${currentUserId}`) === 'true';
+      if (isDismissed) {
+        bannerContainer.innerHTML = '';
+        return;
+      }
+
       // Show the approved status on the dashboard only; other pages stay clean
       bannerContainer.innerHTML = targetContainerId !== 'teacher-banner-dashboard' ? '' : `
-        <div class="app-status-banner approved-dashboard" style="margin-bottom: 1.5rem; background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.35); border-radius: var(--radius-md); padding: 1.25rem; display: flex; gap: 1rem; align-items: flex-start;">
+        <div class="app-status-banner approved-dashboard" style="margin-bottom: 1.5rem; background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.35); border-radius: var(--radius-md); padding: 1.25rem; display: flex; gap: 1rem; align-items: flex-start; position: relative;">
           <div class="status-icon-circle" style="background: rgba(16, 185, 129, 0.2); color: #10B981; width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
             ${Icons.check(22)}
           </div>
@@ -301,7 +308,13 @@ const Teacher = {
               <div style="font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.04em; font-weight: 700;">
                 Tutor Application • ${applicantName}
               </div>
-              <span class="status-pill approved" style="font-size: 0.75rem;">Status: Approved</span>
+              <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <span class="status-pill approved" style="font-size: 0.75rem;">Status: Approved</span>
+                <button type="button" class="btn btn-outline-secondary btn-xs" onclick="Teacher.dismissApprovedBanner()" title="Remove this banner so it no longer appears on your dashboard" style="font-size: 0.75rem; padding: 0.25rem 0.65rem; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px; color: var(--text-secondary); border-color: rgba(16, 185, 129, 0.45); background: rgba(255, 255, 255, 0.9); cursor: pointer; font-weight: 700; transition: all 0.2s ease;">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                  <span>Remove</span>
+                </button>
+              </div>
             </div>
             <h3 style="color: var(--text-primary); margin: 0.2rem 0 0; font-size: 1.15rem; font-weight: 700;">
               Application Approved • All Features Accessible
@@ -422,6 +435,22 @@ const Teacher = {
         </div>
       </div>
     `;
+  },
+
+  dismissApprovedBanner() {
+    // Only verified/approved tutors can remove the approved status banner
+    if (this.getApplicationStage() !== 'approved') return;
+    const currentUserId = (typeof Auth !== 'undefined' && Auth.currentUser) ? Auth.currentUser.id : null;
+    if (currentUserId) {
+      try {
+        localStorage.setItem(`aviora_dismissed_approved_banner_${currentUserId}`, 'true');
+      } catch (e) {}
+    }
+    const bannerContainer = document.getElementById('teacher-banner-dashboard');
+    if (bannerContainer) {
+      bannerContainer.innerHTML = '';
+    }
+    showToast('Application status banner removed from dashboard.', 'info');
   },
 
   // 1. Dedicated Class Page

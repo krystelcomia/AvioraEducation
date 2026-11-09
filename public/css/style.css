@@ -449,6 +449,18 @@ a { text-decoration: none; color: inherit; transition: color var(--transition-fa
   border-color: rgba(198, 138, 40, 0.35);
 }
 
+[data-theme="dark"] .notification-bell {
+  background: #141416;
+  border-color: rgba(255, 255, 255, 0.15);
+  color: #E2E8F0;
+}
+
+[data-theme="dark"] .notification-bell:hover {
+  background: rgba(198, 138, 40, 0.18);
+  color: #F5C563;
+  border-color: rgba(198, 138, 40, 0.4);
+}
+
 .bell-badge {
   position: absolute;
   top: -2px;
@@ -464,6 +476,10 @@ a { text-decoration: none; color: inherit; transition: color var(--transition-fa
   align-items: center;
   justify-content: center;
   border: 2px solid #FFFFFF;
+}
+
+[data-theme="dark"] .bell-badge {
+  border-color: #141416;
 }
 
 /* User Profile Nav Dropdown */

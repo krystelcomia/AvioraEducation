@@ -73,25 +73,15 @@ const Profile = {
 
     pills.forEach(pill => {
       pill.style.display = 'inline-flex';
-      if (status === 'saving') {
-        pill.style.background = 'rgba(198, 138, 40, 0.18)';
-        pill.style.borderColor = 'rgba(198, 138, 40, 0.4)';
-        pill.style.color = 'var(--gold-700)';
-      } else if (status === 'saved') {
-        pill.style.background = 'rgba(16, 185, 129, 0.12)';
-        pill.style.borderColor = 'rgba(16, 185, 129, 0.3)';
-        pill.style.color = '#059669';
-      } else if (status === 'error') {
-        pill.style.background = 'rgba(239, 68, 68, 0.12)';
-        pill.style.borderColor = 'rgba(239, 68, 68, 0.3)';
-        pill.style.color = '#DC2626';
-      }
+      pill.classList.remove('status-saving', 'status-saved', 'status-error', 'status-default');
+      pill.classList.add(`status-${status}`);
+      pill.style.removeProperty('background');
+      pill.style.removeProperty('border-color');
+      pill.style.removeProperty('color');
     });
 
     dotEls.forEach(dot => {
-      if (status === 'saving') dot.style.background = 'var(--gold-500)';
-      else if (status === 'saved') dot.style.background = '#10B981';
-      else if (status === 'error') dot.style.background = '#EF4444';
+      dot.style.removeProperty('background');
     });
 
     textEls.forEach(textEl => {
@@ -103,11 +93,13 @@ const Profile = {
     if (status === 'saved') {
       this.saveStatusTimeout = setTimeout(() => {
         pills.forEach(pill => {
-          pill.style.background = 'rgba(198, 138, 40, 0.12)';
-          pill.style.borderColor = 'rgba(198, 138, 40, 0.25)';
-          pill.style.color = 'var(--gold-600)';
+          pill.classList.remove('status-saving', 'status-saved', 'status-error');
+          pill.classList.add('status-default');
+          pill.style.removeProperty('background');
+          pill.style.removeProperty('border-color');
+          pill.style.removeProperty('color');
         });
-        dotEls.forEach(dot => { dot.style.background = 'var(--gold-500)'; });
+        dotEls.forEach(dot => { dot.style.removeProperty('background'); });
         textEls.forEach(textEl => { textEl.textContent = 'Saved to Account'; });
       }, 4000);
     }
@@ -406,9 +398,8 @@ const Profile = {
       Storage.setUserPreferences(user.id, prefs);
     }
 
-    if (prefs.theme) {
-      this.applyTheme(prefs.theme, notify, false);
-    }
+    const activeTheme = prefs.theme || (user && user.id && localStorage.getItem(`aviora_theme_${user.id}`)) || (document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light');
+    this.applyTheme(activeTheme, notify, false);
     if (prefs.font_size) {
       this.applyFontSize(prefs.font_size, notify, false);
     }
@@ -448,10 +439,24 @@ const Profile = {
       document.documentElement.setAttribute('lang', 'en-US');
     }
 
-    const lightCard = document.getElementById('theme-card-light');
-    const darkCard = document.getElementById('theme-card-dark');
-    if (lightCard) lightCard.classList.add('active');
-    if (darkCard) darkCard.classList.remove('active');
+    ['theme-card-light', 'teacher-theme-card-light', 'admin-theme-card-light'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.classList.add('active');
+    });
+    ['theme-card-dark', 'teacher-theme-card-dark', 'admin-theme-card-dark'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.classList.remove('active');
+    });
+
+    ['settings-status-pill', 'teacher-settings-status-pill', 'admin-settings-status-pill'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.className = 'settings-status-pill status-default';
+        el.style.removeProperty('background');
+        el.style.removeProperty('border-color');
+        el.style.removeProperty('color');
+      }
+    });
 
     const langSelect = document.getElementById('profile-language-select');
     if (langSelect) langSelect.value = 'en-US';

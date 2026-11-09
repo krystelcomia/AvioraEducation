@@ -1081,85 +1081,96 @@ const Teacher = {
       const data = await API.getTeacherDashboard();
       this.dashboardData = data;
       this.requests = data.requests || [];
-      const stats = data.stats || {};
 
-      // 1. Gross Revenue from Students
-      const grossEl = document.getElementById('teacher-stat-gross-revenue');
-      const grossVal = stats.gross_revenue_students || 0;
-      if (grossEl) grossEl.textContent = (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.format(grossVal) : `$${grossVal.toFixed(2)}`;
-
-      // 2. Aviora Platform Commission / Cut (30%)
-      const cutEl = document.getElementById('teacher-stat-commission-cut');
-      const cutVal = stats.platform_commission_amount != null ? stats.platform_commission_amount : (grossVal * 0.30);
-      if (cutEl) cutEl.textContent = (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.format(cutVal) : `$${cutVal.toFixed(2)}`;
-
-      // 3. Net Tutor Take-Home Earnings (70%)
-      const netEl = document.getElementById('teacher-stat-net-earnings');
-      const netVal = stats.net_earnings_tutor != null ? stats.net_earnings_tutor : (grossVal * 0.70);
-      if (netEl) netEl.textContent = (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.format(netVal) : `$${netVal.toFixed(2)}`;
-
-      // Update Request Withdrawal button state next to salary amount
-      const requestBtn = document.getElementById('btn-request-payout-dashboard');
-      if (requestBtn) {
-        if (stats.has_pending_payout) {
-          requestBtn.disabled = true;
-          requestBtn.innerHTML = `${Icons.check(13)} Requested`;
-          requestBtn.style.background = 'rgba(16, 185, 129, 0.15)';
-          requestBtn.style.color = '#10B981';
-          requestBtn.style.borderColor = 'rgba(16, 185, 129, 0.3)';
-          requestBtn.style.boxShadow = 'none';
-          requestBtn.style.cursor = 'default';
-          requestBtn.title = 'Withdrawal request submitted, pending administrator review';
-        } else if (netVal <= 0) {
-          requestBtn.disabled = true;
-          requestBtn.innerHTML = `Request`;
-          requestBtn.style.opacity = '0.5';
-          requestBtn.style.cursor = 'not-allowed';
-          requestBtn.title = 'No earnings available to withdraw yet';
-        } else {
-          requestBtn.disabled = false;
-          requestBtn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right: 0.25rem;"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>Request`;
-          requestBtn.style.opacity = '1';
-          requestBtn.style.cursor = 'pointer';
-          requestBtn.style.background = '';
-          requestBtn.style.color = '';
-          requestBtn.style.borderColor = '';
-          requestBtn.style.boxShadow = '0 2px 6px rgba(198, 138, 40, 0.25)';
-          const formattedNet = (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.format(netVal) : `$${netVal.toFixed(2)}`;
-          requestBtn.title = `Request salary withdrawal of ${formattedNet}`;
-        }
-      }
-
-      // 4. Current Month Net Payout & Sessions
-      const monthNetEl = document.getElementById('teacher-stat-month-net');
-      if (monthNetEl) {
-        const mVal = stats.current_month_net || 0;
-        monthNetEl.textContent = (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.format(mVal) : `$${mVal.toFixed(2)}`;
-      }
-
-      const completedCountEl = document.getElementById('teacher-stat-completed-count');
-      if (completedCountEl) completedCountEl.textContent = stats.completed_sessions || 0;
-
-      const activeSessionsEl = document.getElementById('teacher-stat-active-sessions');
-      if (activeSessionsEl) activeSessionsEl.textContent = stats.active_sessions || 0;
-
-      const ratingEl = document.getElementById('teacher-stat-rating');
-      if (ratingEl) ratingEl.innerHTML = `${Icons.star(14, 'margin-right: 2px;', '#F59E0B')} ${stats.rating?.toFixed(1) || '5.0'} (${stats.reviews_count || 0})`;
-
-      const headerRatingValEl = document.getElementById('teacher-header-rating-val');
-      if (headerRatingValEl) headerRatingValEl.textContent = stats.rating != null ? stats.rating.toFixed(1) : '5.0';
-
-      const headerReviewsCountEl = document.getElementById('teacher-header-reviews-count');
-      if (headerReviewsCountEl) headerReviewsCountEl.textContent = stats.reviews_count != null ? stats.reviews_count : '0';
-
-      // Render Tables
-      this.renderMonthlyFinancials(data.monthlyFinancials || []);
-      this.renderStudentRevenueBreakdown(data.studentRevenueBreakdown || []);
+      // Render stats & financial breakdowns
+      this.renderDashboardStats();
       this.renderTeacherRequests();
       this.populateProfileSettings(data.tutorProfile);
       await this.loadTeacherMessages();
     } catch (err) {
       console.error('Failed to load teacher dashboard:', err);
+    }
+  },
+
+  renderDashboardStats() {
+    if (!this.dashboardData) return;
+    const stats = this.dashboardData.stats || {};
+
+    // 1. Gross Revenue from Students
+    const grossEl = document.getElementById('teacher-stat-gross-revenue');
+    const grossVal = stats.gross_revenue_students || 0;
+    if (grossEl) grossEl.textContent = (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.format(grossVal) : `$${grossVal.toFixed(2)}`;
+
+    // 2. Aviora Platform Commission / Cut (30%)
+    const cutEl = document.getElementById('teacher-stat-commission-cut');
+    const cutVal = stats.platform_commission_amount != null ? stats.platform_commission_amount : (grossVal * 0.30);
+    if (cutEl) cutEl.textContent = (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.format(cutVal) : `$${cutVal.toFixed(2)}`;
+
+    // 3. Net Tutor Take-Home Earnings (70%)
+    const netEl = document.getElementById('teacher-stat-net-earnings');
+    const netVal = stats.net_earnings_tutor != null ? stats.net_earnings_tutor : (grossVal * 0.70);
+    if (netEl) netEl.textContent = (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.format(netVal) : `$${netVal.toFixed(2)}`;
+
+    // Update Request Withdrawal button state next to salary amount
+    const requestBtn = document.getElementById('btn-request-payout-dashboard');
+    if (requestBtn) {
+      if (stats.has_pending_payout) {
+        requestBtn.disabled = true;
+        requestBtn.innerHTML = `${Icons.check(13)} Requested`;
+        requestBtn.style.background = 'rgba(16, 185, 129, 0.15)';
+        requestBtn.style.color = '#10B981';
+        requestBtn.style.borderColor = 'rgba(16, 185, 129, 0.3)';
+        requestBtn.style.boxShadow = 'none';
+        requestBtn.style.cursor = 'default';
+        requestBtn.title = 'Withdrawal request submitted, pending administrator review';
+      } else if (netVal <= 0) {
+        requestBtn.disabled = true;
+        requestBtn.innerHTML = `Request`;
+        requestBtn.style.opacity = '0.5';
+        requestBtn.style.cursor = 'not-allowed';
+        requestBtn.title = 'No earnings available to withdraw yet';
+      } else {
+        requestBtn.disabled = false;
+        requestBtn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right: 0.25rem;"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>Request`;
+        requestBtn.style.opacity = '1';
+        requestBtn.style.cursor = 'pointer';
+        requestBtn.style.background = '';
+        requestBtn.style.color = '';
+        requestBtn.style.borderColor = '';
+        requestBtn.style.boxShadow = '0 2px 6px rgba(198, 138, 40, 0.25)';
+        const formattedNet = (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.format(netVal) : `$${netVal.toFixed(2)}`;
+        requestBtn.title = `Request salary withdrawal of ${formattedNet}`;
+      }
+    }
+
+    // 4. Current Month Net Payout & Sessions
+    const monthNetEl = document.getElementById('teacher-stat-month-net');
+    if (monthNetEl) {
+      const mVal = stats.current_month_net || 0;
+      monthNetEl.textContent = (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.format(mVal) : `$${mVal.toFixed(2)}`;
+    }
+
+    const completedCountEl = document.getElementById('teacher-stat-completed-count');
+    if (completedCountEl) completedCountEl.textContent = stats.completed_sessions || 0;
+
+    const activeSessionsEl = document.getElementById('teacher-stat-active-sessions');
+    if (activeSessionsEl) activeSessionsEl.textContent = stats.active_sessions || 0;
+
+    const ratingEl = document.getElementById('teacher-stat-rating');
+    if (ratingEl) ratingEl.innerHTML = `${Icons.star(14, 'margin-right: 2px;', '#F59E0B')} ${stats.rating?.toFixed(1) || '5.0'} (${stats.reviews_count || 0})`;
+
+    const headerRatingValEl = document.getElementById('teacher-header-rating-val');
+    if (headerRatingValEl) headerRatingValEl.textContent = stats.rating != null ? stats.rating.toFixed(1) : '5.0';
+
+    const headerReviewsCountEl = document.getElementById('teacher-header-reviews-count');
+    if (headerReviewsCountEl) headerReviewsCountEl.textContent = stats.reviews_count != null ? stats.reviews_count : '0';
+
+    // Render Tables with active currency
+    if (this.dashboardData.monthlyFinancials) {
+      this.renderMonthlyFinancials(this.dashboardData.monthlyFinancials);
+    }
+    if (this.dashboardData.studentRevenueBreakdown) {
+      this.renderStudentRevenueBreakdown(this.dashboardData.studentRevenueBreakdown);
     }
   },
 
@@ -1178,7 +1189,8 @@ const Teacher = {
         return;
       }
 
-      const confirmed = confirm(`Submit a salary withdrawal request for $${netVal.toFixed(2)} (70% net tutor share after 30% company commission)?\n\nThis will immediately notify the administrator to review and process your payout.`);
+      const formattedNet = (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.format(netVal) : `$${netVal.toFixed(2)}`;
+      const confirmed = confirm(`Submit a salary withdrawal request for ${formattedNet} (70% net tutor share after 30% company commission)?\n\nThis will immediately notify the administrator to review and process your payout.`);
       if (!confirmed) return;
 
       const btn = document.getElementById('btn-request-payout-dashboard');
@@ -1252,14 +1264,14 @@ const Teacher = {
             <span class="badge-gold" style="font-size: 0.78rem; font-weight: 600;">${m.sessions_count} lesson${m.sessions_count === 1 ? '' : 's'}</span>
           </td>
           <td>
-            <strong style="color: var(--gold-400); font-weight: 700; font-size: 0.95rem;">$${gross.toFixed(2)}</strong>
+            <strong style="color: var(--gold-400); font-weight: 700; font-size: 0.95rem;">${(typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.format(gross) : `$${gross.toFixed(2)}`}</strong>
           </td>
           <td>
-            <span style="color: #EF4444; font-weight: 600;">-$${commission.toFixed(2)}</span>
+            <span style="color: #EF4444; font-weight: 600;">-${(typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.format(commission) : `$${commission.toFixed(2)}`}</span>
             <span style="font-size: 0.75rem; color: #EF4444; opacity: 0.85; margin-left: 0.2rem;">(30%)</span>
           </td>
           <td>
-            <strong style="color: #10B981; font-size: 1rem; font-weight: 800;">$${net.toFixed(2)}</strong>
+            <strong style="color: #10B981; font-size: 1rem; font-weight: 800;">${(typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.format(net) : `$${net.toFixed(2)}`}</strong>
             <span style="font-size: 0.75rem; color: #10B981; opacity: 0.85; margin-left: 0.2rem;">(70%)</span>
           </td>
           <td style="text-align: right;">
@@ -1324,14 +1336,14 @@ const Teacher = {
             </span>
           </td>
           <td>
-            <strong style="color: var(--gold-400); font-weight: 700; font-size: 0.95rem;">$${gross.toFixed(2)}</strong>
+            <strong style="color: var(--gold-400); font-weight: 700; font-size: 0.95rem;">${(typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.format(gross) : `$${gross.toFixed(2)}`}</strong>
           </td>
           <td>
-            <span style="color: #EF4444; font-weight: 600;">-$${commission.toFixed(2)}</span>
+            <span style="color: #EF4444; font-weight: 600;">-${(typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.format(commission) : `$${commission.toFixed(2)}`}</span>
             <span style="font-size: 0.75rem; color: #EF4444; opacity: 0.85; margin-left: 0.2rem;">(30%)</span>
           </td>
           <td>
-            <strong style="color: #10B981; font-size: 1rem; font-weight: 800;">$${net.toFixed(2)}</strong>
+            <strong style="color: #10B981; font-size: 1rem; font-weight: 800;">${(typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.format(net) : `$${net.toFixed(2)}`}</strong>
             <span style="font-size: 0.75rem; color: #10B981; opacity: 0.85; margin-left: 0.2rem;">(70%)</span>
           </td>
         </tr>
@@ -1382,7 +1394,7 @@ const Teacher = {
           <div style="font-size: 0.775rem; color: var(--text-secondary); display: flex; align-items: center; gap: 0.3rem;">${Icons.clock(14)} ${r.requested_time} (${r.duration_hours}h)</div>
         </td>
         <td>
-          <span style="font-weight: 700; color: var(--gold-400);">$${Number(r.total_amount || 0).toFixed(2)}</span>
+          <span style="font-weight: 700; color: var(--gold-400);">${(typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.format(r.total_amount || 0) : `$${Number(r.total_amount || 0).toFixed(2)}`}</span>
         </td>
         <td>
           <span class="status-pill ${(r.status === 'completed' || r.status === 'done' || r.room_status === 'ended') ? 'completed' : (r.status === 'declined' || r.status === 'cancelled') ? 'declined' : 'pending'}">${(r.status === 'completed' || r.status === 'done' || r.room_status === 'ended') ? 'DONE' : (r.status === 'declined' || r.status === 'cancelled') ? 'CANCELLED' : 'PENDING'}</span>
@@ -1743,8 +1755,12 @@ const Teacher = {
       return;
     }
 
+    const curr = (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.getActiveCurrency() : { symbol: '$', code: 'USD' };
+
     grid.innerHTML = subjectsList.map((subj, idx) => {
-      const rateVal = ratesMap[subj] !== undefined ? Number(ratesMap[subj]) : defaultRate;
+      const baseRate = ratesMap[subj] !== undefined ? Number(ratesMap[subj]) : defaultRate;
+      const convertedRate = (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.convert(baseRate) : baseRate;
+      const formattedRatePill = (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.format(baseRate, { perHour: true }) : `$${baseRate.toFixed(2)}/hr`;
       const safeSubj = this.escapeSubjectAttr(subj);
       return `
         <div class="teacher-subject-rate-card" data-subject="${safeSubj}">
@@ -1756,20 +1772,21 @@ const Teacher = {
                 <div class="teacher-subject-meta">50-min 1-on-1 Session • Individual Rate</div>
               </div>
             </div>
-            <span class="teacher-subject-rate-pill">$${rateVal.toFixed(2)}/hr</span>
+            <span class="teacher-subject-rate-pill">${formattedRatePill}</span>
           </div>
 
           <div class="teacher-subject-card-controls">
             <div class="subject-rate-input-group subject-rate-inline-group">
-              <span class="subject-rate-currency">$</span>
+              <span class="subject-rate-currency">${curr.symbol}</span>
               <input
                 type="number"
                 id="teacher-subj-rate-input-${idx}"
                 class="form-control subject-rate-inline-input"
-                min="5"
-                max="1000"
-                step="1"
-                value="${rateVal}"
+                min="1"
+                max="1000000"
+                step="any"
+                value="${convertedRate}"
+                data-base-usd="${baseRate}"
                 ${!approved ? 'disabled' : ''}
                 aria-label="Hourly rate for ${safeSubj}"
               />
@@ -1870,10 +1887,20 @@ const Teacher = {
     const rateInput = document.getElementById('formal-subject-rate');
     const qualInput = document.getElementById('formal-subject-qualification');
 
+    const curr = (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.getActiveCurrency() : { symbol: '$', code: 'USD' };
+    const modalCurr = document.getElementById('formal-subject-rate-currency');
+    const modalRateLabel = document.getElementById('formal-subject-rate-label');
+    if (modalCurr) modalCurr.textContent = curr.symbol;
+    if (modalRateLabel) modalRateLabel.textContent = `Hourly Rate (${curr.symbol} ${curr.code} / hr)`;
+
     if (catSelect) catSelect.value = 'Mathematics';
     if (nameInput) nameInput.value = '';
     if (levelSelect) levelSelect.value = 'AP & College Prep';
-    if (rateInput) rateInput.value = (this.tutorProfile?.hourly_rate || this.application?.hourly_rate || 45);
+    if (rateInput) {
+      const baseUsd = Number(this.tutorProfile?.hourly_rate || this.application?.hourly_rate || 45);
+      rateInput.setAttribute('data-base-usd', baseUsd);
+      rateInput.value = (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.convert(baseUsd) : baseUsd;
+    }
     if (qualInput) qualInput.value = '';
 
     this.onSubjectCategoryChange('Mathematics');
@@ -1936,7 +1963,8 @@ const Teacher = {
     const submitBtn = document.getElementById('btn-submit-formal-subject');
 
     const subject = (nameInput?.value || '').trim();
-    const rate = parseFloat(rateInput?.value);
+    const rawRate = parseFloat(rateInput?.value);
+    const baseRate = (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.convertInputToBase(rawRate) : rawRate;
     const category = catSelect?.value || 'Mathematics';
     const level = levelSelect?.value || 'AP & College Prep';
     const qualification = (qualInput?.value || '').trim();
@@ -1947,8 +1975,11 @@ const Teacher = {
       return;
     }
 
-    if (isNaN(rate) || rate < 5 || rate > 1000) {
-      showToast('Please enter a valid hourly rate between $5 and $1,000.', 'warning');
+    if (isNaN(baseRate) || baseRate < 5 || baseRate > 1000) {
+      const curr = (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.getActiveCurrency() : { symbol: '$' };
+      const minDisp = (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.convert(5) : 5;
+      const maxDisp = (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.convert(1000) : 1000;
+      showToast(`Please enter a valid hourly rate between ${curr.symbol}${minDisp.toLocaleString('en-US')} and ${curr.symbol}${maxDisp.toLocaleString('en-US')}.`, 'warning');
       if (rateInput) rateInput.focus();
       return;
     }
@@ -1971,7 +2002,7 @@ const Teacher = {
       const res = await API.updateTeacherSubjects({
         action: 'add',
         subject,
-        rate,
+        rate: baseRate,
         category,
         level,
         qualification
@@ -1981,7 +2012,8 @@ const Teacher = {
       this.closeAddSubjectModal();
       await this.refreshClassesList();
 
-      showToast(`"${subject}" ($${rate.toFixed(2)}/hr) added to your teaching profile and is now bookable by students!`, 'success');
+      const formattedRate = (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.format(baseRate, { perHour: true }) : `$${baseRate.toFixed(2)}/hr`;
+      showToast(`"${subject}" (${formattedRate}) added to your teaching profile and is now bookable by students!`, 'success');
     } catch (err) {
       showToast(err.message || 'Failed to add qualified subject.', 'error');
     } finally {
@@ -2002,14 +2034,18 @@ const Teacher = {
     const btn = document.getElementById('btn-teacher-add-subject');
 
     const subject = (nameInput?.value || '').trim();
-    const rate = parseFloat(rateInput?.value);
+    const rawRate = parseFloat(rateInput?.value);
+    const baseRate = (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.convertInputToBase(rawRate) : rawRate;
 
     if (!subject) {
       showToast('Please enter a subject or area of specialization name.', 'warning');
       return;
     }
-    if (isNaN(rate) || rate < 5 || rate > 1000) {
-      showToast('Please enter a valid hourly rate between $5 and $1,000.', 'warning');
+    if (isNaN(baseRate) || baseRate < 5 || baseRate > 1000) {
+      const curr = (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.getActiveCurrency() : { symbol: '$' };
+      const minDisp = (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.convert(5) : 5;
+      const maxDisp = (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.convert(1000) : 1000;
+      showToast(`Please enter a valid hourly rate between ${curr.symbol}${minDisp.toLocaleString('en-US')} and ${curr.symbol}${maxDisp.toLocaleString('en-US')}.`, 'warning');
       return;
     }
 
@@ -2024,12 +2060,13 @@ const Teacher = {
       const res = await API.updateTeacherSubjects({
         action: 'add',
         subject,
-        rate
+        rate: baseRate
       });
       this.syncUpdatedSubjectsAcrossApp(res);
       if (nameInput) nameInput.value = '';
       await this.refreshClassesList();
-      showToast(`"${subject}" ($${rate.toFixed(2)}/hr) saved and synced to Student & Admin portals!`, 'success');
+      const formattedRate = (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.format(baseRate, { perHour: true }) : `$${baseRate.toFixed(2)}/hr`;
+      showToast(`"${subject}" (${formattedRate}) saved and synced to Student & Admin portals!`, 'success');
     } catch (err) {
       showToast(err.message || 'Failed to add subject.', 'error');
     } finally {
@@ -2048,11 +2085,15 @@ const Teacher = {
     const subject = btnEl?.getAttribute('data-subject');
     const idx = btnEl?.getAttribute('data-idx');
     const rateInput = document.getElementById(`teacher-subj-rate-input-${idx}`);
-    const rate = parseFloat(rateInput?.value);
+    const rawRate = parseFloat(rateInput?.value);
 
     if (!subject) return;
-    if (isNaN(rate) || rate < 5 || rate > 1000) {
-      showToast('Please enter a valid hourly rate between $5 and $1,000.', 'warning');
+    const baseRate = (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.convertInputToBase(rawRate) : rawRate;
+    if (isNaN(baseRate) || baseRate < 5 || baseRate > 1000) {
+      const curr = (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.getActiveCurrency() : { symbol: '$' };
+      const minDisp = (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.convert(5) : 5;
+      const maxDisp = (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.convert(1000) : 1000;
+      showToast(`Please enter a valid hourly rate between ${curr.symbol}${minDisp.toLocaleString('en-US')} and ${curr.symbol}${maxDisp.toLocaleString('en-US')}.`, 'warning');
       if (rateInput) rateInput.focus();
       return;
     }
@@ -2065,11 +2106,12 @@ const Teacher = {
       const res = await API.updateTeacherSubjects({
         action: 'update',
         subject,
-        rate
+        rate: baseRate
       });
       this.syncUpdatedSubjectsAcrossApp(res);
       await this.refreshClassesList();
-      showToast(`Updated "${subject}" rate to $${rate.toFixed(2)}/hr (synced to Student & Admin).`, 'success');
+      const formattedRate = (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.format(baseRate, { perHour: true }) : `$${baseRate.toFixed(2)}/hr`;
+      showToast(`Updated "${subject}" rate to ${formattedRate} (synced to Student & Admin).`, 'success');
     } catch (err) {
       showToast(err.message || 'Failed to update subject rate.', 'error');
     } finally {
@@ -2306,7 +2348,7 @@ const Teacher = {
             <div class="class-meta-inline-row">
               <span class="class-meta-pill" title="Lesson Date">${Icons.calendar(12)} ${c.requested_date}</span>
               <span class="class-meta-pill" title="Lesson Time & Duration">${Icons.clock(12)} ${c.requested_time} (50m)</span>
-              <span class="class-meta-pill" title="Session Fee">${Icons.award(12)} $${Number(c.total_amount || 0).toFixed(2)}</span>
+              <span class="class-meta-pill" title="Session Fee">${Icons.award(12)} ${(typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.format(c.total_amount || c.hourly_rate || 45) : `$${Number(c.total_amount || 0).toFixed(2)}`}</span>
             </div>
 
             ${!isDeclined ? `
@@ -2522,7 +2564,7 @@ const Teacher = {
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 0.5rem; margin-top: 0.75rem; padding-top: 0.65rem; border-top: 1px solid var(--border-color); font-size: 0.78rem; color: var(--text-secondary);">
           <div>📅 <strong>Date:</strong> ${record.requested_date}</div>
           <div>🕒 <strong>Time:</strong> ${record.requested_time} (50m)</div>
-          <div>💰 <strong>Fee:</strong> $${Number(record.total_amount || 0).toFixed(2)}</div>
+          <div>💰 <strong>Fee:</strong> ${(typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.format(record.total_amount || record.hourly_rate || 0) : `$${Number(record.total_amount || 0).toFixed(2)}`}</div>
           <div>🎓 <strong>Status:</strong> ${isCompleted ? 'Concluded / Done' : 'Scheduled'}</div>
         </div>
 
@@ -5097,7 +5139,11 @@ const Teacher = {
     const bio = document.getElementById('t-profile-bio');
 
     if (headline) headline.value = tutor.headline || '';
-    if (rate) rate.value = tutor.hourly_rate || 45;
+    if (rate) {
+      const baseUsd = Number(tutor.hourly_rate || 45);
+      rate.setAttribute('data-base-usd', baseUsd);
+      rate.value = (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.convert(baseUsd) : baseUsd;
+    }
     if (bio) bio.value = tutor.bio || '';
   },
 
@@ -5130,7 +5176,11 @@ const Teacher = {
     if (institution) institution.value = app.institution || '';
     if (gradYear) gradYear.value = app.graduation_year || 2022;
     if (exp) exp.value = app.years_experience || 2;
-    if (rate) rate.value = app.hourly_rate || 45;
+    if (rate) {
+      const baseUsd = Number(app.hourly_rate || 45);
+      rate.setAttribute('data-base-usd', baseUsd);
+      rate.value = (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.convert(baseUsd) : baseUsd;
+    }
     if (bio) bio.value = app.bio || '';
     if (phil) phil.value = app.teaching_philosophy || '';
     if (subjects) subjects.value = (app.subjects || []).join(', ');
@@ -5901,7 +5951,9 @@ const Teacher = {
     let subjectsHtml = '';
     if (subjectsList.length > 0) {
       subjectsHtml = subjectsList.map(s => {
-        const rate = ratesMap[s] ? `$${ratesMap[s]}/hr` : (creds.hourly_rate ? `$${creds.hourly_rate}/hr` : '');
+        const rate = ratesMap[s]
+          ? ((typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.format(ratesMap[s], { perHour: true }) : `$${ratesMap[s]}/hr`)
+          : (creds.hourly_rate ? ((typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.format(creds.hourly_rate, { perHour: true }) : `$${creds.hourly_rate}/hr`) : '');
         return `<span style="display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.2rem 0.55rem; border-radius: 9999px; background: rgba(198, 138, 40, 0.12); color: var(--gold-600); border: 1px solid rgba(198, 138, 40, 0.25); font-size: 0.72rem; font-weight: 600;">
           ${escapeHTML(s)} ${rate ? `<span style="opacity: 0.75; font-size: 0.68rem;">(${rate})</span>` : ''}
         </span>`;
@@ -5945,7 +5997,7 @@ const Teacher = {
             <div>Headline: <strong style="color: var(--text-primary);">${escapeHTML(creds.headline || 'Not specified')}</strong></div>
             <div>Degree: <strong style="color: var(--text-primary);">${escapeHTML(creds.highest_degree || 'None')}</strong></div>
             <div>Institution: <strong style="color: var(--text-primary);">${escapeHTML(creds.institution || 'None')}</strong></div>
-            <div>Base Rate: <strong style="color: #10B981;">$${escapeHTML(String(creds.hourly_rate || 45))}/hr</strong></div>
+            <div>Base Rate: <strong style="color: #10B981;">${(typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.format(creds.hourly_rate || 45, { perHour: true }) : `$${escapeHTML(String(creds.hourly_rate || 45))}/hr`}</strong></div>
           </div>
         </div>
 

@@ -536,13 +536,39 @@
       if (typeof document === 'undefined') return;
       const curr = this.getActiveCurrency();
 
-      // 1. Hourly Rate Input Labels
+      // 1. Hourly Rate Input Labels & Currency Symbols
       ['t-profile-rate-label', 'app-hourly-rate-label', 'formal-subject-rate-label', 'subject-rate-label'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.textContent = `Hourly Rate (${curr.symbol} ${curr.code} / hr)`;
       });
+      ['formal-subject-rate-currency'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = curr.symbol;
+      });
 
-      // 2. Tutor Profile Rate Input & Hero Badge
+      // 2. Add Subject Modal Input
+      const modalRateInp = document.getElementById('formal-subject-rate');
+      if (modalRateInp) {
+        let baseUsd = parseFloat(modalRateInp.getAttribute('data-base-usd'));
+        if (isNaN(baseUsd) || baseUsd <= 0) {
+          baseUsd = (typeof Teacher !== 'undefined' && (Teacher.tutorProfile?.hourly_rate || Teacher.application?.hourly_rate)) || 45;
+          modalRateInp.setAttribute('data-base-usd', baseUsd);
+        }
+        modalRateInp.value = this.convert(baseUsd);
+      }
+
+      // 3. Application Form Rate Input
+      const appRateInp = document.getElementById('app-hourly-rate');
+      if (appRateInp) {
+        let baseUsd = parseFloat(appRateInp.getAttribute('data-base-usd'));
+        if (isNaN(baseUsd) || baseUsd <= 0) {
+          baseUsd = 55;
+          appRateInp.setAttribute('data-base-usd', '55');
+        }
+        appRateInp.value = this.convert(baseUsd);
+      }
+
+      // 4. Tutor Profile Rate Input & Hero Badge
       const rateInp = document.getElementById('t-profile-rate');
       if (rateInp) {
         let baseUsd = parseFloat(rateInp.getAttribute('data-base-usd'));
@@ -559,7 +585,23 @@
         rateBadge.textContent = this.format(baseUsd, { perHour: true });
       }
 
-      // 3. Navigation Wallet Balances
+      // 5. Connected Teacher account pages (Classes, Subjects, Dashboard, Requests)
+      if (typeof Teacher !== 'undefined') {
+        if (typeof Teacher.renderTeacherSubjects === 'function') {
+          Teacher.renderTeacherSubjects();
+        }
+        if (typeof Teacher.renderClasses === 'function') {
+          Teacher.renderClasses();
+        }
+        if (typeof Teacher.renderDashboardStats === 'function') {
+          Teacher.renderDashboardStats();
+        }
+        if (typeof Teacher.renderTeacherRequests === 'function') {
+          Teacher.renderTeacherRequests();
+        }
+      }
+
+      // 6. Navigation Wallet Balances
       if (typeof Auth !== 'undefined' && Auth.currentUser && Auth.currentUser.role === 'student') {
         const bal = parseFloat(Auth.currentUser.wallet_balance || 0);
         const formattedBal = this.format(bal);
@@ -571,7 +613,7 @@
         if (payBal) payBal.textContent = formattedBal;
       }
 
-      // 4. Rate Filter in Tutors Directory
+      // 7. Rate Filter in Tutors Directory
       const rateFilter = document.getElementById('tutor-rate-filter');
       if (rateFilter) {
         rateFilter.querySelectorAll('option').forEach(opt => {
@@ -583,14 +625,14 @@
         });
       }
 
-      // 5. Subscription Displays
+      // 8. Subscription Displays
       const subRateDisplay = document.getElementById('sub-enroll-tutor-rate-display');
       if (subRateDisplay) {
         const base = parseFloat(subRateDisplay.getAttribute('data-base-rate')) || 58;
         subRateDisplay.textContent = this.format(base, { perHour: true });
       }
 
-      // 6. Generic data-usd-amount elements
+      // 9. Generic data-usd-amount elements
       document.querySelectorAll('[data-usd-amount]').forEach(el => {
         const amt = parseFloat(el.getAttribute('data-usd-amount'));
         if (!isNaN(amt)) {

@@ -1515,12 +1515,20 @@ function ensureJoshuaAccount(customPassword) {
       }
 
       // Ensure conversation history with Krystel Comia exists and is preserved
-      const existingKrystelMsg = db.prepare('SELECT id FROM messages WHERE (sender_id = ? AND receiver_id = ?) OR (sender_id = ? AND receiver_id = ?)').get(krystel.id, userId, userId, krystel.id);
+      const existingKrystelMsg = db.prepare('SELECT id FROM messages WHERE sender_id = ? AND receiver_id = ?').get(krystel.id, userId);
       if (!existingKrystelMsg) {
         db.prepare(`
           INSERT INTO messages (sender_id, receiver_id, sender_name, sender_email, subject, content, status, is_read, created_at)
           VALUES (?, ?, 'Krystel Comia', 'comiakrystel65@gmail.com', 'Calculus BC Question', 'heello', 'seen', 1, '2026-11-09 02:06:00')
         `).run(krystel.id, userId);
+      }
+
+      const existingJoshuaReply = db.prepare('SELECT id FROM messages WHERE sender_id = ? AND receiver_id = ?').get(userId, krystel.id);
+      if (!existingJoshuaReply) {
+        db.prepare(`
+          INSERT INTO messages (sender_id, receiver_id, sender_name, sender_email, subject, content, status, is_read, created_at)
+          VALUES (?, ?, 'Joshua Garcia', 'joshuagarcia@gmail.com', 'Re: Calculus BC Question', 'Hello Krystel! I am here to help you with Calculus BC.', 'delivered', 0, '2026-11-09 04:56:33')
+        `).run(userId, krystel.id);
       }
     }
 

@@ -2288,7 +2288,7 @@ const Student = {
     this.activeTutorId = String(tutorId);
     API.markConversationRead(tutorId).catch(() => {});
     (this.studentMessages || []).forEach(m => {
-      const id = String(m.tutor_user_id || m.sender_id);
+      const id = String(m.tutor_user_id || (m.sender_role === 'student' ? m.receiver_id : m.sender_id));
       if (id === this.activeTutorId) {
         m.is_read = 1;
         m.status = 'seen';

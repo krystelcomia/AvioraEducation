@@ -3906,72 +3906,8 @@ const Teacher = {
       </div>
 
       <div class="date-schedule-columns">
-        <!-- Left Column: Upcoming Classes on this Date -->
-        <div>
-          <div class="date-schedule-col-title">
-            <span>Upcoming Classes (${dayApts.length})</span>
-            <span style="font-size: 0.75rem; color: var(--text-secondary); font-weight: 500;">Auto-synced</span>
-          </div>
-
-          ${dayApts.length === 0 ? `
-            <div style="padding: 2rem 1.5rem; text-align: center; color: var(--text-secondary); background: rgba(0,0,0,0.02); border-radius: var(--radius-lg); border: 1px dashed var(--border-color);">
-              <div style="margin-bottom: 0.5rem; color: var(--text-secondary);">${isDateOccupied ? Icons.ban(26, 'color: #EF4444;') : Icons.calendar(26, 'color: var(--text-secondary);')}</div>
-              <strong style="color: var(--text-primary); font-size: 0.95rem;">
-                ${isDateOccupied ? 'Date Marked as Occupied' : 'No Classes on this Date'}
-              </strong>
-              <p style="margin: 0.25rem 0 0; font-size: 0.825rem;">
-                ${isDateOccupied
-                  ? 'Students see that this date is unavailable when booking.'
-                  : 'Open slots on this day are ready for students to reserve.'}
-              </p>
-            </div>
-          ` : `
-            <div style="display: flex; flex-direction: column; gap: 0.75rem;">
-              ${dayApts.map(apt => `
-                <div class="appointment-card" style="margin-bottom: 0.5rem; flex-direction: column; align-items: stretch;">
-                  <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
-                    <div style="display: flex; gap: 0.75rem; align-items: center;">
-                      <img src="${apt.student_avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=80&q=80'}" class="appointment-avatar" />
-                      <div>
-                        <strong style="color: var(--text-primary); font-size: 0.95rem;">${apt.student_name}</strong>
-                        <div style="font-size: 0.8rem; color: var(--text-secondary);">${apt.subject} • <span class="status-pill ${apt.status === 'completed' ? 'completed' : apt.status === 'declined' ? 'declined' : 'pending'}" style="font-size: 0.68rem; padding: 0.1rem 0.45rem;">${(apt.status === 'completed' ? 'DONE' : apt.status === 'declined' ? 'CANCELLED' : 'PENDING')}</span></div>
-                      </div>
-                    </div>
-                    <div class="appointment-meta">
-                      <div>${Icons.clock(14)} ${apt.requested_time}</div>
-                      <div>${apt.hourly_rate ? `$${apt.hourly_rate}/hr` : 'Booked'}</div>
-                    </div>
-                    <div style="display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap;">
-                      ${!this.isApproved() ? `
-                        <span class="badge" style="background: rgba(245, 158, 11, 0.15); color: #D97706; font-size: 0.75rem; padding: 0.3rem 0.6rem; border-radius: 4px; display: inline-flex; align-items: center; gap: 0.25rem;" title="Operations locked while application is under review">${Icons.lock(12)} Locked</span>
-                      ` : apt.status === 'completed' ? `
-                        <span style="font-size: 0.78rem; color: #10B981; font-weight: 700; display: inline-flex; align-items: center; gap: 0.25rem;">${Icons.check(13)} Done Class</span>
-                      ` : apt.room_status === 'open' ? `
-                        <button class="btn btn-primary btn-sm" onclick="VirtualRoom.joinRoom(${apt.id}, 'tutor')" style="background: #10B981; border-color: #10B981;">Enter</button>
-                      ` : `
-                        <button class="btn btn-secondary btn-sm" onclick="Teacher.startVirtualClassSession(${apt.id}, this)">Open Room</button>
-                      `}
-                    </div>
-                  </div>
-                  ${apt.notes ? `
-                    <div class="date-note-box student-focus-box" style="margin-top: 0.65rem; padding: 0.6rem 0.8rem; font-size: 0.82rem;">
-                      <div class="date-note-header" style="margin-bottom: 0.2rem;">
-                        <span class="date-note-badge" style="display: inline-flex; align-items: center; gap: 0.25rem;">${Icons.note(12)} Student Focus:</span>
-                      </div>
-                      <div class="date-note-body" style="font-size: 0.82rem;">"${this.escapeHtml(apt.notes)}"</div>
-                      ${apt.tutor_response_note ? `
-                        <div class="date-note-response" style="font-size: 0.76rem;"><strong>Your Note:</strong> ${this.escapeHtml(apt.tutor_response_note)}</div>
-                      ` : ''}
-                    </div>
-                  ` : ''}
-                </div>
-              `).join('')}
-            </div>
-          `}
-        </div>
-
-        <!-- Right Column: Time Slot Availability -->
-        <div>
+        <!-- Time Slot Availability (Full Width, Compact Vertical Profile) -->
+        <div class="time-slot-availability-section">
           <div class="date-schedule-col-title">
             <span>Time Slot Availability</span>
             <span style="font-size: 0.75rem; color: var(--gold-400); font-weight: 600; display: inline-flex; align-items: center; gap: 0.25rem;">${Icons.zap(12, 'color: var(--gold-500);')} Live</span>
@@ -3979,60 +3915,77 @@ const Teacher = {
 
           <!-- Specify & Edit Available Hours Card -->
           <div class="time-slot-availability-editor">
-            <div class="tsa-current-bar">
-              <div>
+            <div class="tsa-top-bar">
+              <div class="tsa-current-info">
                 <div class="tsa-current-label">Current Hours (${dayOfWeekName})</div>
                 <div class="tsa-current-value ${isDateOccupied ? 'is-occupied' : ''}">${activeHoursDisplayText}</div>
               </div>
-              <button type="button" class="btn btn-outline-gold btn-sm" onclick="Teacher.toggleHoursEditor()" style="padding: 0.3rem 0.7rem; font-size: 0.76rem; font-weight: 700; display: inline-flex; align-items: center; gap: 0.3rem;">
-                ${this.showHoursEditor ? Icons.x(13) + ' Close' : Icons.edit(13) + ' Edit Hours'}
-              </button>
-            </div>
 
-            <div class="tsa-mode-pills-row">
-              <button type="button" class="tsa-mode-pill ${!isDateOccupied && activeMode === 'all_day' ? 'active' : ''}" onclick="Teacher.selectAvailabilityMode('all_day')" style="display: inline-flex; align-items: center; gap: 0.35rem; justify-content: center;">
-                ${Icons.sun(14)} All Day (8 AM – 8 PM)
-              </button>
-              <button type="button" class="tsa-mode-pill ${!isDateOccupied && activeMode === 'specific' ? 'active' : ''}" onclick="Teacher.selectAvailabilityMode('specific')" style="display: inline-flex; align-items: center; gap: 0.35rem; justify-content: center;">
-                ${Icons.target(14)} Specific Hours
-              </button>
+              <div class="tsa-top-actions">
+                <div class="tsa-mode-pills-row">
+                  <button type="button" class="tsa-mode-pill ${!isDateOccupied && activeMode === 'all_day' ? 'active' : ''}" onclick="Teacher.selectAvailabilityMode('all_day')" style="display: inline-flex; align-items: center; gap: 0.35rem; justify-content: center;">
+                    ${Icons.sun(14)} All Day (8 AM – 8 PM)
+                  </button>
+                  <button type="button" class="tsa-mode-pill ${!isDateOccupied && activeMode === 'specific' ? 'active' : ''}" onclick="Teacher.selectAvailabilityMode('specific')" style="display: inline-flex; align-items: center; gap: 0.35rem; justify-content: center;">
+                    ${Icons.target(14)} Specific Hours
+                  </button>
+                </div>
+
+                <button type="button" class="btn btn-outline-gold btn-sm" onclick="Teacher.toggleHoursEditor()" style="padding: 0.35rem 0.75rem; font-size: 0.76rem; font-weight: 700; display: inline-flex; align-items: center; gap: 0.3rem;">
+                  ${this.showHoursEditor ? Icons.x(13) + ' Close' : Icons.edit(13) + ' Edit Hours'}
+                </button>
+              </div>
             </div>
 
             <div id="teacher-hours-editor-body" class="tsa-editor-body" style="display: ${this.showHoursEditor || activeMode === 'specific' ? 'block' : 'none'};">
               ${activeMode === 'all_day' ? `
-                <div style="font-size: 0.82rem; color: var(--text-secondary); margin-bottom: 0.75rem;">
-                  Set to <strong>Available All Day (8:00 AM – 8:00 PM)</strong>. Students can book open 50-minute sessions throughout the day.
+                <div class="tsa-allday-row">
+                  <div style="font-size: 0.85rem; color: var(--text-secondary);">
+                    Set to <strong>Available All Day (8:00 AM – 8:00 PM)</strong>. Open 50-minute sessions throughout the day.
+                  </div>
+                  <div style="display: flex; gap: 0.75rem; align-items: flex-end; flex-wrap: wrap;">
+                    <div style="min-width: 200px;">
+                      <label class="tsa-field-label">Apply To</label>
+                      <select id="tsa-apply-scope" class="form-control tsa-select">
+                        <option value="date" selected>This Date Only (${this.selectedDate})</option>
+                        <option value="weekday">Every ${dayOfWeekName}</option>
+                        <option value="all_days">All Days (Mon–Sun)</option>
+                      </select>
+                    </div>
+                    <button type="button" class="btn btn-primary btn-sm tsa-save-btn" onclick="Teacher.saveTimeSlotAvailabilityHours('${activeMode}')">
+                      ${Icons.save(14)} Save Hours
+                    </button>
+                  </div>
                 </div>
               ` : `
-                <div class="tsa-time-range-grid">
-                  <div>
+                <div class="tsa-horizontal-controls">
+                  <div class="tsa-control-field">
                     <label class="tsa-field-label">From (Start Hour)</label>
                     <select id="tsa-start-hour" class="form-control tsa-select">
                       ${startHourOptions.join('')}
                     </select>
                   </div>
-                  <div>
+                  <div class="tsa-control-field">
                     <label class="tsa-field-label">Until (End Hour)</label>
                     <select id="tsa-end-hour" class="form-control tsa-select">
                       ${endHourOptions.join('')}
                     </select>
                   </div>
+                  <div class="tsa-control-field">
+                    <label class="tsa-field-label">Apply To</label>
+                    <select id="tsa-apply-scope" class="form-control tsa-select">
+                      <option value="date" selected>This Date Only (${this.selectedDate})</option>
+                      <option value="weekday">Every ${dayOfWeekName}</option>
+                      <option value="all_days">All Days (Mon–Sun)</option>
+                    </select>
+                  </div>
+                  <div class="tsa-control-field tsa-btn-field">
+                    <button type="button" class="btn btn-primary btn-sm tsa-save-btn" onclick="Teacher.saveTimeSlotAvailabilityHours('${activeMode}')">
+                      ${Icons.save(14)} Save Hours
+                    </button>
+                  </div>
                 </div>
               `}
-
-              <div class="tsa-save-row">
-                <div class="tsa-field-col">
-                  <label class="tsa-field-label">Apply To</label>
-                  <select id="tsa-apply-scope" class="form-control tsa-select">
-                    <option value="date" selected>This Date Only (${this.selectedDate})</option>
-                    <option value="weekday">Every ${dayOfWeekName}</option>
-                    <option value="all_days">All Days (Mon–Sun)</option>
-                  </select>
-                </div>
-                <button type="button" class="btn btn-primary btn-sm tsa-save-btn" onclick="Teacher.saveTimeSlotAvailabilityHours('${activeMode}')">
-                  ${Icons.save(14)} Save Hours
-                </button>
-              </div>
             </div>
           </div>
 

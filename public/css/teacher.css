@@ -1899,20 +1899,21 @@
   border-color: #10B981;
 }
 
-/* Time Slot Availability Hours Editor */
+/* Time Slot Availability Hours Editor (Full Width, Compact Vertical Profile) */
 .time-slot-availability-editor {
-  background: rgba(198, 138, 40, 0.05);
-  border: 1px solid rgba(198, 138, 40, 0.24);
+  background: rgba(198, 138, 40, 0.04);
+  border: 1px solid rgba(198, 138, 40, 0.22);
   border-radius: var(--radius-lg);
-  padding: 1rem 1.15rem;
-  margin-bottom: 1rem;
+  padding: 0.85rem 1.25rem;
+  margin-bottom: 0.85rem;
+  width: 100%;
 }
 
-.tsa-current-bar {
+.tsa-top-bar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 0.75rem;
+  gap: 1rem;
   flex-wrap: wrap;
 }
 
@@ -1931,26 +1932,26 @@
 }
 
 .tsa-current-value {
-  font-size: 0.88rem;
+  font-size: 0.9rem;
   font-weight: 700;
   color: var(--text-primary);
 }
 
-.tsa-mode-pills-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.5rem;
-  margin-top: 0.75rem;
+.tsa-top-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
 }
 
-@media (max-width: 640px) {
-  .tsa-mode-pills-row {
-    grid-template-columns: 1fr;
-  }
+.tsa-mode-pills-row {
+  display: inline-flex;
+  gap: 0.45rem;
+  margin-top: 0;
 }
 
 .tsa-mode-pill {
-  padding: 0.5rem 0.65rem;
+  padding: 0.4rem 0.8rem;
   border-radius: var(--radius-md);
   border: 1px solid var(--border-color);
   background: var(--bg-card);
@@ -1960,6 +1961,7 @@
   cursor: pointer;
   transition: all var(--transition-fast);
   text-align: center;
+  white-space: nowrap;
 }
 
 .tsa-mode-pill:hover {
@@ -1975,43 +1977,45 @@
 }
 
 .tsa-editor-body {
-  margin-top: 0.9rem;
-  padding-top: 0.9rem;
-  border-top: 1px dashed rgba(198, 138, 40, 0.3);
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px dashed rgba(198, 138, 40, 0.25);
 }
 
-.tsa-time-range-grid {
+.tsa-horizontal-controls {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  grid-template-columns: minmax(130px, 1fr) minmax(130px, 1fr) minmax(180px, 1.4fr) auto;
   gap: 0.75rem;
-  margin-bottom: 0.85rem;
-}
-
-.tsa-field {
-  display: flex;
-  flex-direction: column;
-  gap: 0.3rem;
-}
-
-.tsa-field label {
-  font-size: 0.74rem;
-  font-weight: 700;
-  color: var(--text-secondary);
-}
-
-.tsa-save-row {
-  display: flex;
   align-items: flex-end;
-  justify-content: space-between;
-  gap: 0.75rem;
-  margin-top: 0.85rem;
 }
 
-.tsa-save-row .tsa-field-col {
-  flex: 1;
-  min-width: 170px;
+@media (max-width: 860px) {
+  .tsa-horizontal-controls {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 520px) {
+  .tsa-horizontal-controls {
+    grid-template-columns: 1fr;
+  }
+}
+
+.tsa-control-field {
   display: flex;
   flex-direction: column;
+}
+
+.tsa-control-field.tsa-btn-field {
+  justify-content: flex-end;
+}
+
+.tsa-allday-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
 }
 
 .tsa-field-label {
@@ -2188,23 +2192,19 @@
 }
 
 .date-schedule-columns {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 2rem;
+  display: block;
+  width: 100%;
 }
 
-@media (max-width: 900px) {
-  .date-schedule-columns {
-    grid-template-columns: 1fr;
-    gap: 1.5rem;
-  }
+.time-slot-availability-section {
+  width: 100%;
 }
 
 .date-schedule-col-title {
   font-size: 1rem;
   font-weight: 700;
   color: var(--text-primary);
-  margin-bottom: 1rem;
+  margin-bottom: 0.85rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -2212,12 +2212,19 @@
 
 .date-slot-pills-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
-  gap: 0.65rem;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0.55rem;
+  width: 100%;
+}
+
+@media (max-width: 1024px) {
+  .date-slot-pills-grid {
+    grid-template-columns: repeat(auto-fill, minmax(115px, 1fr));
+  }
 }
 
 .date-slot-pill {
-  padding: 0.6rem 0.5rem;
+  padding: 0.45rem 0.5rem;
   border-radius: 8px;
   border: 1px solid var(--border-color);
   text-align: center;
@@ -2225,19 +2232,23 @@
   transition: all var(--transition-fast);
   display: flex;
   flex-direction: column;
-  gap: 0.2rem;
+  justify-content: center;
+  gap: 0.12rem;
   background: var(--bg-card);
+  min-height: 48px;
 }
 
 .date-slot-pill .slot-pill-time {
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   font-weight: 700;
   color: var(--text-primary);
+  line-height: 1.15;
 }
 
 .date-slot-pill .slot-pill-status {
-  font-size: 0.68rem;
+  font-size: 0.65rem;
   font-weight: 600;
+  line-height: 1.15;
 }
 
 .date-slot-pill.is-available {

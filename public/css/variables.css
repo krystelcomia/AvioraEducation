@@ -1067,6 +1067,16 @@
   border-color: rgba(255, 255, 255, 0.15) !important;
 }
 
+/* 12. Student Ratings & Reviews Cards Dark Mode */
+[data-theme="dark"] .student-review-card {
+  background: #0A0A0A !important;
+  border-color: rgba(216, 170, 60, 0.28) !important;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.6) !important;
+}
+[data-theme="dark"] .student-review-card:hover {
+  border-color: rgba(216, 170, 60, 0.5) !important;
+}
+
 /* =========================================
    HEADER LANGUAGE SELECTOR
    ========================================= */

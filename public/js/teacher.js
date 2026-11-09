@@ -564,25 +564,50 @@ const Teacher = {
     if (typeof Router !== 'undefined' && Router.updateActiveNav) Router.updateActiveNav();
   },
 
-  // 5b. Dedicated Ratings Page (Strictly Read-Only)
+  // 5b. Dedicated Ratings Page (Strictly Read-Only, Formatted Like Reference Guide)
+  formatRelativeTime(dateStr) {
+    if (!dateStr) return 'Recently';
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return String(dateStr);
+    const now = new Date();
+    const diffSec = Math.floor((now - date) / 1000);
+    if (diffSec < 60) return 'Just now';
+    const diffMin = Math.floor(diffSec / 60);
+    if (diffMin < 60) return `${diffMin}m ago`;
+    const diffHour = Math.floor(diffMin / 60);
+    if (diffHour < 24) return `${diffHour}h ago`;
+    const diffDays = Math.floor(diffHour / 24);
+    if (diffDays === 1) return 'Yesterday';
+    if (diffDays < 7) return `${diffDays} days ago`;
+    const diffWeeks = Math.floor(diffDays / 7);
+    if (diffWeeks < 5) return `${diffWeeks} ${diffWeeks === 1 ? 'week' : 'weeks'} ago`;
+    const diffMonths = Math.floor(diffDays / 30);
+    if (diffMonths < 12) return `${diffMonths} ${diffMonths === 1 ? 'month' : 'months'} ago`;
+    const diffYears = Math.floor(diffDays / 365);
+    return `${diffYears} ${diffYears === 1 ? 'year' : 'years'} ago`;
+  },
+
   async loadRatingsPage() {
     this.currentTab = 'ratings';
     await this.ensureTeacherStatus();
     this.renderStatusBanner('teacher-banner-ratings');
 
+    const cardsGrid = document.getElementById('teacher-ratings-cards-grid');
     const tableBody = document.getElementById('teacher-ratings-table-body');
+    const avgNumberEl = document.getElementById('ratings-avg-number');
+    const avgStarsEl = document.getElementById('ratings-avg-stars');
+    const totalTextEl = document.getElementById('ratings-total-text');
     const summaryAvg = document.getElementById('ratings-summary-avg');
     const summaryCount = document.getElementById('ratings-summary-count');
     const summaryPercent = document.getElementById('ratings-summary-percent');
 
     try {
-      if (tableBody) {
-        tableBody.innerHTML = `
-          <tr>
-            <td colspan="5" style="text-align: center; padding: 2rem; color: var(--text-secondary);">
-              Loading verified student evaluations...
-            </td>
-          </tr>
+      if (cardsGrid) {
+        cardsGrid.innerHTML = `
+          <div style="grid-column: 1 / -1; text-align: center; padding: 3rem 1.5rem; color: var(--text-secondary);">
+            <span class="spinner" style="width: 22px; height: 22px; display: inline-block; border: 2.5px solid var(--gold-500); border-right-color: transparent; border-radius: 50%; animation: spin 0.6s linear infinite; vertical-align: middle; margin-right: 0.5rem;"></span>
+            Loading verified student evaluations...
+          </div>
         `;
       }
 
@@ -590,73 +615,123 @@ const Teacher = {
       const reviews = res.reviews || [];
       const stats = res.stats || {};
 
-      if (summaryAvg) summaryAvg.textContent = stats.average != null ? stats.average.toFixed(1) : '5.0';
-      if (summaryCount) summaryCount.textContent = stats.count != null ? stats.count : reviews.length;
+      const avgVal = stats.average != null ? stats.average.toFixed(1) : (stats.average_rating != null ? stats.average_rating.toFixed(1) : '5.0');
+      const totalCount = stats.count != null ? stats.count : reviews.length;
+      const ratingInt = Math.max(1, Math.min(5, Math.round(parseFloat(avgVal) || 5)));
+      const redStars = '★'.repeat(ratingInt) + '☆'.repeat(Math.max(0, 5 - ratingInt));
+
+      if (avgNumberEl) avgNumberEl.textContent = avgVal;
+      if (avgStarsEl) avgStarsEl.textContent = redStars;
+      if (totalTextEl) {
+        totalTextEl.textContent = totalCount > 0 ? `Over ${totalCount} ${totalCount === 1 ? 'Review' : 'Reviews'}` : '0 Reviews';
+      }
+
+      if (summaryAvg) summaryAvg.textContent = avgVal;
+      if (summaryCount) summaryCount.textContent = totalCount;
       if (summaryPercent) summaryPercent.textContent = (stats.five_star_percent != null ? stats.five_star_percent : 100) + '%';
 
-      if (!tableBody) return;
+      if (!cardsGrid && !tableBody) return;
 
       if (!reviews.length) {
-        tableBody.innerHTML = `
-          <tr>
-            <td colspan="5" style="text-align: center; padding: 2.5rem; color: var(--text-secondary);">
-              <div style="font-size: 1.05rem; font-weight: 600; color: var(--text-primary); margin-bottom: 0.35rem;">No student reviews recorded yet</div>
-              <div style="font-size: 0.85rem;">Official evaluations submitted by students upon completing tutoring sessions will automatically appear in this ledger.</div>
-            </td>
-          </tr>
+        const emptyHtml = `
+          <div style="grid-column: 1 / -1; background: var(--bg-surface, #ffffff); border: 1.5px dashed var(--border-color); border-radius: 14px; padding: 3.5rem 1.5rem; text-align: center;">
+            <div style="font-size: 2.5rem; color: #ef4444; margin-bottom: 0.65rem; line-height: 1;">★</div>
+            <div style="font-size: 1.15rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.35rem;">No student reviews recorded yet</div>
+            <div style="font-size: 0.88rem; color: var(--text-secondary); max-width: 480px; margin: 0 auto; line-height: 1.5;">
+              Official evaluations and star ratings submitted by students upon completing tutoring sessions will automatically appear in this section.
+            </div>
+          </div>
         `;
+        if (cardsGrid) cardsGrid.innerHTML = emptyHtml;
+        if (tableBody) tableBody.innerHTML = `<tr><td colspan="5" style="text-align: center; padding: 2.5rem; color: var(--text-secondary);">${emptyHtml}</td></tr>`;
         return;
       }
 
-      tableBody.innerHTML = reviews.map(rev => {
+      const initialColors = ['#1e293b', '#166534', '#1e40af', '#6b21a8', '#991b1b', '#0369a1', '#854d0e'];
+
+      const cardsHtml = reviews.map((rev, idx) => {
         const studentName = rev.student_name || 'Verified Student';
-        const studentAvatar = rev.student_avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(studentName)}&background=C68A28&color=fff`;
+        const studentAvatar = rev.student_avatar;
         const schoolOrGrade = rev.student_school || rev.student_grade || 'Aviora Learner';
         const subject = rev.session_subject || rev.subject || 'Calculus BC';
         const ratingNum = Math.max(1, Math.min(5, Math.round(Number(rev.rating) || 5)));
         const comment = rev.comment ? this.escapeHtml(rev.comment) : 'Outstanding guidance and clear explanations throughout the session.';
-
-        let dateStr = 'Recent';
-        if (rev.created_at) {
-          const d = new Date(rev.created_at);
-          dateStr = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-        }
+        const relativeTime = this.formatRelativeTime(rev.created_at);
 
         const starsHtml = '★'.repeat(ratingNum) + '☆'.repeat(Math.max(0, 5 - ratingNum));
 
+        const initial = studentName.trim().charAt(0).toUpperCase() || 'S';
+        const avatarBg = initialColors[idx % initialColors.length];
+
+        const avatarMarkup = studentAvatar
+          ? `<img src="${this.escapeHtml(studentAvatar)}" alt="${this.escapeHtml(studentName)}" style="width: 44px; height: 44px; border-radius: 50%; object-fit: cover; border: 1.5px solid var(--border-color); flex-shrink: 0;" />`
+          : `<div style="width: 44px; height: 44px; border-radius: 50%; background: ${avatarBg}; color: #ffffff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1.15rem; flex-shrink: 0; user-select: none;">${this.escapeHtml(initial)}</div>`;
+
         return `
-          <tr>
-            <td>
-              <div style="display: flex; align-items: center; gap: 0.75rem;">
-                <img src="${this.escapeHtml(studentAvatar)}" alt="${this.escapeHtml(studentName)}" style="width: 38px; height: 38px; border-radius: 50%; object-fit: cover; border: 2px solid rgba(198, 138, 40, 0.3);" />
-                <div>
-                  <div style="font-weight: 700; color: var(--text-primary); font-size: 0.92rem;">${this.escapeHtml(studentName)}</div>
-                  <div style="font-size: 0.78rem; color: var(--text-secondary);">${this.escapeHtml(schoolOrGrade)}</div>
+          <div class="student-review-card" style="background: var(--bg-surface, #ffffff); border: 1px solid var(--border-color); border-radius: 12px; padding: 1.45rem; display: flex; flex-direction: column; transition: transform 0.2s ease, box-shadow 0.2s ease; box-shadow: 0 2px 8px rgba(0,0,0,0.03);">
+            
+            <!-- Reviewer Header -->
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; margin-bottom: 0.75rem;">
+              <div style="display: flex; align-items: center; gap: 0.75rem; min-width: 0;">
+                ${avatarMarkup}
+                <div style="min-width: 0;">
+                  <h4 style="font-size: 0.96rem; font-weight: 700; color: var(--text-primary); margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                    ${this.escapeHtml(studentName)}
+                  </h4>
+                  <span style="font-size: 0.78rem; color: var(--text-secondary); display: block; margin-top: 0.15rem;">
+                    ${this.escapeHtml(relativeTime)}
+                  </span>
                 </div>
               </div>
-            </td>
-            <td>
-              <span class="badge-gold" style="font-size: 0.78rem; padding: 0.25rem 0.55rem;">${this.escapeHtml(subject)}</span>
-            </td>
-            <td>
-              <div style="display: flex; flex-direction: column; gap: 0.15rem;">
-                <span style="color: #e5a50a; font-size: 1.05rem; letter-spacing: 1px;">${starsHtml}</span>
-                <span style="font-size: 0.78rem; font-weight: 700; color: var(--text-secondary);">${ratingNum}.0 / 5.0</span>
+
+              <!-- Google / Verified Icon matching guide reference -->
+              <div style="width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;" title="Verified Student Evaluation">
+                <svg width="20" height="20" viewBox="0 0 24 24">
+                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+                </svg>
               </div>
-            </td>
-            <td>
-              <div style="font-size: 0.88rem; color: var(--text-primary); line-height: 1.5; font-style: italic; background: rgba(0,0,0,0.02); padding: 0.65rem 0.85rem; border-radius: 6px; border-left: 3px solid var(--gold-500);">
-                "${comment}"
-              </div>
-            </td>
-            <td style="font-size: 0.82rem; color: var(--text-secondary); white-space: nowrap;">
-              ${this.escapeHtml(dateStr)}
-            </td>
-          </tr>
+            </div>
+
+            <!-- Star Rating Row (Red Stars matching reference image) -->
+            <div style="color: #ef4444; font-size: 1.15rem; letter-spacing: 2px; margin-bottom: 0.75rem; line-height: 1;">
+              ${starsHtml}
+            </div>
+
+            <!-- Review Feedback Text -->
+            <p style="font-size: 0.88rem; line-height: 1.6; color: var(--text-secondary); margin: 0 0 1.1rem 0; flex: 1; word-break: break-word;">
+              ${comment}
+            </p>
+
+            <!-- Card Bottom Metadata -->
+            <div style="display: flex; align-items: center; justify-content: space-between; border-top: 1px dashed var(--border-color); padding-top: 0.75rem; font-size: 0.76rem; color: var(--text-secondary); margin-top: auto;">
+              <span class="badge-gold" style="font-size: 0.72rem; padding: 0.15rem 0.5rem; font-weight: 600;">
+                ${this.escapeHtml(subject)}
+              </span>
+              <span style="font-size: 0.76rem;">
+                ${this.escapeHtml(schoolOrGrade)}
+              </span>
+            </div>
+
+          </div>
         `;
       }).join('');
+
+      if (cardsGrid) {
+        cardsGrid.innerHTML = cardsHtml;
+      }
     } catch (err) {
       console.error('Failed to load ratings page:', err);
+      if (cardsGrid) {
+        cardsGrid.innerHTML = `
+          <div style="grid-column: 1 / -1; text-align: center; padding: 3rem 1.5rem; color: #ef4444; background: rgba(239, 68, 68, 0.05); border-radius: 12px; border: 1px solid rgba(239, 68, 68, 0.2);">
+            <div style="font-weight: 700; margin-bottom: 0.25rem;">Failed to load student ratings ledger</div>
+            <div style="font-size: 0.82rem; color: var(--text-secondary);">${this.escapeHtml(err.message || 'Please refresh or try again later.')}</div>
+          </div>
+        `;
+      }
       if (tableBody) {
         tableBody.innerHTML = `
           <tr>
@@ -671,7 +746,6 @@ const Teacher = {
     }
   },
 
-  // 6. Dedicated Application Page
   // 6. Dedicated Application Page
   async loadApplicationPage() {
     await this.ensureTeacherStatus();

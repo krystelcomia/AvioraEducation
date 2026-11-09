@@ -3408,6 +3408,10 @@ app.post('/api/tutors/:id/messages', (req, res) => {
       success: true,
       message: {
         id: insertInfo.lastInsertRowid,
+        sender_id: senderId,
+        receiver_id: tutor.user_id,
+        tutor_user_id: tutor.user_id,
+        sender_role: 'student',
         sender: 'student',
         senderName: senderName,
         text: contentText,

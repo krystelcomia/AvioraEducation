@@ -1851,7 +1851,7 @@ const Student = {
   studentMessagesPollInterval: null,
   studentMessageFilter: 'all',
   studentChatTypeFilter: 'all',
-  studentTimeRangeFilter: '7days',
+  studentTimeRangeFilter: 'all',
   studentMessageSearchQuery: '',
   activeTutorId: null,
   archivedConversations: new Set(),
@@ -1927,13 +1927,7 @@ const Student = {
   },
 
   clearConversation(convKey) {
-    if (!confirm('Are you sure you want to clear this active chat view? Message history remains stored.')) return;
-    this.studentMessages = (this.studentMessages || []).filter(m => {
-      const k = String(m.tutor_user_id || m.sender_id || m.receiver_id || 'tutor');
-      return k !== convKey;
-    });
-    this.renderStudentMessages();
-    showToast('Chat view cleared.', 'info');
+    showToast('Official conversation messages are permanently preserved.', 'info');
   },
 
   toggleTemplatesMenu() {
@@ -2043,16 +2037,21 @@ const Student = {
             const res = await API.getStudentMessages();
             const incoming = res.messages || [];
 
-            const pendingTemps = (this.studentMessages || []).filter(m => String(m.id).startsWith('temp-'));
+            const incomingIds = new Set(incoming.map(m => String(m.id)));
             const merged = [...incoming];
-            for (const temp of pendingTemps) {
-              const alreadySynced = merged.some(m => 
-                m.sender_role === temp.sender_role &&
-                (m.content || m.text || '') === (temp.content || temp.text || '') &&
-                (m.attachment_url || null) === (temp.attachment_url || null)
-              );
-              if (!alreadySynced) {
-                merged.push(temp);
+            for (const localMsg of (this.studentMessages || [])) {
+              const isTemp = String(localMsg.id).startsWith('temp-');
+              if (isTemp) {
+                const alreadySynced = incoming.some(m => 
+                  m.sender_role === localMsg.sender_role &&
+                  (m.content || m.text || '') === (localMsg.content || localMsg.text || '') &&
+                  (m.attachment_url || null) === (localMsg.attachment_url || null)
+                );
+                if (!alreadySynced) {
+                  merged.push(localMsg);
+                }
+              } else if (!incomingIds.has(String(localMsg.id))) {
+                merged.push(localMsg);
               }
             }
             this.studentMessages = merged;
@@ -2072,6 +2071,7 @@ const Student = {
 
   getTutorConversations() {
     const tutorMap = new Map();
+    const currentStudentId = (typeof Auth !== 'undefined' && Auth.currentUser) ? Auth.currentUser.id : null;
 
     (this.requests || []).forEach(req => {
       const tId = String(req.tutor_id);
@@ -2096,11 +2096,14 @@ const Student = {
     });
 
     (this.studentMessages || []).forEach(msg => {
-      const tId = String(msg.tutor_user_id || msg.sender_id || (msg.sender_role === 'tutor' ? msg.sender_id : msg.receiver_id));
+      const isFromStudent = msg.sender_role === 'student' || (currentStudentId && Number(msg.sender_id) === Number(currentStudentId));
+      const tutorId = isFromStudent ? (msg.tutor_user_id || msg.receiver_id) : (msg.tutor_user_id || msg.sender_id);
+      const tId = String(tutorId || msg.tutor_email || msg.sender_email || 'tutor');
+
       if (!tutorMap.has(tId)) {
         tutorMap.set(tId, {
-          tutor_id: msg.tutor_user_id || msg.sender_id,
-          tutor_name: msg.tutor_name || msg.sender_name || 'Academic Educator',
+          tutor_id: tutorId || (!isNaN(tId) ? Number(tId) : tId),
+          tutor_name: msg.tutor_name || (!isFromStudent && msg.sender_name) || 'Academic Educator',
           tutor_avatar: msg.tutor_avatar || null,
           tutor_headline: msg.tutor_headline || '',
           tutor_institution: msg.tutor_institution || 'Stanford University',
@@ -2116,11 +2119,16 @@ const Student = {
         });
       }
       const t = tutorMap.get(tId);
+      if (!t.tutor_id && tutorId) t.tutor_id = tutorId;
+      if (!t.tutor_name || t.tutor_name === 'Academic Educator') {
+        if (msg.tutor_name) t.tutor_name = msg.tutor_name;
+        else if (!isFromStudent && msg.sender_name) t.tutor_name = msg.sender_name;
+      }
       if (typeof msg.tutor_is_online !== 'undefined') {
         t.isOnline = Boolean(msg.tutor_is_online);
       }
       if (msg.tutor_institution && (!t.tutor_institution || t.tutor_institution === 'Stanford University')) t.tutor_institution = msg.tutor_institution;
-      if (msg.tutor_subjects && (!t.tutor_subjects || t.tutor_subjects === 'Mathematics')) t.tutor_subjects = msg.tutor_subjects;
+      if (msg.tutor_subjects && (!t.tutor_subjects || t.tutor_subjects === 'Calculus BC')) t.tutor_subjects = msg.tutor_subjects;
       if (msg.tutor_phone && (!t.tutor_phone || t.tutor_phone === '+1 254-125-4446')) t.tutor_phone = msg.tutor_phone;
       if (msg.tutor_country && (!t.tutor_country || t.tutor_country === 'United States')) t.tutor_country = msg.tutor_country;
       if (msg.subject && !t.subject) t.subject = msg.subject;
@@ -2133,7 +2141,7 @@ const Student = {
 
     const convs = Array.from(tutorMap.values());
     convs.forEach(c => {
-      c.messages.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+      c.messages.sort((a, b) => new Date(a.created_at || 0) - new Date(b.created_at || 0));
       c.lastMessage = c.messages[c.messages.length - 1];
     });
 
@@ -2380,9 +2388,6 @@ const Student = {
           <button type="button" class="messenger-header-action-btn" title="Archive Chat" onclick="Student.archiveConversation('${activeConv.tutor_id}')">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path><line x1="12" y1="11" x2="12" y2="17"></line><line x1="9" y1="14" x2="15" y2="14"></line></svg>
           </button>
-          <button type="button" class="messenger-header-action-btn" title="Clear Chat View" onclick="Student.clearConversation('${activeConv.tutor_id}')">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-          </button>
         </div>
       </div>
 
@@ -2494,11 +2499,6 @@ const Student = {
               <span>${timeStr}</span>
               ${statusHtml ? `<span class="messenger-msg-status">${statusHtml}</span>` : ''}
               ${m.is_edited ? '<span class="messenger-edited-tag">(edited)</span>' : ''}
-              ${m.content || m.text ? `
-                <button type="button" class="messenger-edit-btn" onclick="Student.startEditMessage('${m.id}')" title="Edit message">
-                  ${Icons.edit(11)}
-                </button>
-              ` : ''}
             </div>
           </div>
         `;
@@ -2547,9 +2547,6 @@ const Student = {
       <div class="contact-info-section">
         <div class="contact-info-section-header">
           <h5 class="contact-info-section-title">About</h5>
-          <button type="button" class="contact-info-edit-btn" onclick="Student.toggleEditContactInfo('${activeConv.tutor_id}')">
-            ✏️ Edit
-          </button>
         </div>
 
         <div class="contact-info-list" id="student-contact-info-fields">
@@ -2601,18 +2598,6 @@ const Student = {
             </div>
           </div>
         </div>
-
-        <div id="student-contact-edit-form" style="display: none; margin-top: 0.85rem; padding-top: 0.85rem; border-top: 1px dashed var(--border-color);">
-          <div style="font-size: 0.78rem; font-weight: 700; margin-bottom: 0.45rem;">Edit Contact Information</div>
-          <div style="display: flex; flex-direction: column; gap: 0.45rem;">
-            <input type="text" id="student-edit-phone" class="form-control" style="font-size: 0.8rem; padding: 0.35rem 0.6rem;" placeholder="Phone" value="${this.escapeHtml(activeConv.tutor_phone || '')}" />
-            <input type="text" id="student-edit-country" class="form-control" style="font-size: 0.8rem; padding: 0.35rem 0.6rem;" placeholder="Country" value="${this.escapeHtml(activeConv.tutor_country || '')}" />
-            <div style="display: flex; gap: 0.4rem; justify-content: flex-end; margin-top: 0.2rem;">
-              <button type="button" class="btn btn-secondary btn-xs" onclick="Student.toggleEditContactInfo('${activeConv.tutor_id}')">Cancel</button>
-              <button type="button" class="btn btn-primary btn-xs" onclick="Student.saveContactInfoEdit('${activeConv.tutor_id}')">Save</button>
-            </div>
-          </div>
-        </div>
       </div>
 
       <div class="contact-info-section" style="border-bottom: none;">
@@ -2641,34 +2626,6 @@ const Student = {
     `;
 
     this.loadContactNotes(activeConv.tutor_id);
-  },
-
-  toggleEditContactInfo(key) {
-    const form = document.getElementById('student-contact-edit-form');
-    if (form) {
-      form.style.display = form.style.display === 'none' ? 'block' : 'none';
-    }
-  },
-
-  async saveContactInfoEdit(tutorId) {
-    const phoneInput = document.getElementById('student-edit-phone');
-    const countryInput = document.getElementById('student-edit-country');
-
-    const phone = phoneInput ? phoneInput.value.trim() : '';
-    const country = countryInput ? countryInput.value.trim() : '';
-
-    try {
-      await API.updateContactInfo(tutorId, { phone, country });
-      const conv = this.getTutorConversations().find(c => String(c.tutor_id) === String(tutorId));
-      if (conv) {
-        if (phone) conv.tutor_phone = phone;
-        if (country) conv.tutor_country = country;
-      }
-      showToast('Contact details updated.', 'success');
-      this.renderStudentContactInfo();
-    } catch (err) {
-      showToast('Failed to update contact info.', 'error');
-    }
   },
 
   insertNoteSnippet(snippet) {
@@ -2759,9 +2716,6 @@ const Student = {
         <div style="margin-top: 0.25rem; font-size: 0.72rem; color: #9CA3AF; padding-right: 0.25rem; display: flex; align-items: center; gap: 0.35rem;">
           <span>${timeStr}</span>
           ${statusHtml ? `<span class="messenger-msg-status">${statusHtml}</span>` : ''}
-          <button type="button" class="messenger-edit-btn" onclick="Student.startEditMessage('${m.id}')" title="Edit message">
-            ${Icons.edit(11)}
-          </button>
         </div>
       `;
     } else {
@@ -2939,6 +2893,12 @@ const Student = {
     const activeConv = convs.find(c => String(c.tutor_id) === this.activeTutorId);
     if (!activeConv) return;
 
+    const targetTutorId = activeConv.tutor_id;
+    if (!targetTutorId) {
+      showToast('Could not identify educator recipient.', 'error');
+      return;
+    }
+
     if (input) {
       input.value = '';
       input.style.height = 'auto';
@@ -2946,13 +2906,17 @@ const Student = {
     this.pendingMessageAttachment = null;
     this.renderAttachmentPreview();
 
+    const currentStudentId = (typeof Auth !== 'undefined' && Auth.currentUser) ? Auth.currentUser.id : null;
     const clientTempId = 'temp-' + Date.now();
     const tempMsg = {
       id: clientTempId,
       sender_role: 'student',
-      tutor_user_id: activeConv.tutor_id,
+      sender_id: currentStudentId,
+      receiver_id: targetTutorId,
+      tutor_user_id: targetTutorId,
       subject: activeConv.subject || 'Student Inquiry',
       content: text,
+      text: text,
       attachment_url: attachment ? attachment.url : null,
       attachment_name: attachment ? attachment.name : null,
       attachment_type: attachment ? attachment.type : null,
@@ -2973,7 +2937,8 @@ const Student = {
       if (API.sendStudentMessage) {
         try {
           res = await API.sendStudentMessage({
-            tutor_id: activeConv.tutor_id,
+            tutor_id: targetTutorId,
+            tutor_user_id: targetTutorId,
             subject: activeConv.subject || 'Student Inquiry',
             message: text,
             attachment_url: attachment ? attachment.url : null,
@@ -2984,7 +2949,7 @@ const Student = {
         } catch (e) {}
       }
       if (!res) {
-        res = await API.sendMessageToTutor(activeConv.tutor_id, {
+        res = await API.sendMessageToTutor(targetTutorId, {
           name: user?.name || 'Student',
           email: user?.email || '',
           subject: activeConv.subject || `Student Inquiry`,
@@ -2999,6 +2964,10 @@ const Student = {
       if (res && (res.message || res.data)) {
         const payload = res.message || res.data;
         tempMsg.id = payload.id;
+        tempMsg.sender_role = 'student';
+        tempMsg.sender_id = currentStudentId;
+        tempMsg.receiver_id = targetTutorId;
+        tempMsg.tutor_user_id = targetTutorId;
         tempMsg.created_at = payload.created_at || tempMsg.created_at;
         tempMsg.status = payload.status || tempMsg.status;
         const row = document.getElementById(`student-msg-row-${clientTempId}`);
@@ -3006,64 +2975,6 @@ const Student = {
       }
     } catch (err) {
       console.warn('Student send message warning:', err);
-    }
-  },
-
-  startEditMessage(messageId) {
-    const contentEl = document.getElementById(`student-msg-content-${messageId}`);
-    if (!contentEl) return;
-
-    const currentMsg = (this.studentMessages || []).find(m => m.id == messageId);
-    const originalText = currentMsg ? (currentMsg.content || currentMsg.text) : contentEl.textContent.trim();
-
-    contentEl.innerHTML = `
-      <div class="messenger-inline-editor">
-        <textarea id="student-edit-input-${messageId}" class="messenger-inline-edit-input" rows="2">${this.escapeHtml(originalText)}</textarea>
-        <div class="messenger-inline-edit-actions">
-          <button type="button" class="btn btn-secondary btn-xs" onclick="Student.cancelEditMessage(${messageId}, '${this.escapeHtml(originalText).replace(/'/g, "\\'")}')">Cancel</button>
-          <button type="button" class="btn btn-primary btn-xs" onclick="Student.saveEditMessage(${messageId})">Save</button>
-        </div>
-      </div>
-    `;
-
-    setTimeout(() => {
-      const inp = document.getElementById(`student-edit-input-${messageId}`);
-      if (inp) {
-        inp.focus();
-        inp.setSelectionRange(inp.value.length, inp.value.length);
-      }
-    }, 50);
-  },
-
-  cancelEditMessage(messageId, originalText) {
-    const contentEl = document.getElementById(`student-msg-content-${messageId}`);
-    if (contentEl) {
-      contentEl.textContent = originalText;
-    }
-  },
-
-  async saveEditMessage(messageId) {
-    const input = document.getElementById(`student-edit-input-${messageId}`);
-    if (!input) return;
-    const newText = input.value.trim();
-    if (!newText) {
-      showToast('Message cannot be empty.', 'warning');
-      return;
-    }
-
-    try {
-      await API.editMessage(messageId, newText);
-      const m = (this.studentMessages || []).find(item => item.id == messageId);
-      if (m) {
-        m.content = newText;
-        m.text = newText;
-        m.is_edited = 1;
-        m.edited_at = new Date().toISOString();
-      }
-      showToast('Conversation message updated.', 'success');
-      this.renderStudentMessages();
-    } catch (err) {
-      showToast(err.message || 'Failed to update message.', 'error');
     }
   }
 };

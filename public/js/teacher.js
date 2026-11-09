@@ -4875,7 +4875,7 @@ const Teacher = {
   teacherMessagesPollInterval: null,
   teacherMessageFilter: 'all',
   teacherChatTypeFilter: 'all',
-  teacherTimeRangeFilter: '7days',
+  teacherTimeRangeFilter: 'all',
   teacherMessageSearchQuery: '',
   activeConversationKey: null,
   archivedConversations: new Set(),
@@ -4952,13 +4952,7 @@ const Teacher = {
   },
 
   clearConversation(convKey) {
-    if (!confirm('Are you sure you want to clear this active chat view? Message history remains stored.')) return;
-    this.teacherMessages = (this.teacherMessages || []).filter(m => {
-      const k = String(m.student_id || m.sender_id || m.student_email || 'student');
-      return k !== convKey;
-    });
-    this.renderTeacherMessages();
-    showToast('Chat view cleared.', 'info');
+    showToast('Official conversation messages are permanently preserved.', 'info');
   },
 
   toggleTemplatesMenu() {
@@ -5064,16 +5058,21 @@ const Teacher = {
             const res = await API.getTeacherMessages();
             const incoming = res.messages || [];
 
-            const pendingTemps = (this.teacherMessages || []).filter(m => String(m.id).startsWith('temp-'));
+            const incomingIds = new Set(incoming.map(m => String(m.id)));
             const merged = [...incoming];
-            for (const temp of pendingTemps) {
-              const alreadySynced = merged.some(m => 
-                m.sender_role === temp.sender_role &&
-                (m.content || '') === (temp.content || '') &&
-                (m.attachment_url || null) === (temp.attachment_url || null)
-              );
-              if (!alreadySynced) {
-                merged.push(temp);
+            for (const localMsg of (this.teacherMessages || [])) {
+              const isTemp = String(localMsg.id).startsWith('temp-');
+              if (isTemp) {
+                const alreadySynced = incoming.some(m => 
+                  m.sender_role === localMsg.sender_role &&
+                  (m.content || '') === (localMsg.content || '') &&
+                  (m.attachment_url || null) === (localMsg.attachment_url || null)
+                );
+                if (!alreadySynced) {
+                  merged.push(localMsg);
+                }
+              } else if (!incomingIds.has(String(localMsg.id))) {
+                merged.push(localMsg);
               }
             }
             this.teacherMessages = merged;
@@ -5093,17 +5092,23 @@ const Teacher = {
 
   getConversations() {
     const convMap = new Map();
+    const currentTeacherId = (typeof Auth !== 'undefined' && Auth.currentUser) ? Auth.currentUser.id : null;
+
     (this.teacherMessages || []).forEach(m => {
-      const key = String(m.student_id || m.sender_id || m.student_email || 'student');
+      const isFromTeacher = m.sender_role === 'teacher' || (currentTeacherId && Number(m.sender_id) === Number(currentTeacherId));
+      const studentId = isFromTeacher ? (m.receiver_id || m.student_id) : (m.student_id || m.sender_id);
+      const studentIdent = studentId || m.student_email || m.other_email || m.sender_email || 'student';
+      const key = String(studentIdent);
+
       if (!convMap.has(key)) {
         convMap.set(key, {
-          id: m.student_id,
+          id: studentId || (m.student_id || (!isNaN(key) ? Number(key) : null)),
           key: key,
-          name: m.student_name || 'Student',
-          email: m.student_email || '',
-          avatar: m.student_avatar || null,
-          phone: m.student_phone || '+1 254-125-4446',
-          country: m.student_country || 'United States',
+          name: m.student_name || (!isFromTeacher && m.sender_name) || 'Student',
+          email: m.student_email || m.other_email || (!isFromTeacher && m.sender_email) || '',
+          avatar: m.student_avatar || m.other_avatar || null,
+          phone: m.student_phone || m.other_phone || '+1 (555) 382-9014',
+          country: m.student_country || m.other_country || 'United States',
           gradeLevel: m.student_grade_level || 'Grade 11 - High School',
           school: m.student_school || 'Westlake High School',
           learningGoals: m.student_learning_goals || '',
@@ -5115,11 +5120,22 @@ const Teacher = {
         });
       }
       const conv = convMap.get(key);
+      if (!conv.id && studentId) conv.id = studentId;
+      if (!conv.name || conv.name === 'Student') {
+        if (m.student_name) conv.name = m.student_name;
+        else if (!isFromTeacher && m.sender_name) conv.name = m.sender_name;
+      }
+      if (!conv.email && (m.student_email || m.other_email)) conv.email = m.student_email || m.other_email;
+      if (!conv.avatar && (m.student_avatar || m.other_avatar)) conv.avatar = m.student_avatar || m.other_avatar;
       if (typeof m.student_is_online !== 'undefined') {
         conv.isOnline = Boolean(m.student_is_online);
       }
-      if (m.student_phone && (!conv.phone || conv.phone === '+1 254-125-4446')) conv.phone = m.student_phone;
-      if (m.student_country && (!conv.country || conv.country === 'United States')) conv.country = m.student_country;
+      if ((m.student_phone || m.other_phone) && (!conv.phone || conv.phone === '+1 254-125-4446')) {
+        conv.phone = m.student_phone || m.other_phone;
+      }
+      if ((m.student_country || m.other_country) && (!conv.country || conv.country === 'Philippines')) {
+        conv.country = m.student_country || m.other_country;
+      }
       if (m.student_grade_level && !conv.gradeLevel) conv.gradeLevel = m.student_grade_level;
       if (m.student_school && !conv.school) conv.school = m.student_school;
       if (m.student_learning_goals && !conv.learningGoals) conv.learningGoals = m.student_learning_goals;
@@ -5132,7 +5148,7 @@ const Teacher = {
 
     const convs = Array.from(convMap.values());
     convs.forEach(c => {
-      c.messages.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+      c.messages.sort((a, b) => new Date(a.created_at || 0) - new Date(b.created_at || 0));
       c.lastMessage = c.messages[c.messages.length - 1];
     });
 
@@ -5441,9 +5457,6 @@ const Teacher = {
           <button type="button" class="messenger-header-action-btn" title="Archive Chat" onclick="Teacher.archiveConversation('${activeConv.key}')">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path><line x1="12" y1="11" x2="12" y2="17"></line><line x1="9" y1="14" x2="15" y2="14"></line></svg>
           </button>
-          <button type="button" class="messenger-header-action-btn" title="Clear Chat View" onclick="Teacher.clearConversation('${activeConv.key}')">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-          </button>
         </div>
       </div>
 
@@ -5555,11 +5568,6 @@ const Teacher = {
               <span>${timeStr}</span>
               ${statusHtml ? `<span class="messenger-msg-status">${statusHtml}</span>` : ''}
               ${m.is_edited ? '<span class="messenger-edited-tag">(edited)</span>' : ''}
-              ${m.content ? `
-                <button type="button" class="messenger-edit-btn" onclick="Teacher.startEditMessage('${m.id}')" title="Edit message">
-                  ${Icons.edit(11)}
-                </button>
-              ` : ''}
             </div>
           </div>
         `;
@@ -5610,9 +5618,6 @@ const Teacher = {
       <div class="contact-info-section">
         <div class="contact-info-section-header">
           <h5 class="contact-info-section-title">About</h5>
-          <button type="button" class="contact-info-edit-btn" onclick="Teacher.toggleEditContactInfo('${activeConv.key}')">
-            ✏️ Edit
-          </button>
         </div>
 
         <div class="contact-info-list" id="teacher-contact-info-fields">
@@ -5644,7 +5649,7 @@ const Teacher = {
             <span class="contact-info-item-icon">📞</span>
             <div class="contact-info-item-content">
               <div class="contact-info-item-label">Phone</div>
-              <div class="contact-info-item-val" id="teacher-contact-val-phone">${this.escapeHtml(activeConv.phone || '+1 254-125-4446')}</div>
+              <div class="contact-info-item-val" id="teacher-contact-val-phone">${this.escapeHtml(activeConv.phone || '+1 (555) 382-9014')}</div>
             </div>
           </div>
 
@@ -5660,20 +5665,7 @@ const Teacher = {
             <span class="contact-info-item-icon">📍</span>
             <div class="contact-info-item-content">
               <div class="contact-info-item-label">Country</div>
-              <div class="contact-info-item-val" id="teacher-contact-val-country">${this.escapeHtml(activeConv.country || 'Philippines')}</div>
-            </div>
-          </div>
-        </div>
-
-        <div id="teacher-contact-edit-form" style="display: none; margin-top: 0.85rem; padding-top: 0.85rem; border-top: 1px dashed var(--border-color);">
-          <div style="font-size: 0.78rem; font-weight: 700; margin-bottom: 0.45rem;">Edit Contact Details</div>
-          <div style="display: flex; flex-direction: column; gap: 0.45rem;">
-            <input type="text" id="teacher-edit-phone" class="form-control" style="font-size: 0.8rem; padding: 0.35rem 0.6rem;" placeholder="Phone (e.g. +1 254-125-4446)" value="${this.escapeHtml(activeConv.phone || '')}" />
-            <input type="text" id="teacher-edit-school" class="form-control" style="font-size: 0.8rem; padding: 0.35rem 0.6rem;" placeholder="School / Company" value="${this.escapeHtml(activeConv.school || '')}" />
-            <input type="text" id="teacher-edit-country" class="form-control" style="font-size: 0.8rem; padding: 0.35rem 0.6rem;" placeholder="Country" value="${this.escapeHtml(activeConv.country || '')}" />
-            <div style="display: flex; gap: 0.4rem; justify-content: flex-end; margin-top: 0.2rem;">
-              <button type="button" class="btn btn-secondary btn-xs" onclick="Teacher.toggleEditContactInfo('${activeConv.key}')">Cancel</button>
-              <button type="button" class="btn btn-primary btn-xs" onclick="Teacher.saveContactInfoEdit('${activeConv.id || activeConv.key}')">Save</button>
+              <div class="contact-info-item-val" id="teacher-contact-val-country">${this.escapeHtml(activeConv.country || 'United States')}</div>
             </div>
           </div>
         </div>
@@ -5705,37 +5697,6 @@ const Teacher = {
     `;
 
     this.loadContactNotes(activeConv.id || activeConv.key);
-  },
-
-  toggleEditContactInfo(key) {
-    const form = document.getElementById('teacher-contact-edit-form');
-    if (form) {
-      form.style.display = form.style.display === 'none' ? 'block' : 'none';
-    }
-  },
-
-  async saveContactInfoEdit(contactId) {
-    const phoneInput = document.getElementById('teacher-edit-phone');
-    const schoolInput = document.getElementById('teacher-edit-school');
-    const countryInput = document.getElementById('teacher-edit-country');
-
-    const phone = phoneInput ? phoneInput.value.trim() : '';
-    const school = schoolInput ? schoolInput.value.trim() : '';
-    const country = countryInput ? countryInput.value.trim() : '';
-
-    try {
-      await API.updateContactInfo(contactId, { phone, school, country });
-      const conv = this.getConversations().find(c => c.id == contactId || c.key == contactId);
-      if (conv) {
-        if (phone) conv.phone = phone;
-        if (school) conv.school = school;
-        if (country) conv.country = country;
-      }
-      showToast('Contact details updated.', 'success');
-      this.renderTeacherContactInfo();
-    } catch (err) {
-      showToast('Failed to update contact info.', 'error');
-    }
   },
 
   insertNoteSnippet(snippet) {
@@ -5826,9 +5787,6 @@ const Teacher = {
         <div style="margin-top: 0.25rem; font-size: 0.72rem; color: #9CA3AF; padding-right: 0.25rem; display: flex; align-items: center; gap: 0.35rem;">
           <span>${timeStr}</span>
           ${statusHtml ? `<span class="messenger-msg-status">${statusHtml}</span>` : ''}
-          <button type="button" class="messenger-edit-btn" onclick="Teacher.startEditMessage('${m.id}')" title="Edit message">
-            ${Icons.edit(11)}
-          </button>
         </div>
       `;
     } else {
@@ -6007,6 +5965,15 @@ const Teacher = {
     const activeConv = convs.find(c => c.key === this.activeConversationKey);
     if (!activeConv) return;
 
+    const targetStudentId = activeConv.id || 
+      (activeConv.messages && activeConv.messages.find(m => m.student_id || (m.sender_role === 'student' ? m.sender_id : m.receiver_id))?.student_id) ||
+      (!isNaN(activeConv.key) ? Number(activeConv.key) : null);
+
+    if (!targetStudentId) {
+      showToast('Could not identify student recipient.', 'error');
+      return;
+    }
+
     // Clear input & pending attachment immediately
     if (input) {
       input.value = '';
@@ -6015,11 +5982,14 @@ const Teacher = {
     this.pendingMessageAttachment = null;
     this.renderAttachmentPreview();
 
+    const currentTeacherId = (typeof Auth !== 'undefined' && Auth.currentUser) ? Auth.currentUser.id : null;
     const clientTempId = 'temp-' + Date.now();
     const tempMsg = {
       id: clientTempId,
       sender_role: 'teacher',
-      student_id: activeConv.id,
+      sender_id: currentTeacherId,
+      receiver_id: targetStudentId,
+      student_id: targetStudentId,
       subject: activeConv.subject ? (activeConv.subject.startsWith('Re:') ? activeConv.subject : `Re: ${activeConv.subject}`) : 'Inquiry Response',
       content: text,
       attachment_url: attachment ? attachment.url : null,
@@ -6032,14 +6002,14 @@ const Teacher = {
       created_at: new Date().toISOString()
     };
 
-    // Immediately push to state and append to DOM thread - NO RELOAD, NO LOADING STATE
+    // Immediately push to state and append to DOM thread - instant response
     this.teacherMessages.push(tempMsg);
     this.appendMessageToActiveThread(tempMsg);
     this.updateSidebarConversations();
 
     try {
       const res = await API.teacherReplyMessage({
-        student_id: activeConv.id,
+        student_id: targetStudentId,
         subject: activeConv.subject,
         message: text,
         attachment_url: attachment ? attachment.url : null,
@@ -6050,6 +6020,9 @@ const Teacher = {
 
       if (res && res.data) {
         tempMsg.id = res.data.id;
+        tempMsg.student_id = targetStudentId;
+        tempMsg.receiver_id = targetStudentId;
+        tempMsg.sender_role = 'teacher';
         tempMsg.created_at = res.data.created_at;
         tempMsg.status = res.data.status || 'delivered';
         tempMsg.subject = res.data.subject || tempMsg.subject;
@@ -6058,63 +6031,6 @@ const Teacher = {
       }
     } catch (err) {
       console.warn('Reply deliver warning:', err);
-    }
-  },
-
-  startEditMessage(messageId) {
-    const contentEl = document.getElementById(`teacher-msg-content-${messageId}`);
-    if (!contentEl) return;
-
-    const currentMsg = (this.teacherMessages || []).find(m => m.id == messageId);
-    const originalText = currentMsg ? currentMsg.content : contentEl.textContent.trim();
-
-    contentEl.innerHTML = `
-      <div class="messenger-inline-editor">
-        <textarea id="teacher-edit-input-${messageId}" class="messenger-inline-edit-input" rows="2">${this.escapeHtml(originalText)}</textarea>
-        <div class="messenger-inline-edit-actions">
-          <button type="button" class="btn btn-secondary btn-xs" onclick="Teacher.cancelEditMessage(${messageId}, '${this.escapeHtml(originalText).replace(/'/g, "\\'")}')">Cancel</button>
-          <button type="button" class="btn btn-primary btn-xs" onclick="Teacher.saveEditMessage(${messageId})">Save</button>
-        </div>
-      </div>
-    `;
-
-    setTimeout(() => {
-      const inp = document.getElementById(`teacher-edit-input-${messageId}`);
-      if (inp) {
-        inp.focus();
-        inp.setSelectionRange(inp.value.length, inp.value.length);
-      }
-    }, 50);
-  },
-
-  cancelEditMessage(messageId, originalText) {
-    const contentEl = document.getElementById(`teacher-msg-content-${messageId}`);
-    if (contentEl) {
-      contentEl.textContent = originalText;
-    }
-  },
-
-  async saveEditMessage(messageId) {
-    const input = document.getElementById(`teacher-edit-input-${messageId}`);
-    if (!input) return;
-    const newText = input.value.trim();
-    if (!newText) {
-      showToast('Message cannot be empty.', 'warning');
-      return;
-    }
-
-    try {
-      const res = await API.editMessage(messageId, newText);
-      const m = (this.teacherMessages || []).find(item => item.id == messageId);
-      if (m) {
-        m.content = newText;
-        m.is_edited = 1;
-        m.edited_at = new Date().toISOString();
-      }
-      showToast('Conversation message updated.', 'success');
-      this.renderTeacherMessages();
-    } catch (err) {
-      showToast(err.message || 'Failed to update message.', 'error');
     }
   },
 

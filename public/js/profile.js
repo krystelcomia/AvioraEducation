@@ -4,7 +4,7 @@
  * with instant UI updates, persistent database storage, and account-level isolation.
  */
 
-window.getTimezoneAbbr = function(tz) {
+window.getTimezoneAbbr = function (tz) {
   const currentTz = tz || localStorage.getItem('aviora_timezone') || 'America/New_York';
   const abbrs = {
     'America/New_York': 'EST',
@@ -274,7 +274,7 @@ const Profile = {
     }
   },
 
-  
+
   updateTimezoneClockDisplays(tz) {
     const activeTz = tz || (typeof localStorage !== 'undefined' ? (localStorage.getItem('aviora_timezone' + (this.getUserKey ? this.getUserKey() : '')) || localStorage.getItem('aviora_timezone')) : null) || 'America/New_York';
     let timeStr = '--:-- --';
@@ -287,7 +287,7 @@ const Profile = {
       try {
         timeStr = new Intl.DateTimeFormat('en-US', { timeZone: activeTz, hour: 'numeric', minute: '2-digit', hour12: true }).format(new Date());
         abbr = activeTz.split('/').pop().replace('_', ' ');
-      } catch (e) {}
+      } catch (e) { }
     }
 
     ['profile', 'teacher', 'admin'].forEach(prefix => {
@@ -520,7 +520,7 @@ const Profile = {
       });
     }
 
-    
+
     // Instant live clock updates on timezone select change/input
     ['profile-timezone-select', 'teacher-timezone-select', 'admin-timezone-select'].forEach(id => {
       const el = document.getElementById(id);

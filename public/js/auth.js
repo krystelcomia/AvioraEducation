@@ -99,28 +99,36 @@ const Auth = {
     };
 
     ping();
-    this.heartbeatInterval = setInterval(ping, 15000);
+    this.heartbeatInterval = setInterval(ping, 10000);
 
     if (!this.hasBoundPresenceEvents) {
       this.hasBoundPresenceEvents = true;
       document.addEventListener('visibilitychange', () => {
         if (document.visibilityState === 'visible' && this.currentUser) {
           ping();
+        } else if (document.visibilityState === 'hidden' && this.currentUser) {
+          // Send offline beacon if tab is closed or hidden
+          try {
+            if (navigator.sendBeacon) {
+              navigator.sendBeacon(`/api/user/offline?user_id=${this.currentUser.id}`);
+            }
+          } catch (e) {}
         }
       });
       window.addEventListener('focus', () => {
         if (this.currentUser) ping();
       });
-      window.addEventListener('beforeunload', () => {
+      const notifyOffline = () => {
         if (this.currentUser) {
           try {
-            const data = JSON.stringify({ user_id: this.currentUser.id });
             if (navigator.sendBeacon) {
-              navigator.sendBeacon('/api/user/offline', data);
+              navigator.sendBeacon(`/api/user/offline?user_id=${this.currentUser.id}`);
             }
           } catch (e) {}
         }
-      });
+      };
+      window.addEventListener('beforeunload', notifyOffline);
+      window.addEventListener('pagehide', notifyOffline);
     }
   },
 
@@ -128,6 +136,11 @@ const Auth = {
     if (this.heartbeatInterval) {
       clearInterval(this.heartbeatInterval);
       this.heartbeatInterval = null;
+    }
+    if (this.currentUser && navigator.sendBeacon) {
+      try {
+        navigator.sendBeacon(`/api/user/offline?user_id=${this.currentUser.id}`);
+      } catch (e) {}
     }
     if (typeof API !== 'undefined' && API.sendOffline) {
       API.sendOffline().catch(() => {});

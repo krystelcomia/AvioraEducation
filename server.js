@@ -817,9 +817,15 @@ function sendNotification(userId, title, message, type = 'info', link = null) {
 }
 
 // ==========================================
+// ==========================================
 // REAL-TIME USER PRESENCE TRACKING (ONLINE / ACCOUNT OPEN)
 // ==========================================
 const onlineUsers = new Map(); // userId -> { lastSeen: timestamp, isOnline: boolean }
+
+// Reset any stale persisted online flags on server boot so only active sessions show online
+try {
+  db.prepare("UPDATE users SET is_online = 0").run();
+} catch (e) {}
 
 function markUserActive(userId) {
   if (!userId) return;
@@ -840,19 +846,9 @@ function isUserOnline(userId) {
   if (!userId) return false;
   const id = Number(userId);
   const presence = onlineUsers.get(id);
-  if (presence && presence.isOnline && (Date.now() - presence.lastSeen <= 45000)) {
+  if (presence && presence.isOnline && (Date.now() - presence.lastSeen <= 25000)) {
     return true;
   }
-  try {
-    const u = db.prepare(`
-      SELECT is_online, last_active_at, 
-             (strftime('%s', 'now') - strftime('%s', last_active_at)) as seconds_ago 
-      FROM users WHERE id = ?
-    `).get(id);
-    if (u && u.is_online === 1 && u.seconds_ago !== null && u.seconds_ago <= 45) {
-      return true;
-    }
-  } catch (e) {}
   return false;
 }
 
@@ -865,18 +861,18 @@ function markUserOffline(userId) {
   } catch (e) {}
 }
 
-// Periodic cleanup of stale presence (every 15s)
+// Periodic cleanup of stale presence (every 10s; offline after 25s of no heartbeat)
 setInterval(() => {
   const now = Date.now();
   for (const [userId, presence] of onlineUsers.entries()) {
-    if (now - presence.lastSeen > 45000) {
+    if (now - presence.lastSeen > 25000) {
       onlineUsers.delete(userId);
       try {
         db.prepare("UPDATE users SET is_online = 0 WHERE id = ?").run(userId);
       } catch (e) {}
     }
   }
-}, 15000);
+}, 10000);
 
 // Auto-reconcile student wallet balance against unspent refunded payments
 function reconcileStudentWallet(studentId) {
@@ -3012,6 +3008,7 @@ app.get('/api/tutors', (req, res) => {
       const norm = normalizeSubjectRates(r.subjects, r.subject_rates || r.app_subject_rates, r.hourly_rate);
       return {
         ...r,
+        is_online: isUserOnline(r.user_id) ? 1 : 0,
         subjects: norm.subjects,
         subject_rates: norm.subject_rates,
         grade_levels: safeParseArray(r.grade_levels),
@@ -3123,10 +3120,28 @@ app.get('/api/tutors/:id', (req, res) => {
       ? actualStudents 
       : Math.max(16, Math.round((tutor.total_sessions || 24) * 0.42));
 
+    tutor.is_online = isUserOnline(tutor.user_id) ? 1 : 0;
     res.json({ tutor });
   } catch (error) {
     console.error('Fetch tutor details error:', error);
     res.status(500).json({ error: 'Failed to load tutor details.' });
+  }
+});
+
+// Real-Time Batch Presence Query Endpoint
+app.get('/api/users/presence', (req, res) => {
+  try {
+    const rawIds = req.query.ids ? String(req.query.ids).split(',') : [];
+    const presence = {};
+    for (const raw of rawIds) {
+      const id = Number(raw.trim());
+      if (id) {
+        presence[id] = isUserOnline(id);
+      }
+    }
+    res.json({ success: true, presence });
+  } catch (err) {
+    res.json({ success: true, presence: {} });
   }
 });
 
@@ -3151,8 +3166,18 @@ app.post('/api/user/offline', (req, res) => {
         userId = decoded.id;
       } catch (e) {}
     }
-    if (!userId && req.body && req.body.user_id) {
-      userId = req.body.user_id;
+    if (!userId && req.query && req.query.user_id) {
+      userId = req.query.user_id;
+    }
+    if (!userId && req.body) {
+      if (typeof req.body === 'string') {
+        try {
+          const parsed = JSON.parse(req.body);
+          userId = parsed.user_id;
+        } catch (e) {}
+      } else if (req.body.user_id) {
+        userId = req.body.user_id;
+      }
     }
     if (userId) {
       markUserOffline(userId);
@@ -4472,6 +4497,7 @@ app.get('/api/teacher/messages', authenticateToken, requireRole('tutor'), (req, 
         student_name: studentName,
         student_email: studentEmail,
         student_avatar: studentAvatar,
+        student_is_online: isUserOnline(studentId) ? 1 : 0,
         sender_name: r.sender_name,
         subject: r.subject,
         content: r.content,
@@ -4580,9 +4606,9 @@ const handleEditMessageEndpoint = (req, res) => {
       return res.status(404).json({ error: 'Message not found.' });
     }
 
-    // Allow sender, or participating party / admin to edit
-    if (msg.sender_id !== userId && msg.receiver_id !== userId && req.user.role !== 'admin') {
-      return res.status(403).json({ error: 'You do not have permission to edit this message.' });
+    // Allow ONLY original author (msg.sender_id) or admin to edit
+    if (msg.sender_id !== userId && req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'You do not have permission to edit this message. Only the author may edit.' });
     }
 
     db.prepare(`
@@ -4635,6 +4661,7 @@ app.get('/api/student/messages', authenticateToken, (req, res) => {
 
     const messages = rows.map(r => ({
       ...r,
+      tutor_is_online: isUserOnline(r.tutor_user_id) ? 1 : 0,
       is_edited: r.is_edited ? 1 : 0,
       time: r.created_at ? new Date(r.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''
     }));

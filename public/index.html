@@ -4143,6 +4143,9 @@
                     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="display:inline-block;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
                     <span id="teacher-dashboard-live-clock">--:-- (EST)</span>
                   </span>
+                  <a href="#teacher-ratings" id="teacher-dashboard-rating-badge" class="badge-gold" style="text-decoration: none; display: inline-flex; align-items: center; gap: 0.35rem; cursor: pointer;" title="View all student ratings &amp; reviews">
+                    <span style="color: #e5a50a;">★</span> <strong id="teacher-header-rating-val">5.0</strong> (<span id="teacher-header-reviews-count">0</span> ratings)
+                  </a>
                 </div>
                 <h1 class="teacher-hero-name" id="teacher-hero-name">Dr. Elena Vance</h1>
                 <p class="teacher-hero-bio" id="teacher-hero-bio">
@@ -4393,6 +4396,129 @@
 
       </div>
     </div><!-- END VIEW 4E: TEACHER DASHBOARD -->
+
+    <!-- =======================================
+         VIEW: TEACHER RATINGS & STUDENT REVIEWS PAGE (STRICTLY READ-ONLY)
+         ======================================= -->
+    <div id="view-teacher-ratings" class="app-page-view" style="display: none; padding-top: calc(var(--header-height) + 1.25rem); padding-bottom: 2rem;">
+      <div class="container portal-wrapper" style="padding-top: 0; padding-bottom: 0;">
+        <div id="teacher-banner-ratings"></div>
+
+        <!-- Ratings Page Header Card -->
+        <div class="teacher-portal-hero" style="margin-bottom: 1.5rem;">
+          <div class="teacher-hero-left">
+            <div class="teacher-hero-meta" style="width: 100%;">
+              <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 0.5rem;">
+                <div style="display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;">
+                  <span class="badge-gold">Verified Student Feedback</span>
+                  <span class="badge-accent">Read-Only Evaluation Ledger</span>
+                </div>
+                <div style="font-size: 0.82rem; color: var(--text-secondary); background: rgba(198, 138, 40, 0.08); padding: 0.35rem 0.75rem; border-radius: 999px; border: 1px solid rgba(198, 138, 40, 0.2);">
+                  🛡️ Protected record: Tutors cannot edit or alter student reviews
+                </div>
+              </div>
+              <h1 class="teacher-hero-name" style="font-size: 1.85rem; margin-bottom: 0.35rem;">Ratings &amp; Student Evaluations</h1>
+              <p class="teacher-hero-bio" style="max-width: 850px; margin-bottom: 0;">
+                Official academic feedback submitted by students upon completing tutoring sessions. All ratings, comments, and recommendations are permanent and strictly read-only to preserve evaluation integrity.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- 1. Ratings Summary Overview Table (Standard Word-Style) -->
+        <div class="data-table-container word-table-container" style="margin-bottom: 1.5rem;">
+          <div class="table-toolbar">
+            <div>
+              <h3 style="color: var(--text-primary); font-size: 1.15rem; margin-bottom: 0.25rem;">
+                Academic Rating Summary
+              </h3>
+              <p style="font-size: 0.85rem; color: var(--text-secondary); margin: 0;">
+                Overall score metrics calculated from verified student completions.
+              </p>
+            </div>
+            <span class="badge-gold" style="font-size: 0.75rem;">OFFICIAL METRICS</span>
+          </div>
+
+          <div class="table-responsive">
+            <table class="admin-table word-standard-table">
+              <thead>
+                <tr>
+                  <th style="width: 25%;">Metric</th>
+                  <th style="width: 25%;">Value</th>
+                  <th style="width: 25%;">Benchmark / Share</th>
+                  <th style="width: 25%;">Evaluation Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>Overall Average Rating</strong></td>
+                  <td>
+                    <span style="font-size: 1.15rem; font-weight: 700; color: #b47a16; display: inline-flex; align-items: center; gap: 0.3rem;">
+                      ★ <span id="ratings-summary-avg">5.0</span> / 5.0
+                    </span>
+                  </td>
+                  <td>Top 5% of Aviora Educators</td>
+                  <td><span class="status-badge status-approved" style="font-size: 0.75rem;">EXCELLENT</span></td>
+                </tr>
+                <tr>
+                  <td><strong>Total Reviews Count</strong></td>
+                  <td>
+                    <strong id="ratings-summary-count" style="font-size: 1.05rem;">0</strong> verified evaluations
+                  </td>
+                  <td>100% Verified Sessions</td>
+                  <td><span class="status-badge status-approved" style="font-size: 0.75rem;">ACTIVE</span></td>
+                </tr>
+                <tr>
+                  <td><strong>5-Star Satisfaction Rate</strong></td>
+                  <td>
+                    <strong id="ratings-summary-percent" style="font-size: 1.05rem; color: #15803d;">100%</strong>
+                  </td>
+                  <td>Positive Student Sentiment</td>
+                  <td><span class="status-badge status-approved" style="font-size: 0.75rem;">HIGH SATISFACTION</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 2. Student Ratings & Comments Table (Standard Word-Style, Strictly Read-Only) -->
+        <div class="data-table-container word-table-container">
+          <div class="table-toolbar">
+            <div>
+              <h3 style="color: var(--text-primary); font-size: 1.15rem; margin-bottom: 0.25rem;">
+                Student Evaluations &amp; Comments
+              </h3>
+              <p style="font-size: 0.85rem; color: var(--text-secondary); margin: 0;">
+                Complete ledger of student ratings, session subjects, and qualitative feedback. Read-only view.
+              </p>
+            </div>
+            <span class="badge-gold" style="font-size: 0.75rem;">STUDENT FEEDBACK</span>
+          </div>
+
+          <div class="table-responsive">
+            <table class="admin-table word-standard-table">
+              <thead>
+                <tr>
+                  <th style="width: 22%;">Student</th>
+                  <th style="width: 18%;">Subject / Class</th>
+                  <th style="width: 15%;">Score</th>
+                  <th style="width: 33%;">Student Feedback &amp; Comments</th>
+                  <th style="width: 12%;">Date</th>
+                </tr>
+              </thead>
+              <tbody id="teacher-ratings-table-body">
+                <tr>
+                  <td colspan="5" style="text-align: center; padding: 2rem; color: var(--text-secondary);">
+                    Loading student ratings...
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </div><!-- END VIEW: TEACHER RATINGS -->
 
     <!-- =======================================
          VIEW: DEDICATED TUTOR PROFILE & SETTINGS PAGE

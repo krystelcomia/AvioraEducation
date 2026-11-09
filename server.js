@@ -5401,6 +5401,64 @@ app.post('/api/teacher/payout/request', requireRole('teacher'), (req, res) => {
   }
 });
 
+// Get all student ratings and comments for tutor (Strictly Read-Only)
+app.get('/api/teacher/ratings', requireRole('teacher'), (req, res) => {
+  try {
+    const teacherId = req.user.id;
+
+    const reviews = db.prepare(`
+      SELECT 
+        r.id,
+        r.rating,
+        r.comment,
+        r.created_at,
+        u.name as student_name,
+        u.email as student_email,
+        u.avatar_url as student_avatar,
+        sp.school as student_school,
+        sp.grade_level as student_grade,
+        tr.subject as session_subject,
+        tr.requested_date as session_date
+      FROM reviews r
+      JOIN users u ON r.student_id = u.id
+      LEFT JOIN student_profiles sp ON sp.user_id = u.id
+      LEFT JOIN tutoring_requests tr ON r.request_id = tr.id
+      WHERE r.tutor_id = ?
+      ORDER BY r.created_at DESC
+    `).all(teacherId);
+
+    const tutorProfile = db.prepare('SELECT rating, reviews_count FROM tutor_profiles WHERE user_id = ?').get(teacherId);
+
+    const totalReviews = reviews.length;
+    const sumRatings = reviews.reduce((acc, rev) => acc + (Number(rev.rating) || 5), 0);
+    const avgRating = totalReviews > 0 ? (sumRatings / totalReviews) : (tutorProfile?.rating || 5.0);
+    const roundedAvg = Math.round(avgRating * 10) / 10;
+
+    const fiveStarCount = reviews.filter(r => Number(r.rating) === 5).length;
+    const fiveStarPercent = totalReviews > 0 ? Math.round((fiveStarCount / totalReviews) * 100) : 100;
+
+    const stats = {
+      average: roundedAvg,
+      average_rating: roundedAvg,
+      count: totalReviews,
+      total_reviews: totalReviews,
+      five_star_percent: fiveStarPercent,
+      breakdown: {
+        5: fiveStarCount,
+        4: reviews.filter(r => Number(r.rating) === 4).length,
+        3: reviews.filter(r => Number(r.rating) === 3).length,
+        2: reviews.filter(r => Number(r.rating) === 2).length,
+        1: reviews.filter(r => Number(r.rating) === 1).length,
+      }
+    };
+
+    res.json({ reviews, stats, tutorProfile });
+  } catch (error) {
+    console.error('Error fetching teacher ratings:', error);
+    res.status(500).json({ error: 'Failed to retrieve ratings data.' });
+  }
+});
+
 // Auto-end elapsed virtual rooms (50-minute automatic conclusion)
 function checkAndAutoEndElapsedRooms() {
   try {

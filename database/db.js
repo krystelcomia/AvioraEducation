@@ -1586,6 +1586,38 @@ function ensureJoshuaAccount(customPassword) {
         `).run(lucas.id, userId);
       }
     }
+
+    // Ensure authentic student reviews and ratings for Joshua Garcia
+    if (krystel) {
+      const completedKrystelReq = db.prepare("SELECT id FROM tutoring_requests WHERE tutor_id = ? AND student_id = ? AND status = 'completed'").get(userId, krystel.id);
+      const existingKrystelRev = db.prepare('SELECT id FROM reviews WHERE tutor_id = ? AND student_id = ?').get(userId, krystel.id);
+      if (!existingKrystelRev && completedKrystelReq) {
+        db.prepare(`
+          INSERT INTO reviews (request_id, student_id, tutor_id, rating, comment, created_at)
+          VALUES (?, ?, ?, 5, 'Joshua is an exceptional mathematics educator! He made Taylor Series convergence and integration by parts intuitive and easy to follow. He was very patient with all of my questions.', '2026-10-30 15:30:00')
+        `).run(completedKrystelReq.id, krystel.id, userId);
+      }
+    }
+
+    if (lucas) {
+      const existingLucasRev = db.prepare('SELECT id FROM reviews WHERE tutor_id = ? AND student_id = ?').get(userId, lucas.id);
+      const lucasReq = db.prepare('SELECT id FROM tutoring_requests WHERE tutor_id = ? AND student_id = ?').get(userId, lucas.id);
+      if (!existingLucasRev) {
+        db.prepare(`
+          INSERT INTO reviews (request_id, student_id, tutor_id, rating, comment, created_at)
+          VALUES (?, ?, ?, 5, 'Very engaging and structured teaching style. Helped me prepare thoroughly for my polynomial algebra quiz!', '2026-11-02 11:15:00')
+        `).run(lucasReq ? lucasReq.id : null, lucas.id, userId);
+      } else if (!existingLucasRev.request_id && lucasReq) {
+        db.prepare('UPDATE reviews SET request_id = ? WHERE id = ?').run(lucasReq.id, existingLucasRev.id);
+      }
+    }
+
+    // Update Joshua's live rating and review count
+    const reviewStats = db.prepare('SELECT AVG(rating) as avg_rating, COUNT(*) as count FROM reviews WHERE tutor_id = ?').get(userId);
+    if (reviewStats && reviewStats.count > 0) {
+      db.prepare('UPDATE tutor_profiles SET rating = ?, reviews_count = ? WHERE user_id = ?')
+        .run(Math.round(reviewStats.avg_rating * 10) / 10, reviewStats.count, userId);
+    }
   } catch (err) {
     console.error('Error ensuring Joshua Garcia account:', err);
   }

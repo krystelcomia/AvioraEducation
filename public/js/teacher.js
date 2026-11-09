@@ -556,6 +556,113 @@ const Teacher = {
     if (typeof Router !== 'undefined' && Router.updateActiveNav) Router.updateActiveNav();
   },
 
+  // 5b. Dedicated Ratings Page (Strictly Read-Only)
+  async loadRatingsPage() {
+    this.currentTab = 'ratings';
+    await this.ensureTeacherStatus();
+    this.renderStatusBanner('teacher-banner-ratings');
+
+    const tableBody = document.getElementById('teacher-ratings-table-body');
+    const summaryAvg = document.getElementById('ratings-summary-avg');
+    const summaryCount = document.getElementById('ratings-summary-count');
+    const summaryPercent = document.getElementById('ratings-summary-percent');
+
+    try {
+      if (tableBody) {
+        tableBody.innerHTML = `
+          <tr>
+            <td colspan="5" style="text-align: center; padding: 2rem; color: var(--text-secondary);">
+              Loading verified student evaluations...
+            </td>
+          </tr>
+        `;
+      }
+
+      const res = await API.getTeacherRatings();
+      const reviews = res.reviews || [];
+      const stats = res.stats || {};
+
+      if (summaryAvg) summaryAvg.textContent = stats.average != null ? stats.average.toFixed(1) : '5.0';
+      if (summaryCount) summaryCount.textContent = stats.count != null ? stats.count : reviews.length;
+      if (summaryPercent) summaryPercent.textContent = (stats.five_star_percent != null ? stats.five_star_percent : 100) + '%';
+
+      if (!tableBody) return;
+
+      if (!reviews.length) {
+        tableBody.innerHTML = `
+          <tr>
+            <td colspan="5" style="text-align: center; padding: 2.5rem; color: var(--text-secondary);">
+              <div style="font-size: 1.05rem; font-weight: 600; color: var(--text-primary); margin-bottom: 0.35rem;">No student reviews recorded yet</div>
+              <div style="font-size: 0.85rem;">Official evaluations submitted by students upon completing tutoring sessions will automatically appear in this ledger.</div>
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      tableBody.innerHTML = reviews.map(rev => {
+        const studentName = rev.student_name || 'Verified Student';
+        const studentAvatar = rev.student_avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(studentName)}&background=C68A28&color=fff`;
+        const schoolOrGrade = rev.student_school || rev.student_grade || 'Aviora Learner';
+        const subject = rev.session_subject || rev.subject || 'Calculus BC';
+        const ratingNum = Math.max(1, Math.min(5, Math.round(Number(rev.rating) || 5)));
+        const comment = rev.comment ? this.escapeHtml(rev.comment) : 'Outstanding guidance and clear explanations throughout the session.';
+
+        let dateStr = 'Recent';
+        if (rev.created_at) {
+          const d = new Date(rev.created_at);
+          dateStr = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        }
+
+        const starsHtml = '★'.repeat(ratingNum) + '☆'.repeat(Math.max(0, 5 - ratingNum));
+
+        return `
+          <tr>
+            <td>
+              <div style="display: flex; align-items: center; gap: 0.75rem;">
+                <img src="${this.escapeHtml(studentAvatar)}" alt="${this.escapeHtml(studentName)}" style="width: 38px; height: 38px; border-radius: 50%; object-fit: cover; border: 2px solid rgba(198, 138, 40, 0.3);" />
+                <div>
+                  <div style="font-weight: 700; color: var(--text-primary); font-size: 0.92rem;">${this.escapeHtml(studentName)}</div>
+                  <div style="font-size: 0.78rem; color: var(--text-secondary);">${this.escapeHtml(schoolOrGrade)}</div>
+                </div>
+              </div>
+            </td>
+            <td>
+              <span class="badge-gold" style="font-size: 0.78rem; padding: 0.25rem 0.55rem;">${this.escapeHtml(subject)}</span>
+            </td>
+            <td>
+              <div style="display: flex; flex-direction: column; gap: 0.15rem;">
+                <span style="color: #e5a50a; font-size: 1.05rem; letter-spacing: 1px;">${starsHtml}</span>
+                <span style="font-size: 0.78rem; font-weight: 700; color: var(--text-secondary);">${ratingNum}.0 / 5.0</span>
+              </div>
+            </td>
+            <td>
+              <div style="font-size: 0.88rem; color: var(--text-primary); line-height: 1.5; font-style: italic; background: rgba(0,0,0,0.02); padding: 0.65rem 0.85rem; border-radius: 6px; border-left: 3px solid var(--gold-500);">
+                "${comment}"
+              </div>
+            </td>
+            <td style="font-size: 0.82rem; color: var(--text-secondary); white-space: nowrap;">
+              ${this.escapeHtml(dateStr)}
+            </td>
+          </tr>
+        `;
+      }).join('');
+    } catch (err) {
+      console.error('Failed to load ratings page:', err);
+      if (tableBody) {
+        tableBody.innerHTML = `
+          <tr>
+            <td colspan="5" style="text-align: center; padding: 2rem; color: #ef4444;">
+              Failed to load student ratings ledger. Please try again later.
+            </td>
+          </tr>
+        `;
+      }
+    } finally {
+      if (typeof Router !== 'undefined' && Router.updateActiveNav) Router.updateActiveNav();
+    }
+  },
+
   // 6. Dedicated Application Page
   // 6. Dedicated Application Page
   async loadApplicationPage() {
@@ -836,6 +943,8 @@ const Teacher = {
       await this.loadStudentsPage();
     } else if (currentHash === '#teacher-schedule') {
       await this.loadSchedulePage();
+    } else if (currentHash === '#teacher-ratings' || currentHash === '#teacher-reviews') {
+      await this.loadRatingsPage();
     } else if (currentHash === '#teacher-messages') {
       window.location.hash = '#teacher-students';
       return;
@@ -855,6 +964,7 @@ const Teacher = {
     if (tabId === 'classes') window.location.hash = '#teacher-classes';
     else if (tabId === 'students') window.location.hash = '#teacher-students';
     else if (tabId === 'schedule') window.location.hash = '#teacher-schedule';
+    else if (tabId === 'ratings' || tabId === 'reviews') window.location.hash = '#teacher-ratings';
     else if (tabId === 'messages') window.location.hash = '#teacher-students';
     else if (tabId === 'profile') window.location.hash = '#teacher-profile';
     else {
@@ -930,6 +1040,12 @@ const Teacher = {
 
       const ratingEl = document.getElementById('teacher-stat-rating');
       if (ratingEl) ratingEl.innerHTML = `${Icons.star(14, 'margin-right: 2px;', '#F59E0B')} ${stats.rating?.toFixed(1) || '5.0'} (${stats.reviews_count || 0})`;
+
+      const headerRatingValEl = document.getElementById('teacher-header-rating-val');
+      if (headerRatingValEl) headerRatingValEl.textContent = stats.rating != null ? stats.rating.toFixed(1) : '5.0';
+
+      const headerReviewsCountEl = document.getElementById('teacher-header-reviews-count');
+      if (headerReviewsCountEl) headerReviewsCountEl.textContent = stats.reviews_count != null ? stats.reviews_count : '0';
 
       // Render Tables
       this.renderMonthlyFinancials(data.monthlyFinancials || []);

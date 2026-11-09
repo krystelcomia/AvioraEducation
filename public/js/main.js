@@ -113,7 +113,7 @@ function showConfirm(title, message, onConfirm, options = {}) {
 
 // Router
 const Router = {
-  routes: ['#home', '#about', '#tutors', '#aviora-buddy', '#buddy', '#aviora-buddy-studio', '#how-it-works', '#book-now', '#book-lesson', '#subscriptions', '#subscription', '#student-subscriptions', '#login', '#signup', '#student-portal', '#dashboard', '#student-lessons', '#student-tutors', '#student-history', '#student-schedule', '#student-messages', '#messages', '#student-profile', '#teacher-portal', '#teacher-classes', '#teacher-class', '#teacher-students', '#teacher-schedule', '#teacher-messages', '#teacher-dashboard', '#teacher-profile', '#teacher-application', '#admin-portal', '#admin-profile'],
+  routes: ['#home', '#about', '#tutors', '#aviora-buddy', '#buddy', '#aviora-buddy-studio', '#how-it-works', '#book-now', '#book-lesson', '#subscriptions', '#subscription', '#student-subscriptions', '#login', '#signup', '#student-portal', '#dashboard', '#student-lessons', '#student-tutors', '#student-history', '#student-schedule', '#student-messages', '#messages', '#student-profile', '#teacher-portal', '#teacher-classes', '#teacher-class', '#teacher-students', '#teacher-schedule', '#teacher-ratings', '#teacher-messages', '#teacher-dashboard', '#teacher-profile', '#teacher-application', '#admin-portal', '#admin-profile'],
 
   init() {
     window.addEventListener('hashchange', () => this.handleRoute());
@@ -151,6 +151,9 @@ const Router = {
         isActive = true;
       }
       if (!isActive && (href === '#teacher-schedule' || link.id === 'nav-link-teacher-schedule') && hash === '#teacher-schedule') {
+        isActive = true;
+      }
+      if (!isActive && (href === '#teacher-ratings' || href === '#teacher-reviews' || link.id === 'nav-link-teacher-ratings') && (hash === '#teacher-ratings' || hash === '#teacher-reviews')) {
         isActive = true;
       }
       if (!isActive && (href === '#teacher-messages' || link.id === 'nav-link-teacher-messages') && hash === '#teacher-messages') {
@@ -462,6 +465,13 @@ const Router = {
       if (view) view.style.display = 'block';
       window.scrollTo(0, 0);
       await Teacher.loadSchedulePage();
+    } else if (hash === '#teacher-ratings' || hash === '#teacher-reviews') {
+      const view = document.getElementById('view-teacher-ratings');
+      if (view) view.style.display = 'block';
+      window.scrollTo(0, 0);
+      if (typeof Teacher !== 'undefined' && Teacher.loadRatingsPage) {
+        await Teacher.loadRatingsPage();
+      }
     } else if (hash === '#teacher-messages') {
       window.location.hash = '#teacher-students';
       return;

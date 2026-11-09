@@ -1612,6 +1612,28 @@ function ensureJoshuaAccount(customPassword) {
       }
     }
 
+    const sophia = db.prepare('SELECT id FROM users WHERE email = ?').get('sophia.martinez@gmail.com');
+    if (sophia) {
+      const existingSophiaRev = db.prepare('SELECT id FROM reviews WHERE tutor_id = ? AND student_id = ?').get(userId, sophia.id);
+      if (!existingSophiaRev) {
+        db.prepare(`
+          INSERT INTO reviews (request_id, student_id, tutor_id, rating, comment, created_at)
+          VALUES (NULL, ?, ?, 5, 'Joshua is phenomenal! His step-by-step calculus explanations and intuitive visual examples helped me ace my AP Calculus exam. Highly recommend him to any student!', '2026-10-12 14:20:00')
+        `).run(sophia.id, userId);
+      }
+    }
+
+    const maya = db.prepare('SELECT id FROM users WHERE email = ?').get('maya.patel@gmail.com');
+    if (maya) {
+      const existingMayaRev = db.prepare('SELECT id FROM reviews WHERE tutor_id = ? AND student_id = ?').get(userId, maya.id);
+      if (!existingMayaRev) {
+        db.prepare(`
+          INSERT INTO reviews (request_id, student_id, tutor_id, rating, comment, created_at)
+          VALUES (NULL, ?, ?, 5, 'Exceptional educator! Very clear, patient, and prepared. His practice worksheets and interactive problem-solving boosted my confidence in high school mathematics.', '2026-08-15 09:45:00')
+        `).run(maya.id, userId);
+      }
+    }
+
     // Update Joshua's live rating and review count
     const reviewStats = db.prepare('SELECT AVG(rating) as avg_rating, COUNT(*) as count FROM reviews WHERE tutor_id = ?').get(userId);
     if (reviewStats && reviewStats.count > 0) {

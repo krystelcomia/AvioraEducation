@@ -618,10 +618,13 @@ const Teacher = {
       const avgVal = stats.average != null ? stats.average.toFixed(1) : (stats.average_rating != null ? stats.average_rating.toFixed(1) : '5.0');
       const totalCount = stats.count != null ? stats.count : reviews.length;
       const ratingInt = Math.max(1, Math.min(5, Math.round(parseFloat(avgVal) || 5)));
-      const redStars = '★'.repeat(ratingInt) + '☆'.repeat(Math.max(0, 5 - ratingInt));
+      const yellowStars = '★'.repeat(ratingInt) + '☆'.repeat(Math.max(0, 5 - ratingInt));
 
       if (avgNumberEl) avgNumberEl.textContent = avgVal;
-      if (avgStarsEl) avgStarsEl.textContent = redStars;
+      if (avgStarsEl) {
+        avgStarsEl.textContent = yellowStars;
+        avgStarsEl.style.color = '#f59e0b';
+      }
       if (totalTextEl) {
         totalTextEl.textContent = totalCount > 0 ? `Over ${totalCount} ${totalCount === 1 ? 'Review' : 'Reviews'}` : '0 Reviews';
       }
@@ -635,7 +638,7 @@ const Teacher = {
       if (!reviews.length) {
         const emptyHtml = `
           <div style="grid-column: 1 / -1; background: var(--bg-surface, #ffffff); border: 1.5px dashed var(--border-color); border-radius: 14px; padding: 3.5rem 1.5rem; text-align: center;">
-            <div style="font-size: 2.5rem; color: #ef4444; margin-bottom: 0.65rem; line-height: 1;">★</div>
+            <div style="font-size: 2.5rem; color: #f59e0b; margin-bottom: 0.65rem; line-height: 1;">★</div>
             <div style="font-size: 1.15rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.35rem;">No student reviews recorded yet</div>
             <div style="font-size: 0.88rem; color: var(--text-secondary); max-width: 480px; margin: 0 auto; line-height: 1.5;">
               Official evaluations and star ratings submitted by students upon completing tutoring sessions will automatically appear in this section.
@@ -695,8 +698,8 @@ const Teacher = {
               </div>
             </div>
 
-            <!-- Star Rating Row (Red Stars matching reference image) -->
-            <div style="color: #ef4444; font-size: 1.15rem; letter-spacing: 2px; margin-bottom: 0.75rem; line-height: 1;">
+            <!-- Star Rating Row (Yellow Stars matching request) -->
+            <div style="color: #f59e0b; font-size: 1.15rem; letter-spacing: 2px; margin-bottom: 0.75rem; line-height: 1;">
               ${starsHtml}
             </div>
 

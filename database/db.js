@@ -203,6 +203,14 @@ function initSchema() {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
+    CREATE TABLE IF NOT EXISTS contact_notes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      author_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      contact_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      note TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
     CREATE TABLE IF NOT EXISTS virtual_room_messages (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       request_id INTEGER NOT NULL REFERENCES tutoring_requests(id) ON DELETE CASCADE,

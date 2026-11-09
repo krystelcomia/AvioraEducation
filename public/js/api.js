@@ -151,6 +151,10 @@ const API = {
   getStudentMessages: () => apiRequest('/student/messages'),
   sendStudentMessage: (body) => apiRequest('/student/messages', { method: 'POST', body }),
   markConversationRead: (partnerId) => apiRequest('/messages/mark-read', { method: 'POST', body: { partner_id: partnerId } }),
+  getContactNotes: (contactId) => apiRequest(`/contacts/${contactId}/notes`),
+  addContactNote: (contactId, note) => apiRequest(`/contacts/${contactId}/notes`, { method: 'POST', body: { note } }),
+  deleteContactNote: (noteId) => apiRequest(`/contacts/notes/${noteId}`, { method: 'DELETE' }),
+  updateContactInfo: (contactId, data) => apiRequest(`/contacts/${contactId}`, { method: 'PUT', body: data }),
 
   // Teacher & Tutor Portal
   getTeacherStatus: () => apiRequest('/teacher/application-status'),

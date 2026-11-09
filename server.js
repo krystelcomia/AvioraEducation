@@ -4482,6 +4482,8 @@ app.get('/api/teacher/messages', authenticateToken, requireRole('tutor'), (req, 
         u_other.name as other_name,
         u_other.avatar_url as other_avatar,
         u_other.email as other_email,
+        u_other.phone as other_phone,
+        u_other.country as other_country,
         sp.grade_level as student_grade_level,
         sp.school as student_school,
         sp.learning_goals as student_learning_goals,
@@ -4513,6 +4515,8 @@ app.get('/api/teacher/messages', authenticateToken, requireRole('tutor'), (req, 
         student_avatar: studentAvatar,
         student_grade_level: r.student_grade_level || '',
         student_school: r.student_school || '',
+        student_phone: r.other_phone || '+1 (254) 125-4446',
+        student_country: r.other_country || 'United States',
         student_learning_goals: r.student_learning_goals || r.request_notes || '',
         student_is_online: isUserOnline(studentId) ? 1 : 0,
         sender_name: r.sender_name,
@@ -4688,10 +4692,14 @@ app.get('/api/student/messages', authenticateToken, (req, res) => {
         u_tutor.name as tutor_name,
         u_tutor.avatar_url as tutor_avatar,
         u_tutor.email as tutor_email,
+        u_tutor.phone as tutor_phone,
+        u_tutor.country as tutor_country,
         tp.id as tutor_profile_id,
         tp.headline as tutor_headline,
         tp.institution as tutor_institution,
-        tp.subjects as tutor_subjects
+        tp.subjects as tutor_subjects,
+        tp.hourly_rate as tutor_rate,
+        tp.rating as tutor_rating
       FROM messages m
       LEFT JOIN users u_tutor ON u_tutor.id = (CASE WHEN m.sender_id = ? THEN m.receiver_id ELSE m.sender_id END)
       LEFT JOIN tutor_profiles tp ON tp.user_id = u_tutor.id
@@ -4847,6 +4855,96 @@ app.post('/api/teacher/presence-toggle', authenticateToken, requireRole('tutor')
   } catch (error) {
     console.error('Presence toggle error:', error);
     res.status(500).json({ error: 'Failed to toggle presence.' });
+  }
+});
+
+// Contact Notes (Persistent CRM-style contact notes)
+app.get('/api/contacts/:contactId/notes', authenticateToken, (req, res) => {
+  try {
+    const authorId = req.user.id;
+    const contactId = req.params.contactId;
+    const notes = db.prepare(`
+      SELECT cn.*, u.name as author_name
+      FROM contact_notes cn
+      LEFT JOIN users u ON u.id = cn.author_id
+      WHERE cn.author_id = ? AND cn.contact_id = ?
+      ORDER BY cn.created_at DESC
+    `).all(authorId, contactId);
+    res.json({ success: true, notes });
+  } catch (err) {
+    console.error('Get contact notes error:', err);
+    res.status(500).json({ error: 'Failed to fetch contact notes.' });
+  }
+});
+
+app.post('/api/contacts/:contactId/notes', authenticateToken, (req, res) => {
+  try {
+    const authorId = req.user.id;
+    const contactId = req.params.contactId;
+    const { note } = req.body;
+    if (!note || !note.trim()) {
+      return res.status(400).json({ error: 'Note cannot be empty.' });
+    }
+    const info = db.prepare(`
+      INSERT INTO contact_notes (author_id, contact_id, note)
+      VALUES (?, ?, ?)
+    `).run(authorId, contactId, note.trim());
+
+    const created = db.prepare(`
+      SELECT cn.*, u.name as author_name
+      FROM contact_notes cn
+      LEFT JOIN users u ON u.id = cn.author_id
+      WHERE cn.id = ?
+    `).get(info.lastInsertRowid);
+
+    res.json({ success: true, note: created });
+  } catch (err) {
+    console.error('Add contact note error:', err);
+    res.status(500).json({ error: 'Failed to save contact note.' });
+  }
+});
+
+app.delete('/api/contacts/notes/:noteId', authenticateToken, (req, res) => {
+  try {
+    const authorId = req.user.id;
+    const noteId = req.params.noteId;
+    db.prepare('DELETE FROM contact_notes WHERE id = ? AND author_id = ?').run(noteId, authorId);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Delete contact note error:', err);
+    res.status(500).json({ error: 'Failed to delete note.' });
+  }
+});
+
+// Update Contact Info (Edit details from Contact Info pane)
+app.put('/api/contacts/:contactId', authenticateToken, (req, res) => {
+  try {
+    const contactId = req.params.contactId;
+    const { phone, country, school, grade_level } = req.body;
+
+    if (phone !== undefined || country !== undefined) {
+      const updates = [];
+      const params = [];
+      if (phone !== undefined) { updates.push('phone = ?'); params.push(phone); }
+      if (country !== undefined) { updates.push('country = ?'); params.push(country); }
+      if (updates.length > 0) {
+        params.push(contactId);
+        db.prepare(`UPDATE users SET ${updates.join(', ')} WHERE id = ?`).run(...params);
+      }
+    }
+
+    if (school !== undefined || grade_level !== undefined) {
+      const existing = db.prepare('SELECT id FROM student_profiles WHERE user_id = ?').get(contactId);
+      if (existing) {
+        db.prepare('UPDATE student_profiles SET school = COALESCE(?, school), grade_level = COALESCE(?, grade_level) WHERE user_id = ?')
+          .run(school, grade_level, contactId);
+      }
+    }
+
+    res.json({ success: true, message: 'Contact info updated.' });
+  } catch (err) {
+    console.error('Update contact info error:', err);
+    res.status(500).json({ error: 'Failed to update contact info.' });
   }
 });
 

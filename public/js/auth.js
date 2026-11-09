@@ -2031,7 +2031,6 @@ const Auth = {
             <li><a href="#about" class="nav-link" id="nav-link-about">About</a></li>
             <li><a href="#subscriptions" class="nav-link" id="nav-link-subscription">Subscription</a></li>
             <li><a href="#tutors" class="nav-link" id="nav-link-tutors">Tutors</a></li>
-            <li><a href="#student-messages" class="nav-link" id="nav-link-student-messages">Messages</a></li>
             <li><a href="#aviora-buddy" class="nav-link" id="nav-link-buddy">Aviora Buddy</a></li>
             <li><a href="#student-portal" class="nav-link" id="nav-link-dashboard">Dashboard</a></li>
           `;

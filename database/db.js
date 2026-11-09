@@ -1530,6 +1530,17 @@ function ensureJoshuaAccount(customPassword) {
           VALUES (?, ?, 'Joshua Garcia', 'joshuagarcia@gmail.com', 'Re: Calculus BC Question', 'Hello Krystel! I am here to help you with Calculus BC.', 'delivered', 0, '2026-11-09 04:56:33')
         `).run(userId, krystel.id);
       }
+
+      // Ensure notification to student exists for tutor's reply so it appears in the notification section
+      const tutorProf = db.prepare('SELECT id FROM tutor_profiles WHERE user_id = ?').get(userId);
+      const tutorProfileId = tutorProf ? tutorProf.id : userId;
+      const existingJoshuaNotif = db.prepare("SELECT id FROM notifications WHERE user_id = ? AND title LIKE '%Joshua Garcia%'").get(krystel.id);
+      if (!existingJoshuaNotif) {
+        db.prepare(`
+          INSERT INTO notifications (user_id, title, message, type, is_read, link)
+          VALUES (?, 'New Message from Joshua Garcia', 'Hello Krystel! I am here to help you with Calculus BC.', 'message', 0, ?)
+        `).run(krystel.id, `#messages?tutor=${tutorProfileId}`);
+      }
     }
 
     const lucas = db.prepare("SELECT id FROM users WHERE email = 'student@aviora.edu'").get();

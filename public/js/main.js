@@ -428,12 +428,16 @@ const Router = {
         window.location.hash = '#teacher-messages';
         return;
       }
-      const view = document.getElementById('view-student-messages');
-      if (view) view.style.display = 'block';
-      window.scrollTo(0, 0);
-      if (typeof Student !== 'undefined' && Student.loadMessagesPage) {
-        await Student.loadMessagesPage();
+      // Students do not have a dedicated messages page.
+      // If a tutor parameter is present, redirect to student portal and open the message modal directly.
+      const tutorParam = params.get('tutor');
+      window.location.hash = '#student-portal';
+      if (tutorParam && typeof Tutors !== 'undefined' && Tutors.openMessageModal) {
+        setTimeout(() => {
+          Tutors.openMessageModal(tutorParam);
+        }, 150);
       }
+      return;
     } else if (hash === '#virtual-room') {
       const sessionId = params.get('session');
       if (sessionId && typeof VirtualRoom !== 'undefined') {

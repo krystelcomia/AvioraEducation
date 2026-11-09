@@ -387,15 +387,46 @@ const NotificationsUI = {
       return;
     }
 
-    // 6. Direct Message / Chat
-    if (title.includes('message from')) {
-      window.location.hash = (typeof Auth !== 'undefined' && Auth.currentUser && Auth.currentUser.role === 'student') ? '#student-portal' : '#teacher-dashboard';
-      return;
+    // 6. Direct Message / Chat / Inquiry reply
+    const isMessageNotif = (notif && notif.type === 'message') || 
+                           title.includes('message from') || 
+                           title.includes('reply from') || 
+                           link.includes('tutor=') || 
+                           link.includes('student-messages') ||
+                           link.includes('messages');
+
+    if (isMessageNotif) {
+      if (typeof Auth !== 'undefined' && Auth.currentUser && Auth.currentUser.role === 'student') {
+        let tutorParam = null;
+        const match = link.match(/tutor=(\d+)/);
+        if (match) {
+          tutorParam = match[1];
+        } else {
+          // Extract educator name if present in notification title
+          const nameMatch = (notif?.title || '').match(/(?:message|reply)\s+from\s+(.+)$/i);
+          if (nameMatch) {
+            tutorParam = nameMatch[1].trim();
+          }
+        }
+
+        // Directly lead to the messages modal with this educator
+        if (typeof Tutors !== 'undefined' && Tutors.openMessageModal) {
+          Tutors.openMessageModal(tutorParam || 'latest');
+        }
+        return;
+      } else if (typeof Auth !== 'undefined' && Auth.currentUser && (Auth.currentUser.role === 'teacher' || Auth.currentUser.role === 'tutor')) {
+        window.location.hash = '#teacher-messages';
+        return;
+      }
     }
 
     // 7. Inquiry
     if (title.includes('inquiry')) {
-      window.location.hash = '#profile';
+      if (typeof Auth !== 'undefined' && Auth.currentUser && (Auth.currentUser.role === 'teacher' || Auth.currentUser.role === 'tutor')) {
+        window.location.hash = '#teacher-messages';
+      } else {
+        window.location.hash = '#student-portal';
+      }
       return;
     }
 

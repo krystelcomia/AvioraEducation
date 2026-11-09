@@ -831,15 +831,60 @@ const Tutors = {
   },
 
   async openMessageModal(tutorId) {
-    let tutor = this.allTutors.find(t => t.id == tutorId);
-    if (!tutor) {
+    if (!this.allTutors || this.allTutors.length === 0) {
+      try {
+        const data = await API.getTutors();
+        if (data && data.tutors) {
+          this.allTutors = (data.tutors || []).map(t => ({
+            ...t,
+            subjects: this.getTutorActiveSubjects ? this.getTutorActiveSubjects(t) : (t.subjects || [])
+          }));
+        }
+      } catch (e) {}
+    }
+
+    let tutor = null;
+
+    // If 'latest' or unspecified, look up the last tutor who interacted with this student
+    if (!tutorId || tutorId === 'latest') {
+      try {
+        const myMsgs = await API.getStudentMessages();
+        const threadList = (myMsgs && (myMsgs.messages || myMsgs.chats || []));
+        if (threadList && threadList.length > 0) {
+          const lastMsg = threadList[threadList.length - 1];
+          const foundId = lastMsg.tutor_profile_id || lastMsg.tutor_user_id || (lastMsg.sender_role === 'tutor' ? lastMsg.sender_id : lastMsg.receiver_id);
+          if (foundId) {
+            tutorId = foundId;
+          }
+        }
+      } catch (e) {}
+    }
+
+    // Try finding by id, user_id, or name match in allTutors
+    if (this.allTutors && this.allTutors.length > 0 && tutorId && tutorId !== 'latest') {
+      const queryStr = String(tutorId).toLowerCase().trim();
+      tutor = this.allTutors.find(t => 
+        String(t.id) === queryStr || 
+        String(t.user_id) === queryStr ||
+        (t.name && (t.name.toLowerCase() === queryStr || t.name.toLowerCase().includes(queryStr)))
+      );
+    }
+
+    // If not found in allTutors, query API by ID
+    if (!tutor && tutorId && tutorId !== 'latest') {
       try {
         const res = await API.getTutorById(tutorId);
-        tutor = res.tutor;
+        if (res && res.tutor) tutor = res.tutor;
       } catch (e) {
         // Fallback
       }
     }
+
+    // Fallback to first available tutor if still not found
+    if (!tutor && this.allTutors && this.allTutors.length > 0) {
+      tutor = this.allTutors[0];
+    }
+
     if (!tutor) return;
     this.currentChatTutor = tutor;
 

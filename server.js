@@ -4610,13 +4610,16 @@ app.post('/api/teacher/messages/reply', authenticateToken, requireRole('tutor'),
     // Mark previous incoming messages from this student to teacher as seen
     db.prepare("UPDATE messages SET is_read = 1, read_at = CURRENT_TIMESTAMP, status = 'seen' WHERE receiver_id = ? AND sender_id = ?").run(teacherId, targetStudentId);
 
-    // Real-time notification to the student
+    // Real-time notification to the student (routes directly to the message conversation)
+    const tutorProf = db.prepare('SELECT id FROM tutor_profiles WHERE user_id = ?').get(teacherId);
+    const tutorProfileId = tutorProf ? tutorProf.id : teacherId;
+
     sendNotification(
       targetStudentId,
       `New Message from ${teacherUser.name}`,
       (contentText || attachment_name || 'Sent an attachment').substring(0, 120),
       'message',
-      '#student-messages'
+      `#messages?tutor=${tutorProfileId}`
     );
 
     const insertedMsg = db.prepare('SELECT * FROM messages WHERE id = ?').get(info.lastInsertRowid);

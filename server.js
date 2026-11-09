@@ -1030,7 +1030,7 @@ app.post('/api/auth/register', (req, res) => {
 
     // Default avatars based on role
     const defaultAvatar = (designatedRole === 'tutor' || designatedRole === 'teacher')
-      ? 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80'
+      ? 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=300&q=80'
       : 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=300&q=80';
 
     const insertUser = db.prepare(`
@@ -1223,7 +1223,7 @@ app.post('/api/auth/sync-account', (req, res) => {
 
     if (!user) {
       const defaultAvatar = (designatedRole === 'teacher' || designatedRole === 'tutor')
-        ? 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80'
+        ? 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=300&q=80'
         : 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=300&q=80';
 
       const result = db.prepare(`
@@ -1449,7 +1449,7 @@ app.post('/api/auth/forgot-password/reset', (req, res) => {
       const designatedRole = isJoshua ? 'teacher' : 'student';
       const name = isJoshua ? 'Joshua Garcia' : 'Krystel Comia';
       const defaultAvatar = isJoshua
-        ? 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80'
+        ? 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=300&q=80'
         : 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=300&q=80';
       db.prepare(`
         INSERT INTO users (name, email, password_hash, role, status, avatar_url)
@@ -8498,7 +8498,7 @@ app.post('/api/admin/users', authenticateToken, requireRole('admin'), (req, res)
     const passwordHash = bcrypt.hashSync(password, salt);
 
     const defaultAvatar = (role === 'teacher' || role === 'tutor')
-      ? 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80'
+      ? 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=300&q=80'
       : (role === 'admin'
         ? 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=300&q=80'
         : 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=300&q=80');

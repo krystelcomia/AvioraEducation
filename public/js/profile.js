@@ -768,6 +768,7 @@ const Profile = {
 
   updateAllAvatars(url) {
     if (!url) return;
+    const defaultEducatorAvatar = 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=300&q=80';
     const heroAvatar = document.getElementById('profile-hero-avatar');
     const studentAvatar = document.getElementById('student-display-avatar');
     const subAvatar = document.getElementById('student-sub-avatar');
@@ -778,12 +779,22 @@ const Profile = {
     if (heroAvatar) heroAvatar.src = url;
     if (studentAvatar) studentAvatar.src = url;
     if (subAvatar) subAvatar.src = url;
-    if (tHeroAvatar) tHeroAvatar.src = url;
-    if (tDashAvatar) tDashAvatar.src = url;
+    if (tHeroAvatar) {
+      tHeroAvatar.src = url;
+      tHeroAvatar.onerror = () => { tHeroAvatar.src = defaultEducatorAvatar; };
+    }
+    if (tDashAvatar) {
+      tDashAvatar.src = url;
+      tDashAvatar.onerror = () => { tDashAvatar.src = defaultEducatorAvatar; };
+    }
     if (aHeroAvatar) aHeroAvatar.src = url;
-    if (navAvatar) navAvatar.src = url;
+    if (navAvatar) {
+      navAvatar.src = url;
+      navAvatar.onerror = () => { navAvatar.src = defaultEducatorAvatar; };
+    }
     document.querySelectorAll('.user-avatar, .nav-user-avatar, .teacher-hero-avatar').forEach(img => {
       img.src = url;
+      img.onerror = () => { img.src = defaultEducatorAvatar; };
     });
   },
 

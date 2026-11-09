@@ -537,11 +537,18 @@ const Teacher = {
     const heroTag = document.getElementById('teacher-headline-tag');
     const heroAvatar = document.getElementById('teacher-hero-avatar');
 
-    if (heroName) heroName.textContent = user?.name || 'Dr. Elena Vance';
-    if (heroBio) heroBio.textContent = this.tutorProfile?.bio || this.application?.bio || 'Educator workspace for live virtual classroom sessions, student coursework management, schedule availability, and financial earnings tracking.';
-    if (heroTag) heroTag.textContent = this.tutorProfile?.headline || this.application?.headline || 'Verified Academic Educator';
-    if (heroAvatar && (user?.avatar || this.tutorProfile?.avatar)) {
-      heroAvatar.src = user?.avatar || this.tutorProfile.avatar;
+    const defaultEducatorAvatar = 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=300&q=80';
+    const resolvedName = user?.name || 'Joshua Garcia';
+    const resolvedBio = this.tutorProfile?.bio || this.application?.bio || user?.bio || 'Dedicated mathematics educator passionate about guiding students through algebra, geometry, and calculus with interactive problem solving.';
+    const resolvedTag = this.tutorProfile?.headline || this.application?.headline || user?.headline || 'Mathematics & Calculus Specialist';
+    const resolvedAvatar = user?.avatar_url || user?.avatar || this.tutorProfile?.avatar || defaultEducatorAvatar;
+
+    if (heroName) heroName.textContent = resolvedName;
+    if (heroBio) heroBio.textContent = resolvedBio;
+    if (heroTag) heroTag.textContent = resolvedTag;
+    if (heroAvatar) {
+      heroAvatar.src = resolvedAvatar;
+      heroAvatar.onerror = () => { heroAvatar.src = defaultEducatorAvatar; };
     }
 
     const countryVal = this.tutorProfile?.country || (typeof localStorage !== 'undefined' ? localStorage.getItem('aviora_country') : null) || 'United States';
@@ -5429,10 +5436,13 @@ const Teacher = {
       const rateBadge = document.getElementById('teacher-profile-rate-badge');
       const subjectBadge = document.getElementById('teacher-profile-subject-badge');
 
-      if (heroName) heroName.textContent = u.name || 'Dr. Elena Vance';
-      if (heroEmail) heroEmail.textContent = u.email || '';
+      const defaultEducatorAvatar = 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=300&q=80';
+      if (heroName) heroName.textContent = u.name || user?.name || 'Joshua Garcia';
+      if (heroEmail) heroEmail.textContent = u.email || user?.email || 'joshuagarcia@gmail.com';
       if (heroAvatar) {
-        heroAvatar.src = u.avatar_url || tp.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80';
+        const avatarSrc = u.avatar_url || user?.avatar_url || user?.avatar || tp.avatar || defaultEducatorAvatar;
+        heroAvatar.src = avatarSrc;
+        heroAvatar.onerror = () => { heroAvatar.src = defaultEducatorAvatar; };
       }
 
       const isApproved = (app.status === 'approved');
@@ -5536,16 +5546,35 @@ const Teacher = {
         submitBtn.textContent = 'Updating...';
       }
 
+      const currentAvatar = Auth.currentUser?.avatar_url || Auth.currentUser?.avatar || 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=300&q=80';
       const res = await API.updateProfile({
         name,
         phone,
         country,
+        avatar_url: currentAvatar,
         tutorData: { headline, hourly_rate, bio, country, timezone, institution, subjects }
       });
 
       if (res && res.user && typeof Auth !== 'undefined') {
         Auth.currentUser = res.user;
         if (typeof Storage !== 'undefined') Storage.setUser(res.user);
+        if (typeof Auth.saveCreatedAccount === 'function') {
+          Auth.saveCreatedAccount({
+            name,
+            email: res.user.email,
+            password: res.user.password || 'Joshua123_',
+            role: 'teacher',
+            phone,
+            headline,
+            subjects,
+            country,
+            timezone,
+            institution,
+            bio,
+            hourly_rate,
+            avatar_url: res.user.avatar_url || currentAvatar
+          });
+        }
       }
 
       showToast('Tutor public profile updated successfully!', 'success');

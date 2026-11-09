@@ -247,15 +247,23 @@ const Auth = {
   ensurePersistentAccounts() {
     const accounts = this.getCreatedAccounts();
     const joshuaEmail = 'joshuagarcia@gmail.com';
-    if (!accounts[joshuaEmail]) {
+    const existing = accounts[joshuaEmail];
+    if (!existing || existing.avatar_url === 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80') {
       this.saveCreatedAccount({
-        name: 'Joshua Garcia',
+        name: existing?.name || 'Joshua Garcia',
         email: joshuaEmail,
-        password: 'Joshua123_',
+        password: existing?.password || 'Joshua123_',
         role: 'teacher',
-        phone: '+1 (555) 234-5678',
-        headline: 'Mathematics & Calculus Specialist',
-        subjects: 'Mathematics, Algebra'
+        phone: existing?.phone || '+1 (555) 234-5678',
+        headline: existing?.headline || 'Mathematics & Calculus Specialist',
+        subjects: existing?.subjects || 'Mathematics, Algebra',
+        country: existing?.country || 'Philippines',
+        timezone: existing?.timezone || 'Asia/Manila',
+        institution: existing?.institution || 'University of California, Berkeley',
+        highest_degree: existing?.highest_degree || 'Bachelor of Science in Education',
+        hourly_rate: existing?.hourly_rate || 45,
+        bio: existing?.bio || 'Dedicated mathematics educator passionate about guiding students through algebra, geometry, and calculus with interactive problem solving.',
+        avatar_url: existing?.avatar_url || 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=300&q=80'
       });
     }
   },
@@ -266,16 +274,24 @@ const Auth = {
       const accounts = this.getCreatedAccounts();
       const email = account.email.toLowerCase().trim();
       accounts[email] = {
-        name: account.name || 'Aviora Member',
+        name: account.name || accounts[email]?.name || 'Aviora Member',
         email,
-        password: account.password,
-        role: account.role || 'student',
-        phone: account.phone || null,
-        grade_level: account.grade_level,
-        school: account.school,
-        headline: account.headline,
-        subjects: account.subjects,
-        created_at: accounts[email]?.created_at || new Date().toISOString()
+        password: account.password || accounts[email]?.password,
+        role: account.role || accounts[email]?.role || 'student',
+        phone: account.phone !== undefined ? account.phone : (accounts[email]?.phone || null),
+        grade_level: account.grade_level || accounts[email]?.grade_level,
+        school: account.school || accounts[email]?.school,
+        headline: account.headline || accounts[email]?.headline,
+        subjects: account.subjects || accounts[email]?.subjects,
+        country: account.country || accounts[email]?.country,
+        timezone: account.timezone || accounts[email]?.timezone,
+        institution: account.institution || accounts[email]?.institution,
+        highest_degree: account.highest_degree || accounts[email]?.highest_degree,
+        hourly_rate: account.hourly_rate || accounts[email]?.hourly_rate,
+        bio: account.bio || accounts[email]?.bio,
+        avatar_url: account.avatar_url || account.avatar || accounts[email]?.avatar_url,
+        created_at: accounts[email]?.created_at || new Date().toISOString(),
+        updated_at: new Date().toISOString()
       };
       localStorage.setItem('aviora_created_accounts', JSON.stringify(accounts));
     } catch (e) {}
@@ -1900,7 +1916,7 @@ const Auth = {
         const roleLabel = user.role === 'admin' ? 'Administrator' : (user.role === 'teacher' || user.role === 'tutor' ? 'Teacher' : 'Student');
         const safeUserName = user.name || (user.role === 'admin' ? 'Administrator' : 'User');
         const defaultAvatar = (user.role === 'teacher' || user.role === 'tutor')
-          ? 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80'
+          ? 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=300&q=80'
           : (user.role === 'admin'
             ? 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=300&q=80'
             : 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=300&q=80');
@@ -1983,7 +1999,7 @@ const Auth = {
           <!-- User Profile & Log-Out Group (Placed side-by-side next to each other) -->
           <div class="nav-profile-logout-group" id="nav-profile-logout-group">
             <a href="${profileHash}" class="nav-user-profile-link" id="nav-user-profile-btn" aria-label="View Profile" title="View Profile">
-              <img src="${userAvatarUrl}" alt="${safeUserName}" class="nav-header-profile-avatar nav-user-avatar" id="nav-user-profile-avatar" />
+              <img src="${userAvatarUrl}" alt="${safeUserName}" class="nav-header-profile-avatar nav-user-avatar" id="nav-user-profile-avatar" onerror="this.onerror=null; this.src='${defaultAvatar}';" />
             </a>
             <!-- Log Out Popover Prompt Container (Icon Trigger) -->
             <div class="nav-logout-container" id="nav-logout-container" style="position: relative;">

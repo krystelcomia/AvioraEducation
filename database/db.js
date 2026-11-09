@@ -1377,20 +1377,21 @@ function ensureJoshuaAccount(customPassword) {
     const email = 'joshuagarcia@gmail.com';
     let user = db.prepare('SELECT * FROM users WHERE LOWER(email) = LOWER(?)').get(email);
 
+    const defaultJoshuaAvatar = 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=300&q=80';
     const passwordToHash = customPassword || 'Joshua123_';
     const salt = bcrypt.genSaltSync(10);
     const passwordHash = bcrypt.hashSync(passwordToHash, salt);
 
     if (!user) {
       const res = db.prepare(`
-        INSERT INTO users (name, email, password_hash, role, phone, avatar_url, status)
-        VALUES (?, ?, ?, 'teacher', ?, ?, 'active')
+        INSERT INTO users (name, email, password_hash, role, phone, avatar_url, country, status)
+        VALUES (?, ?, ?, 'teacher', ?, ?, 'Philippines', 'active')
       `).run(
         'Joshua Garcia',
         email,
         passwordHash,
         '+1 (555) 234-5678',
-        'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80'
+        defaultJoshuaAvatar
       );
       user = db.prepare('SELECT * FROM users WHERE id = ?').get(res.lastInsertRowid);
     } else {
@@ -1399,6 +1400,11 @@ function ensureJoshuaAccount(customPassword) {
       if (!matchesPass || customPassword) {
         db.prepare("UPDATE users SET password_hash = ?, status = 'active', role = 'teacher' WHERE id = ?").run(passwordHash, user.id);
         user.password_hash = passwordHash;
+      }
+      // If user still has the old default woman avatar or no avatar, update to the proper Joshua Garcia avatar
+      if (!user.avatar_url || user.avatar_url === 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80') {
+        db.prepare("UPDATE users SET avatar_url = ? WHERE id = ?").run(defaultJoshuaAvatar, user.id);
+        user.avatar_url = defaultJoshuaAvatar;
       }
     }
 

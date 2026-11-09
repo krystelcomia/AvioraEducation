@@ -5838,7 +5838,7 @@ app.get('/api/teacher/dashboard', authenticateToken, requireRole('teacher'), (re
 });
 
 // Request tutor salary withdrawal / payout
-app.post('/api/teacher/payout/request', requireRole('teacher'), (req, res) => {
+app.post('/api/teacher/payout/request', authenticateToken, requireRole('teacher'), (req, res) => {
   try {
     const teacherId = req.user.id;
 
@@ -5926,7 +5926,7 @@ app.post('/api/teacher/payout/request', requireRole('teacher'), (req, res) => {
 });
 
 // Get all student ratings and comments for tutor (Strictly Read-Only)
-app.get('/api/teacher/ratings', requireRole('teacher'), (req, res) => {
+app.get('/api/teacher/ratings', authenticateToken, requireRole('teacher'), (req, res) => {
   try {
     const teacherId = req.user.id;
 

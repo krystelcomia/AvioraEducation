@@ -4623,6 +4623,9 @@ app.post('/api/teacher/messages/reply', authenticateToken, requireRole('tutor'),
       message: 'Reply delivered directly to the student in real time.',
       data: {
         ...insertedMsg,
+        sender_role: 'teacher',
+        student_id: targetStudentId,
+        student_name: teacherUser.name,
         time: new Date(insertedMsg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       }
     });
@@ -4632,47 +4635,9 @@ app.post('/api/teacher/messages/reply', authenticateToken, requireRole('tutor'),
   }
 });
 
-// Edit Message Content (Messenger Conversation Editing)
+// Edit Message Content (Official records - message editing disabled)
 const handleEditMessageEndpoint = (req, res) => {
-  try {
-    const messageId = req.params.id;
-    const { content } = req.body;
-    const userId = req.user.id;
-
-    if (!content || !content.trim()) {
-      return res.status(400).json({ error: 'Message content cannot be empty.' });
-    }
-
-    const msg = db.prepare('SELECT * FROM messages WHERE id = ?').get(messageId);
-    if (!msg) {
-      return res.status(404).json({ error: 'Message not found.' });
-    }
-
-    // Allow ONLY original author (msg.sender_id) or admin to edit
-    if (msg.sender_id !== userId && req.user.role !== 'admin') {
-      return res.status(403).json({ error: 'You do not have permission to edit this message. Only the author may edit.' });
-    }
-
-    db.prepare(`
-      UPDATE messages 
-      SET content = ?, is_edited = 1, edited_at = CURRENT_TIMESTAMP 
-      WHERE id = ?
-    `).run(content.trim(), messageId);
-
-    const updated = db.prepare('SELECT * FROM messages WHERE id = ?').get(messageId);
-
-    res.json({
-      success: true,
-      message: 'Message updated successfully.',
-      data: {
-        ...updated,
-        time: new Date(updated.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      }
-    });
-  } catch (error) {
-    console.error('Edit message error:', error);
-    res.status(500).json({ error: 'Failed to edit message: ' + error.message });
-  }
+  return res.status(403).json({ error: 'Official conversation messages cannot be edited.' });
 };
 
 app.post('/api/messages/:id/edit', authenticateToken, handleEditMessageEndpoint);

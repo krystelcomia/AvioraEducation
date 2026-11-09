@@ -1029,6 +1029,44 @@
   color: #E2E8F0 !important;
 }
 
+/* 11. Backup & Recovery Preview Modal Dark Mode */
+[data-theme="dark"] #backup-preview-modal .modal-card {
+  background: #000000 !important;
+  border: 1.5px solid rgba(216, 170, 60, 0.45) !important;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.9), 0 0 0 1px rgba(216, 170, 60, 0.2) !important;
+  color: #FFFFFF !important;
+}
+[data-theme="dark"] #backup-preview-modal .backup-preview-controls {
+  background: #080808 !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+}
+[data-theme="dark"] #backup-preview-modal #backup-overwrite-warning-box.safe-mode {
+  background: rgba(16, 185, 129, 0.12) !important;
+  border-color: rgba(16, 185, 129, 0.35) !important;
+  color: #A7F3D0 !important;
+}
+[data-theme="dark"] #backup-preview-modal #backup-overwrite-warning-box.safe-mode strong {
+  color: #34D399 !important;
+}
+[data-theme="dark"] #backup-preview-modal #backup-overwrite-warning-box.overwrite-mode {
+  background: rgba(234, 179, 8, 0.12) !important;
+  border-color: rgba(234, 179, 8, 0.45) !important;
+  color: #FDE68A !important;
+}
+[data-theme="dark"] #backup-preview-modal #backup-overwrite-warning-box.overwrite-mode strong {
+  color: #FBBF24 !important;
+}
+[data-theme="dark"] #backup-preview-modal .backup-category-card {
+  background: #0A0A0A !important;
+  border-color: rgba(216, 170, 60, 0.25) !important;
+  color: #FFFFFF !important;
+}
+[data-theme="dark"] #backup-preview-modal pre {
+  background: #050505 !important;
+  color: #CBD5E1 !important;
+  border-color: rgba(255, 255, 255, 0.15) !important;
+}
+
 /* =========================================
    HEADER LANGUAGE SELECTOR
    ========================================= */

@@ -6,7 +6,7 @@ const jwt = require('jsonwebtoken');
 const multer = require('multer');
 const fs = require('fs');
 const crypto = require('crypto');
-const { db, ensureAdminAccount, ensureKrystelAccount, ensureJoshuaAccount, getUserPreferences } = require('./database/db');
+const { db, ensureAdminAccount, ensureKrystelAccount, ensureJoshuaAccount, getUserPreferences, saveUserPreferences } = require('./database/db');
 const { inspectDocument } = require('./utils/documentDetector');
 
 try {
@@ -2933,13 +2933,22 @@ app.post('/api/account/restore', authenticateToken, (req, res) => {
     const financialsCat = cats.financials_and_payouts || payload.payoutRequests || [];
     const prefsCat = cats.preferences_and_settings || payload.preferences || {};
 
+    const allowOverwrite = !!(req.body.allow_overwrite || payload.allow_overwrite);
     const restoredSummary = [];
 
-    // Category 1: Profile & Identity (Existing data is strictly preserved and never overwritten)
-    const nameToRestore = (currentUser.name && currentUser.name.trim()) ? currentUser.name : (profileCat.name || null);
-    const phoneToRestore = (currentUser.phone && currentUser.phone.trim()) ? currentUser.phone : (profileCat.phone || null);
-    const avatarToRestore = (currentUser.avatar_url && currentUser.avatar_url.trim()) ? currentUser.avatar_url : (profileCat.avatar_url || null);
-    const countryToRestore = (currentUser.country && currentUser.country.trim()) ? currentUser.country : (profileCat.country || null);
+    // Category 1: Profile & Identity (Existing data preserved unless overwrite explicitly approved)
+    const nameToRestore = allowOverwrite
+      ? (profileCat.name || currentUser.name)
+      : ((currentUser.name && currentUser.name.trim()) ? currentUser.name : (profileCat.name || null));
+    const phoneToRestore = allowOverwrite
+      ? (profileCat.phone || currentUser.phone)
+      : ((currentUser.phone && currentUser.phone.trim()) ? currentUser.phone : (profileCat.phone || null));
+    const avatarToRestore = allowOverwrite
+      ? (profileCat.avatar_url || currentUser.avatar_url)
+      : ((currentUser.avatar_url && currentUser.avatar_url.trim()) ? currentUser.avatar_url : (profileCat.avatar_url || null));
+    const countryToRestore = allowOverwrite
+      ? (profileCat.country || currentUser.country)
+      : ((currentUser.country && currentUser.country.trim()) ? currentUser.country : (profileCat.country || null));
 
     db.prepare(`
       UPDATE users
@@ -2951,29 +2960,32 @@ app.post('/api/account/restore', authenticateToken, (req, res) => {
     `).run(nameToRestore, phoneToRestore, avatarToRestore, countryToRestore, userId);
     restoredSummary.push('Profile & Personal Identity');
 
-    // Category 2: Academic Credentials & Biography (Existing data is strictly preserved and never overwritten)
+    // Category 2: Academic Credentials & Biography
     const currentHeadline = (currentTutorProfile?.headline || currentTeacherApp?.headline || '').trim();
-    const headlineToRestore = currentHeadline || (credsCat.headline || payload.tutorProfile?.headline || '');
-
     const currentBio = (currentTutorProfile?.bio || currentTeacherApp?.bio || '').trim();
-    const bioToRestore = currentBio || (credsCat.bio || payload.tutorProfile?.bio || '');
-
     const currentRate = parseFloat(currentTutorProfile?.hourly_rate || currentTeacherApp?.hourly_rate || 0);
-    const rateToRestore = (currentRate > 0) ? currentRate : (parseFloat(credsCat.hourly_rate || payload.tutorProfile?.hourly_rate || 45) || 45);
-
     const currentDegree = (currentTutorProfile?.highest_degree || currentTeacherApp?.highest_degree || '').trim();
-    const degreeToRestore = currentDegree || (credsCat.highest_degree || payload.tutorProfile?.highest_degree || '');
-
     const currentInst = (currentTutorProfile?.institution || currentTeacherApp?.institution || '').trim();
-    const instToRestore = currentInst || (credsCat.institution || payload.tutorProfile?.institution || '');
-
     const currentYears = parseInt(currentTutorProfile?.years_experience || currentTeacherApp?.years_experience || 0, 10);
-    const yearsToRestore = (currentYears > 0) ? currentYears : (parseInt(credsCat.years_experience || payload.tutorProfile?.years_experience || 0, 10) || 0);
-
     const currentTz = (currentTutorProfile?.timezone || currentTeacherApp?.timezone || '').trim();
-    const tzToRestore = currentTz || (scheduleCat.timezone || credsCat.timezone || payload.tutorProfile?.timezone || 'America/New_York');
 
-    // Category 3: Subjects & Hourly Rates (Merge into union so existing subjects and rates are never overwritten)
+    const backupHeadline = (credsCat.headline || payload.tutorProfile?.headline || '').trim();
+    const backupBio = (credsCat.bio || payload.tutorProfile?.bio || '').trim();
+    const backupRate = parseFloat(credsCat.hourly_rate || payload.tutorProfile?.hourly_rate || 0);
+    const backupDegree = (credsCat.highest_degree || payload.tutorProfile?.highest_degree || '').trim();
+    const backupInst = (credsCat.institution || payload.tutorProfile?.institution || '').trim();
+    const backupYears = parseInt(credsCat.years_experience || payload.tutorProfile?.years_experience || 0, 10);
+    const backupTz = (scheduleCat.timezone || credsCat.timezone || payload.tutorProfile?.timezone || '').trim();
+
+    const headlineToRestore = allowOverwrite ? (backupHeadline || currentHeadline) : (currentHeadline || backupHeadline);
+    const bioToRestore = allowOverwrite ? (backupBio || currentBio) : (currentBio || backupBio);
+    const rateToRestore = allowOverwrite ? (backupRate > 0 ? backupRate : currentRate) : (currentRate > 0 ? currentRate : (backupRate > 0 ? backupRate : 45));
+    const degreeToRestore = allowOverwrite ? (backupDegree || currentDegree) : (currentDegree || backupDegree);
+    const instToRestore = allowOverwrite ? (backupInst || currentInst) : (currentInst || backupInst);
+    const yearsToRestore = allowOverwrite ? (backupYears > 0 ? backupYears : currentYears) : (currentYears > 0 ? currentYears : backupYears);
+    const tzToRestore = allowOverwrite ? (backupTz || currentTz || 'America/New_York') : (currentTz || backupTz || 'America/New_York');
+
+    // Category 3: Subjects & Hourly Rates
     const existingSubjs = safeParseArray(currentTutorProfile?.subjects || currentTeacherApp?.subjects);
     const backupSubjs = safeParseArray(subjectsCat.subjects || credsCat.subjects || payload.tutorProfile?.subjects);
     const mergedSubjects = Array.from(new Set([...existingSubjs, ...backupSubjs]));
@@ -2981,8 +2993,8 @@ app.post('/api/account/restore', authenticateToken, (req, res) => {
 
     const existingRates = safeParseObject(currentTutorProfile?.subject_rates || currentTeacherApp?.subject_rates);
     const backupRates = safeParseObject(subjectsCat.subject_rates || credsCat.subject_rates || payload.tutorProfile?.subject_rates);
-    // Existing rates take precedence over backup rates so existing data is not overwritten
-    const mergedRates = { ...backupRates, ...existingRates };
+    // If overwrite is enabled, backup rates take priority over existing rates; otherwise existing rates are strictly preserved
+    const mergedRates = allowOverwrite ? { ...existingRates, ...backupRates } : { ...backupRates, ...existingRates };
     const subjRatesJson = JSON.stringify(mergedRates);
 
     if (currentTutorProfile) {
@@ -3183,18 +3195,20 @@ app.post('/api/account/restore', authenticateToken, (req, res) => {
       restoredSummary.push('Financials & Payout Statements');
     }
 
-    // Category 9: Preferences & Settings (Keep existing preference settings intact)
+    // Category 9: Preferences & Settings (Keep existing preference settings intact unless overwrite is selected)
     const prefsToSave = {
-      theme: currentPrefs?.theme || prefsCat.theme || 'light',
-      language: currentPrefs?.language || prefsCat.language || 'en-US',
-      country: currentPrefs?.country || prefsCat.country || countryToRestore || 'United States',
-      timezone: currentPrefs?.timezone || prefsCat.timezone || tzToRestore || 'America/New_York',
+      theme: (allowOverwrite && prefsCat.theme) ? prefsCat.theme : (currentPrefs?.theme || prefsCat.theme || 'light'),
+      language: (allowOverwrite && prefsCat.language) ? prefsCat.language : (currentPrefs?.language || prefsCat.language || 'en-US'),
+      country: (allowOverwrite && prefsCat.country) ? prefsCat.country : (currentPrefs?.country || prefsCat.country || countryToRestore || 'United States'),
+      timezone: (allowOverwrite && prefsCat.timezone) ? prefsCat.timezone : (currentPrefs?.timezone || prefsCat.timezone || tzToRestore || 'America/New_York'),
       notif_lessons: currentPrefs?.notif_lessons !== undefined ? currentPrefs.notif_lessons : (prefsCat.notif_lessons !== undefined ? prefsCat.notif_lessons : 1),
       notif_calendar: currentPrefs?.notif_calendar !== undefined ? currentPrefs.notif_calendar : (prefsCat.notif_calendar !== undefined ? prefsCat.notif_calendar : 1),
       notif_messages: currentPrefs?.notif_messages !== undefined ? currentPrefs.notif_messages : (prefsCat.notif_messages !== undefined ? prefsCat.notif_messages : 1),
       notif_reports: currentPrefs?.notif_reports !== undefined ? currentPrefs.notif_reports : (prefsCat.notif_reports !== undefined ? prefsCat.notif_reports : 0)
     };
-    saveUserPreferences(userId, prefsToSave);
+    if (typeof saveUserPreferences === 'function') {
+      saveUserPreferences(userId, prefsToSave);
+    }
     restoredSummary.push('Account Settings & Preferences');
 
     const updatedUser = db.prepare('SELECT id, name, email, role, phone, avatar_url, country FROM users WHERE id = ?').get(userId);
@@ -3203,8 +3217,11 @@ app.post('/api/account/restore', authenticateToken, (req, res) => {
 
     return res.json({
       success: true,
-      message: 'All data contained within the backup was successfully restored by category, with existing data preserved.',
+      message: allowOverwrite
+        ? 'Account data was restored from backup with selected profile overwrite applied.'
+        : 'All data contained within the backup was successfully restored by category, with existing data preserved.',
       restored_categories: restoredSummary,
+      overwrite_applied: allowOverwrite,
       user: updatedUser,
       tutorProfile: updatedTutorProfile,
       preferences: updatedPreferences

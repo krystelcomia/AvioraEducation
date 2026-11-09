@@ -64,21 +64,7 @@ const Teacher = {
       btnBackupDownload.addEventListener('click', () => this.handleDownloadBackup());
     }
 
-    const btnRestoreTrigger = document.getElementById('btn-backup-restore-trigger');
-    const fileInputRestore = document.getElementById('backup-restore-file-input');
-    if (btnRestoreTrigger && fileInputRestore) {
-      btnRestoreTrigger.addEventListener('click', () => {
-        fileInputRestore.value = '';
-        fileInputRestore.click();
-      });
-
-      fileInputRestore.addEventListener('change', (e) => {
-        const file = e.target.files && e.target.files[0];
-        if (file) {
-          this.handleRestoreBackup(file);
-        }
-      });
-    }
+    this.initBackupPreviewModal();
 
     // Close modals on overlay click or Escape key
     ['modal-teacher-assign-task', 'modal-teacher-grade-task', 'modal-teacher-instant-class', 'modal-teacher-class-record'].forEach(id => {

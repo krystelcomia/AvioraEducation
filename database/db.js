@@ -1651,6 +1651,59 @@ function getUserPreferences(userId) {
   }
 }
 
+function saveUserPreferences(userId, prefs = {}) {
+  try {
+    const existing = db.prepare('SELECT id FROM user_preferences WHERE user_id = ?').get(userId);
+    if (existing) {
+      db.prepare(`
+        UPDATE user_preferences
+        SET theme = COALESCE(?, theme),
+            language = COALESCE(?, language),
+            country = COALESCE(?, country),
+            timezone = COALESCE(?, timezone),
+            font_size = COALESCE(?, font_size),
+            notif_lessons = COALESCE(?, notif_lessons),
+            notif_calendar = COALESCE(?, notif_calendar),
+            notif_messages = COALESCE(?, notif_messages),
+            notif_reports = COALESCE(?, notif_reports),
+            updated_at = CURRENT_TIMESTAMP
+        WHERE user_id = ?
+      `).run(
+        prefs.theme !== undefined ? prefs.theme : null,
+        prefs.language !== undefined ? prefs.language : null,
+        prefs.country !== undefined ? prefs.country : null,
+        prefs.timezone !== undefined ? prefs.timezone : null,
+        prefs.font_size !== undefined ? prefs.font_size : null,
+        prefs.notif_lessons !== undefined ? prefs.notif_lessons : null,
+        prefs.notif_calendar !== undefined ? prefs.notif_calendar : null,
+        prefs.notif_messages !== undefined ? prefs.notif_messages : null,
+        prefs.notif_reports !== undefined ? prefs.notif_reports : null,
+        userId
+      );
+    } else {
+      db.prepare(`
+        INSERT INTO user_preferences (user_id, theme, language, country, timezone, font_size, notif_lessons, notif_calendar, notif_messages, notif_reports)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(
+        userId,
+        prefs.theme || 'light',
+        prefs.language || 'en-US',
+        prefs.country || 'United States',
+        prefs.timezone || 'America/New_York',
+        prefs.font_size || 'normal',
+        prefs.notif_lessons !== undefined ? prefs.notif_lessons : 1,
+        prefs.notif_calendar !== undefined ? prefs.notif_calendar : 1,
+        prefs.notif_messages !== undefined ? prefs.notif_messages : 1,
+        prefs.notif_reports !== undefined ? prefs.notif_reports : 0
+      );
+    }
+    return getUserPreferences(userId);
+  } catch (err) {
+    console.error('Error saving user preferences in db.js:', err);
+    return null;
+  }
+}
+
 function ensureBuddySeedData() {
   try {
     const existing = db.prepare('SELECT id FROM buddy_sessions LIMIT 1').get();
@@ -1978,6 +2031,7 @@ module.exports = {
   ensureBuddySeedData,
   ensureInquirySeedData,
   ensureTutorSeedData,
-  getUserPreferences
+  getUserPreferences,
+  saveUserPreferences
 };
 

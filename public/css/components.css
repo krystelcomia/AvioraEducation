@@ -4283,3 +4283,240 @@
   line-height: 1.45;
 }
 
+/* ========================================================
+   MESSENGER ATTACHMENTS, MEDIA, LINKS & COMPOSER TOOLBAR
+   ======================================================== */
+.messenger-composer-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.5rem 0 0.5rem;
+  margin-bottom: 0.35rem;
+}
+
+.messenger-tool-btn {
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 0.3rem 0.5rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.78rem;
+  font-weight: 500;
+  transition: all var(--transition-fast);
+}
+
+.messenger-tool-btn:hover {
+  background: rgba(198, 138, 40, 0.12);
+  color: var(--gold-700);
+  border-color: rgba(198, 138, 40, 0.25);
+}
+
+.messenger-tool-btn svg {
+  display: inline-block;
+  vertical-align: middle;
+}
+
+/* Attachment Preview in Composer */
+.messenger-attachment-preview {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  background: rgba(198, 138, 40, 0.1);
+  border: 1px solid rgba(198, 138, 40, 0.3);
+  border-radius: 8px;
+  padding: 0.35rem 0.65rem;
+  margin-bottom: 0.45rem;
+  max-width: 100%;
+}
+
+.messenger-attachment-thumb {
+  width: 36px;
+  height: 36px;
+  border-radius: 6px;
+  object-fit: cover;
+  flex-shrink: 0;
+  border: 1px solid var(--border-color);
+}
+
+.messenger-attachment-icon-chip {
+  width: 36px;
+  height: 36px;
+  border-radius: 6px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--gold-600);
+  flex-shrink: 0;
+}
+
+.messenger-attachment-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.messenger-attachment-name {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.messenger-attachment-meta {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+}
+
+.messenger-attachment-remove {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 0.2rem 0.35rem;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  line-height: 1;
+  transition: all var(--transition-fast);
+}
+
+.messenger-attachment-remove:hover {
+  background: rgba(239, 68, 68, 0.15);
+  color: #DC2626;
+}
+
+/* Bubble Links */
+.messenger-bubble-link {
+  color: #0A4FA8;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  font-weight: 600;
+  word-break: break-all;
+  transition: color var(--transition-fast);
+}
+
+.messenger-message.outgoing .messenger-bubble-link {
+  color: #0F172A;
+  text-decoration: underline;
+  font-weight: 700;
+}
+
+.messenger-message.outgoing .messenger-bubble-link:hover {
+  color: #000000;
+}
+
+.messenger-message.incoming .messenger-bubble-link:hover {
+  color: var(--gold-700);
+}
+
+/* Image Thumbnails in Bubbles */
+.messenger-bubble-img-wrap {
+  margin-top: 0.4rem;
+  border-radius: 10px;
+  overflow: hidden;
+  display: inline-block;
+  max-width: 100%;
+}
+
+.messenger-bubble-img {
+  max-width: 280px;
+  max-height: 220px;
+  width: auto;
+  height: auto;
+  border-radius: 10px;
+  object-fit: cover;
+  display: block;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.messenger-bubble-img:hover {
+  transform: scale(1.02);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
+}
+
+/* File Attachment Card in Bubbles */
+.messenger-file-attachment {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  margin-top: 0.4rem;
+  padding: 0.55rem 0.75rem;
+  border-radius: 10px;
+  text-decoration: none;
+  transition: all var(--transition-fast);
+  max-width: 320px;
+}
+
+.messenger-message.incoming .messenger-file-attachment {
+  background: rgba(0, 0, 0, 0.04);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+}
+
+.messenger-message.incoming .messenger-file-attachment:hover {
+  background: rgba(198, 138, 40, 0.1);
+  border-color: var(--gold-400);
+}
+
+.messenger-message.outgoing .messenger-file-attachment {
+  background: rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  color: #14151B;
+}
+
+.messenger-message.outgoing .messenger-file-attachment:hover {
+  background: rgba(0, 0, 0, 0.16);
+}
+
+.messenger-file-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--gold-800);
+}
+
+.messenger-file-details {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.messenger-file-name {
+  font-size: 0.82rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.messenger-file-size {
+  font-size: 0.7rem;
+  opacity: 0.75;
+}
+
+.messenger-file-download-icon {
+  opacity: 0.7;
+  flex-shrink: 0;
+  transition: opacity var(--transition-fast);
+}
+
+.messenger-file-attachment:hover .messenger-file-download-icon {
+  opacity: 1;
+}
+

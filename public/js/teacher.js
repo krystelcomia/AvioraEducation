@@ -5123,6 +5123,151 @@ const Teacher = {
     }
   },
 
+  pendingMessageAttachment: null,
+
+  formatFileSize(bytes) {
+    if (!bytes || isNaN(bytes)) return '';
+    const b = Number(bytes);
+    if (b < 1024) return b + ' B';
+    if (b < 1024 * 1024) return (b / 1024).toFixed(1) + ' KB';
+    return (b / (1024 * 1024)).toFixed(1) + ' MB';
+  },
+
+  formatMessageBody(m) {
+    let html = '';
+    const text = (m.content || '').trim();
+    if (text) {
+      let escaped = this.escapeHtml(text);
+      // Auto-link URLs
+      const urlRegex = /(https?:\/\/[^\s<]+[^<.,:;"')\]\s])/g;
+      escaped = escaped.replace(urlRegex, (url) => {
+        return `<a href="${url}" target="_blank" rel="noopener noreferrer" class="messenger-bubble-link">${url}</a>`;
+      });
+      escaped = escaped.replace(/\n/g, '<br>');
+      html += `<div class="messenger-bubble-text" id="teacher-msg-content-${m.id}">${escaped}</div>`;
+    } else {
+      html += `<div class="messenger-bubble-text" id="teacher-msg-content-${m.id}" style="display:none;"></div>`;
+    }
+
+    if (m.attachment_url) {
+      const isImg = (m.attachment_type && m.attachment_type.startsWith('image/')) ||
+                    /\.(png|jpe?g|gif|webp|svg|bmp)$/i.test(m.attachment_url) ||
+                    /\.(png|jpe?g|gif|webp|svg|bmp)$/i.test(m.attachment_name || '');
+      if (isImg) {
+        html += `
+          <div class="messenger-bubble-img-wrap">
+            <img src="${m.attachment_url}" alt="${this.escapeHtml(m.attachment_name || 'Photo')}" class="messenger-bubble-img" onclick="window.open('${m.attachment_url}', '_blank')" title="Click to view full image" />
+          </div>
+        `;
+      } else {
+        html += `
+          <a href="${m.attachment_url}" download="${this.escapeHtml(m.attachment_name || 'download')}" target="_blank" rel="noopener noreferrer" class="messenger-file-attachment" title="Click to download file">
+            <div class="messenger-file-icon">
+              ${Icons.file(20)}
+            </div>
+            <div class="messenger-file-details">
+              <span class="messenger-file-name">${this.escapeHtml(m.attachment_name || 'File Attachment')}</span>
+              <span class="messenger-file-size">${m.attachment_size ? this.formatFileSize(m.attachment_size) : 'Click to download'}</span>
+            </div>
+            <div class="messenger-file-download-icon">
+              ${Icons.externalLink(15)}
+            </div>
+          </a>
+        `;
+      }
+    }
+    return html;
+  },
+
+  triggerPictureUpload() {
+    const input = document.getElementById('teacher-messenger-pic-input');
+    if (input) input.click();
+  },
+
+  triggerFileUpload() {
+    const input = document.getElementById('teacher-messenger-doc-input');
+    if (input) input.click();
+  },
+
+  insertLinkPrompt() {
+    const url = prompt('Enter website link URL (e.g. https://...):', 'https://');
+    if (url && url.trim() && url.trim() !== 'https://') {
+      const input = document.getElementById('teacher-composer-input');
+      if (input) {
+        const val = input.value;
+        const prefix = val && !val.endsWith(' ') ? ' ' : '';
+        input.value = val + prefix + url.trim() + ' ';
+        input.focus();
+      }
+    }
+  },
+
+  async handleAttachmentUpload(inputEl, isImage) {
+    const file = inputEl.files && inputEl.files[0];
+    if (!file) return;
+
+    if (file.size > 25 * 1024 * 1024) {
+      showToast('File size exceeds the 25MB limit.', 'error');
+      inputEl.value = '';
+      return;
+    }
+
+    try {
+      showToast(`Uploading ${isImage ? 'picture' : 'file'}...`, 'info');
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const res = await API.uploadMessageAttachment(formData);
+      if (res && res.fileUrl) {
+        this.pendingMessageAttachment = {
+          url: res.fileUrl,
+          name: res.fileName || file.name,
+          type: res.fileType || file.type,
+          size: res.fileSize || file.size
+        };
+        this.renderAttachmentPreview();
+        showToast(`${isImage ? 'Picture' : 'File'} ready to send.`, 'success');
+      }
+    } catch (err) {
+      showToast(err.message || 'Attachment upload failed.', 'error');
+    } finally {
+      inputEl.value = '';
+    }
+  },
+
+  renderAttachmentPreview() {
+    const previewEl = document.getElementById('teacher-composer-attachment-preview');
+    if (!previewEl) return;
+    if (!this.pendingMessageAttachment) {
+      previewEl.innerHTML = '';
+      previewEl.style.display = 'none';
+      return;
+    }
+
+    const att = this.pendingMessageAttachment;
+    const isImg = (att.type && att.type.startsWith('image/')) || /\.(png|jpe?g|gif|webp|svg|bmp)$/i.test(att.name);
+
+    previewEl.style.display = 'flex';
+    previewEl.className = 'messenger-attachment-preview';
+    previewEl.innerHTML = `
+      ${isImg ? `
+        <img src="${att.url}" alt="Preview" class="messenger-attachment-thumb" />
+      ` : `
+        <div class="messenger-attachment-icon-chip">${Icons.file(18)}</div>
+      `}
+      <div class="messenger-attachment-info">
+        <span class="messenger-attachment-name">${this.escapeHtml(att.name)}</span>
+        <span class="messenger-attachment-meta">${this.formatFileSize(att.size)} • Ready to send</span>
+      </div>
+      <button type="button" class="messenger-attachment-remove" onclick="Teacher.removeAttachment()" title="Remove attachment">✕</button>
+    `;
+  },
+
+  removeAttachment() {
+    this.pendingMessageAttachment = null;
+    this.renderAttachmentPreview();
+  },
+
   renderTeacherActiveConversation(container) {
     if (!container) container = document.getElementById('teacher-messenger-main-pane');
     if (!container) return;
@@ -5203,13 +5348,15 @@ const Teacher = {
                   <div class="messenger-bubble-wrap">
                     <div class="messenger-bubble">
                       <div class="messenger-bubble-sender">${this.escapeHtml(activeConv.name)}</div>
-                      <div class="messenger-bubble-text" id="teacher-msg-content-${m.id}">${this.escapeHtml(m.content)}</div>
+                      ${this.formatMessageBody(m)}
                       <div class="messenger-bubble-footer">
                         <span>${timeStr}</span>
                         ${m.is_edited ? '<span class="messenger-edited-tag">(edited)</span>' : ''}
-                        <button type="button" class="messenger-edit-btn" onclick="Teacher.startEditMessage(${m.id})" title="Edit message">
-                          ${Icons.edit(11)}
-                        </button>
+                        ${m.content ? `
+                          <button type="button" class="messenger-edit-btn" onclick="Teacher.startEditMessage(${m.id})" title="Edit message">
+                            ${Icons.edit(11)}
+                          </button>
+                        ` : ''}
                       </div>
                     </div>
                   </div>
@@ -5220,13 +5367,15 @@ const Teacher = {
                 <div class="messenger-message outgoing" id="teacher-msg-row-${m.id}">
                   <div class="messenger-bubble-wrap">
                     <div class="messenger-bubble">
-                      <div class="messenger-bubble-text" id="teacher-msg-content-${m.id}">${this.escapeHtml(m.content)}</div>
+                      ${this.formatMessageBody(m)}
                       <div class="messenger-bubble-footer">
                         <span>${timeStr} ${statusHtml}</span>
                         ${m.is_edited ? '<span class="messenger-edited-tag">(edited)</span>' : ''}
-                        <button type="button" class="messenger-edit-btn" onclick="Teacher.startEditMessage(${m.id})" title="Edit message">
-                          ${Icons.edit(11)}
-                        </button>
+                        ${m.content ? `
+                          <button type="button" class="messenger-edit-btn" onclick="Teacher.startEditMessage(${m.id})" title="Edit message">
+                            ${Icons.edit(11)}
+                          </button>
+                        ` : ''}
                       </div>
                     </div>
                   </div>
@@ -5239,12 +5388,35 @@ const Teacher = {
 
       <!-- Message Composer Bar -->
       <div class="messenger-footer">
+        <!-- Hidden file inputs -->
+        <input type="file" id="teacher-messenger-pic-input" accept="image/*" style="display:none;" onchange="Teacher.handleAttachmentUpload(this, true)" />
+        <input type="file" id="teacher-messenger-doc-input" accept="*/*" style="display:none;" onchange="Teacher.handleAttachmentUpload(this, false)" />
+
+        <!-- Attachment Preview Pill -->
+        <div id="teacher-composer-attachment-preview" style="display:none;"></div>
+
+        <!-- Composer Tools Toolbar (Picture, File, Link) -->
+        <div class="messenger-composer-toolbar">
+          <button type="button" class="messenger-tool-btn" onclick="Teacher.triggerPictureUpload()" title="Attach photo or picture">
+            ${Icons.image(15)}
+            <span>Picture</span>
+          </button>
+          <button type="button" class="messenger-tool-btn" onclick="Teacher.triggerFileUpload()" title="Attach file or document">
+            ${Icons.paperclip(15)}
+            <span>File</span>
+          </button>
+          <button type="button" class="messenger-tool-btn" onclick="Teacher.insertLinkPrompt()" title="Insert clickable web link">
+            ${Icons.link(15)}
+            <span>Link</span>
+          </button>
+        </div>
+
         <form class="messenger-composer-form" onsubmit="event.preventDefault(); Teacher.sendTeacherMessage();">
           <div class="messenger-input-wrap">
             <textarea 
               id="teacher-composer-input" 
               class="messenger-textarea" 
-              placeholder="Type a message to ${this.escapeHtml(activeConv.name)}..." 
+              placeholder="Type a message or share photos, files, links with ${this.escapeHtml(activeConv.name)}..." 
               rows="1"
               onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault(); Teacher.sendTeacherMessage();}"
             ></textarea>
@@ -5258,22 +5430,30 @@ const Teacher = {
       </div>
     `;
 
-    setTimeout(() => this.scrollTeacherMessengerToBottom(), 50);
+    setTimeout(() => {
+      this.scrollTeacherMessengerToBottom();
+      this.renderAttachmentPreview();
+    }, 50);
   },
 
   async sendTeacherMessage() {
     const input = document.getElementById('teacher-composer-input');
-    if (!input) return;
-    const text = input.value.trim();
-    if (!text) return;
+    const text = input ? input.value.trim() : '';
+    const attachment = this.pendingMessageAttachment;
+
+    if (!text && !attachment) return;
 
     const convs = this.getConversations();
     const activeConv = convs.find(c => c.key === this.activeConversationKey);
     if (!activeConv) return;
 
-    // Clear input immediately
-    input.value = '';
-    input.style.height = 'auto';
+    // Clear input & pending attachment
+    if (input) {
+      input.value = '';
+      input.style.height = 'auto';
+    }
+    this.pendingMessageAttachment = null;
+    this.renderAttachmentPreview();
 
     // Append to local state immediately
     const tempMsg = {
@@ -5281,6 +5461,10 @@ const Teacher = {
       sender_role: 'teacher',
       student_id: activeConv.id,
       content: text,
+      attachment_url: attachment ? attachment.url : null,
+      attachment_name: attachment ? attachment.name : null,
+      attachment_type: attachment ? attachment.type : null,
+      attachment_size: attachment ? attachment.size : null,
       status: 'delivered',
       is_read: 0,
       is_edited: 0,
@@ -5293,7 +5477,11 @@ const Teacher = {
     try {
       const res = await API.teacherReplyMessage({
         student_id: activeConv.id,
-        message: text
+        message: text,
+        attachment_url: attachment ? attachment.url : null,
+        attachment_name: attachment ? attachment.name : null,
+        attachment_type: attachment ? attachment.type : null,
+        attachment_size: attachment ? attachment.size : null
       });
 
       if (res && res.data) {

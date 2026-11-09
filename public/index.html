@@ -6031,10 +6031,33 @@
 
       <!-- Messenger Footer Composer -->
       <div class="messenger-footer">
+        <!-- Hidden file inputs for modal -->
+        <input type="file" id="modal-messenger-pic-input" accept="image/*" style="display:none;" onchange="Tutors.handleAttachmentUpload(this, true)" />
+        <input type="file" id="modal-messenger-doc-input" accept="*/*" style="display:none;" onchange="Tutors.handleAttachmentUpload(this, false)" />
+
+        <!-- Attachment Preview Pill -->
+        <div id="modal-composer-attachment-preview" style="display:none;"></div>
+
+        <!-- Composer Tools Toolbar (Picture, File, Link) -->
+        <div class="messenger-composer-toolbar">
+          <button type="button" class="messenger-tool-btn" onclick="Tutors.triggerPictureUpload()" title="Attach photo or picture">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:-2px;"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+            <span>Picture</span>
+          </button>
+          <button type="button" class="messenger-tool-btn" onclick="Tutors.triggerFileUpload()" title="Attach file or document">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:-2px;"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
+            <span>File</span>
+          </button>
+          <button type="button" class="messenger-tool-btn" onclick="Tutors.insertLinkPrompt()" title="Insert clickable web link">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:-2px;"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+            <span>Link</span>
+          </button>
+        </div>
+
         <form id="messenger-composer-form" class="messenger-composer-form">
           <input type="hidden" id="direct-message-tutor-id" />
           <div class="messenger-input-wrap">
-            <textarea id="messenger-chat-input" class="messenger-textarea" placeholder="Type a message to educator..." rows="1" required></textarea>
+            <textarea id="messenger-chat-input" class="messenger-textarea" placeholder="Type a message or send photos, files, links to educator..." rows="1"></textarea>
             <button type="submit" class="messenger-send-btn" id="messenger-send-btn" aria-label="Send message" title="Send message (Enter)">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <line x1="22" y1="2" x2="11" y2="13"></line>

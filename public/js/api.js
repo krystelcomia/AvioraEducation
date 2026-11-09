@@ -146,6 +146,7 @@ const API = {
   toggleStudentSlot: (body) => apiRequest('/student/schedule/toggle-slot', { method: 'POST', body }),
 
   // Messages & Real-Time Messenger
+  uploadMessageAttachment: (formData) => apiRequest('/messages/upload', { method: 'POST', body: formData }),
   editMessage: (id, content) => apiRequest(`/messages/${id}/edit`, { method: 'POST', body: { content } }),
   getStudentMessages: () => apiRequest('/student/messages'),
   markConversationRead: (partnerId) => apiRequest('/messages/mark-read', { method: 'POST', body: { partner_id: partnerId } }),

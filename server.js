@@ -90,6 +90,14 @@ const taskUpload = multer({
   }
 });
 
+const messageAttachmentUpload = multer({
+  storage,
+  limits: { fileSize: 25 * 1024 * 1024 }, // 25MB limit for pictures & documents
+  fileFilter: (req, file, cb) => {
+    cb(null, true);
+  }
+});
+
 // Middleware
 app.use(cors());
 app.use(express.json());
@@ -3231,6 +3239,11 @@ app.get('/api/tutors/:id/messages', (req, res) => {
         sender: r.sender_id === tutor.user_id ? 'tutor' : 'student',
         senderName: r.sender_name,
         text: r.content,
+        content: r.content,
+        attachment_url: r.attachment_url,
+        attachment_name: r.attachment_name,
+        attachment_type: r.attachment_type,
+        attachment_size: r.attachment_size,
         time: new Date(r.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         created_at: r.created_at,
         status: msgStatus,
@@ -3254,13 +3267,50 @@ app.get('/api/tutors/:id/messages', (req, res) => {
   }
 });
 
-// Send Message to Tutor
+// Upload Attachment for Messages (Pictures & Files)
+app.post('/api/messages/upload', (req, res) => {
+  messageAttachmentUpload.single('file')(req, res, function (err) {
+    if (err) {
+      return res.status(400).json({ error: err.message || 'File upload failed.' });
+    }
+    if (!req.file) {
+      const { base64Data, fileName, fileType } = req.body || {};
+      if (base64Data && fileName) {
+        try {
+          const buffer = Buffer.from(base64Data.replace(/^data:.*?;base64,/, ''), 'base64');
+          const safeName = `${Date.now()}_${fileName.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+          const destPath = path.join(uploadsDir, safeName);
+          fs.writeFileSync(destPath, buffer);
+          return res.json({
+            fileUrl: `/uploads/${safeName}`,
+            fileName: fileName,
+            fileType: fileType || 'application/octet-stream',
+            fileSize: buffer.length
+          });
+        } catch (e) {
+          return res.status(500).json({ error: 'Failed to save base64 file: ' + e.message });
+        }
+      }
+      return res.status(400).json({ error: 'No file provided.' });
+    }
+
+    res.json({
+      fileUrl: `/uploads/${req.file.filename}`,
+      fileName: req.file.originalname,
+      fileType: req.file.mimetype,
+      fileSize: req.file.size
+    });
+  });
+});
+
+// Send Message to Tutor (Supports text, pictures, files, links)
 app.post('/api/tutors/:id/messages', (req, res) => {
   try {
     const tutorId = req.params.id;
-    const { name, email, subject, message } = req.body;
+    const { name, email, subject, message, attachment_url, attachment_name, attachment_type, attachment_size } = req.body;
 
-    if (!message || !message.trim()) {
+    const contentText = (message || '').trim();
+    if (!contentText && !attachment_url) {
       return res.status(400).json({ error: 'Message content cannot be empty.' });
     }
 
@@ -3298,23 +3348,27 @@ app.post('/api/tutors/:id/messages', (req, res) => {
     const deliveredAt = tutorIsOnline ? new Date().toISOString() : null;
 
     const insertInfo = db.prepare(`
-      INSERT INTO messages (sender_id, receiver_id, sender_name, sender_email, subject, content, status, delivered_at, is_read)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)
+      INSERT INTO messages (sender_id, receiver_id, sender_name, sender_email, subject, content, status, delivered_at, is_read, attachment_url, attachment_name, attachment_type, attachment_size)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?)
     `).run(
       senderId,
       tutor.user_id,
       senderName,
       senderEmail,
       subject || 'Student Inquiry',
-      message.trim(),
+      contentText,
       initialStatus,
-      deliveredAt
+      deliveredAt,
+      attachment_url || null,
+      attachment_name || null,
+      attachment_type || null,
+      attachment_size ? String(attachment_size) : null
     );
 
     sendNotification(
       tutor.user_id,
       `New Message from ${senderName}`,
-      message.trim().substring(0, 120) + (message.length > 120 ? '...' : ''),
+      (contentText || attachment_name || 'Sent an attachment').substring(0, 120),
       'message',
       '#teacher-dashboard'
     );
@@ -3325,10 +3379,16 @@ app.post('/api/tutors/:id/messages', (req, res) => {
         id: insertInfo.lastInsertRowid,
         sender: 'student',
         senderName: senderName,
-        text: message.trim(),
+        text: contentText,
+        content: contentText,
+        attachment_url: attachment_url || null,
+        attachment_name: attachment_name || null,
+        attachment_type: attachment_type || null,
+        attachment_size: attachment_size || null,
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         status: initialStatus,
         is_read: 0,
+        is_edited: 0,
         created_at: new Date().toISOString()
       },
       tutor: {
@@ -4415,6 +4475,10 @@ app.get('/api/teacher/messages', authenticateToken, requireRole('tutor'), (req, 
         sender_name: r.sender_name,
         subject: r.subject,
         content: r.content,
+        attachment_url: r.attachment_url,
+        attachment_name: r.attachment_name,
+        attachment_type: r.attachment_type,
+        attachment_size: r.attachment_size,
         status: r.status || 'sent',
         is_read: r.is_read,
         is_edited: r.is_edited ? 1 : 0,
@@ -4435,10 +4499,11 @@ app.get('/api/teacher/messages', authenticateToken, requireRole('tutor'), (req, 
 app.post('/api/teacher/messages/reply', authenticateToken, requireRole('tutor'), (req, res) => {
   try {
     const teacherId = req.user.id;
-    const { student_id, message_id, message } = req.body;
+    const { student_id, message_id, message, attachment_url, attachment_name, attachment_type, attachment_size } = req.body;
 
-    if (!message || !message.trim()) {
-      return res.status(400).json({ error: 'Reply message cannot be empty.' });
+    const contentText = (message || '').trim();
+    if (!contentText && !attachment_url) {
+      return res.status(400).json({ error: 'Cannot send an empty message.' });
     }
 
     const teacherUser = db.prepare('SELECT name, email FROM users WHERE id = ?').get(teacherId);
@@ -4455,15 +4520,19 @@ app.post('/api/teacher/messages/reply', authenticateToken, requireRole('tutor'),
 
     // Insert real reply from this tutor with status 'delivered'
     const info = db.prepare(`
-      INSERT INTO messages (sender_id, receiver_id, sender_name, sender_email, subject, content, status, delivered_at, is_read, is_edited)
-      VALUES (?, ?, ?, ?, ?, ?, 'delivered', CURRENT_TIMESTAMP, 0, 0)
+      INSERT INTO messages (sender_id, receiver_id, sender_name, sender_email, subject, content, status, delivered_at, is_read, is_edited, attachment_url, attachment_name, attachment_type, attachment_size)
+      VALUES (?, ?, ?, ?, ?, ?, 'delivered', CURRENT_TIMESTAMP, 0, 0, ?, ?, ?, ?)
     `).run(
       teacherId,
       targetStudentId,
       teacherUser.name,
       teacherUser.email,
       'Re: Direct Mentorship Inquiry',
-      message.trim()
+      contentText,
+      attachment_url || null,
+      attachment_name || null,
+      attachment_type || null,
+      attachment_size ? String(attachment_size) : null
     );
 
     // Mark previous incoming messages from this student to teacher as seen
@@ -4473,7 +4542,7 @@ app.post('/api/teacher/messages/reply', authenticateToken, requireRole('tutor'),
     sendNotification(
       targetStudentId,
       `New Message from ${teacherUser.name}`,
-      message.trim().substring(0, 120) + (message.length > 120 ? '...' : ''),
+      (contentText || attachment_name || 'Sent an attachment').substring(0, 120),
       'message',
       '#student-messages'
     );

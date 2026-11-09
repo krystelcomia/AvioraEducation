@@ -196,6 +196,10 @@ function initSchema() {
       is_read INTEGER DEFAULT 0,
       is_edited INTEGER DEFAULT 0,
       edited_at DATETIME,
+      attachment_url TEXT,
+      attachment_name TEXT,
+      attachment_type TEXT,
+      attachment_size TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
@@ -415,6 +419,18 @@ function initSchema() {
       }
       if (!msgCols.some(c => c.name === 'edited_at')) {
         db.prepare("ALTER TABLE messages ADD COLUMN edited_at DATETIME").run();
+      }
+      if (!msgCols.some(c => c.name === 'attachment_url')) {
+        db.prepare("ALTER TABLE messages ADD COLUMN attachment_url TEXT").run();
+      }
+      if (!msgCols.some(c => c.name === 'attachment_name')) {
+        db.prepare("ALTER TABLE messages ADD COLUMN attachment_name TEXT").run();
+      }
+      if (!msgCols.some(c => c.name === 'attachment_type')) {
+        db.prepare("ALTER TABLE messages ADD COLUMN attachment_type TEXT").run();
+      }
+      if (!msgCols.some(c => c.name === 'attachment_size')) {
+        db.prepare("ALTER TABLE messages ADD COLUMN attachment_size TEXT").run();
       }
     }
   } catch (e) {}

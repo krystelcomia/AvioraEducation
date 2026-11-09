@@ -255,10 +255,40 @@ const Icons = {
     return this.create('<path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line>', size, style);
   },
 
+  refresh(size = 18, style = '') {
+    return this.create('<polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>', size, style);
+  },
+
+  image(size = 18, style = '') {
+    return this.create('<rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline>', size, style);
+  },
+
+  file(size = 18, style = '') {
+    return this.create('<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line>', size, style);
+  },
+
+  loader(size = 18, style = '') {
+    return this.create('<line x1="12" y1="2" x2="12" y2="6"></line><line x1="12" y1="18" x2="12" y2="22"></line><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"></line><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"></line><line x1="2" y1="12" x2="6" y2="12"></line><line x1="18" y1="12" x2="22" y2="12"></line><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"></line><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"></line>', size, 'animation: spin 1s linear infinite; ' + style);
+  },
+
+  spinner(size = 18, style = '') {
+    return this.loader(size, style);
+  },
+
   dot(size = 8, color = 'currentColor', style = '') {
     return `<span style="display: inline-block; width: ${size}px; height: ${size}px; border-radius: 50%; background: ${color}; vertical-align: middle; ${style}"></span>`;
   }
 };
 
-window.Icons = Icons;
-window.AvioraIcons = Icons;
+// Safe Proxy wrapper so unknown icon calls never throw TypeError
+const SafeIcons = typeof Proxy !== 'undefined' ? new Proxy(Icons, {
+  get(target, prop) {
+    if (prop in target) return target[prop];
+    return function(size = 18, style = '') {
+      return '';
+    };
+  }
+}) : Icons;
+
+window.Icons = SafeIcons;
+window.AvioraIcons = SafeIcons;

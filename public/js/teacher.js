@@ -240,6 +240,10 @@ const Teacher = {
       const statusData = await API.getTeacherStatus();
       this.application = statusData.application;
       this.tutorProfile = statusData.tutorProfile;
+      if (statusData.user && typeof Auth !== 'undefined' && Auth.currentUser) {
+        Auth.currentUser = Object.assign({}, Auth.currentUser, statusData.user);
+        if (typeof Storage !== 'undefined') Storage.setUser(Auth.currentUser);
+      }
       if (this.application && Array.isArray(this.application.subjects)) {
         this.application.subjects = this.filterOutDeletedSubjects(this.application.subjects);
       }
@@ -541,7 +545,7 @@ const Teacher = {
     const resolvedName = user?.name || 'Joshua Garcia';
     const resolvedBio = this.tutorProfile?.bio || this.application?.bio || user?.bio || 'Dedicated mathematics educator passionate about guiding students through algebra, geometry, and calculus with interactive problem solving.';
     const resolvedTag = this.tutorProfile?.headline || this.application?.headline || user?.headline || 'Mathematics & Calculus Specialist';
-    const resolvedAvatar = user?.avatar_url || user?.avatar || this.tutorProfile?.avatar || defaultEducatorAvatar;
+    const resolvedAvatar = this.tutorProfile?.avatar_url || user?.avatar_url || user?.avatar || this.tutorProfile?.avatar || defaultEducatorAvatar;
 
     if (heroName) heroName.textContent = resolvedName;
     if (heroBio) heroBio.textContent = resolvedBio;
@@ -549,6 +553,11 @@ const Teacher = {
     if (heroAvatar) {
       heroAvatar.src = resolvedAvatar;
       heroAvatar.onerror = () => { heroAvatar.src = defaultEducatorAvatar; };
+    }
+    const navAvatar = document.getElementById('nav-user-profile-avatar');
+    if (navAvatar) {
+      navAvatar.src = resolvedAvatar;
+      navAvatar.onerror = () => { navAvatar.src = defaultEducatorAvatar; };
     }
 
     const countryVal = this.tutorProfile?.country || (typeof localStorage !== 'undefined' ? localStorage.getItem('aviora_country') : null) || 'United States';
@@ -5440,9 +5449,14 @@ const Teacher = {
       if (heroName) heroName.textContent = u.name || user?.name || 'Joshua Garcia';
       if (heroEmail) heroEmail.textContent = u.email || user?.email || 'joshuagarcia@gmail.com';
       if (heroAvatar) {
-        const avatarSrc = u.avatar_url || user?.avatar_url || user?.avatar || tp.avatar || defaultEducatorAvatar;
+        const avatarSrc = tp.avatar_url || u.avatar_url || user?.avatar_url || user?.avatar || tp.avatar || defaultEducatorAvatar;
         heroAvatar.src = avatarSrc;
         heroAvatar.onerror = () => { heroAvatar.src = defaultEducatorAvatar; };
+        const navAvatar = document.getElementById('nav-user-profile-avatar');
+        if (navAvatar) {
+          navAvatar.src = avatarSrc;
+          navAvatar.onerror = () => { navAvatar.src = defaultEducatorAvatar; };
+        }
       }
 
       const isApproved = (app.status === 'approved');

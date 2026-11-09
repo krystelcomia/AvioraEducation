@@ -102,6 +102,9 @@ function initSchema() {
       availability_schedule TEXT,
       is_featured INTEGER DEFAULT 0,
       is_active INTEGER DEFAULT 1,
+      country TEXT DEFAULT 'United States',
+      timezone TEXT DEFAULT 'America/New_York',
+      avatar_url TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
@@ -523,6 +526,15 @@ function initSchema() {
       if (!tutorCols.some(c => c.name === 'timezone')) {
         db.prepare("ALTER TABLE tutor_profiles ADD COLUMN timezone TEXT DEFAULT 'America/New_York'").run();
       }
+      if (!tutorCols.some(c => c.name === 'avatar_url')) {
+        db.prepare("ALTER TABLE tutor_profiles ADD COLUMN avatar_url TEXT").run();
+      }
+      db.prepare(`
+        UPDATE tutor_profiles 
+        SET avatar_url = (SELECT avatar_url FROM users WHERE users.id = tutor_profiles.user_id)
+        WHERE (avatar_url IS NULL OR avatar_url = '') 
+          AND EXISTS (SELECT 1 FROM users WHERE users.id = tutor_profiles.user_id AND avatar_url IS NOT NULL AND avatar_url != '')
+      `).run();
     }
   } catch (e) {}
 
@@ -1512,6 +1524,8 @@ function ensureJoshuaAccount(customPassword) {
         WHERE user_id = ?
       `).run(appId, defaultSubjects, defaultSubjectRates, JSON.stringify(['Grade 9-12', 'College Prep']), defaultSchedule, userId);
     }
+
+    db.prepare("UPDATE tutor_profiles SET avatar_url = COALESCE(avatar_url, ?) WHERE user_id = ?").run(user.avatar_url || defaultJoshuaAvatar, userId);
 
     // 3. Ensure approved welcome notification for Joshua
     const existingNotif = db.prepare("SELECT id FROM notifications WHERE user_id = ? AND title LIKE '%Approved%'").get(userId);

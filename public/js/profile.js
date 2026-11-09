@@ -719,6 +719,37 @@ const Profile = {
     }
   },
 
+  compressImage(file, maxDimension = 500, quality = 0.88) {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          let { width, height } = img;
+          if (width > maxDimension || height > maxDimension) {
+            if (width > height) {
+              height = Math.round((height * maxDimension) / width);
+              width = maxDimension;
+            } else {
+              width = Math.round((width * maxDimension) / height);
+              height = maxDimension;
+            }
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL('image/jpeg', quality));
+        };
+        img.onerror = () => resolve(e.target.result);
+        img.src = e.target.result;
+      };
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(file);
+    });
+  },
+
   async handleAvatarUpload(file) {
     if (!file) return;
     if (!file.type.startsWith('image/')) {
@@ -730,40 +761,52 @@ const Profile = {
       return;
     }
 
-    // Immediate preview
-    const reader = new FileReader();
-    reader.onload = async (event) => {
-      const dataUrl = event.target.result;
+    try {
+      showToast('Saving profile picture...', 'info');
+      // Compress image to ensure lightweight base64 storage in database
+      const compressedData = await this.compressImage(file, 500, 0.88);
+      const dataUrl = compressedData || await new Promise((resolve) => {
+        const fr = new FileReader();
+        fr.onload = ev => resolve(ev.target.result);
+        fr.readAsDataURL(file);
+      });
+
       this.updateAllAvatars(dataUrl);
 
+      let finalUrl = dataUrl;
       try {
-        showToast('Saving profile picture...', 'info');
+        const res = await API.updateProfile({ avatar_url: dataUrl });
+        if (res && res.user && res.user.avatar_url) {
+          finalUrl = res.user.avatar_url;
+        }
+      } catch (saveErr) {
+        console.warn('Profile avatar update error, trying uploadAvatar:', saveErr);
         const formData = new FormData();
         formData.append('avatar', file);
-
-        let finalUrl = dataUrl;
-        try {
-          const res = await API.uploadAvatar(formData);
-          if (res && res.avatar_url) {
-            finalUrl = res.avatar_url;
-          }
-        } catch (uploadErr) {
-          console.warn('Multer upload failed, falling back to base64 save:', uploadErr);
-          await API.updateProfile({ avatar_url: dataUrl });
-        }
-
-        if (typeof Auth !== 'undefined' && Auth.currentUser) {
-          Auth.currentUser.avatar_url = finalUrl;
-          Storage.setUser(Auth.currentUser);
-        }
-        this.updateAllAvatars(finalUrl);
-        showToast('Profile picture saved! It will remain in place on your account.', 'success');
-      } catch (err) {
-        console.error('Error saving avatar:', err);
-        showToast(err.message || 'Failed to save profile picture.', 'error');
+        const res = await API.uploadAvatar(formData);
+        if (res && res.avatar_url) finalUrl = res.avatar_url;
       }
-    };
-    reader.readAsDataURL(file);
+
+      if (typeof Auth !== 'undefined' && Auth.currentUser) {
+        Auth.currentUser.avatar_url = finalUrl;
+        if (typeof Storage !== 'undefined') Storage.setUser(Auth.currentUser);
+        if (typeof Auth.saveCreatedAccount === 'function') {
+          Auth.saveCreatedAccount({
+            name: Auth.currentUser.name,
+            email: Auth.currentUser.email,
+            avatar_url: finalUrl
+          });
+        }
+      }
+      if (typeof Teacher !== 'undefined' && Teacher.tutorProfile) {
+        Teacher.tutorProfile.avatar_url = finalUrl;
+      }
+      this.updateAllAvatars(finalUrl);
+      showToast('Profile picture saved! It is now stored in the database and synchronized.', 'success');
+    } catch (err) {
+      console.error('Error saving avatar:', err);
+      showToast(err.message || 'Failed to save profile picture.', 'error');
+    }
   },
 
   updateAllAvatars(url) {

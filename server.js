@@ -2455,6 +2455,7 @@ app.get('/api/auth/me', authenticateToken, (req, res) => {
         teacherApp.grade_levels = safeParseArray(teacherApp.grade_levels);
       }
       if (tutorProfile) {
+        tutorProfile.avatar_url = tutorProfile.avatar_url || req.user.avatar_url;
         const normProf = normalizeSubjectRates(tutorProfile.subjects, tutorProfile.subject_rates || teacherApp?.subject_rates, tutorProfile.hourly_rate);
         tutorProfile.subjects = normProf.subjects;
         tutorProfile.subject_rates = normProf.subject_rates;
@@ -2506,6 +2507,12 @@ app.put('/api/auth/profile', authenticateToken, (req, res) => {
     if (updates.length > 0) {
       params.push(userId);
       db.prepare(`UPDATE users SET ${updates.join(', ')} WHERE id = ?`).run(...params);
+    }
+
+    if (avatar_url !== undefined && avatar_url !== null) {
+      try {
+        db.prepare('UPDATE tutor_profiles SET avatar_url = ? WHERE user_id = ?').run(avatar_url, userId);
+      } catch (e) {}
     }
 
     if (req.user.role === 'student' && studentData) {
@@ -2576,8 +2583,9 @@ app.put('/api/auth/profile', authenticateToken, (req, res) => {
       );
     }
 
-    const updatedUser = db.prepare('SELECT id, name, email, role, phone, avatar_url, status, wallet_balance FROM users WHERE id = ?').get(userId);
-    return res.json({ message: 'Profile updated successfully.', user: updatedUser });
+    const updatedUser = db.prepare('SELECT id, name, email, role, phone, avatar_url, country, status, wallet_balance FROM users WHERE id = ?').get(userId);
+    const updatedTutorProfile = db.prepare('SELECT * FROM tutor_profiles WHERE user_id = ?').get(userId);
+    return res.json({ message: 'Profile updated successfully.', user: updatedUser, tutorProfile: updatedTutorProfile });
   } catch (error) {
     console.error('Profile update error:', error);
     return res.status(500).json({ error: 'Failed to update profile.' });
@@ -2593,16 +2601,29 @@ app.post('/api/auth/upload-avatar', authenticateToken, (req, res) => {
     try {
       let avatarUrl = null;
       if (req.file) {
-        avatarUrl = `/uploads/${req.file.filename}`;
+        try {
+          const fileBuf = fs.readFileSync(req.file.path);
+          avatarUrl = `data:${req.file.mimetype || 'image/jpeg'};base64,${fileBuf.toString('base64')}`;
+          try { fs.unlinkSync(req.file.path); } catch (uErr) {}
+        } catch (readErr) {
+          avatarUrl = `/uploads/${req.file.filename}`;
+        }
       } else if (req.body && req.body.avatar_data) {
         avatarUrl = req.body.avatar_data;
+      } else if (req.body && req.body.avatar_url) {
+        avatarUrl = req.body.avatar_url;
       } else {
         return res.status(400).json({ error: 'No avatar image file provided.' });
       }
 
       db.prepare('UPDATE users SET avatar_url = ? WHERE id = ?').run(avatarUrl, req.user.id);
-      const user = db.prepare('SELECT id, name, email, role, phone, avatar_url, status, wallet_balance FROM users WHERE id = ?').get(req.user.id);
-      return res.json({ message: 'Profile avatar updated successfully.', avatar_url: avatarUrl, user });
+      try {
+        db.prepare('UPDATE tutor_profiles SET avatar_url = ? WHERE user_id = ?').run(avatarUrl, req.user.id);
+      } catch (e) {}
+
+      const user = db.prepare('SELECT id, name, email, role, phone, avatar_url, country, status, wallet_balance FROM users WHERE id = ?').get(req.user.id);
+      const tutorProfile = db.prepare('SELECT * FROM tutor_profiles WHERE user_id = ?').get(req.user.id);
+      return res.json({ message: 'Profile avatar updated successfully.', avatar_url: avatarUrl, user, tutorProfile });
     } catch (error) {
       console.error('Avatar upload error:', error);
       return res.status(500).json({ error: 'Failed to save avatar image.' });
@@ -5449,8 +5470,13 @@ app.put('/api/contacts/:contactId', authenticateToken, (req, res) => {
 app.get('/api/teacher/application-status', authenticateToken, requireRole('teacher'), (req, res) => {
   try {
     const userId = req.user.id;
+    const user = db.prepare('SELECT id, name, email, role, phone, avatar_url, country, status, wallet_balance FROM users WHERE id = ?').get(userId);
     const application = db.prepare('SELECT * FROM teacher_applications WHERE user_id = ?').get(userId);
     const tutorProfile = db.prepare('SELECT * FROM tutor_profiles WHERE user_id = ?').get(userId);
+
+    if (tutorProfile && user) {
+      tutorProfile.avatar_url = tutorProfile.avatar_url || user.avatar_url;
+    }
 
     if (application) {
       const normApp = normalizeSubjectRates(application.subjects, application.subject_rates, application.hourly_rate);
@@ -5467,7 +5493,7 @@ app.get('/api/teacher/application-status', authenticateToken, requireRole('teach
       tutorProfile.availability_schedule = safeParseObject(tutorProfile.availability_schedule);
     }
 
-    res.json({ application, tutorProfile });
+    res.json({ user, application, tutorProfile });
   } catch (error) {
     console.error('Application status error:', error);
     res.status(500).json({ error: 'Failed to retrieve application status.' });

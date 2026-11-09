@@ -5529,12 +5529,16 @@ const Teacher = {
       // Augment with current local preferences from localStorage
       const u = (typeof Auth !== 'undefined' && Auth.currentUser) || (typeof Storage !== 'undefined' ? Storage.getUser() : null);
       if (u && u.id) {
-        res.data.client_storage = {
-          theme: localStorage.getItem(`aviora_theme_${u.id}`) || localStorage.getItem('aviora_theme'),
-          language: localStorage.getItem(`aviora_language_${u.id}`) || localStorage.getItem('aviora_language'),
-          country: localStorage.getItem(`aviora_country_${u.id}`) || localStorage.getItem('aviora_country'),
-          timezone: localStorage.getItem(`aviora_timezone_${u.id}`) || localStorage.getItem('aviora_timezone')
+        const cs = {
+          theme: localStorage.getItem(`aviora_theme_${u.id}`) || localStorage.getItem('aviora_theme') || 'light',
+          language: localStorage.getItem(`aviora_language_${u.id}`) || localStorage.getItem('aviora_language') || 'en-US',
+          country: localStorage.getItem(`aviora_country_${u.id}`) || localStorage.getItem('aviora_country') || 'United States',
+          timezone: localStorage.getItem(`aviora_timezone_${u.id}`) || localStorage.getItem('aviora_timezone') || 'America/New_York'
         };
+        res.data.client_storage = cs;
+        if (res.data.categories && res.data.categories.preferences_and_settings) {
+          res.data.categories.preferences_and_settings.client_storage = cs;
+        }
       }
 
       const jsonStr = JSON.stringify(res.data, null, 2);
@@ -5575,8 +5579,8 @@ const Teacher = {
     const triggerBtn = document.getElementById('btn-backup-restore-trigger');
     const origTriggerText = triggerBtn ? triggerBtn.innerHTML : '';
 
-    if (!file.name.toLowerCase().endsWith('.json') && file.type !== 'application/json') {
-      showToast('Please select a valid Aviora Education JSON backup file.', 'error');
+    if (!file.name.toLowerCase().endsWith('.json') && file.type && !file.type.includes('json')) {
+      showToast('Please select a valid JSON backup file.', 'error');
       return;
     }
 
@@ -5596,15 +5600,15 @@ const Teacher = {
       try {
         parsedData = JSON.parse(fileText);
       } catch (parseErr) {
-        throw new Error('Invalid JSON format in the backup file.');
+        throw new Error('Invalid JSON format in the backup file. Please ensure the file contains valid JSON text.');
       }
 
-      if (!parsedData || (!parsedData.user && !parsedData.tutorProfile && !parsedData.platform)) {
-        throw new Error('The selected file does not appear to be a valid Aviora backup archive.');
+      if (!parsedData || typeof parsedData !== 'object') {
+        throw new Error('The selected backup file is empty or does not contain a valid JSON object.');
       }
 
       if (statusEl) {
-        statusEl.textContent = 'Uploading and recovering account records...';
+        statusEl.textContent = 'Uploading and restoring account data by category...';
       }
 
       const res = await API.restoreAccountBackup(parsedData);
@@ -5612,23 +5616,25 @@ const Teacher = {
         throw new Error(res?.error || 'Failed to restore account data.');
       }
 
-      // Restore client-side localStorage preferences if present
+      // Restore client-side localStorage preferences if present, without overwriting existing settings
       const u = (typeof Auth !== 'undefined' && Auth.currentUser) || (typeof Storage !== 'undefined' ? Storage.getUser() : null);
-      if (parsedData.client_storage && u && u.id) {
+      const cats = parsedData.categories || (parsedData.data && parsedData.data.categories) || {};
+      const prefsCat = cats.preferences_and_settings || parsedData.preferences || {};
+      const cs = prefsCat.client_storage || parsedData.client_storage;
+      if (cs && u && u.id) {
         const uid = u.id;
-        const cs = parsedData.client_storage;
-        if (cs.theme) {
+        if (cs.theme && !localStorage.getItem(`aviora_theme_${uid}`)) {
           localStorage.setItem(`aviora_theme_${uid}`, cs.theme);
           if (typeof Profile !== 'undefined') Profile.applyTheme(cs.theme, false, false);
         }
-        if (cs.language) {
+        if (cs.language && !localStorage.getItem(`aviora_language_${uid}`)) {
           localStorage.setItem(`aviora_language_${uid}`, cs.language);
           if (typeof I18n !== 'undefined') I18n.applyLanguage(cs.language);
         }
-        if (cs.country) {
+        if (cs.country && !localStorage.getItem(`aviora_country_${uid}`)) {
           localStorage.setItem(`aviora_country_${uid}`, cs.country);
         }
-        if (cs.timezone) {
+        if (cs.timezone && !localStorage.getItem(`aviora_timezone_${uid}`)) {
           localStorage.setItem(`aviora_timezone_${uid}`, cs.timezone);
         }
       }
@@ -5646,9 +5652,12 @@ const Teacher = {
 
       if (statusEl) {
         statusEl.style.color = '#10B981';
-        statusEl.textContent = '✓ All account data successfully recovered and restored!';
+        const catsText = (res.restored_categories && res.restored_categories.length > 0)
+          ? res.restored_categories.join(', ')
+          : 'Profile, Credentials, Subjects, Schedule, Tasks, and Settings';
+        statusEl.textContent = `✓ Data restored by category (${catsText}). Existing data was safely preserved!`;
       }
-      showToast('All account data has been successfully recovered and restored from backup!', 'success');
+      showToast('All account data restored by category! Existing data was safely preserved.', 'success');
 
       // Reload profile view so all restored fields reflect immediately
       await this.loadProfilePage();

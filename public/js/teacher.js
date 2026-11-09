@@ -4935,7 +4935,7 @@ const Teacher = {
             }
           } catch (e) {}
         }
-      }, 2500);
+      }, 1500);
     }
   },
 
@@ -4950,6 +4950,10 @@ const Teacher = {
           name: m.student_name || 'Student',
           email: m.student_email || '',
           avatar: m.student_avatar || null,
+          gradeLevel: m.student_grade_level || '',
+          school: m.student_school || '',
+          learningGoals: m.student_learning_goals || '',
+          subject: m.subject || 'Calculus BC Mentorship',
           isOnline: typeof m.student_is_online !== 'undefined' ? Boolean(m.student_is_online) : false,
           messages: [],
           unreadCount: 0,
@@ -4960,6 +4964,10 @@ const Teacher = {
       if (typeof m.student_is_online !== 'undefined') {
         conv.isOnline = Boolean(m.student_is_online);
       }
+      if (m.student_grade_level && !conv.gradeLevel) conv.gradeLevel = m.student_grade_level;
+      if (m.student_school && !conv.school) conv.school = m.student_school;
+      if (m.student_learning_goals && !conv.learningGoals) conv.learningGoals = m.student_learning_goals;
+      if (m.subject && (!conv.subject || conv.subject === 'Academic Mentorship Inquiry')) conv.subject = m.subject;
       conv.messages.push(m);
       if (m.sender_role === 'student' && Number(m.is_read) === 0) {
         conv.unreadCount++;
@@ -5042,6 +5050,9 @@ const Teacher = {
               <span class="messenger-conv-name">${this.escapeHtml(c.name)}</span>
               <span class="messenger-conv-time">${timeStr}</span>
             </div>
+            <div style="margin: 0.15rem 0 0.22rem;">
+              <span class="inquiry-subject-badge">${this.escapeHtml(c.subject || 'Calculus BC Mentorship')}</span>
+            </div>
             <div class="messenger-conv-snippet-row">
               <span class="messenger-conv-snippet">${this.escapeHtml(lastText)}</span>
               ${isUnread ? `<span class="messenger-conv-badge"></span>` : ''}
@@ -5056,9 +5067,31 @@ const Teacher = {
     const threadEl = document.querySelector('#teacher-messages-stream .messenger-thread');
     if (!threadEl) return;
 
-    const renderedCount = threadEl.querySelectorAll('.messenger-message').length;
-    if (renderedCount !== activeConv.messages.length) {
+    if (threadEl.querySelector('.messenger-inline-editor')) return;
+
+    const renderedCards = threadEl.querySelectorAll('.inquiry-message-card, .messenger-message');
+    const renderedCount = renderedCards.length;
+    const lastRendered = threadEl.querySelector('.inquiry-message-card:last-child, .messenger-message:last-child');
+    const lastMsg = activeConv.messages[activeConv.messages.length - 1];
+    const lastRenderedId = lastRendered ? lastRendered.id.replace('teacher-msg-row-', '') : null;
+    const lastMsgId = lastMsg ? String(lastMsg.id) : null;
+
+    if (renderedCount !== activeConv.messages.length || (lastMsgId && lastRenderedId && lastRenderedId !== lastMsgId && !lastRenderedId.startsWith('temp-'))) {
       this.renderThreadMessagesOnly(activeConv);
+    } else {
+      activeConv.messages.forEach(m => {
+        if (m.sender_role === 'teacher') {
+          const row = document.getElementById(`teacher-msg-row-${m.id}`);
+          if (row) {
+            const footerSpan = row.querySelector('.messenger-bubble-footer span:first-child');
+            if (footerSpan) {
+              const timeStr = m.created_at ? new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+              const statusHtml = m.status === 'seen' || m.is_read === 1 ? '• Seen' : '• Delivered';
+              footerSpan.textContent = `${timeStr} ${statusHtml}`;
+            }
+          }
+        }
+      });
     }
   },
 
@@ -5073,44 +5106,44 @@ const Teacher = {
 
       if (!isMe) {
         return `
-          <div class="messenger-message incoming" id="teacher-msg-row-${m.id}">
-            <div class="messenger-conv-avatar-wrap" style="width: 32px; height: 32px;">
-              ${activeConv.avatar ? `
-                <img src="${activeConv.avatar}" alt="${this.escapeHtml(activeConv.name)}" class="messenger-avatar-small" />
-              ` : `
-                <div class="messenger-avatar-small" style="display: flex; align-items: center; justify-content: center; background: rgba(198, 138, 40, 0.15); font-size: 0.75rem; font-weight: 700; color: var(--gold-800);">
-                  ${this.escapeHtml(activeConv.name.charAt(0).toUpperCase())}
-                </div>
-              `}
-            </div>
-            <div class="messenger-bubble-wrap">
-              <div class="messenger-bubble">
-                <div class="messenger-bubble-sender">${this.escapeHtml(activeConv.name)}</div>
-                ${this.formatMessageBody(m)}
-                <div class="messenger-bubble-footer">
-                  <span>${timeStr}</span>
-                  ${m.is_edited ? '<span class="messenger-edited-tag">(edited)</span>' : ''}
-                </div>
+          <div class="inquiry-message-card incoming" id="teacher-msg-row-${m.id}">
+            <div class="inquiry-bubble-header">
+              <div class="inquiry-bubble-author">
+                <span class="inquiry-role-pill student">🎓 Student Inquiry</span>
+                <strong class="inquiry-author-name">${this.escapeHtml(activeConv.name)}</strong>
               </div>
+              <div class="inquiry-topic-tag">${this.escapeHtml(m.subject || activeConv.subject || 'Inquiry')}</div>
+            </div>
+            <div class="inquiry-bubble-content" id="teacher-msg-content-${m.id}">
+              ${this.formatMessageBody(m)}
+            </div>
+            <div class="messenger-bubble-footer">
+              <span>${timeStr}</span>
+              ${m.is_edited ? '<span class="messenger-edited-tag">(edited)</span>' : ''}
             </div>
           </div>
         `;
       } else {
         return `
-          <div class="messenger-message outgoing" id="teacher-msg-row-${m.id}">
-            <div class="messenger-bubble-wrap">
-              <div class="messenger-bubble">
-                ${this.formatMessageBody(m)}
-                <div class="messenger-bubble-footer">
-                  <span>${timeStr} ${statusHtml}</span>
-                  ${m.is_edited ? '<span class="messenger-edited-tag">(edited)</span>' : ''}
-                  ${m.content ? `
-                    <button type="button" class="messenger-edit-btn" onclick="Teacher.startEditMessage('${m.id}')" title="Edit message">
-                      ${Icons.edit(11)}
-                    </button>
-                  ` : ''}
-                </div>
+          <div class="inquiry-message-card outgoing" id="teacher-msg-row-${m.id}">
+            <div class="inquiry-bubble-header">
+              <div class="inquiry-bubble-author">
+                <span class="inquiry-role-pill tutor">🧑‍🏫 Educator Response</span>
+                <strong class="inquiry-author-name">You</strong>
               </div>
+              <div class="inquiry-topic-tag">${this.escapeHtml(m.subject || (activeConv.subject ? 'Re: ' + activeConv.subject : 'Inquiry Response'))}</div>
+            </div>
+            <div class="inquiry-bubble-content" id="teacher-msg-content-${m.id}">
+              ${this.formatMessageBody(m)}
+            </div>
+            <div class="messenger-bubble-footer">
+              <span>${timeStr} ${statusHtml}</span>
+              ${m.is_edited ? '<span class="messenger-edited-tag">(edited)</span>' : ''}
+              ${m.content ? `
+                <button type="button" class="messenger-edit-btn" onclick="Teacher.startEditMessage('${m.id}')" title="Edit response">
+                  ${Icons.edit(11)}
+                </button>
+              ` : ''}
             </div>
           </div>
         `;
@@ -5463,6 +5496,8 @@ const Teacher = {
     const statusText = activeConv.isOnline ? '● Active now' : '○ Offline';
     const statusColor = activeConv.isOnline ? '#059669' : '#6B7280';
 
+    const inquiryTopic = activeConv.subject || 'Calculus BC Mentorship';
+
     container.innerHTML = `
       <!-- Active Conversation Header -->
       <div class="messenger-active-header">
@@ -5491,7 +5526,41 @@ const Teacher = {
         </div>
       </div>
 
-      <!-- Messages Feed (Scrollable, All History Preserved) -->
+      <!-- Inquiry Overview Card (Structured Academic Context) -->
+      <div class="inquiry-overview-card">
+        <div class="inquiry-overview-header">
+          <div class="inquiry-subject-pill">
+            <span class="inquiry-badge-icon">${Icons.book ? Icons.book(13) : '📖'}</span>
+            <span class="inquiry-badge-subject">${this.escapeHtml(inquiryTopic)}</span>
+          </div>
+          <div class="inquiry-status-badge ${activeConv.unreadCount > 0 ? 'needs-reply' : 'active'}">
+            <span class="inquiry-status-pulse"></span>
+            <span>${activeConv.unreadCount > 0 ? 'Pending Educator Reply' : 'Active Inquiry Discussion'}</span>
+          </div>
+        </div>
+
+        <div class="inquiry-details-grid">
+          <div class="inquiry-meta-item">
+            <span class="inquiry-meta-label">Inquiring Student</span>
+            <strong class="inquiry-meta-title">${this.escapeHtml(activeConv.name)}</strong>
+            <span class="inquiry-meta-sub">${this.escapeHtml(activeConv.gradeLevel || 'Grade 11')}${activeConv.school ? ' • ' + this.escapeHtml(activeConv.school) : ''}</span>
+          </div>
+          <div class="inquiry-meta-item">
+            <span class="inquiry-meta-label">Inquiry Subject Focus</span>
+            <strong class="inquiry-meta-title">${this.escapeHtml(inquiryTopic)}</strong>
+            <span class="inquiry-meta-sub">${this.escapeHtml(activeConv.learningGoals || 'Calculus BC Mentorship & Problem Solving')}</span>
+          </div>
+          <div class="inquiry-meta-item">
+            <span class="inquiry-meta-label">Real-Time Channel</span>
+            <strong class="inquiry-meta-title" style="color: ${activeConv.isOnline ? '#059669' : '#6B7280'};">
+              ${activeConv.isOnline ? '● Active Now' : '○ Offline'}
+            </strong>
+            <span class="inquiry-meta-sub">Direct 1-on-1 Mentorship</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Messages Feed (Scrollable, Inquiry-Structured) -->
       <div class="messenger-body" id="teacher-messages-stream">
         <div class="messenger-date-divider">
           <span>Today</span>
@@ -5505,44 +5574,44 @@ const Teacher = {
 
             if (!isMe) {
               return `
-                <div class="messenger-message incoming" id="teacher-msg-row-${m.id}">
-                  <div class="messenger-conv-avatar-wrap" style="width: 32px; height: 32px;">
-                    ${activeConv.avatar ? `
-                      <img src="${activeConv.avatar}" alt="${this.escapeHtml(activeConv.name)}" class="messenger-avatar-small" />
-                    ` : `
-                      <div class="messenger-avatar-small" style="display: flex; align-items: center; justify-content: center; background: rgba(198, 138, 40, 0.15); font-size: 0.75rem; font-weight: 700; color: var(--gold-800);">
-                        ${this.escapeHtml(activeConv.name.charAt(0).toUpperCase())}
-                      </div>
-                    `}
-                  </div>
-                  <div class="messenger-bubble-wrap">
-                    <div class="messenger-bubble">
-                      <div class="messenger-bubble-sender">${this.escapeHtml(activeConv.name)}</div>
-                      ${this.formatMessageBody(m)}
-                      <div class="messenger-bubble-footer">
-                        <span>${timeStr}</span>
-                        ${m.is_edited ? '<span class="messenger-edited-tag">(edited)</span>' : ''}
-                      </div>
+                <div class="inquiry-message-card incoming" id="teacher-msg-row-${m.id}">
+                  <div class="inquiry-bubble-header">
+                    <div class="inquiry-bubble-author">
+                      <span class="inquiry-role-pill student">🎓 Student Inquiry</span>
+                      <strong class="inquiry-author-name">${this.escapeHtml(activeConv.name)}</strong>
                     </div>
+                    <div class="inquiry-topic-tag">${this.escapeHtml(m.subject || inquiryTopic)}</div>
+                  </div>
+                  <div class="inquiry-bubble-content" id="teacher-msg-content-${m.id}">
+                    ${this.formatMessageBody(m)}
+                  </div>
+                  <div class="messenger-bubble-footer">
+                    <span>${timeStr}</span>
+                    ${m.is_edited ? '<span class="messenger-edited-tag">(edited)</span>' : ''}
                   </div>
                 </div>
               `;
             } else {
               return `
-                <div class="messenger-message outgoing" id="teacher-msg-row-${m.id}">
-                  <div class="messenger-bubble-wrap">
-                    <div class="messenger-bubble">
-                      ${this.formatMessageBody(m)}
-                      <div class="messenger-bubble-footer">
-                        <span>${timeStr} ${statusHtml}</span>
-                        ${m.is_edited ? '<span class="messenger-edited-tag">(edited)</span>' : ''}
-                        ${m.content ? `
-                          <button type="button" class="messenger-edit-btn" onclick="Teacher.startEditMessage('${m.id}')" title="Edit message">
-                            ${Icons.edit(11)}
-                          </button>
-                        ` : ''}
-                      </div>
+                <div class="inquiry-message-card outgoing" id="teacher-msg-row-${m.id}">
+                  <div class="inquiry-bubble-header">
+                    <div class="inquiry-bubble-author">
+                      <span class="inquiry-role-pill tutor">🧑‍🏫 Educator Response</span>
+                      <strong class="inquiry-author-name">You</strong>
                     </div>
+                    <div class="inquiry-topic-tag">${this.escapeHtml(m.subject || (inquiryTopic ? 'Re: ' + inquiryTopic : 'Inquiry Response'))}</div>
+                  </div>
+                  <div class="inquiry-bubble-content" id="teacher-msg-content-${m.id}">
+                    ${this.formatMessageBody(m)}
+                  </div>
+                  <div class="messenger-bubble-footer">
+                    <span>${timeStr} ${statusHtml}</span>
+                    ${m.is_edited ? '<span class="messenger-edited-tag">(edited)</span>' : ''}
+                    ${m.content ? `
+                      <button type="button" class="messenger-edit-btn" onclick="Teacher.startEditMessage('${m.id}')" title="Edit response">
+                        ${Icons.edit(11)}
+                      </button>
+                    ` : ''}
                   </div>
                 </div>
               `;
@@ -5551,8 +5620,19 @@ const Teacher = {
         </div>
       </div>
 
-      <!-- Message Composer Bar -->
+      <!-- Message Composer Bar with Inquiry Context Strip -->
       <div class="messenger-footer">
+        <!-- Inquiry Reply Strip -->
+        <div class="messenger-inquiry-context-strip">
+          <div class="messenger-inquiry-context-left">
+            <span class="inquiry-context-icon">${Icons.message(12)}</span>
+            <span>Replying to Inquiry: <strong>${this.escapeHtml(inquiryTopic)}</strong></span>
+          </div>
+          <div class="messenger-inquiry-context-right">
+            <span class="inquiry-mode-indicator">● Real-Time Channel</span>
+          </div>
+        </div>
+
         <!-- Hidden file inputs -->
         <input type="file" id="teacher-messenger-pic-input" accept="image/*" style="display:none;" onchange="Teacher.handleAttachmentUpload(this, true)" />
         <input type="file" id="teacher-messenger-doc-input" accept="*/*" style="display:none;" onchange="Teacher.handleAttachmentUpload(this, false)" />
@@ -5581,11 +5661,11 @@ const Teacher = {
             <textarea 
               id="teacher-composer-input" 
               class="messenger-textarea" 
-              placeholder="Type a message or share photos, files, links with ${this.escapeHtml(activeConv.name)}..." 
+              placeholder="Type your inquiry response or share photos, files, links with ${this.escapeHtml(activeConv.name)}..." 
               rows="1"
               onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault(); Teacher.sendTeacherMessage();}"
             ></textarea>
-            <button type="submit" class="messenger-send-btn" id="teacher-send-msg-btn" title="Send Message (Enter)">
+            <button type="submit" class="messenger-send-btn" id="teacher-send-msg-btn" title="Send Response (Enter)">
               <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
               </svg>
@@ -5613,23 +5693,28 @@ const Teacher = {
     const statusHtml = isMe ? (m.status === 'seen' || m.is_read === 1 ? '• Seen' : '• Delivered') : '';
 
     const div = document.createElement('div');
-    div.className = `messenger-message ${isMe ? 'outgoing' : 'incoming'}`;
+    div.className = `inquiry-message-card ${isMe ? 'outgoing' : 'incoming'}`;
     div.id = `teacher-msg-row-${m.id}`;
 
     div.innerHTML = `
-      <div class="messenger-bubble-wrap">
-        <div class="messenger-bubble">
-          ${this.formatMessageBody(m)}
-          <div class="messenger-bubble-footer">
-            <span>${timeStr} ${statusHtml}</span>
-            ${m.is_edited ? '<span class="messenger-edited-tag">(edited)</span>' : ''}
-            ${m.content ? `
-              <button type="button" class="messenger-edit-btn" onclick="Teacher.startEditMessage('${m.id}')" title="Edit message">
-                ${Icons.edit(11)}
-              </button>
-            ` : ''}
-          </div>
+      <div class="inquiry-bubble-header">
+        <div class="inquiry-bubble-author">
+          <span class="inquiry-role-pill ${isMe ? 'tutor' : 'student'}">${isMe ? '🧑‍🏫 Educator Response' : '🎓 Student Inquiry'}</span>
+          <strong class="inquiry-author-name">${isMe ? 'You' : 'Student'}</strong>
         </div>
+        <div class="inquiry-topic-tag">${this.escapeHtml(m.subject || (isMe ? 'Inquiry Response' : 'Inquiry'))}</div>
+      </div>
+      <div class="inquiry-bubble-content" id="teacher-msg-content-${m.id}">
+        ${this.formatMessageBody(m)}
+      </div>
+      <div class="messenger-bubble-footer">
+        <span>${timeStr} ${statusHtml}</span>
+        ${m.is_edited ? '<span class="messenger-edited-tag">(edited)</span>' : ''}
+        ${isMe && m.content ? `
+          <button type="button" class="messenger-edit-btn" onclick="Teacher.startEditMessage('${m.id}')" title="Edit response">
+            ${Icons.edit(11)}
+          </button>
+        ` : ''}
       </div>
     `;
 
@@ -5661,6 +5746,7 @@ const Teacher = {
       id: clientTempId,
       sender_role: 'teacher',
       student_id: activeConv.id,
+      subject: activeConv.subject ? (activeConv.subject.startsWith('Re:') ? activeConv.subject : `Re: ${activeConv.subject}`) : 'Inquiry Response',
       content: text,
       attachment_url: attachment ? attachment.url : null,
       attachment_name: attachment ? attachment.name : null,
@@ -5680,6 +5766,7 @@ const Teacher = {
     try {
       const res = await API.teacherReplyMessage({
         student_id: activeConv.id,
+        subject: activeConv.subject,
         message: text,
         attachment_url: attachment ? attachment.url : null,
         attachment_name: attachment ? attachment.name : null,
@@ -5691,6 +5778,7 @@ const Teacher = {
         tempMsg.id = res.data.id;
         tempMsg.created_at = res.data.created_at;
         tempMsg.status = res.data.status || 'delivered';
+        tempMsg.subject = res.data.subject || tempMsg.subject;
         const row = document.getElementById(`teacher-msg-row-${clientTempId}`);
         if (row) row.id = `teacher-msg-row-${res.data.id}`;
       }

@@ -149,6 +149,7 @@ const API = {
   uploadMessageAttachment: (formData) => apiRequest('/messages/upload', { method: 'POST', body: formData }),
   editMessage: (id, content) => apiRequest(`/messages/${id}/edit`, { method: 'POST', body: { content } }),
   getStudentMessages: () => apiRequest('/student/messages'),
+  sendStudentMessage: (body) => apiRequest('/student/messages', { method: 'POST', body }),
   markConversationRead: (partnerId) => apiRequest('/messages/mark-read', { method: 'POST', body: { partner_id: partnerId } }),
 
   // Teacher & Tutor Portal

@@ -3344,6 +3344,12 @@ app.post('/api/tutors/:id/messages', (req, res) => {
       tutor = db.prepare('SELECT id, user_id, headline FROM tutor_profiles WHERE user_id = ?').get(tutorId);
     }
     if (!tutor) {
+      const u = db.prepare("SELECT id, name FROM users WHERE id = ? AND (role = 'teacher' OR role = 'tutor')").get(tutorId);
+      if (u) {
+        tutor = { id: u.id, user_id: u.id, headline: 'Academic Tutor' };
+      }
+    }
+    if (!tutor) {
       return res.status(404).json({ error: 'Tutor not found.' });
     }
 
@@ -4467,6 +4473,7 @@ app.get('/api/teacher/messages', authenticateToken, requireRole('tutor'), (req, 
     const teacherId = req.user.id;
 
     // Fetch all conversation messages involving the teacher (both received and sent)
+    // Joined with student profiles and lesson requests for rich inquiry context
     const rows = db.prepare(`
       SELECT 
         m.*,
@@ -4474,12 +4481,18 @@ app.get('/api/teacher/messages', authenticateToken, requireRole('tutor'), (req, 
         CASE WHEN m.sender_id = ? THEN m.receiver_id ELSE m.sender_id END as other_user_id,
         u_other.name as other_name,
         u_other.avatar_url as other_avatar,
-        u_other.email as other_email
+        u_other.email as other_email,
+        sp.grade_level as student_grade_level,
+        sp.school as student_school,
+        sp.learning_goals as student_learning_goals,
+        (SELECT tr.subject FROM tutoring_requests tr WHERE tr.student_id = (CASE WHEN m.sender_id = ? THEN m.receiver_id ELSE m.sender_id END) AND tr.tutor_id = ? ORDER BY tr.id DESC LIMIT 1) as request_subject,
+        (SELECT tr.notes FROM tutoring_requests tr WHERE tr.student_id = (CASE WHEN m.sender_id = ? THEN m.receiver_id ELSE m.sender_id END) AND tr.tutor_id = ? ORDER BY tr.id DESC LIMIT 1) as request_notes
       FROM messages m
       LEFT JOIN users u_other ON u_other.id = (CASE WHEN m.sender_id = ? THEN m.receiver_id ELSE m.sender_id END)
+      LEFT JOIN student_profiles sp ON sp.user_id = u_other.id
       WHERE m.receiver_id = ? OR m.sender_id = ?
       ORDER BY m.created_at ASC
-    `).all(teacherId, teacherId, teacherId, teacherId, teacherId);
+    `).all(teacherId, teacherId, teacherId, teacherId, teacherId, teacherId, teacherId, teacherId, teacherId);
 
     const messages = rows.map(r => {
       const isTeacher = r.sender_role === 'teacher';
@@ -4487,6 +4500,7 @@ app.get('/api/teacher/messages', authenticateToken, requireRole('tutor'), (req, 
       const studentEmail = isTeacher ? (r.other_email || '') : (r.other_email || r.sender_email || '');
       const studentAvatar = r.other_avatar || null;
       const studentId = r.other_user_id || (isTeacher ? r.receiver_id : r.sender_id);
+      const studentSubject = r.subject || r.request_subject || 'Academic Mentorship Inquiry';
 
       return {
         id: r.id,
@@ -4497,9 +4511,12 @@ app.get('/api/teacher/messages', authenticateToken, requireRole('tutor'), (req, 
         student_name: studentName,
         student_email: studentEmail,
         student_avatar: studentAvatar,
+        student_grade_level: r.student_grade_level || '',
+        student_school: r.student_school || '',
+        student_learning_goals: r.student_learning_goals || r.request_notes || '',
         student_is_online: isUserOnline(studentId) ? 1 : 0,
         sender_name: r.sender_name,
-        subject: r.subject,
+        subject: studentSubject,
         content: r.content,
         attachment_url: r.attachment_url,
         attachment_name: r.attachment_name,
@@ -4525,7 +4542,7 @@ app.get('/api/teacher/messages', authenticateToken, requireRole('tutor'), (req, 
 app.post('/api/teacher/messages/reply', authenticateToken, requireRole('tutor'), (req, res) => {
   try {
     const teacherId = req.user.id;
-    const { student_id, message_id, message, attachment_url, attachment_name, attachment_type, attachment_size } = req.body;
+    const { student_id, message_id, message, subject, attachment_url, attachment_name, attachment_type, attachment_size } = req.body;
 
     const contentText = (message || '').trim();
     if (!contentText && !attachment_url) {
@@ -4544,17 +4561,38 @@ app.post('/api/teacher/messages/reply', authenticateToken, requireRole('tutor'),
       return res.status(400).json({ error: 'Cannot reply: Student ID is unknown.' });
     }
 
-    // Insert real reply from this tutor with status 'delivered'
+    // Determine inquiry response subject
+    let replySubject = subject ? (subject.startsWith('Re:') ? subject : `Re: ${subject}`) : '';
+    if (!replySubject) {
+      const lastMsg = db.prepare(`
+        SELECT subject FROM messages 
+        WHERE (sender_id = ? AND receiver_id = ?) OR (sender_id = ? AND receiver_id = ?) 
+        ORDER BY id DESC LIMIT 1
+      `).get(targetStudentId, teacherId, teacherId, targetStudentId);
+      if (lastMsg && lastMsg.subject) {
+        replySubject = lastMsg.subject.startsWith('Re:') ? lastMsg.subject : `Re: ${lastMsg.subject}`;
+      } else {
+        replySubject = 'Re: Academic Mentorship Inquiry';
+      }
+    }
+
+    const studentIsOnline = isUserOnline(targetStudentId);
+    const initialStatus = studentIsOnline ? 'delivered' : 'sent';
+    const deliveredAt = studentIsOnline ? new Date().toISOString() : null;
+
+    // Insert real reply from this tutor with instant delivery status
     const info = db.prepare(`
       INSERT INTO messages (sender_id, receiver_id, sender_name, sender_email, subject, content, status, delivered_at, is_read, is_edited, attachment_url, attachment_name, attachment_type, attachment_size)
-      VALUES (?, ?, ?, ?, ?, ?, 'delivered', CURRENT_TIMESTAMP, 0, 0, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, 0, ?, ?, ?, ?)
     `).run(
       teacherId,
       targetStudentId,
       teacherUser.name,
       teacherUser.email,
-      'Re: Direct Mentorship Inquiry',
+      replySubject,
       contentText,
+      initialStatus,
+      deliveredAt,
       attachment_url || null,
       attachment_name || null,
       attachment_type || null,
@@ -4636,7 +4674,7 @@ const handleEditMessageEndpoint = (req, res) => {
 app.post('/api/messages/:id/edit', authenticateToken, handleEditMessageEndpoint);
 app.put('/api/messages/:id', authenticateToken, handleEditMessageEndpoint);
 
-// Student All Direct Messages (Real-Time Messenger Feed)
+// Student All Direct Messages (Real-Time Inquiry Feed)
 app.get('/api/student/messages', authenticateToken, (req, res) => {
   try {
     const studentId = req.user.id;
@@ -4651,7 +4689,9 @@ app.get('/api/student/messages', authenticateToken, (req, res) => {
         u_tutor.avatar_url as tutor_avatar,
         u_tutor.email as tutor_email,
         tp.id as tutor_profile_id,
-        tp.headline as tutor_headline
+        tp.headline as tutor_headline,
+        tp.institution as tutor_institution,
+        tp.subjects as tutor_subjects
       FROM messages m
       LEFT JOIN users u_tutor ON u_tutor.id = (CASE WHEN m.sender_id = ? THEN m.receiver_id ELSE m.sender_id END)
       LEFT JOIN tutor_profiles tp ON tp.user_id = u_tutor.id
@@ -4670,6 +4710,90 @@ app.get('/api/student/messages', authenticateToken, (req, res) => {
   } catch (error) {
     console.error('Student get messages error:', error);
     res.status(500).json({ error: 'Failed to fetch student messages.' });
+  }
+});
+
+// Student Send Direct Inquiry / Message to Tutor (Real-Time Bi-Directional Delivery)
+app.post('/api/student/messages', authenticateToken, (req, res) => {
+  try {
+    const studentId = req.user.id;
+    const { tutor_id, tutor_user_id, subject, message, content, attachment_url, attachment_name, attachment_type, attachment_size } = req.body;
+
+    const contentText = (message || content || '').trim();
+    if (!contentText && !attachment_url) {
+      return res.status(400).json({ error: 'Message content cannot be empty.' });
+    }
+
+    let targetTutorUserId = tutor_user_id || tutor_id;
+    // Map profile ID to user ID if needed
+    const tp = db.prepare('SELECT user_id FROM tutor_profiles WHERE id = ?').get(targetTutorUserId);
+    if (tp) {
+      targetTutorUserId = tp.user_id;
+    }
+
+    if (!targetTutorUserId) {
+      return res.status(400).json({ error: 'Target tutor recipient is unknown.' });
+    }
+
+    const studentUser = db.prepare('SELECT name, email FROM users WHERE id = ?').get(studentId);
+    const tutorIsOnline = isUserOnline(targetTutorUserId);
+    const initialStatus = tutorIsOnline ? 'delivered' : 'sent';
+    const deliveredAt = tutorIsOnline ? new Date().toISOString() : null;
+
+    const insertInfo = db.prepare(`
+      INSERT INTO messages (sender_id, receiver_id, sender_name, sender_email, subject, content, status, delivered_at, is_read, is_edited, attachment_url, attachment_name, attachment_type, attachment_size)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, 0, ?, ?, ?, ?)
+    `).run(
+      studentId,
+      targetTutorUserId,
+      studentUser.name,
+      studentUser.email,
+      subject || 'Student Inquiry',
+      contentText,
+      initialStatus,
+      deliveredAt,
+      attachment_url || null,
+      attachment_name || null,
+      attachment_type || null,
+      attachment_size ? String(attachment_size) : null
+    );
+
+    sendNotification(
+      targetTutorUserId,
+      `New Inquiry from ${studentUser.name}`,
+      (contentText || attachment_name || 'Sent an attachment').substring(0, 120),
+      'message',
+      '#teacher-messages'
+    );
+
+    const insertedMsg = db.prepare('SELECT * FROM messages WHERE id = ?').get(insertInfo.lastInsertRowid);
+
+    res.json({
+      success: true,
+      messageId: insertInfo.lastInsertRowid,
+      message: {
+        id: insertInfo.lastInsertRowid,
+        sender_id: studentId,
+        receiver_id: targetTutorUserId,
+        sender_role: 'student',
+        sender: 'student',
+        senderName: studentUser.name,
+        subject: subject || 'Student Inquiry',
+        content: contentText,
+        text: contentText,
+        status: initialStatus,
+        delivered_at: deliveredAt,
+        attachment_url: attachment_url || null,
+        attachment_name: attachment_name || null,
+        attachment_type: attachment_type || null,
+        attachment_size: attachment_size || null,
+        created_at: insertedMsg.created_at,
+        time: new Date(insertedMsg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      }
+    });
+  } catch (error) {
+    console.error('Student send message error:', error);
+    res.status(500).json({ error: 'Failed to send message: ' + error.message });
   }
 });
 

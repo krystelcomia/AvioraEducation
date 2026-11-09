@@ -2824,11 +2824,11 @@
           <div class="messenger-hub-sidebar">
             <div class="messenger-sidebar-header">
               <div class="messenger-sidebar-title-row">
-                <h3 class="messenger-sidebar-title">Chats</h3>
+                <h3 class="messenger-sidebar-title">Mentorship Inquiries</h3>
               </div>
               <div class="messenger-search-wrap">
                 <span class="messenger-search-icon">🔍</span>
-                <input type="text" id="student-messages-search-input" class="messenger-search-input" placeholder="Search chats by tutor name or message..." oninput="Student.searchMessages(this.value)" />
+                <input type="text" id="student-messages-search-input" class="messenger-search-input" placeholder="Search inquiries by tutor name or topic..." oninput="Student.searchMessages(this.value)" />
               </div>
             </div>
 
@@ -4014,14 +4014,14 @@
           <div class="messenger-hub-sidebar">
             <div class="messenger-sidebar-header">
               <div class="messenger-sidebar-title-row">
-                <h3 class="messenger-sidebar-title">Chats</h3>
+                <h3 class="messenger-sidebar-title">Student Inquiries</h3>
               </div>
               <div class="messenger-search-wrap">
                 <span class="messenger-search-icon">🔍</span>
-                <input type="text" id="teacher-messages-search-input" class="messenger-search-input" placeholder="Search chats by student name or message..." oninput="Teacher.searchMessages(this.value)" />
+                <input type="text" id="teacher-messages-search-input" class="messenger-search-input" placeholder="Search inquiries by student or topic..." oninput="Teacher.searchMessages(this.value)" />
               </div>
               <div class="messenger-filter-tabs">
-                <button type="button" class="messenger-filter-pill teacher-msg-filter-btn active" data-filter="all" onclick="Teacher.filterMessages('all', this)">All Chats</button>
+                <button type="button" class="messenger-filter-pill teacher-msg-filter-btn active" data-filter="all" onclick="Teacher.filterMessages('all', this)">All Inquiries</button>
                 <button type="button" class="messenger-filter-pill teacher-msg-filter-btn" data-filter="unread" onclick="Teacher.filterMessages('unread', this)">Unread</button>
                 <button type="button" class="messenger-filter-pill teacher-msg-filter-btn" data-filter="seen" onclick="Teacher.filterMessages('seen', this)">Seen</button>
               </div>

@@ -966,7 +966,7 @@ const Teacher = {
           <div>
             <div style="font-size: 0.76rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase;">Preferred Hourly Rate</div>
             <div style="font-size: 0.95rem; font-weight: 700; color: var(--gold-600); margin-top: 0.25rem;">
-              $${Number(app.hourly_rate || 45).toFixed(2)} USD / hr
+              ${(typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.format(app.hourly_rate || 45, { perHour: true, showCode: true }) : `$${Number(app.hourly_rate || 45).toFixed(2)} USD / hr`}
             </div>
           </div>
 
@@ -1086,17 +1086,17 @@ const Teacher = {
       // 1. Gross Revenue from Students
       const grossEl = document.getElementById('teacher-stat-gross-revenue');
       const grossVal = stats.gross_revenue_students || 0;
-      if (grossEl) grossEl.textContent = `$${grossVal.toFixed(2)}`;
+      if (grossEl) grossEl.textContent = (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.format(grossVal) : `$${grossVal.toFixed(2)}`;
 
       // 2. Aviora Platform Commission / Cut (30%)
       const cutEl = document.getElementById('teacher-stat-commission-cut');
       const cutVal = stats.platform_commission_amount != null ? stats.platform_commission_amount : (grossVal * 0.30);
-      if (cutEl) cutEl.textContent = `$${cutVal.toFixed(2)}`;
+      if (cutEl) cutEl.textContent = (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.format(cutVal) : `$${cutVal.toFixed(2)}`;
 
       // 3. Net Tutor Take-Home Earnings (70%)
       const netEl = document.getElementById('teacher-stat-net-earnings');
       const netVal = stats.net_earnings_tutor != null ? stats.net_earnings_tutor : (grossVal * 0.70);
-      if (netEl) netEl.textContent = `$${netVal.toFixed(2)}`;
+      if (netEl) netEl.textContent = (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.format(netVal) : `$${netVal.toFixed(2)}`;
 
       // Update Request Withdrawal button state next to salary amount
       const requestBtn = document.getElementById('btn-request-payout-dashboard');
@@ -1125,13 +1125,17 @@ const Teacher = {
           requestBtn.style.color = '';
           requestBtn.style.borderColor = '';
           requestBtn.style.boxShadow = '0 2px 6px rgba(198, 138, 40, 0.25)';
-          requestBtn.title = `Request salary withdrawal of $${netVal.toFixed(2)}`;
+          const formattedNet = (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.format(netVal) : `$${netVal.toFixed(2)}`;
+          requestBtn.title = `Request salary withdrawal of ${formattedNet}`;
         }
       }
 
       // 4. Current Month Net Payout & Sessions
       const monthNetEl = document.getElementById('teacher-stat-month-net');
-      if (monthNetEl) monthNetEl.textContent = `$${(stats.current_month_net || 0).toFixed(2)}`;
+      if (monthNetEl) {
+        const mVal = stats.current_month_net || 0;
+        monthNetEl.textContent = (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.format(mVal) : `$${mVal.toFixed(2)}`;
+      }
 
       const completedCountEl = document.getElementById('teacher-stat-completed-count');
       if (completedCountEl) completedCountEl.textContent = stats.completed_sessions || 0;
@@ -5467,7 +5471,7 @@ const Teacher = {
 
       const rateVal = tp.hourly_rate || app.hourly_rate || 45;
       if (rateBadge) {
-        rateBadge.textContent = `$${rateVal} / hr`;
+        rateBadge.textContent = (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.format(rateVal, { perHour: true }) : `$${rateVal} / hr`;
       }
 
       const degreeText = app.highest_degree || tp.highest_degree || 'Stanford Ph.D.';
@@ -5481,6 +5485,7 @@ const Teacher = {
       const emailInp = document.getElementById('teacher-profile-email');
       const phoneInp = document.getElementById('teacher-profile-phone');
       const rateInp = document.getElementById('t-profile-rate');
+      const rateLabel = document.getElementById('t-profile-rate-label');
       const headlineInp = document.getElementById('t-profile-headline');
       const instInp = document.getElementById('teacher-profile-institution');
       const subjInp = document.getElementById('teacher-profile-subjects');
@@ -5489,7 +5494,24 @@ const Teacher = {
       if (nameInp) nameInp.value = u.name || '';
       if (emailInp) emailInp.value = u.email || '';
       if (phoneInp) phoneInp.value = u.phone || '';
-      if (rateInp) rateInp.value = rateVal;
+      if (rateLabel) {
+        const curr = (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.getActiveCurrency() : { symbol: '$', code: 'USD' };
+        rateLabel.textContent = `Hourly Rate (${curr.symbol} ${curr.code} / hr)`;
+      }
+      if (rateInp) {
+        rateInp.setAttribute('data-base-usd', rateVal);
+        rateInp.value = (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.convert(rateVal) : rateVal;
+        if (!rateInp._currencyBound) {
+          rateInp._currencyBound = true;
+          rateInp.addEventListener('input', () => {
+            if (typeof AvioraCurrency !== 'undefined') {
+              const baseFromInput = AvioraCurrency.convertInputToBase(rateInp.value);
+              rateInp.setAttribute('data-base-usd', baseFromInput);
+              if (rateBadge) rateBadge.textContent = AvioraCurrency.format(baseFromInput, { perHour: true });
+            }
+          });
+        }
+      }
       if (headlineInp) headlineInp.value = tp.headline || app.headline || '';
       if (instInp) instInp.value = `${app.highest_degree || tp.highest_degree || ''}${app.institution ? ' • ' + app.institution : ''}`;
 
@@ -5546,7 +5568,8 @@ const Teacher = {
     const name = document.getElementById('teacher-profile-name')?.value.trim();
     const phone = document.getElementById('teacher-profile-phone')?.value.trim();
     const headline = document.getElementById('t-profile-headline')?.value.trim();
-    const hourly_rate = parseFloat(document.getElementById('t-profile-rate')?.value || 45);
+    const rawRateInput = parseFloat(document.getElementById('t-profile-rate')?.value || 45);
+    const hourly_rate = (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.convertInputToBase(rawRateInput) : rawRateInput;
     const bio = document.getElementById('t-profile-bio')?.value.trim();
     const country = document.getElementById('teacher-profile-country')?.value || document.getElementById('teacher-country-select')?.value || 'United States';
     const timezone = document.getElementById('teacher-profile-timezone')?.value || document.getElementById('teacher-timezone-select')?.value || 'America/New_York';

@@ -248,7 +248,8 @@ const Admin = {
       if (requestsEl) requestsEl.textContent = m.totalRequests || 0;
 
       const volumeEl = document.getElementById('m-volume');
-      if (volumeEl) volumeEl.textContent = `$${m.platformVolume?.toFixed(2) || '0.00'}`;
+      const adminCurr = (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.getAdminCurrency() : { code: 'USD', symbol: '$' };
+      if (volumeEl) volumeEl.textContent = (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.format(m.platformVolume || 0, { to: adminCurr.code }) : `$${m.platformVolume?.toFixed(2) || '0.00'}`;
 
       const pendingInquiriesEl = document.getElementById('m-pending-inquiries');
       if (pendingInquiriesEl) pendingInquiriesEl.textContent = m.pendingInquiries || 0;
@@ -879,12 +880,17 @@ const Admin = {
     }
 
     tbody.innerHTML = this.applications.map(app => {
+      const adminCurr = (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.getAdminCurrency() : { code: 'USD', symbol: '$' };
       const appRates = app.subject_rates && typeof app.subject_rates === 'object' ? app.subject_rates : {};
-      const appSubjs = (app.subjects || []).map(s => `${s} ($${appRates[s] !== undefined ? appRates[s] : app.hourly_rate}/hr)`);
+      const appSubjs = (app.subjects || []).map(s => {
+        const sRate = appRates[s] !== undefined ? appRates[s] : app.hourly_rate;
+        const formatted = (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.format(sRate, { to: adminCurr.code, perHour: true }) : `$${sRate}/hr`;
+        return `${s} (${formatted})`;
+      });
       const rateVals = Object.values(appRates).map(v => Number(v)).filter(v => !isNaN(v) && v > 0);
       const rateDisplay = rateVals.length > 1 && Math.min(...rateVals) !== Math.max(...rateVals)
-        ? `$${Math.min(...rateVals)}–$${Math.max(...rateVals)}/hr`
-        : `$${app.hourly_rate}/hr`;
+        ? ((typeof AvioraCurrency !== 'undefined') ? `${AvioraCurrency.formatRange(Math.min(...rateVals), Math.max(...rateVals), { to: adminCurr.code })}/hr` : `$${Math.min(...rateVals)}–$${Math.max(...rateVals)}/hr`)
+        : ((typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.format(app.hourly_rate, { to: adminCurr.code, perHour: true }) : `$${app.hourly_rate}/hr`);
       return `
       <tr>
         <td>
@@ -959,14 +965,18 @@ const Admin = {
             ${Icons.landmark(15)} <strong>Institution:</strong> ${app.institution}
           </p>
           <p style="font-size: 0.875rem; color: var(--charcoal-700); display: flex; align-items: center; gap: 0.4rem;">
-            ${Icons.clock(15)} <strong>Experience:</strong> ${app.years_experience} years • <strong>Target Rate:</strong> $${app.hourly_rate}/hr
+            ${Icons.clock(15)} <strong>Experience:</strong> ${app.years_experience} years • <strong>Target Rate:</strong> ${(typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.format(app.hourly_rate, { to: (typeof AvioraCurrency !== 'undefined' ? AvioraCurrency.getAdminCurrency().code : 'USD'), perHour: true }) : `$${app.hourly_rate}/hr`}
           </p>
         </div>
 
         <div style="margin-bottom: 1.25rem;">
           <h4 style="color: var(--charcoal-900); margin-bottom: 0.35rem; font-size: 0.95rem;">Subjects, Specializations &amp; Individual Rates</h4>
           <p style="color: var(--gold-800); font-size: 0.85rem; font-weight: 600; margin-bottom: 0.25rem;">
-            ${(app.subjects || []).map(s => `${s} ($${(app.subject_rates && app.subject_rates[s] !== undefined) ? app.subject_rates[s] : app.hourly_rate}/hr)`).join(' • ')}
+            ${(app.subjects || []).map(s => {
+              const r = (app.subject_rates && app.subject_rates[s] !== undefined) ? app.subject_rates[s] : app.hourly_rate;
+              const f = (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.format(r, { to: AvioraCurrency.getAdminCurrency().code, perHour: true }) : `$${r}/hr`;
+              return `${s} (${f})`;
+            }).join(' • ')}
           </p>
           <p style="color: var(--text-secondary); font-size: 0.8rem;">Grade Levels: ${(app.grade_levels || []).join(', ')}</p>
         </div>
@@ -1133,12 +1143,17 @@ const Admin = {
     if (!tbody) return;
 
     tbody.innerHTML = this.tutors.map(t => {
+      const adminCurr = (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.getAdminCurrency() : { code: 'USD', symbol: '$' };
       const tRates = t.subject_rates && typeof t.subject_rates === 'object' ? t.subject_rates : {};
-      const subjListHtml = (t.subjects || []).map(s => `<span style="display:inline-block; background: rgba(198,138,40,0.1); border: 1px solid rgba(198,138,40,0.3); border-radius: 999px; padding: 0.1rem 0.45rem; font-size: 0.72rem; font-weight: 700; color: var(--gold-800); margin: 0.1rem 0.2rem 0.1rem 0;">${s}: $${tRates[s] !== undefined ? tRates[s] : t.hourly_rate}/hr</span>`).join('');
+      const subjListHtml = (t.subjects || []).map(s => {
+        const r = tRates[s] !== undefined ? tRates[s] : t.hourly_rate;
+        const formatted = (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.format(r, { to: adminCurr.code, perHour: true }) : `$${r}/hr`;
+        return `<span style="display:inline-block; background: rgba(198,138,40,0.1); border: 1px solid rgba(198,138,40,0.3); border-radius: 999px; padding: 0.1rem 0.45rem; font-size: 0.72rem; font-weight: 700; color: var(--gold-800); margin: 0.1rem 0.2rem 0.1rem 0;">${s}: ${formatted}</span>`;
+      }).join('');
       const rateVals = Object.values(tRates).map(v => Number(v)).filter(v => !isNaN(v) && v > 0);
       const rateSummary = rateVals.length > 1 && Math.min(...rateVals) !== Math.max(...rateVals)
-        ? `$${Math.min(...rateVals)}–$${Math.max(...rateVals)}/hr`
-        : `$${t.hourly_rate}/hr`;
+        ? ((typeof AvioraCurrency !== 'undefined') ? `${AvioraCurrency.formatRange(Math.min(...rateVals), Math.max(...rateVals), { to: adminCurr.code })}/hr` : `$${Math.min(...rateVals)}–$${Math.max(...rateVals)}/hr`)
+        : ((typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.format(t.hourly_rate, { to: adminCurr.code, perHour: true }) : `$${t.hourly_rate}/hr`);
       return `
       <tr>
         <td>

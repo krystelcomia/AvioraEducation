@@ -8,34 +8,34 @@
   'use strict';
 
   const COUNTRIES = [
-    { name: 'United States', code: 'US', flag: '🇺🇸', timezone: 'America/New_York', abbr: 'EST' },
-    { name: 'United Kingdom', code: 'GB', flag: '🇬🇧', timezone: 'Europe/London', abbr: 'GMT' },
-    { name: 'Canada', code: 'CA', flag: '🇨🇦', timezone: 'America/Toronto', abbr: 'EST' },
-    { name: 'Australia', code: 'AU', flag: '🇦🇺', timezone: 'Australia/Sydney', abbr: 'AEST' },
-    { name: 'Philippines', code: 'PH', flag: '🇵🇭', timezone: 'Asia/Manila', abbr: 'PHT' },
-    { name: 'Singapore', code: 'SG', flag: '🇸🇬', timezone: 'Asia/Singapore', abbr: 'SGT' },
-    { name: 'Japan', code: 'JP', flag: '🇯🇵', timezone: 'Asia/Tokyo', abbr: 'JST' },
-    { name: 'South Korea', code: 'KR', flag: '🇰🇷', timezone: 'Asia/Seoul', abbr: 'KST' },
-    { name: 'China', code: 'CN', flag: '🇨🇳', timezone: 'Asia/Shanghai', abbr: 'CST' },
-    { name: 'India', code: 'IN', flag: '🇮🇳', timezone: 'Asia/Kolkata', abbr: 'IST' },
-    { name: 'France', code: 'FR', flag: '🇫🇷', timezone: 'Europe/Paris', abbr: 'CET' },
-    { name: 'Germany', code: 'DE', flag: '🇩🇪', timezone: 'Europe/Berlin', abbr: 'CET' },
-    { name: 'Spain', code: 'ES', flag: '🇪🇸', timezone: 'Europe/Madrid', abbr: 'CET' },
-    { name: 'Italy', code: 'IT', flag: '🇮🇹', timezone: 'Europe/Rome', abbr: 'CET' },
-    { name: 'Brazil', code: 'BR', flag: '🇧🇷', timezone: 'America/Sao_Paulo', abbr: 'BRT' },
-    { name: 'Mexico', code: 'MX', flag: '🇲🇽', timezone: 'America/Mexico_City', abbr: 'CST' },
-    { name: 'United Arab Emirates', code: 'AE', flag: '🇦🇪', timezone: 'Asia/Dubai', abbr: 'GST' },
-    { name: 'Saudi Arabia', code: 'SA', flag: '🇸🇦', timezone: 'Asia/Riyadh', abbr: 'AST' },
-    { name: 'Indonesia', code: 'ID', flag: '🇮🇩', timezone: 'Asia/Jakarta', abbr: 'WIB' },
-    { name: 'Vietnam', code: 'VN', flag: '🇻🇳', timezone: 'Asia/Ho_Chi_Minh', abbr: 'ICT' },
-    { name: 'Turkey', code: 'TR', flag: '🇹🇷', timezone: 'Europe/Istanbul', abbr: 'TRT' },
-    { name: 'Netherlands', code: 'NL', flag: '🇳🇱', timezone: 'Europe/Amsterdam', abbr: 'CET' },
-    { name: 'Poland', code: 'PL', flag: '🇵🇱', timezone: 'Europe/Warsaw', abbr: 'CET' },
-    { name: 'Sweden', code: 'SE', flag: '🇸🇪', timezone: 'Europe/Stockholm', abbr: 'CET' },
-    { name: 'Thailand', code: 'TH', flag: '🇹🇭', timezone: 'Asia/Bangkok', abbr: 'ICT' },
-    { name: 'Switzerland', code: 'CH', flag: '🇨🇭', timezone: 'Europe/Zurich', abbr: 'CET' },
-    { name: 'South Africa', code: 'ZA', flag: '🇿🇦', timezone: 'Africa/Johannesburg', abbr: 'SAST' },
-    { name: 'New Zealand', code: 'NZ', flag: '🇳🇿', timezone: 'Pacific/Auckland', abbr: 'NZST' }
+    { name: 'United States', code: 'US', flag: '🇺🇸', timezone: 'America/New_York', abbr: 'EST', currency: 'USD', symbol: '$', rate: 1.0, currencyName: 'US Dollar' },
+    { name: 'United Kingdom', code: 'GB', flag: '🇬🇧', timezone: 'Europe/London', abbr: 'GMT', currency: 'GBP', symbol: '£', rate: 0.78, currencyName: 'British Pound' },
+    { name: 'Canada', code: 'CA', flag: '🇨🇦', timezone: 'America/Toronto', abbr: 'EST', currency: 'CAD', symbol: 'CA$', rate: 1.36, currencyName: 'Canadian Dollar' },
+    { name: 'Australia', code: 'AU', flag: '🇦🇺', timezone: 'Australia/Sydney', abbr: 'AEST', currency: 'AUD', symbol: 'A$', rate: 1.52, currencyName: 'Australian Dollar' },
+    { name: 'Philippines', code: 'PH', flag: '🇵🇭', timezone: 'Asia/Manila', abbr: 'PHT', currency: 'PHP', symbol: '₱', rate: 56.0, currencyName: 'Philippine Peso' },
+    { name: 'Singapore', code: 'SG', flag: '🇸🇬', timezone: 'Asia/Singapore', abbr: 'SGT', currency: 'SGD', symbol: 'S$', rate: 1.34, currencyName: 'Singapore Dollar' },
+    { name: 'Japan', code: 'JP', flag: '🇯🇵', timezone: 'Asia/Tokyo', abbr: 'JST', currency: 'JPY', symbol: '¥', rate: 152.0, currencyName: 'Japanese Yen' },
+    { name: 'South Korea', code: 'KR', flag: '🇰🇷', timezone: 'Asia/Seoul', abbr: 'KST', currency: 'KRW', symbol: '₩', rate: 1380.0, currencyName: 'South Korean Won' },
+    { name: 'China', code: 'CN', flag: '🇨🇳', timezone: 'Asia/Shanghai', abbr: 'CST', currency: 'CNY', symbol: '¥', rate: 7.23, currencyName: 'Chinese Yuan' },
+    { name: 'India', code: 'IN', flag: '🇮🇳', timezone: 'Asia/Kolkata', abbr: 'IST', currency: 'INR', symbol: '₹', rate: 83.5, currencyName: 'Indian Rupee' },
+    { name: 'France', code: 'FR', flag: '🇫🇷', timezone: 'Europe/Paris', abbr: 'CET', currency: 'EUR', symbol: '€', rate: 0.92, currencyName: 'Euro' },
+    { name: 'Germany', code: 'DE', flag: '🇩🇪', timezone: 'Europe/Berlin', abbr: 'CET', currency: 'EUR', symbol: '€', rate: 0.92, currencyName: 'Euro' },
+    { name: 'Spain', code: 'ES', flag: '🇪🇸', timezone: 'Europe/Madrid', abbr: 'CET', currency: 'EUR', symbol: '€', rate: 0.92, currencyName: 'Euro' },
+    { name: 'Italy', code: 'IT', flag: '🇮🇹', timezone: 'Europe/Rome', abbr: 'CET', currency: 'EUR', symbol: '€', rate: 0.92, currencyName: 'Euro' },
+    { name: 'Brazil', code: 'BR', flag: '🇧🇷', timezone: 'America/Sao_Paulo', abbr: 'BRT', currency: 'BRL', symbol: 'R$', rate: 5.4, currencyName: 'Brazilian Real' },
+    { name: 'Mexico', code: 'MX', flag: '🇲🇽', timezone: 'America/Mexico_City', abbr: 'CST', currency: 'MXN', symbol: 'MX$', rate: 18.2, currencyName: 'Mexican Peso' },
+    { name: 'United Arab Emirates', code: 'AE', flag: '🇦🇪', timezone: 'Asia/Dubai', abbr: 'GST', currency: 'AED', symbol: 'AED', rate: 3.67, currencyName: 'UAE Dirham' },
+    { name: 'Saudi Arabia', code: 'SA', flag: '🇸🇦', timezone: 'Asia/Riyadh', abbr: 'AST', currency: 'SAR', symbol: 'SAR', rate: 3.75, currencyName: 'Saudi Riyal' },
+    { name: 'Indonesia', code: 'ID', flag: '🇮🇩', timezone: 'Asia/Jakarta', abbr: 'WIB', currency: 'IDR', symbol: 'Rp', rate: 15800.0, currencyName: 'Indonesian Rupiah' },
+    { name: 'Vietnam', code: 'VN', flag: '🇻🇳', timezone: 'Asia/Ho_Chi_Minh', abbr: 'ICT', currency: 'VND', symbol: '₫', rate: 25000.0, currencyName: 'Vietnamese Dong' },
+    { name: 'Turkey', code: 'TR', flag: '🇹🇷', timezone: 'Europe/Istanbul', abbr: 'TRT', currency: 'TRY', symbol: '₺', rate: 34.0, currencyName: 'Turkish Lira' },
+    { name: 'Netherlands', code: 'NL', flag: '🇳🇱', timezone: 'Europe/Amsterdam', abbr: 'CET', currency: 'EUR', symbol: '€', rate: 0.92, currencyName: 'Euro' },
+    { name: 'Poland', code: 'PL', flag: '🇵🇱', timezone: 'Europe/Warsaw', abbr: 'CET', currency: 'PLN', symbol: 'zł', rate: 3.98, currencyName: 'Polish Złoty' },
+    { name: 'Sweden', code: 'SE', flag: '🇸🇪', timezone: 'Europe/Stockholm', abbr: 'CET', currency: 'SEK', symbol: 'kr', rate: 10.5, currencyName: 'Swedish Krona' },
+    { name: 'Thailand', code: 'TH', flag: '🇹🇭', timezone: 'Asia/Bangkok', abbr: 'ICT', currency: 'THB', symbol: '฿', rate: 36.5, currencyName: 'Thai Baht' },
+    { name: 'Switzerland', code: 'CH', flag: '🇨🇭', timezone: 'Europe/Zurich', abbr: 'CET', currency: 'CHF', symbol: 'CHF', rate: 0.89, currencyName: 'Swiss Franc' },
+    { name: 'South Africa', code: 'ZA', flag: '🇿🇦', timezone: 'Africa/Johannesburg', abbr: 'SAST', currency: 'ZAR', symbol: 'R', rate: 18.0, currencyName: 'South African Rand' },
+    { name: 'New Zealand', code: 'NZ', flag: '🇳🇿', timezone: 'Pacific/Auckland', abbr: 'NZST', currency: 'NZD', symbol: 'NZ$', rate: 1.64, currencyName: 'New Zealand Dollar' }
   ];
 
   const TIMEZONE_ABBRS = {
@@ -395,7 +395,215 @@
     }
   };
 
+  const AvioraCurrency = {
+    DEFAULT_CURRENCY: { code: 'USD', symbol: '$', rate: 1.0, currencyName: 'US Dollar' },
+
+    getCountry(nameOrCode) {
+      return AvioraGeo.getCountry(nameOrCode);
+    },
+
+    getCurrencyForCountry(countryNameOrCode) {
+      if (!countryNameOrCode) return this.DEFAULT_CURRENCY;
+      const c = this.getCountry(countryNameOrCode);
+      if (c && c.currency) {
+        return {
+          code: c.currency,
+          symbol: c.symbol || '$',
+          rate: c.rate || 1.0,
+          currencyName: c.currencyName || c.currency
+        };
+      }
+      return this.DEFAULT_CURRENCY;
+    },
+
+    getActiveCountry() {
+      if (typeof window === 'undefined') return 'United States';
+      const user = (typeof Auth !== 'undefined' && Auth.currentUser) ? Auth.currentUser : null;
+      const uidKey = user ? `_${user.id}` : '';
+      return (uidKey ? localStorage.getItem(`aviora_country${uidKey}`) : null)
+        || user?.country
+        || localStorage.getItem('aviora_country')
+        || 'United States';
+    },
+
+    getActiveCurrency() {
+      return this.getCurrencyForCountry(this.getActiveCountry());
+    },
+
+    getAdminCurrency() {
+      const adminCountry = (typeof localStorage !== 'undefined' ? localStorage.getItem('aviora_admin_country') : null) || 'United States';
+      return this.getCurrencyForCountry(adminCountry);
+    },
+
+    setAdminCountry(country) {
+      if (typeof localStorage !== 'undefined' && country) {
+        localStorage.setItem('aviora_admin_country', country);
+        this.updateDOM();
+      }
+    },
+
+    getCurrencyByCode(code) {
+      if (!code) return this.DEFAULT_CURRENCY;
+      const upper = String(code).toUpperCase().trim();
+      const match = COUNTRIES.find(c => c.currency === upper);
+      if (match) {
+        return {
+          code: match.currency,
+          symbol: match.symbol || '$',
+          rate: match.rate || 1.0,
+          currencyName: match.currencyName || match.currency
+        };
+      }
+      return this.DEFAULT_CURRENCY;
+    },
+
+    convert(amountInBase, fromCurrencyCode = 'USD', toCurrencyCode = null) {
+      const val = parseFloat(amountInBase);
+      if (isNaN(val)) return 0;
+      const targetCurr = toCurrencyCode ? this.getCurrencyByCode(toCurrencyCode) : this.getActiveCurrency();
+      const sourceCurr = fromCurrencyCode ? this.getCurrencyByCode(fromCurrencyCode) : this.DEFAULT_CURRENCY;
+
+      // Base conversion to USD
+      const inUsd = val / (sourceCurr.rate || 1.0);
+      // Target conversion
+      const result = inUsd * (targetCurr.rate || 1.0);
+
+      // Rounding for currencies
+      if (['JPY', 'KRW', 'VND', 'IDR'].includes(targetCurr.code)) {
+        return Math.round(result);
+      }
+      if (targetCurr.code === 'PHP') {
+        return Math.round(result);
+      }
+      return Math.round(result * 100) / 100;
+    },
+
+    convertInputToBase(amountInActiveCurrency, fromCurrencyCode = null) {
+      const val = parseFloat(amountInActiveCurrency);
+      if (isNaN(val)) return 0;
+      const sourceCurr = fromCurrencyCode ? this.getCurrencyByCode(fromCurrencyCode) : this.getActiveCurrency();
+      const inUsd = val / (sourceCurr.rate || 1.0);
+      return Math.round(inUsd * 100) / 100;
+    },
+
+    convertFromAdmin(amountInAdmin, toCurrencyCode = null) {
+      const adminCurr = this.getAdminCurrency();
+      return this.convert(amountInAdmin, adminCurr.code, toCurrencyCode);
+    },
+
+    convertToAdmin(amountInUSD) {
+      const adminCurr = this.getAdminCurrency();
+      return this.convert(amountInUSD, 'USD', adminCurr.code);
+    },
+
+    format(amountInBase, options = {}) {
+      const val = parseFloat(amountInBase);
+      if (isNaN(val)) return '$0.00';
+      const targetCurr = options.to ? this.getCurrencyByCode(options.to) : this.getActiveCurrency();
+      const fromCurr = options.from ? this.getCurrencyByCode(options.from) : this.DEFAULT_CURRENCY;
+      const converted = this.convert(val, fromCurr.code, targetCurr.code);
+
+      const noDecimalCurrs = ['JPY', 'KRW', 'VND', 'IDR', 'PHP'];
+      const isWhole = (converted % 1 === 0) || noDecimalCurrs.includes(targetCurr.code);
+      const formattedNum = isWhole
+        ? converted.toLocaleString('en-US', { maximumFractionDigits: 0 })
+        : converted.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+      let out = `${targetCurr.symbol}${formattedNum}`;
+      if (options.showCode) {
+        out += ` ${targetCurr.code}`;
+      }
+      if (options.perHour) {
+        out += ' / hr';
+      }
+      return out;
+    },
+
+    formatRange(minBase, maxBase, options = {}) {
+      const targetCurr = options.to ? this.getCurrencyByCode(options.to) : this.getActiveCurrency();
+      const cMin = this.convert(minBase, options.from || 'USD', targetCurr.code);
+      const cMax = this.convert(maxBase, options.from || 'USD', targetCurr.code);
+      const noDecimalCurrs = ['JPY', 'KRW', 'VND', 'IDR', 'PHP'];
+      const isMinWhole = (cMin % 1 === 0) || noDecimalCurrs.includes(targetCurr.code);
+      const isMaxWhole = (cMax % 1 === 0) || noDecimalCurrs.includes(targetCurr.code);
+      const sMin = isMinWhole ? cMin.toLocaleString('en-US') : cMin.toFixed(2);
+      const sMax = isMaxWhole ? cMax.toLocaleString('en-US') : cMax.toFixed(2);
+      if (cMin === cMax) return `${targetCurr.symbol}${sMin}`;
+      return `${targetCurr.symbol}${sMin}–${targetCurr.symbol}${sMax}`;
+    },
+
+    updateDOM() {
+      if (typeof document === 'undefined') return;
+      const curr = this.getActiveCurrency();
+
+      // 1. Hourly Rate Input Labels
+      ['t-profile-rate-label', 'app-hourly-rate-label', 'formal-subject-rate-label', 'subject-rate-label'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = `Hourly Rate (${curr.symbol} ${curr.code} / hr)`;
+      });
+
+      // 2. Tutor Profile Rate Input & Hero Badge
+      const rateInp = document.getElementById('t-profile-rate');
+      if (rateInp) {
+        let baseUsd = parseFloat(rateInp.getAttribute('data-base-usd'));
+        if (isNaN(baseUsd) || baseUsd <= 0) {
+          baseUsd = 45;
+          rateInp.setAttribute('data-base-usd', '45');
+        }
+        rateInp.value = this.convert(baseUsd);
+      }
+
+      const rateBadge = document.getElementById('teacher-profile-rate-badge');
+      if (rateBadge) {
+        const baseUsd = parseFloat(rateInp?.getAttribute('data-base-usd')) || 45;
+        rateBadge.textContent = this.format(baseUsd, { perHour: true });
+      }
+
+      // 3. Navigation Wallet Balances
+      if (typeof Auth !== 'undefined' && Auth.currentUser && Auth.currentUser.role === 'student') {
+        const bal = parseFloat(Auth.currentUser.wallet_balance || 0);
+        const formattedBal = this.format(bal);
+        const navBal = document.getElementById('nav-wallet-balance');
+        if (navBal) navBal.textContent = formattedBal;
+        const dropBal = document.getElementById('wallet-dropdown-balance');
+        if (dropBal) dropBal.textContent = formattedBal;
+        const payBal = document.getElementById('pay-wallet-balance-label');
+        if (payBal) payBal.textContent = formattedBal;
+      }
+
+      // 4. Rate Filter in Tutors Directory
+      const rateFilter = document.getElementById('tutor-rate-filter');
+      if (rateFilter) {
+        rateFilter.querySelectorAll('option').forEach(opt => {
+          const base = opt.value;
+          if (base && base !== 'all' && !isNaN(parseFloat(base))) {
+            const converted = this.convert(parseFloat(base));
+            opt.textContent = `Under ${curr.symbol}${converted.toLocaleString('en-US')}/hr`;
+          }
+        });
+      }
+
+      // 5. Subscription Displays
+      const subRateDisplay = document.getElementById('sub-enroll-tutor-rate-display');
+      if (subRateDisplay) {
+        const base = parseFloat(subRateDisplay.getAttribute('data-base-rate')) || 58;
+        subRateDisplay.textContent = this.format(base, { perHour: true });
+      }
+
+      // 6. Generic data-usd-amount elements
+      document.querySelectorAll('[data-usd-amount]').forEach(el => {
+        const amt = parseFloat(el.getAttribute('data-usd-amount'));
+        if (!isNaN(amt)) {
+          const perHour = el.getAttribute('data-per-hour') === 'true';
+          el.textContent = this.format(amt, { perHour });
+        }
+      });
+    }
+  };
+
   // Expose globally
+  AvioraGeo.currency = AvioraCurrency;
+  window.AvioraCurrency = AvioraCurrency;
   window.AvioraGeo = AvioraGeo;
   window.getTimezoneAbbr = function(tz) {
     return AvioraGeo.getTimezoneAbbr(tz);
@@ -404,9 +612,13 @@
   // Start live clock updates on DOM ready
   if (typeof document !== 'undefined') {
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => AvioraGeo.startLiveClocks());
+      document.addEventListener('DOMContentLoaded', () => {
+        AvioraGeo.startLiveClocks();
+        AvioraCurrency.updateDOM();
+      });
     } else {
       AvioraGeo.startLiveClocks();
+      AvioraCurrency.updateDOM();
     }
   }
 

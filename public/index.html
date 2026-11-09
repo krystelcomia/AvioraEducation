@@ -4502,8 +4502,8 @@
                   <input type="tel" id="teacher-profile-phone" class="form-control" placeholder="+1 (555) 000-0000" />
                 </div>
                 <div class="form-group" style="margin-bottom: 0;">
-                  <label class="form-label" style="font-weight: 700; font-size: 0.82rem;">Hourly Rate ($ USD / hr)</label>
-                  <input type="number" id="t-profile-rate" class="form-control" min="20" max="250" step="1" required />
+                  <label class="form-label" id="t-profile-rate-label" style="font-weight: 700; font-size: 0.82rem;">Hourly Rate ($ USD / hr)</label>
+                  <input type="number" id="t-profile-rate" class="form-control" min="1" max="1000000" step="any" required />
                 </div>
               </div>
 
@@ -5255,8 +5255,8 @@
                   <input type="text" name="subjects" id="app-subjects" class="form-control" placeholder="e.g. AP Calculus BC, Linear Algebra, SAT Math" required />
                 </div>
                 <div class="form-group">
-                  <label class="form-label">Hourly Rate ($ USD / hr)</label>
-                  <input type="number" name="hourly_rate" id="app-hourly-rate" class="form-control" min="20" max="250" value="55" required />
+                  <label class="form-label" id="app-hourly-rate-label">Hourly Rate ($ USD / hr)</label>
+                  <input type="number" name="hourly_rate" id="app-hourly-rate" class="form-control" min="1" max="1000000" step="any" value="55" required />
                 </div>
               </div>
 
@@ -6836,8 +6836,8 @@
                 <input type="text" id="admin-new-user-headline" class="form-control" placeholder="e.g. PhD in Mathematics | Oxford" />
               </div>
               <div class="form-group">
-                <label class="form-label" style="color: var(--charcoal-900); font-weight: 600;">Hourly Rate ($/hr)</label>
-                <input type="number" id="admin-new-user-rate" class="form-control" placeholder="55" value="55" min="20" max="300" />
+                <label class="form-label" id="admin-rate-label" style="color: var(--charcoal-900); font-weight: 600;">Hourly Rate ($/hr)</label>
+                <input type="number" id="admin-new-user-rate" class="form-control" placeholder="55" value="55" min="1" max="1000000" step="any" />
               </div>
             </div>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
@@ -7930,10 +7930,10 @@
               </select>
             </div>
             <div class="form-group">
-              <label class="form-label" for="formal-subject-rate" style="font-weight: 700; color: var(--charcoal-900);">Hourly Rate ($ USD / hr)</label>
+              <label class="form-label" id="formal-subject-rate-label" for="formal-subject-rate" style="font-weight: 700; color: var(--charcoal-900);">Hourly Rate ($ USD / hr)</label>
               <div class="subject-rate-input-group">
-                <span class="subject-rate-currency">$</span>
-                <input type="number" id="formal-subject-rate" class="form-control" min="5" max="1000" step="1" placeholder="45" value="45" required />
+                <span class="subject-rate-currency" id="formal-subject-rate-currency">$</span>
+                <input type="number" id="formal-subject-rate" class="form-control" min="1" max="1000000" step="any" placeholder="45" value="45" required />
                 <span class="subject-rate-unit">/hr</span>
               </div>
             </div>

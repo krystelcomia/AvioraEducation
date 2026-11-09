@@ -233,6 +233,11 @@ const Profile = {
     if (key) localStorage.setItem(`aviora_country${key}`, activeCountry);
     localStorage.setItem('aviora_country', activeCountry);
 
+    // Automatically update website currency to match the selected country/region
+    if (typeof AvioraCurrency !== 'undefined' && typeof AvioraCurrency.updateDOM === 'function') {
+      AvioraCurrency.updateDOM();
+    }
+
     // Auto-update timezone when country is selected if appropriate
     if (typeof AvioraGeo !== 'undefined') {
       const defTz = AvioraGeo.getDefaultTimezone(activeCountry);
@@ -264,7 +269,8 @@ const Profile = {
 
     if (notify) {
       const flag = typeof AvioraGeo !== 'undefined' ? AvioraGeo.getCountryFlag(activeCountry) : '🌐';
-      showToast(`Country set to ${flag} ${activeCountry}`, 'success');
+      const curr = typeof AvioraCurrency !== 'undefined' ? AvioraCurrency.getCurrencyForCountry(activeCountry) : { symbol: '$', code: 'USD', currencyName: 'US Dollar' };
+      showToast(`Country set to ${flag} ${activeCountry} • Currency: ${curr.currencyName} (${curr.symbol} ${curr.code})`, 'success');
     }
   },
 

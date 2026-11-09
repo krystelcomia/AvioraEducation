@@ -1765,7 +1765,7 @@ const Auth = {
 
   updateWalletBalance(balance, tutorInfo) {
     const num = parseFloat(balance) || 0;
-    const formatted = `${num.toFixed(2)}`;
+    const formatted = (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.format(num) : `$${num.toFixed(2)}`;
     if (this.currentUser) {
       this.currentUser.wallet_balance = num;
       if (tutorInfo && tutorInfo.id) {
@@ -1912,7 +1912,7 @@ const Auth = {
         userActions.style.display = 'flex';
         const profileHash = (user.role === 'teacher' || user.role === 'tutor') ? '#teacher-profile' : (user.role === 'admin' ? '#admin-profile' : '#student-profile');
         const isStudent = user.role === 'student';
-        const walletBalance = parseFloat(user.wallet_balance || 0).toFixed(2);
+        const walletBalance = (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.format(user.wallet_balance || 0) : `$${parseFloat(user.wallet_balance || 0).toFixed(2)}`;
         const roleLabel = user.role === 'admin' ? 'Administrator' : (user.role === 'teacher' || user.role === 'tutor' ? 'Teacher' : 'Student');
         const safeUserName = user.name || (user.role === 'admin' ? 'Administrator' : 'User');
         const defaultAvatar = (user.role === 'teacher' || user.role === 'tutor')

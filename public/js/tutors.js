@@ -340,14 +340,19 @@ const Tutors = {
   },
 
   getTutorRateDisplay(tutor) {
-    if (!tutor) return '$45';
+    if (!tutor) return (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.format(45) : '$45';
     const ratesObj = tutor.subject_rates && typeof tutor.subject_rates === 'object' ? tutor.subject_rates : {};
     const vals = Object.values(ratesObj).map(v => Number(v)).filter(v => !isNaN(v) && v > 0);
-    if (vals.length === 0) return `$${tutor.hourly_rate || 45}`;
+    if (vals.length === 0) {
+      const base = tutor.hourly_rate || 45;
+      return (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.format(base) : `$${base}`;
+    }
     const minRate = Math.min(...vals);
     const maxRate = Math.max(...vals);
-    if (minRate === maxRate) return `$${minRate}`;
-    return `$${minRate}–$${maxRate}`;
+    if (minRate === maxRate) {
+      return (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.format(minRate) : `$${minRate}`;
+    }
+    return (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.formatRange(minRate, maxRate) : `$${minRate}–$${maxRate}`;
   },
 
   createTutorCardHtml(t) {
@@ -357,7 +362,8 @@ const Tutors = {
 
     const subjectsHtml = (t.subjects || []).slice(0, 3).map(s => {
       const sRate = this.getTutorSubjectRate(t, s);
-      return `<span class="subject-tag">${s}${hasVaryingRates ? ` • $${sRate}/hr` : ''}</span>`;
+      const formattedRate = (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.format(sRate, { perHour: true }) : `$${sRate}/hr`;
+      return `<span class="subject-tag">${s}${hasVaryingRates ? ` • ${formattedRate}` : ''}</span>`;
     }).join('');
 
     const moreSubjects = (t.subjects || []).length > 3 ? `<span class="subject-tag">+${t.subjects.length - 3} more</span>` : '';
@@ -481,7 +487,8 @@ const Tutors = {
 
       const subjectsTags = (tutor.subjects || []).map(s => {
         const sRate = this.getTutorSubjectRate(tutor, s);
-        return `<span class="subject-tag">${s} <strong style="color: var(--gold-700); margin-left: 0.25rem;">($${sRate}/hr)</strong></span>`;
+        const formattedRate = (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.format(sRate, { perHour: true }) : `$${sRate}/hr`;
+        return `<span class="subject-tag">${s} <strong style="color: var(--gold-700); margin-left: 0.25rem;">(${formattedRate})</strong></span>`;
       }).join(' ');
       const gradeLevelsTags = (tutor.grade_levels || []).map(g => `<span class="badge-gold">${g}</span>`).join(' ');
 

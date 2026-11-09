@@ -759,6 +759,74 @@
   transform: translateY(-1px);
 }
 
+/* ============================================================== */
+/* STANDARD WORD-STYLE TABLES FOR TEACHER DASHBOARD               */
+/* Simple, standard gridlines, clear borders, and clear categories */
+/* ============================================================== */
+.word-standard-table,
+#teacher-dashboard table.admin-table {
+  width: 100%;
+  border-collapse: collapse !important;
+  border: 1px solid #C8C2B7 !important;
+  text-align: left;
+  background: var(--bg-card, #FFFFFF);
+  font-size: 0.875rem;
+}
+
+.word-standard-table th,
+#teacher-dashboard table.admin-table th {
+  padding: 0.75rem 1rem !important;
+  font-size: 0.78rem !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.04em !important;
+  color: var(--text-primary, #2C2621) !important;
+  background: #F3EFE6 !important;
+  border: 1px solid #C8C2B7 !important;
+  vertical-align: middle;
+}
+
+.word-standard-table td,
+#teacher-dashboard table.admin-table td {
+  padding: 0.75rem 1rem !important;
+  font-size: 0.875rem !important;
+  color: var(--text-primary, #1F2937) !important;
+  border: 1px solid #D5CFC3 !important;
+  vertical-align: middle;
+  background: var(--bg-card, #FFFFFF);
+}
+
+.word-standard-table tr:hover td,
+#teacher-dashboard table.admin-table tr:hover td {
+  background: rgba(198, 138, 40, 0.04) !important;
+}
+
+/* Dark mode word-table styles */
+[data-theme="dark"] .word-standard-table,
+[data-theme="dark"] #teacher-dashboard table.admin-table {
+  border: 1px solid #374151 !important;
+  background: #18191E !important;
+}
+
+[data-theme="dark"] .word-standard-table th,
+[data-theme="dark"] #teacher-dashboard table.admin-table th {
+  background: #252830 !important;
+  color: #F3F4F6 !important;
+  border: 1px solid #374151 !important;
+}
+
+[data-theme="dark"] .word-standard-table td,
+[data-theme="dark"] #teacher-dashboard table.admin-table td {
+  background: #18191E !important;
+  color: #E5E7EB !important;
+  border: 1px solid #374151 !important;
+}
+
+[data-theme="dark"] .word-standard-table tr:hover td,
+[data-theme="dark"] #teacher-dashboard table.admin-table tr:hover td {
+  background: rgba(255, 255, 255, 0.03) !important;
+}
+
 /* Virtual Classes Cards Grid */
 .teacher-classes-grid {
   display: grid;

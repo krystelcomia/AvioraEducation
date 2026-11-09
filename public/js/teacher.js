@@ -5559,26 +5559,116 @@ const Teacher = {
     }
   },
 
-  async handleRestoreBackup(file) {
+  pendingBackupData: null,
+  pendingBackupFile: null,
+
+  initBackupPreviewModal() {
+    const btnRestoreTrigger = document.getElementById('btn-backup-restore-trigger');
+    const fileInputRestore = document.getElementById('backup-restore-file-input');
+    if (btnRestoreTrigger && fileInputRestore) {
+      btnRestoreTrigger.addEventListener('click', () => {
+        fileInputRestore.value = '';
+        fileInputRestore.click();
+      });
+
+      fileInputRestore.addEventListener('change', (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (file) {
+          this.handleFileSelectedForReview(file);
+        }
+      });
+    }
+
+    const closeBtn = document.getElementById('backup-preview-close-btn');
+    const cancelBtn = document.getElementById('backup-preview-cancel-btn');
+    if (closeBtn) closeBtn.addEventListener('click', () => this.closeBackupPreviewModal());
+    if (cancelBtn) cancelBtn.addEventListener('click', () => this.closeBackupPreviewModal());
+
+    const modal = document.getElementById('backup-preview-modal');
+    if (modal) {
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) this.closeBackupPreviewModal();
+      });
+    }
+
+    const check = document.getElementById('backup-allow-overwrite-check');
+    if (check) {
+      check.addEventListener('change', () => this.updateBackupOverwriteWarning(check.checked));
+    }
+
+    const confirmBtn = document.getElementById('backup-preview-confirm-btn');
+    if (confirmBtn) {
+      confirmBtn.addEventListener('click', () => this.executeRestoreBackup());
+    }
+  },
+
+  updateBackupOverwriteWarning(isOverwrite) {
+    const box = document.getElementById('backup-overwrite-warning-box');
+    const icon = document.getElementById('backup-warning-icon');
+    const title = document.getElementById('backup-warning-title');
+    const desc = document.getElementById('backup-warning-desc');
+    if (!box) return;
+
+    if (isOverwrite) {
+      box.className = 'overwrite-mode';
+      box.style.borderColor = 'rgba(234, 179, 8, 0.45)';
+      box.style.background = 'rgba(234, 179, 8, 0.09)';
+      box.style.color = '#B45309';
+      if (icon) icon.textContent = '⚠️';
+      if (title) {
+        title.textContent = 'Warning: Overwrite Mode Active';
+        title.style.color = '#B45309';
+      }
+      if (desc) {
+        desc.innerHTML = 'Your current profile headline, biography, highest degree, institution, and hourly rate will be <strong>overwritten</strong> with values from this backup file. Other records (such as completed classes, reviews, and tasks) will continue to be safely merged.';
+      }
+    } else {
+      box.className = 'safe-mode';
+      box.style.borderColor = 'rgba(16, 185, 129, 0.35)';
+      box.style.background = 'rgba(16, 185, 129, 0.08)';
+      box.style.color = '#065F46';
+      if (icon) icon.textContent = '🛡️';
+      if (title) {
+        title.textContent = 'Non-Destructive Protection Active';
+        title.style.color = '#047857';
+      }
+      if (desc) {
+        desc.innerHTML = 'Your current profile details, rates, and existing calendar records are safely protected and will <strong>not</strong> be overwritten. Missing coursework, sessions, and subjects will be restored.';
+      }
+    }
+  },
+
+  closeBackupPreviewModal() {
+    const modal = document.getElementById('backup-preview-modal');
+    if (modal) {
+      modal.classList.remove('active');
+      modal.style.display = 'none';
+    }
+    const fileInput = document.getElementById('backup-restore-file-input');
+    if (fileInput) fileInput.value = '';
+    this.pendingBackupData = null;
+    this.pendingBackupFile = null;
+  },
+
+  async handleFileSelectedForReview(file) {
     if (!file) return;
     const statusEl = document.getElementById('backup-recovery-status');
-    const triggerBtn = document.getElementById('btn-backup-restore-trigger');
-    const origTriggerText = triggerBtn ? triggerBtn.innerHTML : '';
 
     if (!file.name.toLowerCase().endsWith('.json') && file.type && !file.type.includes('json')) {
       showToast('Please select a valid JSON backup file.', 'error');
+      if (statusEl) {
+        statusEl.style.display = 'block';
+        statusEl.style.color = '#EF4444';
+        statusEl.textContent = 'Please select a valid .json backup file.';
+      }
       return;
     }
 
     try {
-      if (triggerBtn) {
-        triggerBtn.disabled = true;
-        triggerBtn.innerHTML = `<span class="spinner" style="width: 14px; height: 14px; display: inline-block; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: spin 0.6s linear infinite; vertical-align: middle;"></span> Restoring...`;
-      }
       if (statusEl) {
         statusEl.style.display = 'block';
         statusEl.style.color = 'var(--gold-600)';
-        statusEl.textContent = 'Reading and validating backup file...';
+        statusEl.textContent = 'Loading and reading backup file...';
       }
 
       const fileText = await file.text();
@@ -5593,34 +5683,233 @@ const Teacher = {
         throw new Error('The selected backup file is empty or does not contain a valid JSON object.');
       }
 
+      this.pendingBackupData = parsedData;
+      this.pendingBackupFile = file;
+
+      this.renderBackupPreviewModal(parsedData, file);
+
+      // Reset overwrite checkbox to safe mode
+      const check = document.getElementById('backup-allow-overwrite-check');
+      if (check) check.checked = false;
+      this.updateBackupOverwriteWarning(false);
+
+      const modal = document.getElementById('backup-preview-modal');
+      if (modal) {
+        modal.classList.add('active');
+        modal.style.display = 'flex';
+      }
+
       if (statusEl) {
-        statusEl.textContent = 'Uploading and restoring account data by category...';
+        statusEl.style.color = 'var(--gold-600)';
+        statusEl.textContent = `Reviewing "${file.name}" (${(file.size / 1024).toFixed(1)} KB)...`;
       }
+    } catch (err) {
+      console.error('File review error:', err);
+      if (statusEl) {
+        statusEl.style.display = 'block';
+        statusEl.style.color = '#EF4444';
+        statusEl.textContent = `Error: ${err.message}`;
+      }
+      showToast(err.message || 'Failed to read backup file.', 'error');
+    }
+  },
 
-      const res = await API.restoreAccountBackup(parsedData);
+  renderBackupPreviewModal(data, file) {
+    const metaEl = document.getElementById('backup-preview-meta');
+    const bodyEl = document.getElementById('backup-preview-body');
+    if (!bodyEl) return;
+
+    const cats = data.categories || (data.data && data.data.categories) || {};
+    const profile = cats.profile_and_identity || data.profile || data.user || {};
+    const creds = cats.credentials_and_bio || data.tutorProfile || data.teacherApplication || {};
+    const subjectsCat = cats.subjects_and_rates || {};
+    const scheduleCat = cats.schedule_and_calendar || {};
+    const tasksCat = cats.academic_tasks_and_coursework || data.tasks || [];
+    const sessionsCat = cats.classes_and_sessions || data.tutoringRequests || [];
+    const reviewsCat = cats.student_ratings_and_reviews || data.reviews || [];
+    const prefsCat = cats.preferences_and_settings || data.preferences || {};
+
+    const subjectsList = Array.isArray(subjectsCat.subjects) ? subjectsCat.subjects : (Array.isArray(creds.subjects) ? creds.subjects : []);
+    const ratesMap = (subjectsCat.subject_rates && typeof subjectsCat.subject_rates === 'object') ? subjectsCat.subject_rates : {};
+    const tasksList = Array.isArray(tasksCat) ? tasksCat : (tasksCat.tasks || []);
+    const sessionsList = Array.isArray(sessionsCat) ? sessionsCat : (sessionsCat.sessions || []);
+    const reviewsList = Array.isArray(reviewsCat) ? reviewsCat : (reviewsCat.reviews || []);
+    const slotsList = Array.isArray(scheduleCat.occupied_slots) ? scheduleCat.occupied_slots : (data.occupiedSlots || []);
+    const notesList = Array.isArray(scheduleCat.date_notes) ? scheduleCat.date_notes : (data.dateNotes || []);
+
+    const exportedDate = data.exported_at ? new Date(data.exported_at).toLocaleString() : 'Recent export';
+    const fileSizeKb = file ? (file.size / 1024).toFixed(1) + ' KB' : 'Archive';
+
+    if (metaEl) {
+      metaEl.innerHTML = `File: <strong style="color: var(--text-primary);">${file?.name || 'backup.json'}</strong> (${fileSizeKb}) &bull; Exported: ${exportedDate}`;
+    }
+
+    const escapeHTML = (str) => {
+      if (typeof str !== 'string') return String(str || '');
+      return str.replace(/[&<>'"]/g, tag => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        "'": '&#39;',
+        '"': '&quot;'
+      }[tag] || tag));
+    };
+
+    let subjectsHtml = '';
+    if (subjectsList.length > 0) {
+      subjectsHtml = subjectsList.map(s => {
+        const rate = ratesMap[s] ? `$${ratesMap[s]}/hr` : (creds.hourly_rate ? `$${creds.hourly_rate}/hr` : '');
+        return `<span style="display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.2rem 0.55rem; border-radius: 9999px; background: rgba(198, 138, 40, 0.12); color: var(--gold-600); border: 1px solid rgba(198, 138, 40, 0.25); font-size: 0.72rem; font-weight: 600;">
+          ${escapeHTML(s)} ${rate ? `<span style="opacity: 0.75; font-size: 0.68rem;">(${rate})</span>` : ''}
+        </span>`;
+      }).join(' ');
+    } else {
+      subjectsHtml = '<em style="color: var(--text-secondary); font-size: 0.75rem;">No explicit subjects recorded in backup</em>';
+    }
+
+    let tasksHtml = '';
+    if (tasksList.length > 0) {
+      tasksHtml = tasksList.slice(0, 3).map(t => `<li style="margin-bottom: 0.25rem;">${escapeHTML(t.title || 'Coursework assignment')} ${t.subject ? `<span style="opacity: 0.7;">(${escapeHTML(t.subject)})</span>` : ''}</li>`).join('');
+      if (tasksList.length > 3) tasksHtml += `<li style="opacity: 0.65;">+${tasksList.length - 3} additional tasks</li>`;
+    } else {
+      tasksHtml = '<li style="list-style: none; color: var(--text-secondary); font-style: italic;">No coursework tasks in backup</li>';
+    }
+
+    bodyEl.innerHTML = `
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 0.85rem;">
+        
+        <!-- Category 1: Profile & Identity -->
+        <div class="backup-category-card" style="border: 1px solid var(--border-color); border-radius: 10px; padding: 0.85rem 1rem; background: var(--bg-surface-alt, rgba(0,0,0,0.015));">
+          <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+            <span style="font-size: 1.1rem;">👤</span>
+            <strong style="font-size: 0.82rem; color: var(--gold-600); text-transform: uppercase; letter-spacing: 0.5px;">Profile &amp; Personal Identity</strong>
+          </div>
+          <div style="font-size: 0.78rem; line-height: 1.5; color: var(--text-secondary);">
+            <div>Name: <strong style="color: var(--text-primary);">${escapeHTML(profile.name || 'Not specified')}</strong></div>
+            <div>Email: <strong style="color: var(--text-primary);">${escapeHTML(profile.email || 'Not specified')}</strong></div>
+            <div>Phone: <strong style="color: var(--text-primary);">${escapeHTML(profile.phone || 'None')}</strong></div>
+            <div>Country: <strong style="color: var(--text-primary);">${escapeHTML(profile.country || 'United States')}</strong></div>
+          </div>
+        </div>
+
+        <!-- Category 2: Credentials & Bio -->
+        <div class="backup-category-card" style="border: 1px solid var(--border-color); border-radius: 10px; padding: 0.85rem 1rem; background: var(--bg-surface-alt, rgba(0,0,0,0.015));">
+          <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+            <span style="font-size: 1.1rem;">🎓</span>
+            <strong style="font-size: 0.82rem; color: var(--gold-600); text-transform: uppercase; letter-spacing: 0.5px;">Credentials &amp; Biography</strong>
+          </div>
+          <div style="font-size: 0.78rem; line-height: 1.5; color: var(--text-secondary);">
+            <div>Headline: <strong style="color: var(--text-primary);">${escapeHTML(creds.headline || 'Not specified')}</strong></div>
+            <div>Degree: <strong style="color: var(--text-primary);">${escapeHTML(creds.highest_degree || 'None')}</strong></div>
+            <div>Institution: <strong style="color: var(--text-primary);">${escapeHTML(creds.institution || 'None')}</strong></div>
+            <div>Base Rate: <strong style="color: #10B981;">$${escapeHTML(String(creds.hourly_rate || 45))}/hr</strong></div>
+          </div>
+        </div>
+
+        <!-- Category 3: Subjects & Rates -->
+        <div class="backup-category-card" style="border: 1px solid var(--border-color); border-radius: 10px; padding: 0.85rem 1rem; background: var(--bg-surface-alt, rgba(0,0,0,0.015));">
+          <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+            <span style="font-size: 1.1rem;">📚</span>
+            <strong style="font-size: 0.82rem; color: var(--gold-600); text-transform: uppercase; letter-spacing: 0.5px;">Teaching Subjects (${subjectsList.length})</strong>
+          </div>
+          <div style="display: flex; flex-wrap: wrap; gap: 0.35rem; margin-top: 0.35rem;">
+            ${subjectsHtml}
+          </div>
+        </div>
+
+        <!-- Category 4: Schedule & Calendar -->
+        <div class="backup-category-card" style="border: 1px solid var(--border-color); border-radius: 10px; padding: 0.85rem 1rem; background: var(--bg-surface-alt, rgba(0,0,0,0.015));">
+          <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+            <span style="font-size: 1.1rem;">📅</span>
+            <strong style="font-size: 0.82rem; color: var(--gold-600); text-transform: uppercase; letter-spacing: 0.5px;">Schedule &amp; Availability</strong>
+          </div>
+          <div style="font-size: 0.78rem; line-height: 1.5; color: var(--text-secondary);">
+            <div>Timezone: <strong style="color: var(--text-primary);">${escapeHTML(scheduleCat.timezone || creds.timezone || 'America/New_York')}</strong></div>
+            <div>Occupied/Booked Slots: <strong style="color: var(--text-primary);">${slotsList.length} records</strong></div>
+            <div>Date Calendar Notes: <strong style="color: var(--text-primary);">${notesList.length} entries</strong></div>
+          </div>
+        </div>
+
+        <!-- Category 5: Academic Coursework -->
+        <div class="backup-category-card" style="border: 1px solid var(--border-color); border-radius: 10px; padding: 0.85rem 1rem; background: var(--bg-surface-alt, rgba(0,0,0,0.015));">
+          <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+            <span style="font-size: 1.1rem;">📝</span>
+            <strong style="font-size: 0.82rem; color: var(--gold-600); text-transform: uppercase; letter-spacing: 0.5px;">Coursework Tasks (${tasksList.length})</strong>
+          </div>
+          <ul style="margin: 0; padding-left: 1.2rem; font-size: 0.75rem; color: var(--text-secondary); line-height: 1.45;">
+            ${tasksHtml}
+          </ul>
+        </div>
+
+        <!-- Category 6: Tutoring Sessions, Reviews & Settings -->
+        <div class="backup-category-card" style="border: 1px solid var(--border-color); border-radius: 10px; padding: 0.85rem 1rem; background: var(--bg-surface-alt, rgba(0,0,0,0.015));">
+          <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+            <span style="font-size: 1.1rem;">⚙️</span>
+            <strong style="font-size: 0.82rem; color: var(--gold-600); text-transform: uppercase; letter-spacing: 0.5px;">Sessions, Reviews &amp; Settings</strong>
+          </div>
+          <div style="font-size: 0.78rem; line-height: 1.5; color: var(--text-secondary);">
+            <div>Tutoring Sessions: <strong style="color: var(--text-primary);">${sessionsList.length} classes</strong></div>
+            <div>Student Reviews: <strong style="color: var(--text-primary);">${reviewsList.length} reviews</strong></div>
+            <div>Appearance Theme: <strong style="color: var(--text-primary); text-transform: capitalize;">${escapeHTML(prefsCat.theme || 'Light')} Mode</strong></div>
+            <div>System Language: <strong style="color: var(--text-primary);">${escapeHTML(prefsCat.language || 'English (US)')}</strong></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Collapsible Raw JSON Explorer -->
+      <details style="border: 1px solid var(--border-color); border-radius: 8px; padding: 0.65rem 0.85rem; font-size: 0.76rem; background: var(--bg-surface-alt, rgba(0,0,0,0.02)); margin-top: 0.5rem;">
+        <summary style="cursor: pointer; font-weight: 700; color: var(--gold-600); outline: none;">
+          🔍 Inspect Raw JSON Backup Content (${fileSizeKb})
+        </summary>
+        <pre style="margin-top: 0.65rem; max-height: 200px; overflow-y: auto; background: var(--bg-surface, #FFFFFF); border: 1px solid var(--border-color); border-radius: 6px; padding: 0.75rem; font-family: var(--font-mono, monospace); font-size: 0.72rem; line-height: 1.45; white-space: pre-wrap; word-break: break-all; color: var(--text-primary);"><code>${escapeHTML(JSON.stringify(data, null, 2))}</code></pre>
+      </details>
+    `;
+  },
+
+  async executeRestoreBackup() {
+    if (!this.pendingBackupData) return;
+    const confirmBtn = document.getElementById('backup-preview-confirm-btn');
+    const cancelBtn = document.getElementById('backup-preview-cancel-btn');
+    const statusEl = document.getElementById('backup-recovery-status');
+    const origConfirmText = confirmBtn ? confirmBtn.innerHTML : '';
+    const allowOverwrite = document.getElementById('backup-allow-overwrite-check')?.checked || false;
+
+    try {
+      if (confirmBtn) {
+        confirmBtn.disabled = true;
+        confirmBtn.innerHTML = `<span class="spinner" style="width: 14px; height: 14px; display: inline-block; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: spin 0.6s linear infinite; vertical-align: middle;"></span> Restoring Data...`;
+      }
+      if (cancelBtn) cancelBtn.disabled = true;
+
+      const payload = {
+        data: this.pendingBackupData,
+        allow_overwrite: allowOverwrite
+      };
+
+      const res = await API.restoreAccountBackup(payload);
       if (!res || !res.success) {
-        throw new Error(res?.error || 'Failed to restore account data.');
+        throw new Error(res?.error || 'Failed to restore account data from backup.');
       }
 
-      // Restore client-side localStorage preferences if present, without overwriting existing settings
+      // Restore client-side localStorage preferences if present
       const u = (typeof Auth !== 'undefined' && Auth.currentUser) || (typeof Storage !== 'undefined' ? Storage.getUser() : null);
-      const cats = parsedData.categories || (parsedData.data && parsedData.data.categories) || {};
-      const prefsCat = cats.preferences_and_settings || parsedData.preferences || {};
-      const cs = prefsCat.client_storage || parsedData.client_storage;
+      const cats = this.pendingBackupData.categories || (this.pendingBackupData.data && this.pendingBackupData.data.categories) || {};
+      const prefsCat = cats.preferences_and_settings || this.pendingBackupData.preferences || {};
+      const cs = prefsCat.client_storage || this.pendingBackupData.client_storage;
       if (cs && u && u.id) {
         const uid = u.id;
-        if (cs.theme && !localStorage.getItem(`aviora_theme_${uid}`)) {
+        if (cs.theme && (!localStorage.getItem(`aviora_theme_${uid}`) || allowOverwrite)) {
           localStorage.setItem(`aviora_theme_${uid}`, cs.theme);
           if (typeof Profile !== 'undefined') Profile.applyTheme(cs.theme, false, false);
         }
-        if (cs.language && !localStorage.getItem(`aviora_language_${uid}`)) {
+        if (cs.language && (!localStorage.getItem(`aviora_language_${uid}`) || allowOverwrite)) {
           localStorage.setItem(`aviora_language_${uid}`, cs.language);
           if (typeof I18n !== 'undefined') I18n.applyLanguage(cs.language);
         }
-        if (cs.country && !localStorage.getItem(`aviora_country_${uid}`)) {
+        if (cs.country && (!localStorage.getItem(`aviora_country_${uid}`) || allowOverwrite)) {
           localStorage.setItem(`aviora_country_${uid}`, cs.country);
         }
-        if (cs.timezone && !localStorage.getItem(`aviora_timezone_${uid}`)) {
+        if (cs.timezone && (!localStorage.getItem(`aviora_timezone_${uid}`) || allowOverwrite)) {
           localStorage.setItem(`aviora_timezone_${uid}`, cs.timezone);
         }
       }
@@ -5636,29 +5925,42 @@ const Teacher = {
         Profile.syncAllPreferences(res.preferences, false);
       }
 
+      this.closeBackupPreviewModal();
+
       if (statusEl) {
+        statusEl.style.display = 'block';
         statusEl.style.color = '#10B981';
         const catsText = (res.restored_categories && res.restored_categories.length > 0)
           ? res.restored_categories.join(', ')
           : 'Profile, Credentials, Subjects, Schedule, Tasks, and Settings';
-        statusEl.textContent = `✓ Data restored by category (${catsText}). Existing data was safely preserved!`;
+        statusEl.textContent = allowOverwrite
+          ? `✓ Account data restored by category (${catsText}) with profile updates applied.`
+          : `✓ Data restored by category (${catsText}). Existing data safely preserved!`;
       }
-      showToast('All account data restored by category! Existing data was safely preserved.', 'success');
 
-      // Reload profile view so all restored fields reflect immediately
+      showToast(
+        allowOverwrite
+          ? 'Account data restored successfully with profile updates applied.'
+          : 'All account data restored by category! Existing data was safely preserved.',
+        'success'
+      );
+
+      // Reload profile page to display restored content immediately
       await this.loadProfilePage();
     } catch (err) {
-      console.error('Restore backup error:', err);
+      console.error('Execute restore error:', err);
+      showToast(err.message || 'Failed to restore account data.', 'error');
       if (statusEl) {
+        statusEl.style.display = 'block';
         statusEl.style.color = '#EF4444';
         statusEl.textContent = `Restore failed: ${err.message}`;
       }
-      showToast(err.message || 'Failed to restore data from backup file.', 'error');
     } finally {
-      if (triggerBtn) {
-        triggerBtn.disabled = false;
-        triggerBtn.innerHTML = origTriggerText;
+      if (confirmBtn) {
+        confirmBtn.disabled = false;
+        confirmBtn.innerHTML = origConfirmText;
       }
+      if (cancelBtn) cancelBtn.disabled = false;
     }
   },
 

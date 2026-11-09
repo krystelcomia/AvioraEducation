@@ -1848,13 +1848,174 @@ const Student = {
 
   // 1-on-1 Messages & Tutor Chats Page (Messenger Interface)
   studentMessages: [],
-  activeTutorId: null,
-  studentMessageSearchQuery: '',
   studentMessagesPollInterval: null,
+  studentMessageFilter: 'all',
+  studentChatTypeFilter: 'all',
+  studentTimeRangeFilter: '7days',
+  studentMessageSearchQuery: '',
+  activeTutorId: null,
+  archivedConversations: new Set(),
+  pendingMessageAttachment: null,
+
+  filterMessages(filterType, btnEl) {
+    this.studentMessageFilter = filterType;
+    document.querySelectorAll('.student-msg-filter-btn').forEach(b => {
+      b.classList.toggle('active', b === btnEl || b.dataset.filter === filterType);
+    });
+    this.renderStudentMessages();
+  },
+
+  toggleFilterUnread(btnEl) {
+    if (this.studentMessageFilter === 'unread') {
+      this.studentMessageFilter = 'all';
+      if (btnEl) btnEl.classList.remove('active');
+    } else {
+      this.studentMessageFilter = 'unread';
+      if (btnEl) btnEl.classList.add('active');
+    }
+    this.renderStudentMessages();
+  },
+
+  filterChatType(type) {
+    this.studentChatTypeFilter = type || 'all';
+    this.renderStudentMessages();
+  },
+
+  filterTimeRange(range) {
+    this.studentTimeRangeFilter = range || 'all';
+    this.renderStudentMessages();
+  },
+
+  toggleSidebarSearch() {
+    const wrap = document.getElementById('student-messenger-search-wrap');
+    const input = document.getElementById('student-messages-search-input');
+    if (wrap) {
+      const isHidden = window.getComputedStyle(wrap).display === 'none' || wrap.style.display === 'none';
+      wrap.style.display = isHidden ? 'block' : 'none';
+      if (isHidden && input) input.focus();
+    }
+  },
 
   searchMessages(query) {
     this.studentMessageSearchQuery = (query || '').toLowerCase().trim();
     this.renderStudentMessages();
+  },
+
+  copyContactIdentifier(text) {
+    if (!text) return;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(() => {
+        showToast('Copied to clipboard: ' + text, 'info');
+      }).catch(() => {
+        showToast('Copied: ' + text, 'info');
+      });
+    } else {
+      showToast('Contact: ' + text, 'info');
+    }
+  },
+
+  archiveConversation(convKey) {
+    if (!convKey) return;
+    if (this.archivedConversations.has(convKey)) {
+      this.archivedConversations.delete(convKey);
+      showToast('Conversation unarchived.', 'info');
+    } else {
+      this.archivedConversations.add(convKey);
+      showToast('Conversation moved to archive.', 'info');
+    }
+    this.renderStudentMessages();
+  },
+
+  clearConversation(convKey) {
+    if (!confirm('Are you sure you want to clear this active chat view? Message history remains stored.')) return;
+    this.studentMessages = (this.studentMessages || []).filter(m => {
+      const k = String(m.tutor_user_id || m.sender_id || m.receiver_id || 'tutor');
+      return k !== convKey;
+    });
+    this.renderStudentMessages();
+    showToast('Chat view cleared.', 'info');
+  },
+
+  toggleTemplatesMenu() {
+    const el = document.getElementById('student-templates-dropdown');
+    if (!el) return;
+    const isShown = el.style.display !== 'none';
+    if (isShown) {
+      el.style.display = 'none';
+    } else {
+      const templates = [
+        "Hello! I have a question regarding our recent lesson material.",
+        "Could you please explain the homework problem when you have time?",
+        "Thank you so much for the detailed explanation! That really helped.",
+        "Could we schedule a review session for the upcoming exam?",
+        "I've attached my working steps for the problem set."
+      ];
+      el.innerHTML = `
+        <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 10px; padding: 0.5rem; box-shadow: 0 8px 24px rgba(0,0,0,0.12); margin-bottom: 0.5rem; display: flex; flex-direction: column; gap: 0.35rem; max-height: 180px; overflow-y: auto;">
+          <div style="font-size: 0.72rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; padding: 0.2rem 0.4rem;">Select Quick Template</div>
+          ${templates.map(t => `
+            <button type="button" style="text-align: left; background: transparent; border: none; padding: 0.35rem 0.5rem; font-size: 0.8rem; color: var(--text-primary); border-radius: 6px; cursor: pointer; transition: background 0.15s;" onmouseover="this.style.background='rgba(37,99,235,0.08)'" onmouseout="this.style.background='transparent'" onclick="Student.insertTemplate('${this.escapeHtml(t).replace(/'/g, "\\'")}')">
+              ${this.escapeHtml(t)}
+            </button>
+          `).join('')}
+        </div>
+      `;
+      el.style.display = 'block';
+    }
+  },
+
+  insertTemplate(text) {
+    const input = document.getElementById('student-composer-input');
+    if (input) {
+      input.value = text;
+      input.focus();
+    }
+    const el = document.getElementById('student-templates-dropdown');
+    if (el) el.style.display = 'none';
+  },
+
+  toggleEmojiMenu() {
+    const el = document.getElementById('student-emoji-dropdown');
+    if (!el) return;
+    const isShown = el.style.display !== 'none';
+    if (isShown) {
+      el.style.display = 'none';
+    } else {
+      const emojis = ['👍', '😊', '📚', '💡', '🎯', '👏', '💯', '🎓', '✨', '📝', '🙌', '⭐'];
+      el.innerHTML = `
+        <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 10px; padding: 0.4rem; box-shadow: 0 8px 24px rgba(0,0,0,0.12); margin-bottom: 0.5rem; display: flex; flex-wrap: wrap; gap: 0.35rem;">
+          ${emojis.map(e => `
+            <button type="button" style="background: transparent; border: none; font-size: 1.15rem; cursor: pointer; padding: 0.2rem 0.35rem; border-radius: 6px;" onmouseover="this.style.background='rgba(0,0,0,0.08)'" onmouseout="this.style.background='transparent'" onclick="Student.insertEmoji('${e}')">
+              ${e}
+            </button>
+          `).join('')}
+        </div>
+      `;
+      el.style.display = 'block';
+    }
+  },
+
+  insertEmoji(char) {
+    const input = document.getElementById('student-composer-input');
+    if (input) {
+      input.value += char;
+      input.focus();
+    }
+    const el = document.getElementById('student-emoji-dropdown');
+    if (el) el.style.display = 'none';
+  },
+
+  openCalendarShortcut() {
+    window.location.hash = '#student-schedule';
+  },
+
+  triggerAttachmentChooser() {
+    const choice = confirm('Click OK to attach a Photo/Image, or Cancel to attach a Document/File.');
+    if (choice) {
+      this.triggerPictureUpload();
+    } else {
+      this.triggerFileUpload();
+    }
   },
 
   async loadMessagesPage() {
@@ -1882,7 +2043,6 @@ const Student = {
             const res = await API.getStudentMessages();
             const incoming = res.messages || [];
 
-            // Preserve any pending local messages so they never disappear
             const pendingTemps = (this.studentMessages || []).filter(m => String(m.id).startsWith('temp-'));
             const merged = [...incoming];
             for (const temp of pendingTemps) {
@@ -1904,64 +2064,74 @@ const Student = {
               this.updateActiveHeaderPresence(activeConv);
               this.syncActiveThreadMessages(activeConv);
             }
-          } catch (err) {}
+          } catch (e) {}
         }
       }, 1500);
     }
   },
 
   getTutorConversations() {
-    const convMap = new Map();
+    const tutorMap = new Map();
 
-    // 1. First add tutors from requests (students who booked lessons)
-    (this.requests || []).forEach(r => {
-      if (r.tutor_id && !convMap.has(String(r.tutor_id))) {
-        convMap.set(String(r.tutor_id), {
-          tutor_id: r.tutor_id,
-          name: r.tutor_name || 'Academic Tutor',
-          avatar: r.tutor_avatar,
-          subject: r.subject || 'Calculus BC Mentorship',
-          institution: 'Accredited Faculty',
+    (this.requests || []).forEach(req => {
+      const tId = String(req.tutor_id);
+      if (!tutorMap.has(tId)) {
+        tutorMap.set(tId, {
+          tutor_id: req.tutor_id,
+          tutor_name: req.tutor_name || 'Academic Educator',
+          tutor_avatar: req.tutor_avatar || null,
+          tutor_headline: req.tutor_headline || '',
+          tutor_institution: 'Stanford University',
+          tutor_subjects: req.subject || 'Mathematics',
+          tutor_rate: req.hourly_rate || 45,
+          tutor_phone: '+1 254-125-4446',
+          tutor_country: 'United States',
+          subject: req.subject || 'Calculus BC',
+          messages: [],
           isOnline: false,
-          messages: [],
-          lastMessage: null,
-          unreadCount: 0
+          unreadCount: 0,
+          lastMessage: null
         });
       }
     });
 
-    // 2. Add tutors from messages
-    (this.studentMessages || []).forEach(m => {
-      const tId = String(m.tutor_user_id || m.receiver_id || m.sender_id);
-      if (!convMap.has(tId)) {
-        convMap.set(tId, {
-          tutor_id: m.tutor_user_id || m.receiver_id,
-          name: m.tutor_name || 'Verified Educator',
-          avatar: m.tutor_avatar,
-          subject: m.subject || m.tutor_headline || 'Calculus BC Mentorship',
-          institution: m.tutor_institution || 'Accredited Faculty Specialist',
-          isOnline: typeof m.tutor_is_online !== 'undefined' ? Boolean(m.tutor_is_online) : false,
+    (this.studentMessages || []).forEach(msg => {
+      const tId = String(msg.tutor_user_id || msg.sender_id || (msg.sender_role === 'tutor' ? msg.sender_id : msg.receiver_id));
+      if (!tutorMap.has(tId)) {
+        tutorMap.set(tId, {
+          tutor_id: msg.tutor_user_id || msg.sender_id,
+          tutor_name: msg.tutor_name || msg.sender_name || 'Academic Educator',
+          tutor_avatar: msg.tutor_avatar || null,
+          tutor_headline: msg.tutor_headline || '',
+          tutor_institution: msg.tutor_institution || 'Stanford University',
+          tutor_subjects: msg.tutor_subjects || msg.subject || 'Calculus BC',
+          tutor_rate: msg.tutor_rate || 45,
+          tutor_phone: msg.tutor_phone || '+1 254-125-4446',
+          tutor_country: msg.tutor_country || 'United States',
+          subject: msg.subject || 'Calculus BC',
           messages: [],
-          lastMessage: null,
-          unreadCount: 0
+          isOnline: Boolean(msg.tutor_is_online),
+          unreadCount: 0,
+          lastMessage: null
         });
       }
-      const c = convMap.get(tId);
-      if (typeof m.tutor_is_online !== 'undefined') {
-        c.isOnline = Boolean(m.tutor_is_online);
+      const t = tutorMap.get(tId);
+      if (typeof msg.tutor_is_online !== 'undefined') {
+        t.isOnline = Boolean(msg.tutor_is_online);
       }
-      if (m.tutor_name && c.name === 'Academic Tutor') c.name = m.tutor_name;
-      if (m.tutor_avatar && !c.avatar) c.avatar = m.tutor_avatar;
-      if (m.subject && (!c.subject || c.subject === 'Educator' || c.subject === 'Academic Mentor')) c.subject = m.subject;
-      if (m.tutor_headline && !c.headline) c.headline = m.tutor_headline;
-      if (m.tutor_institution && !c.institution) c.institution = m.tutor_institution;
-      c.messages.push(m);
-      if (m.sender_role === 'tutor' && Number(m.is_read) === 0) {
-        c.unreadCount++;
+      if (msg.tutor_institution && (!t.tutor_institution || t.tutor_institution === 'Stanford University')) t.tutor_institution = msg.tutor_institution;
+      if (msg.tutor_subjects && (!t.tutor_subjects || t.tutor_subjects === 'Mathematics')) t.tutor_subjects = msg.tutor_subjects;
+      if (msg.tutor_phone && (!t.tutor_phone || t.tutor_phone === '+1 254-125-4446')) t.tutor_phone = msg.tutor_phone;
+      if (msg.tutor_country && (!t.tutor_country || t.tutor_country === 'United States')) t.tutor_country = msg.tutor_country;
+      if (msg.subject && !t.subject) t.subject = msg.subject;
+
+      t.messages.push(msg);
+      if (msg.sender_role === 'tutor' && Number(msg.is_read) === 0) {
+        t.unreadCount++;
       }
     });
 
-    const convs = Array.from(convMap.values());
+    const convs = Array.from(tutorMap.values());
     convs.forEach(c => {
       c.messages.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
       c.lastMessage = c.messages[c.messages.length - 1];
@@ -1975,94 +2145,43 @@ const Student = {
     if (!activeConv) return;
     const dot = document.getElementById('student-active-header-dot');
     const indicator = document.getElementById('student-active-header-status-text');
+    const dotBg = activeConv.isOnline ? '#10B981' : '#9CA3AF';
+    const dotShadow = activeConv.isOnline ? '0 0 0 2px var(--bg-card), 0 0 8px rgba(16, 185, 129, 0.6)' : '0 0 0 2px var(--bg-card)';
+    const statusText = activeConv.isOnline ? '● Active now' : '○ Offline';
+    const statusColor = activeConv.isOnline ? '#059669' : '#6B7280';
+
     if (dot) {
-      dot.className = `messenger-status-dot ${activeConv.isOnline ? 'online' : 'offline'}`;
-      dot.style.backgroundColor = activeConv.isOnline ? '#10B981' : '#9CA3AF';
-      dot.style.boxShadow = activeConv.isOnline ? '0 0 0 2px var(--bg-card), 0 0 8px rgba(16, 185, 129, 0.6)' : '0 0 0 2px var(--bg-card)';
+      dot.style.backgroundColor = dotBg;
+      dot.style.boxShadow = dotShadow;
       dot.title = activeConv.isOnline ? 'Active now' : 'Offline';
     }
     if (indicator) {
-      indicator.innerHTML = activeConv.isOnline ? '● Active now' : '○ Offline';
-      indicator.style.color = activeConv.isOnline ? '#059669' : '#6B7280';
+      indicator.textContent = statusText;
+      indicator.style.color = statusColor;
     }
-  },
-
-  updateSidebarConversations() {
-    const listEl = document.getElementById('student-messenger-conv-list');
-    if (!listEl) return;
-    const convs = this.getTutorConversations();
-    const q = this.studentMessageSearchQuery;
-    let filtered = convs;
-    if (q) {
-      filtered = filtered.filter(c => {
-        const sName = String(c.name || '').toLowerCase();
-        const sSub = String(c.subject || '').toLowerCase();
-        const hasMsg = c.messages.some(m => String(m.content || '').toLowerCase().includes(q));
-        return sName.includes(q) || sSub.includes(q) || hasMsg;
-      });
-    }
-
-    if (filtered.length === 0) return;
-
-    listEl.innerHTML = filtered.map(c => {
-      const isActive = String(c.tutor_id) === this.activeTutorId;
-      const isUnread = c.unreadCount > 0;
-      const lastText = c.lastMessage ? (c.lastMessage.sender_role === 'student' ? 'You: ' + c.lastMessage.content : c.lastMessage.content) : 'Start an inquiry';
-      const timeStr = c.lastMessage?.created_at ? new Date(c.lastMessage.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
-      const dotBg = c.isOnline ? '#10B981' : '#9CA3AF';
-      const dotShadow = c.isOnline ? '0 0 0 2px var(--bg-card), 0 0 8px rgba(16, 185, 129, 0.6)' : '0 0 0 2px var(--bg-card)';
-      const dotTitle = c.isOnline ? 'Active now' : 'Offline';
-
-      return `
-        <div class="messenger-conv-item ${isActive ? 'active' : ''} ${isUnread ? 'unread' : ''}" onclick="Student.selectTutorConversation('${c.tutor_id}')">
-          <div class="messenger-conv-avatar-wrap">
-            <img src="${c.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80'}" alt="${this.escapeHtml(c.name)}" class="messenger-conv-avatar" />
-            <span class="messenger-status-dot ${c.isOnline ? 'online' : 'offline'}" style="bottom: -2px; right: -2px; border-color: var(--bg-card); background-color: ${dotBg}; box-shadow: ${dotShadow};" title="${dotTitle}"></span>
-          </div>
-          <div class="messenger-conv-details">
-            <div class="messenger-conv-name-row">
-              <span class="messenger-conv-name">${this.escapeHtml(c.name)}</span>
-              <span class="messenger-conv-time">${timeStr}</span>
-            </div>
-            <div style="margin: 0.15rem 0 0.22rem;">
-              <span class="inquiry-subject-badge">${this.escapeHtml(c.subject || 'Calculus BC')}</span>
-            </div>
-            <div class="messenger-conv-snippet-row">
-              <span class="messenger-conv-snippet">${this.escapeHtml(lastText)}</span>
-              ${isUnread ? `<span class="messenger-conv-badge"></span>` : ''}
-            </div>
-          </div>
-        </div>
-      `;
-    }).join('');
   },
 
   syncActiveThreadMessages(activeConv) {
-    const threadEl = document.querySelector('#student-messages-stream .messenger-thread');
+    if (!activeConv) return;
+    const threadEl = document.getElementById('student-messages-thread-container');
     if (!threadEl) return;
 
-    if (threadEl.querySelector('.messenger-inline-editor')) return;
-
-    const renderedCards = threadEl.querySelectorAll('.inquiry-message-card, .messenger-message');
-    const renderedCount = renderedCards.length;
-    const lastRendered = threadEl.querySelector('.inquiry-message-card:last-child, .messenger-message:last-child');
+    const renderedCount = threadEl.children.length;
+    const lastRenderedEl = threadEl.lastElementChild;
     const lastMsg = activeConv.messages[activeConv.messages.length - 1];
-    const lastRenderedId = lastRendered ? lastRendered.id.replace('student-msg-row-', '') : null;
-    const lastMsgId = lastMsg ? String(lastMsg.id) : null;
+    const lastIdMatches = lastRenderedEl && lastMsg && lastRenderedEl.id === `student-msg-row-${lastMsg.id}`;
 
-    if (renderedCount !== activeConv.messages.length || (lastMsgId && lastRenderedId && lastRenderedId !== lastMsgId && !lastRenderedId.startsWith('temp-'))) {
+    if (renderedCount !== activeConv.messages.length || !lastIdMatches) {
       this.renderThreadMessagesOnly(activeConv);
     } else {
       activeConv.messages.forEach(m => {
-        const isMe = m.sender_role === 'student' || m.sender === 'student';
-        if (isMe) {
+        if (m.sender_role === 'student') {
           const row = document.getElementById(`student-msg-row-${m.id}`);
           if (row) {
-            const footerSpan = row.querySelector('.messenger-bubble-footer span:first-child');
+            const footerSpan = row.querySelector('.messenger-msg-status');
             if (footerSpan) {
-              const timeStr = m.created_at ? new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : (m.time || '');
               const statusHtml = m.status === 'seen' || m.is_read === 1 ? '• Seen' : '• Delivered';
-              footerSpan.textContent = `${timeStr} ${statusHtml}`;
+              footerSpan.textContent = statusHtml;
             }
           }
         }
@@ -2070,79 +2189,110 @@ const Student = {
     }
   },
 
-  renderThreadMessagesOnly(activeConv) {
-    const threadEl = document.querySelector('#student-messages-stream .messenger-thread');
-    if (!threadEl) return;
+  updateSidebarConversations() {
+    const convListEl = document.getElementById('student-messenger-conv-list');
+    if (!convListEl) return;
+    let convs = this.getTutorConversations();
 
-    threadEl.innerHTML = activeConv.messages.map(m => {
-      const isMe = m.sender_role === 'student' || m.sender === 'student';
-      const timeStr = m.created_at ? new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : (m.time || '');
-      const statusHtml = isMe ? (m.status === 'seen' || m.is_read === 1 ? '• Seen' : '• Delivered') : '';
+    // Filtering
+    if (this.studentChatTypeFilter === 'active') {
+      convs = convs.filter(c => !this.archivedConversations.has(String(c.tutor_id)));
+    } else if (this.studentChatTypeFilter === 'archived') {
+      convs = convs.filter(c => this.archivedConversations.has(String(c.tutor_id)));
+    }
 
-      if (!isMe) {
-        return `
-          <div class="inquiry-message-card incoming" id="student-msg-row-${m.id}">
-            <div class="inquiry-bubble-header">
-              <div class="inquiry-bubble-author">
-                <span class="inquiry-role-pill tutor">🧑‍🏫 Educator Response</span>
-                <strong class="inquiry-author-name">${this.escapeHtml(activeConv.name)}</strong>
+    if (this.studentTimeRangeFilter && this.studentTimeRangeFilter !== 'all') {
+      const now = Date.now();
+      convs = convs.filter(c => {
+        const msgTime = new Date(c.lastMessage?.created_at || 0).getTime();
+        const diffHours = (now - msgTime) / (1000 * 60 * 60);
+        if (this.studentTimeRangeFilter === 'today') return diffHours <= 24;
+        if (this.studentTimeRangeFilter === '7days') return diffHours <= 24 * 7;
+        if (this.studentTimeRangeFilter === '30days') return diffHours <= 24 * 30;
+        return true;
+      });
+    }
+
+    if (this.studentMessageFilter === 'unread') {
+      convs = convs.filter(c => c.unreadCount > 0);
+    }
+
+    const q = this.studentMessageSearchQuery;
+    if (q) {
+      convs = convs.filter(c => {
+        const tName = String(c.tutor_name || '').toLowerCase();
+        const tSubj = String(c.subject || '').toLowerCase();
+        const tPhone = String(c.tutor_phone || '').toLowerCase();
+        const hasMatchingMsg = c.messages.some(m => String(m.content || m.text || '').toLowerCase().includes(q));
+        return tName.includes(q) || tSubj.includes(q) || tPhone.includes(q) || hasMatchingMsg;
+      });
+    }
+
+    if (convs.length === 0) {
+      convListEl.innerHTML = `
+        <div style="text-align: center; padding: 2.5rem 1rem; color: var(--text-secondary);">
+          <div style="font-size: 1.5rem; margin-bottom: 0.4rem;">💬</div>
+          <div style="font-size: 0.85rem; font-weight: 600;">No chats found</div>
+        </div>
+      `;
+      return;
+    }
+
+    convListEl.innerHTML = convs.map(c => {
+      const tId = String(c.tutor_id);
+      const isActive = tId === this.activeTutorId;
+      const isUnread = c.unreadCount > 0;
+      const lastText = c.lastMessage ? (c.lastMessage.sender_role === 'student' ? 'You: ' + (c.lastMessage.content || c.lastMessage.text) : (c.lastMessage.content || c.lastMessage.text)) : 'Started a conversation';
+      const timeStr = c.lastMessage?.created_at ? new Date(c.lastMessage.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+      const dotBg = c.isOnline ? '#10B981' : '#9CA3AF';
+      const dotShadow = c.isOnline ? '0 0 0 2px var(--bg-card), 0 0 8px rgba(16, 185, 129, 0.6)' : '0 0 0 2px var(--bg-card)';
+      const dotTitle = c.isOnline ? 'Active now' : 'Offline';
+
+      return `
+        <div class="messenger-conv-item ${isActive ? 'active' : ''} ${isUnread ? 'unread' : ''}" onclick="Student.selectTutorConversation('${tId}')">
+          <div class="messenger-conv-avatar-wrap">
+            ${c.tutor_avatar ? `
+              <img src="${c.tutor_avatar}" alt="${this.escapeHtml(c.tutor_name)}" class="messenger-conv-avatar" />
+            ` : `
+              <div class="messenger-conv-avatar">
+                ${this.escapeHtml(c.tutor_name.charAt(0).toUpperCase())}
               </div>
-              <div class="inquiry-topic-tag">${this.escapeHtml(m.subject || (activeConv.subject ? 'Re: ' + activeConv.subject : 'Response'))}</div>
+            `}
+            <span class="messenger-status-dot ${c.isOnline ? 'online' : 'offline'}" style="background-color: ${dotBg}; box-shadow: ${dotShadow};" title="${dotTitle}"></span>
+          </div>
+
+          <div class="messenger-conv-details">
+            <div class="messenger-conv-name-row">
+              <span class="messenger-conv-name">${this.escapeHtml(c.tutor_name)}</span>
+              <span class="messenger-conv-time">${timeStr}</span>
             </div>
-            <div class="inquiry-bubble-content" id="student-msg-content-${m.id}">
-              ${this.formatMessageBody(m)}
-            </div>
-            <div class="messenger-bubble-footer">
-              <span>${timeStr}</span>
-              ${m.is_edited ? '<span class="messenger-edited-tag">(edited)</span>' : ''}
+            <div class="messenger-conv-snippet-row">
+              <span class="messenger-conv-snippet">${this.escapeHtml(lastText)}</span>
+              ${isUnread ? `<span class="messenger-conv-badge-pill">${c.unreadCount}</span>` : ''}
             </div>
           </div>
-        `;
-      } else {
-        return `
-          <div class="inquiry-message-card outgoing" id="student-msg-row-${m.id}">
-            <div class="inquiry-bubble-header">
-              <div class="inquiry-bubble-author">
-                <span class="inquiry-role-pill student">🎓 My Inquiry</span>
-                <strong class="inquiry-author-name">You</strong>
-              </div>
-              <div class="inquiry-topic-tag">${this.escapeHtml(m.subject || activeConv.subject || 'Student Inquiry')}</div>
-            </div>
-            <div class="inquiry-bubble-content" id="student-msg-content-${m.id}">
-              ${this.formatMessageBody(m)}
-            </div>
-            <div class="messenger-bubble-footer">
-              <span>${timeStr} ${statusHtml}</span>
-              ${m.is_edited ? '<span class="messenger-edited-tag">(edited)</span>' : ''}
-              ${m.content || m.text ? `
-                <button type="button" class="messenger-edit-btn" onclick="Student.startEditMessage('${m.id}')" title="Edit inquiry">
-                  ${Icons.edit(11)}
-                </button>
-              ` : ''}
-            </div>
-          </div>
-        `;
-      }
+        </div>
+      `;
     }).join('');
-
-    this.scrollStudentMessengerToBottom();
   },
 
   selectTutorConversation(tutorId) {
     this.activeTutorId = String(tutorId);
     API.markConversationRead(tutorId).catch(() => {});
     (this.studentMessages || []).forEach(m => {
-      if (m.tutor_user_id == tutorId || m.sender_id == tutorId) {
+      const id = String(m.tutor_user_id || m.sender_id);
+      if (id === this.activeTutorId) {
         m.is_read = 1;
         m.status = 'seen';
       }
     });
+
     this.renderStudentMessages();
     setTimeout(() => {
       this.scrollStudentMessengerToBottom();
-      const inp = document.getElementById('student-composer-input');
-      if (inp) inp.focus();
-    }, 80);
+      const input = document.getElementById('student-composer-input');
+      if (input) input.focus();
+    }, 100);
   },
 
   scrollStudentMessengerToBottom() {
@@ -2153,20 +2303,11 @@ const Student = {
   },
 
   renderStudentMessages() {
-    const listEl = document.getElementById('student-messenger-conv-list');
+    const convListEl = document.getElementById('student-messenger-conv-list');
     const mainEl = document.getElementById('student-messenger-main-pane');
-    if (!listEl || !mainEl) return;
+    const contactPaneEl = document.getElementById('student-messenger-contact-pane');
 
     let convs = this.getTutorConversations();
-    const q = this.studentMessageSearchQuery;
-    if (q) {
-      convs = convs.filter(c => {
-        const sName = String(c.name || '').toLowerCase();
-        const sSub = String(c.subject || '').toLowerCase();
-        const hasMsg = c.messages.some(m => String(m.content || '').toLowerCase().includes(q));
-        return sName.includes(q) || sSub.includes(q) || hasMsg;
-      });
-    }
 
     if (!this.activeTutorId && convs.length > 0) {
       this.activeTutorId = String(convs[0].tutor_id);
@@ -2175,193 +2316,13 @@ const Student = {
     }
 
     // 1. Render Left Sidebar
-    if (convs.length === 0) {
-      listEl.innerHTML = `
-        <div style="text-align: center; padding: 3rem 1rem; color: var(--text-secondary);">
-          <div style="color: var(--gold-600); margin-bottom: 0.5rem;">${Icons.message(30)}</div>
-          <h5 style="font-size: 0.95rem; font-weight: 700; color: var(--text-primary); margin: 0 0 0.35rem;">
-            ${q ? 'No Matching Chats' : 'No Conversations Yet'}
-          </h5>
-          <p style="font-size: 0.8rem; margin: 0 0 1rem;">
-            Connect 1-on-1 with verified academic mentors.
-          </p>
-          <a href="#tutors" class="btn btn-primary btn-xs">Browse Tutors</a>
-        </div>
-      `;
-    } else {
-      listEl.innerHTML = convs.map(c => {
-        const isActive = String(c.tutor_id) === this.activeTutorId;
-        const isUnread = c.unreadCount > 0;
-        const lastText = c.lastMessage ? (c.lastMessage.sender_role === 'student' ? 'You: ' + c.lastMessage.content : c.lastMessage.content) : 'Start a conversation';
-        const timeStr = c.lastMessage?.created_at ? new Date(c.lastMessage.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+    this.updateSidebarConversations();
 
-        return `
-          <div class="messenger-conv-item ${isActive ? 'active' : ''} ${isUnread ? 'unread' : ''}" onclick="Student.selectTutorConversation('${c.tutor_id}')">
-            <div class="messenger-conv-avatar-wrap">
-              <img src="${c.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80'}" alt="${this.escapeHtml(c.name)}" class="messenger-conv-avatar" />
-              <span class="messenger-status-dot" style="bottom: -2px; right: -2px; border-color: var(--bg-card);" title="Active now"></span>
-            </div>
-            <div class="messenger-conv-details">
-              <div class="messenger-conv-name-row">
-                <span class="messenger-conv-name">${this.escapeHtml(c.name)}</span>
-                <span class="messenger-conv-time">${timeStr}</span>
-              </div>
-              <div class="messenger-conv-snippet-row">
-                <span class="messenger-conv-snippet">${this.escapeHtml(lastText)}</span>
-                ${isUnread ? `<span class="messenger-conv-badge"></span>` : ''}
-              </div>
-            </div>
-          </div>
-        `;
-      }).join('');
-    }
-
-    // 2. Render Right Active Pane
+    // 2. Render Middle Active Conversation Pane
     this.renderStudentActiveConversation(mainEl);
-  },
 
-  pendingMessageAttachment: null,
-
-  formatFileSize(bytes) {
-    if (!bytes || isNaN(bytes)) return '';
-    const b = Number(bytes);
-    if (b < 1024) return b + ' B';
-    if (b < 1024 * 1024) return (b / 1024).toFixed(1) + ' KB';
-    return (b / (1024 * 1024)).toFixed(1) + ' MB';
-  },
-
-  formatMessageBody(m) {
-    let html = '';
-    const text = (m.content || m.text || '').trim();
-    if (text) {
-      let escaped = this.escapeHtml(text);
-      const urlRegex = /(https?:\/\/[^\s<]+[^<.,:;"')\]\s])/g;
-      escaped = escaped.replace(urlRegex, (url) => {
-        return `<a href="${url}" target="_blank" rel="noopener noreferrer" class="messenger-bubble-link">${url}</a>`;
-      });
-      escaped = escaped.replace(/\n/g, '<br>');
-      html += `<div class="messenger-bubble-text" id="student-msg-content-${m.id}">${escaped}</div>`;
-    } else {
-      html += `<div class="messenger-bubble-text" id="student-msg-content-${m.id}" style="display:none;"></div>`;
-    }
-
-    if (m.attachment_url) {
-      const isImg = (m.attachment_type && m.attachment_type.startsWith('image/')) ||
-                    /\.(png|jpe?g|gif|webp|svg|bmp)$/i.test(m.attachment_url) ||
-                    /\.(png|jpe?g|gif|webp|svg|bmp)$/i.test(m.attachment_name || '');
-      if (isImg) {
-        html += `
-          <div class="messenger-bubble-img-wrap">
-            <img src="${m.attachment_url}" alt="${this.escapeHtml(m.attachment_name || 'Photo')}" class="messenger-bubble-img" onclick="window.open('${m.attachment_url}', '_blank')" title="Click to view full image" />
-          </div>
-        `;
-      } else {
-        html += `
-          <a href="${m.attachment_url}" download="${this.escapeHtml(m.attachment_name || 'download')}" target="_blank" rel="noopener noreferrer" class="messenger-file-attachment" title="Click to download file">
-            <div class="messenger-file-icon">
-              ${Icons.file(20)}
-            </div>
-            <div class="messenger-file-details">
-              <span class="messenger-file-name">${this.escapeHtml(m.attachment_name || 'File Attachment')}</span>
-              <span class="messenger-file-size">${m.attachment_size ? this.formatFileSize(m.attachment_size) : 'Click to download'}</span>
-            </div>
-            <div class="messenger-file-download-icon">
-              ${Icons.externalLink(15)}
-            </div>
-          </a>
-        `;
-      }
-    }
-    return html;
-  },
-
-  triggerPictureUpload() {
-    const input = document.getElementById('student-messenger-pic-input');
-    if (input) input.click();
-  },
-
-  triggerFileUpload() {
-    const input = document.getElementById('student-messenger-doc-input');
-    if (input) input.click();
-  },
-
-  insertLinkPrompt() {
-    const url = prompt('Enter website link URL (e.g. https://...):', 'https://');
-    if (url && url.trim() && url.trim() !== 'https://') {
-      const input = document.getElementById('student-composer-input');
-      if (input) {
-        const val = input.value;
-        const prefix = val && !val.endsWith(' ') ? ' ' : '';
-        input.value = val + prefix + url.trim() + ' ';
-        input.focus();
-      }
-    }
-  },
-
-  async handleAttachmentUpload(inputEl, isImage) {
-    const file = inputEl.files && inputEl.files[0];
-    if (!file) return;
-
-    if (file.size > 25 * 1024 * 1024) {
-      showToast('File size exceeds the 25MB limit.', 'error');
-      inputEl.value = '';
-      return;
-    }
-
-    try {
-      showToast(`Uploading ${isImage ? 'picture' : 'file'}...`, 'info');
-      const formData = new FormData();
-      formData.append('file', file);
-
-      const res = await API.uploadMessageAttachment(formData);
-      if (res && res.fileUrl) {
-        this.pendingMessageAttachment = {
-          url: res.fileUrl,
-          name: res.fileName || file.name,
-          type: res.fileType || file.type,
-          size: res.fileSize || file.size
-        };
-        this.renderAttachmentPreview();
-        showToast(`${isImage ? 'Picture' : 'File'} ready to send.`, 'success');
-      }
-    } catch (err) {
-      showToast(err.message || 'Attachment upload failed.', 'error');
-    } finally {
-      inputEl.value = '';
-    }
-  },
-
-  renderAttachmentPreview() {
-    const previewEl = document.getElementById('student-composer-attachment-preview');
-    if (!previewEl) return;
-    if (!this.pendingMessageAttachment) {
-      previewEl.innerHTML = '';
-      previewEl.style.display = 'none';
-      return;
-    }
-
-    const att = this.pendingMessageAttachment;
-    const isImg = (att.type && att.type.startsWith('image/')) || /\.(png|jpe?g|gif|webp|svg|bmp)$/i.test(att.name);
-
-    previewEl.style.display = 'flex';
-    previewEl.className = 'messenger-attachment-preview';
-    previewEl.innerHTML = `
-      ${isImg ? `
-        <img src="${att.url}" alt="Preview" class="messenger-attachment-thumb" />
-      ` : `
-        <div class="messenger-attachment-icon-chip">${Icons.file(18)}</div>
-      `}
-      <div class="messenger-attachment-info">
-        <span class="messenger-attachment-name">${this.escapeHtml(att.name)}</span>
-        <span class="messenger-attachment-meta">${this.formatFileSize(att.size)} • Ready to send</span>
-      </div>
-      <button type="button" class="messenger-attachment-remove" onclick="Student.removeAttachment()" title="Remove attachment">✕</button>
-    `;
-  },
-
-  removeAttachment() {
-    this.pendingMessageAttachment = null;
-    this.renderAttachmentPreview();
+    // 3. Render Right Column Contact Info Pane
+    this.renderStudentContactInfo(contactPaneEl);
   },
 
   renderStudentActiveConversation(container) {
@@ -2388,147 +2349,56 @@ const Student = {
     const dotShadow = activeConv.isOnline ? '0 0 0 2px var(--bg-card), 0 0 8px rgba(16, 185, 129, 0.6)' : '0 0 0 2px var(--bg-card)';
     const statusText = activeConv.isOnline ? '● Active now' : '○ Offline';
     const statusColor = activeConv.isOnline ? '#059669' : '#6B7280';
-    const inquiryTopic = activeConv.subject || 'Calculus BC Mentorship';
 
     container.innerHTML = `
-      <!-- Active Header -->
+      <!-- Active Conversation Header Matching Reference -->
       <div class="messenger-active-header">
         <div class="messenger-active-contact">
           <div class="messenger-conv-avatar-wrap">
-            <img src="${activeConv.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80'}" alt="${this.escapeHtml(activeConv.name)}" class="messenger-header-avatar" />
+            ${activeConv.tutor_avatar ? `
+              <img src="${activeConv.tutor_avatar}" alt="${this.escapeHtml(activeConv.tutor_name)}" class="messenger-header-avatar" />
+            ` : `
+              <div class="messenger-header-avatar" style="display: flex; align-items: center; justify-content: center; background: rgba(198, 138, 40, 0.15); font-weight: 700; color: var(--gold-700);">
+                ${this.escapeHtml(activeConv.tutor_name.charAt(0).toUpperCase())}
+              </div>
+            `}
             <span class="messenger-status-dot ${activeConv.isOnline ? 'online' : 'offline'}" id="student-active-header-dot" style="background-color: ${dotBg}; box-shadow: ${dotShadow};" title="${activeConv.isOnline ? 'Active now' : 'Offline'}"></span>
           </div>
           <div>
-            <div style="display: flex; align-items: center; gap: 0.5rem;">
-              <h4 style="margin: 0; font-size: 1.05rem; font-weight: 700; color: var(--text-primary);">${this.escapeHtml(activeConv.name)}</h4>
-              <span class="messenger-active-role-tag">Tutor</span>
-            </div>
-            <div class="messenger-header-status">
-              <span class="messenger-status-indicator" id="student-active-header-status-text" style="color: ${statusColor}; font-weight: 600;">${statusText}</span>
-              <span class="messenger-status-sep">•</span>
-              <span style="color: var(--text-secondary);">${this.escapeHtml(activeConv.subject || 'Verified Academic Specialist')}</span>
+            <h4 style="margin: 0; font-size: 1.05rem; font-weight: 700; color: var(--text-primary); line-height: 1.2;">${this.escapeHtml(activeConv.tutor_name)}</h4>
+            <div style="display: flex; align-items: center; gap: 0.35rem; margin-top: 2px;">
+              <span style="font-size: 0.8rem; color: var(--text-secondary);">${this.escapeHtml(activeConv.tutor_phone || activeConv.tutor_headline || 'Educator')}</span>
+              <button type="button" class="messenger-header-copy-btn" onclick="Student.copyContactIdentifier('${this.escapeHtml(activeConv.tutor_phone || activeConv.tutor_name)}')" title="Copy identifier">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+              </button>
+              <span style="font-size: 0.74rem; color: ${statusColor}; font-weight: 600;" id="student-active-header-status-text">${statusText}</span>
             </div>
           </div>
         </div>
-        <div style="display: flex; align-items: center; gap: 0.5rem;">
-          <a href="#tutors" class="btn btn-outline-gold btn-sm" style="display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.35rem 0.75rem;">
-            Tutor Directory
-          </a>
+
+        <div style="display: flex; align-items: center; gap: 0.45rem;">
+          <button type="button" class="messenger-header-action-btn" title="Archive Chat" onclick="Student.archiveConversation('${activeConv.tutor_id}')">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path><line x1="12" y1="11" x2="12" y2="17"></line><line x1="9" y1="14" x2="15" y2="14"></line></svg>
+          </button>
+          <button type="button" class="messenger-header-action-btn" title="Clear Chat View" onclick="Student.clearConversation('${activeConv.tutor_id}')">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+          </button>
         </div>
       </div>
 
-      <!-- Inquiry Overview Card (Structured Academic Context) -->
-      <div class="inquiry-overview-card">
-        <div class="inquiry-overview-header">
-          <div class="inquiry-subject-pill">
-            <span class="inquiry-badge-icon">${Icons.book ? Icons.book(13) : '📖'}</span>
-            <span class="inquiry-badge-subject">${this.escapeHtml(inquiryTopic)}</span>
-          </div>
-          <div class="inquiry-status-badge ${activeConv.isOnline ? 'active' : 'needs-reply'}">
-            <span class="inquiry-status-pulse"></span>
-            <span>${activeConv.isOnline ? 'Educator Available Now' : 'Direct Inquiry Line'}</span>
-          </div>
+      <!-- Messages Stream (Matching Reference Image) -->
+      <div class="messenger-body" id="student-messages-stream" style="flex: 1; overflow-y: auto; padding: 1.25rem 1.5rem; display: flex; flex-direction: column; gap: 0.85rem;">
+        <div style="text-align: center; margin: 0.5rem 0 1rem;">
+          <span style="background: var(--bg-secondary, #F3F4F6); color: var(--text-secondary); font-size: 0.75rem; font-weight: 600; padding: 0.25rem 0.85rem; border-radius: 999px;">Today</span>
         </div>
 
-        <div class="inquiry-details-grid">
-          <div class="inquiry-meta-item">
-            <span class="inquiry-meta-label">Mentoring Educator</span>
-            <strong class="inquiry-meta-title">${this.escapeHtml(activeConv.name)}</strong>
-            <span class="inquiry-meta-sub">${this.escapeHtml(activeConv.headline || activeConv.institution || 'Verified Academic Faculty')}</span>
-          </div>
-          <div class="inquiry-meta-item">
-            <span class="inquiry-meta-label">Mentorship Subject</span>
-            <strong class="inquiry-meta-title">${this.escapeHtml(inquiryTopic)}</strong>
-            <span class="inquiry-meta-sub">Direct 1-on-1 Academic Tutoring</span>
-          </div>
-          <div class="inquiry-meta-item">
-            <span class="inquiry-meta-label">Real-Time Channel</span>
-            <strong class="inquiry-meta-title" style="color: ${activeConv.isOnline ? '#059669' : '#6B7280'};">
-              ${activeConv.isOnline ? '● Online Now' : '○ Offline'}
-            </strong>
-            <span class="inquiry-meta-sub">Fast inquiry response</span>
-          </div>
+        <div class="messenger-thread" id="student-messages-thread-container" style="display: flex; flex-direction: column; gap: 0.85rem;">
+          <!-- Dynamically populated -->
         </div>
       </div>
 
-      <!-- Messages Feed (All History Preserved, Inquiry-Structured) -->
-      <div class="messenger-body" id="student-messages-stream">
-        <div class="messenger-date-divider">
-          <span>Today</span>
-        </div>
-
-        <div class="messenger-thread">
-          ${activeConv.messages.length === 0 ? `
-            <div style="text-align: center; padding: 3rem 1rem; color: var(--text-secondary);">
-              <p style="font-size: 0.88rem; margin: 0 0 0.5rem;">Start an inquiry with <strong>${this.escapeHtml(activeConv.name)}</strong>!</p>
-              <span style="font-size: 0.8rem;">Ask about session prep, homework help, or study plans.</span>
-            </div>
-          ` : activeConv.messages.map(m => {
-            const isMe = m.sender_role === 'student' || m.sender === 'student';
-            const timeStr = m.created_at ? new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : (m.time || '');
-            const statusHtml = isMe ? (m.status === 'seen' || m.is_read === 1 ? '• Seen' : '• Delivered') : '';
-
-            if (!isMe) {
-              return `
-                <div class="inquiry-message-card incoming" id="student-msg-row-${m.id}">
-                  <div class="inquiry-bubble-header">
-                    <div class="inquiry-bubble-author">
-                      <span class="inquiry-role-pill tutor">🧑‍🏫 Educator Response</span>
-                      <strong class="inquiry-author-name">${this.escapeHtml(activeConv.name)}</strong>
-                    </div>
-                    <div class="inquiry-topic-tag">${this.escapeHtml(m.subject || (inquiryTopic ? 'Re: ' + inquiryTopic : 'Response'))}</div>
-                  </div>
-                  <div class="inquiry-bubble-content" id="student-msg-content-${m.id}">
-                    ${this.formatMessageBody(m)}
-                  </div>
-                  <div class="messenger-bubble-footer">
-                    <span>${timeStr}</span>
-                    ${m.is_edited ? '<span class="messenger-edited-tag">(edited)</span>' : ''}
-                  </div>
-                </div>
-              `;
-            } else {
-              return `
-                <div class="inquiry-message-card outgoing" id="student-msg-row-${m.id}">
-                  <div class="inquiry-bubble-header">
-                    <div class="inquiry-bubble-author">
-                      <span class="inquiry-role-pill student">🎓 My Inquiry</span>
-                      <strong class="inquiry-author-name">You</strong>
-                    </div>
-                    <div class="inquiry-topic-tag">${this.escapeHtml(m.subject || inquiryTopic)}</div>
-                  </div>
-                  <div class="inquiry-bubble-content" id="student-msg-content-${m.id}">
-                    ${this.formatMessageBody(m)}
-                  </div>
-                  <div class="messenger-bubble-footer">
-                    <span>${timeStr} ${statusHtml}</span>
-                    ${m.is_edited ? '<span class="messenger-edited-tag">(edited)</span>' : ''}
-                    ${m.content || m.text ? `
-                      <button type="button" class="messenger-edit-btn" onclick="Student.startEditMessage('${m.id}')" title="Edit inquiry">
-                        ${Icons.edit(11)}
-                      </button>
-                    ` : ''}
-                  </div>
-                </div>
-              `;
-            }
-          }).join('')}
-        </div>
-      </div>
-
-      <!-- Message Composer Bar with Inquiry Context Strip -->
-      <div class="messenger-footer">
-        <!-- Inquiry Context Strip -->
-        <div class="messenger-inquiry-context-strip">
-          <div class="messenger-inquiry-context-left">
-            <span class="inquiry-context-icon">${Icons.message(12)}</span>
-            <span>Inquiry Topic: <strong>${this.escapeHtml(inquiryTopic)}</strong></span>
-          </div>
-          <div class="messenger-inquiry-context-right">
-            <span class="inquiry-mode-indicator">● Real-Time Channel</span>
-          </div>
-        </div>
-
+      <!-- Composer Toolbar & Input Matching Reference Image -->
+      <div class="messenger-footer" style="padding: 0.65rem 1.25rem 1rem; border-top: 1px solid var(--border-color); background: var(--bg-card); display: flex; flex-direction: column; gap: 0.45rem;">
         <!-- Hidden file inputs -->
         <input type="file" id="student-messenger-pic-input" accept="image/*" style="display:none;" onchange="Student.handleAttachmentUpload(this, true)" />
         <input type="file" id="student-messenger-doc-input" accept="*/*" style="display:none;" onchange="Student.handleAttachmentUpload(this, false)" />
@@ -2536,40 +2406,47 @@ const Student = {
         <!-- Attachment Preview Pill -->
         <div id="student-composer-attachment-preview" style="display:none;"></div>
 
-        <!-- Composer Tools Toolbar (Picture, File, Link) -->
-        <div class="messenger-composer-toolbar">
-          <button type="button" class="messenger-tool-btn" onclick="Student.triggerPictureUpload()" title="Attach photo or picture">
-            ${Icons.image(15)}
-            <span>Picture</span>
+        <!-- Quick Template Dropdown & Emoji Picker Container -->
+        <div id="student-templates-dropdown" style="display: none;"></div>
+        <div id="student-emoji-dropdown" style="display: none;"></div>
+
+        <!-- Action Toolbar Matching Reference Image -->
+        <div class="messenger-composer-toolbar" style="display: flex; align-items: center; gap: 0.85rem; padding: 0; margin-bottom: 0.15rem;">
+          <button type="button" class="messenger-tool-btn" onclick="Student.triggerAttachmentChooser()" title="Attach file, photo or link">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
+            <span>Attach</span>
           </button>
-          <button type="button" class="messenger-tool-btn" onclick="Student.triggerFileUpload()" title="Attach file or document">
-            ${Icons.paperclip(15)}
-            <span>File</span>
+          <button type="button" class="messenger-tool-btn" onclick="Student.toggleEmojiMenu()" title="Add emoji">
+            😊
           </button>
-          <button type="button" class="messenger-tool-btn" onclick="Student.insertLinkPrompt()" title="Insert clickable web link">
-            ${Icons.link(15)}
-            <span>Link</span>
+          <button type="button" class="messenger-tool-btn" onclick="Student.toggleTemplatesMenu()" title="Quick message templates">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+            <span>Template</span>
+          </button>
+          <button type="button" class="messenger-tool-btn" onclick="Student.openCalendarShortcut()" title="Add event to calendar / Schedule">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+            <span>Add to calendar</span>
           </button>
         </div>
 
         <form class="messenger-composer-form" onsubmit="event.preventDefault(); Student.sendStudentMessage();">
-          <div class="messenger-input-wrap">
+          <div class="messenger-input-wrap" style="display: flex; align-items: center; gap: 0.65rem; background: var(--bg-secondary, #FAF8F5); border: 1px solid var(--border-color); border-radius: 24px; padding: 0.35rem 0.65rem 0.35rem 1.15rem;">
             <textarea 
               id="student-composer-input" 
               class="messenger-textarea" 
-              placeholder="Type your inquiry or message for ${this.escapeHtml(activeConv.name)}..." 
+              placeholder="Type a message or share photos, files, links with ${this.escapeHtml(activeConv.tutor_name)}..." 
               rows="1"
               onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault(); Student.sendStudentMessage();}"
             ></textarea>
-            <button type="submit" class="messenger-send-btn" id="student-send-msg-btn" title="Send Inquiry (Enter)">
-              <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
-              </svg>
+            <button type="submit" class="messenger-send-btn" id="student-send-msg-btn" title="Send (Enter)">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
             </button>
           </div>
         </form>
       </div>
     `;
+
+    this.renderThreadMessagesOnly(activeConv);
 
     setTimeout(() => {
       this.scrollStudentMessengerToBottom();
@@ -2577,45 +2454,478 @@ const Student = {
     }, 50);
   },
 
+  renderThreadMessagesOnly(activeConv) {
+    const threadEl = document.getElementById('student-messages-thread-container');
+    if (!threadEl) return;
+
+    threadEl.innerHTML = activeConv.messages.map(m => {
+      const isMe = m.sender_role === 'student';
+      const timeStr = m.created_at ? new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+      const statusHtml = isMe ? (m.status === 'seen' || m.is_read === 1 ? '• Seen' : '• Delivered') : '';
+
+      if (!isMe) {
+        return `
+          <div class="messenger-message incoming" id="student-msg-row-${m.id}" style="display: flex; align-items: flex-end; gap: 0.65rem; align-self: flex-start; max-width: 75%;">
+            ${activeConv.tutor_avatar ? `
+              <img src="${activeConv.tutor_avatar}" alt="${this.escapeHtml(activeConv.tutor_name)}" style="width: 30px; height: 30px; border-radius: 50%; object-fit: cover; flex-shrink: 0;" />
+            ` : `
+              <div style="width: 30px; height: 30px; border-radius: 50%; background: rgba(198, 138, 40, 0.15); color: var(--gold-700); font-weight: 700; font-size: 0.78rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                ${this.escapeHtml(activeConv.tutor_name.charAt(0).toUpperCase())}
+              </div>
+            `}
+            <div>
+              <div class="messenger-bubble" style="background: #F3F4F6; color: #1F2937; border-radius: 18px 18px 18px 4px; padding: 0.85rem 1.15rem; font-size: 0.92rem; line-height: 1.5; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);">
+                <div id="student-msg-content-${m.id}">${this.formatMessageBody(m)}</div>
+              </div>
+              <div style="margin-top: 0.25rem; font-size: 0.72rem; color: #9CA3AF; padding-left: 0.25rem;">
+                <span>${timeStr}</span>
+                ${m.is_edited ? '<span class="messenger-edited-tag">(edited)</span>' : ''}
+              </div>
+            </div>
+          </div>
+        `;
+      } else {
+        return `
+          <div class="messenger-message outgoing" id="student-msg-row-${m.id}" style="display: flex; flex-direction: column; align-items: flex-end; align-self: flex-end; max-width: 75%;">
+            <div class="messenger-bubble" style="background: #1D64F2; color: #FFFFFF; border-radius: 18px 18px 4px 18px; padding: 0.85rem 1.15rem; font-size: 0.92rem; line-height: 1.5; box-shadow: 0 4px 14px rgba(29, 100, 242, 0.22);">
+              <div id="student-msg-content-${m.id}" style="color: #FFFFFF;">${this.formatMessageBody(m)}</div>
+            </div>
+            <div style="margin-top: 0.25rem; font-size: 0.72rem; color: #9CA3AF; padding-right: 0.25rem; display: flex; align-items: center; gap: 0.35rem;">
+              <span>${timeStr}</span>
+              ${statusHtml ? `<span class="messenger-msg-status">${statusHtml}</span>` : ''}
+              ${m.is_edited ? '<span class="messenger-edited-tag">(edited)</span>' : ''}
+              ${m.content || m.text ? `
+                <button type="button" class="messenger-edit-btn" onclick="Student.startEditMessage('${m.id}')" title="Edit message">
+                  ${Icons.edit(11)}
+                </button>
+              ` : ''}
+            </div>
+          </div>
+        `;
+      }
+    }).join('');
+
+    this.scrollStudentMessengerToBottom();
+  },
+
+  renderStudentContactInfo(container) {
+    if (!container) container = document.getElementById('student-messenger-contact-pane');
+    if (!container) return;
+
+    const convs = this.getTutorConversations();
+    const activeConv = convs.find(c => String(c.tutor_id) === this.activeTutorId);
+
+    if (!activeConv) {
+      container.innerHTML = `
+        <div style="padding: 2.5rem 1.5rem; text-align: center; color: var(--text-secondary);">
+          <div style="font-size: 2rem; margin-bottom: 0.5rem;">👤</div>
+          <h5>No Educator Selected</h5>
+        </div>
+      `;
+      return;
+    }
+
+    container.innerHTML = `
+      <div class="contact-info-header">
+        <h4 class="contact-info-title">Contact Info</h4>
+      </div>
+
+      <div class="contact-info-hero">
+        ${activeConv.tutor_avatar ? `
+          <img src="${activeConv.tutor_avatar}" alt="${this.escapeHtml(activeConv.tutor_name)}" class="contact-info-avatar" />
+        ` : `
+          <div class="contact-info-avatar">
+            ${this.escapeHtml(activeConv.tutor_name.charAt(0).toUpperCase())}
+          </div>
+        `}
+        <h3 class="contact-info-name">${this.escapeHtml(activeConv.tutor_name)}</h3>
+        <button type="button" class="contact-info-action-btn" title="View Tutor Profile" onclick="window.location.hash='#tutors'">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+        </button>
+      </div>
+
+      <div class="contact-info-section">
+        <div class="contact-info-section-header">
+          <h5 class="contact-info-section-title">About</h5>
+          <button type="button" class="contact-info-edit-btn" onclick="Student.toggleEditContactInfo('${activeConv.tutor_id}')">
+            ✏️ Edit
+          </button>
+        </div>
+
+        <div class="contact-info-list" id="student-contact-info-fields">
+          <div class="contact-info-item">
+            <span class="contact-info-item-icon">👤</span>
+            <div class="contact-info-item-content">
+              <div class="contact-info-item-label">Name</div>
+              <div class="contact-info-item-val">${this.escapeHtml(activeConv.tutor_name)}</div>
+            </div>
+          </div>
+
+          <div class="contact-info-item">
+            <span class="contact-info-item-icon">🏢</span>
+            <div class="contact-info-item-content">
+              <div class="contact-info-item-label">Company / Institution</div>
+              <div class="contact-info-item-val">${this.escapeHtml(activeConv.tutor_institution || 'Stanford University')}</div>
+            </div>
+          </div>
+
+          <div class="contact-info-item">
+            <span class="contact-info-item-icon">📇</span>
+            <div class="contact-info-item-content">
+              <div class="contact-info-item-label">Contact list / Specialty</div>
+              <div class="contact-info-item-val">${this.escapeHtml(activeConv.tutor_subjects || activeConv.subject || 'Calculus BC')}</div>
+            </div>
+          </div>
+
+          <div class="contact-info-item">
+            <span class="contact-info-item-icon">📞</span>
+            <div class="contact-info-item-content">
+              <div class="contact-info-item-label">Phone</div>
+              <div class="contact-info-item-val">${this.escapeHtml(activeConv.tutor_phone || '+1 254-125-4446')}</div>
+            </div>
+          </div>
+
+          <div class="contact-info-item">
+            <span class="contact-info-item-icon">✉️</span>
+            <div class="contact-info-item-content">
+              <div class="contact-info-item-label">Rate & Verification</div>
+              <div class="contact-info-item-val">$${activeConv.tutor_rate || 45}/hr • Verified Educator</div>
+            </div>
+          </div>
+
+          <div class="contact-info-item">
+            <span class="contact-info-item-icon">📍</span>
+            <div class="contact-info-item-content">
+              <div class="contact-info-item-label">Country</div>
+              <div class="contact-info-item-val">${this.escapeHtml(activeConv.tutor_country || 'United States')}</div>
+            </div>
+          </div>
+        </div>
+
+        <div id="student-contact-edit-form" style="display: none; margin-top: 0.85rem; padding-top: 0.85rem; border-top: 1px dashed var(--border-color);">
+          <div style="font-size: 0.78rem; font-weight: 700; margin-bottom: 0.45rem;">Edit Contact Information</div>
+          <div style="display: flex; flex-direction: column; gap: 0.45rem;">
+            <input type="text" id="student-edit-phone" class="form-control" style="font-size: 0.8rem; padding: 0.35rem 0.6rem;" placeholder="Phone" value="${this.escapeHtml(activeConv.tutor_phone || '')}" />
+            <input type="text" id="student-edit-country" class="form-control" style="font-size: 0.8rem; padding: 0.35rem 0.6rem;" placeholder="Country" value="${this.escapeHtml(activeConv.tutor_country || '')}" />
+            <div style="display: flex; gap: 0.4rem; justify-content: flex-end; margin-top: 0.2rem;">
+              <button type="button" class="btn btn-secondary btn-xs" onclick="Student.toggleEditContactInfo('${activeConv.tutor_id}')">Cancel</button>
+              <button type="button" class="btn btn-primary btn-xs" onclick="Student.saveContactInfoEdit('${activeConv.tutor_id}')">Save</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="contact-info-section" style="border-bottom: none;">
+        <div class="contact-info-section-header">
+          <h5 class="contact-info-section-title">Notes</h5>
+        </div>
+
+        <div class="contact-notes-card">
+          <textarea id="student-contact-note-input" class="contact-notes-textarea" placeholder="Write a note..."></textarea>
+          <div class="contact-notes-toolbar">
+            <div class="contact-notes-tools">
+              <button type="button" class="contact-notes-tool-btn" onclick="Student.insertNoteSnippet('@')" title="Mention">@</button>
+              <button type="button" class="contact-notes-tool-btn" onclick="Student.insertNoteSnippet('📎 ')" title="Attach file note">📎</button>
+              <button type="button" class="contact-notes-tool-btn" onclick="Student.insertNoteSnippet('😊 ')" title="Emoji">😊</button>
+            </div>
+            <button type="button" class="contact-notes-save-btn" onclick="Student.saveContactNote('${activeConv.tutor_id}')" title="Save Note">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="contact-notes-list" id="student-contact-notes-list">
+          <div style="font-size: 0.78rem; color: var(--text-secondary); text-align: center; padding: 0.75rem 0;">Loading notes...</div>
+        </div>
+      </div>
+    `;
+
+    this.loadContactNotes(activeConv.tutor_id);
+  },
+
+  toggleEditContactInfo(key) {
+    const form = document.getElementById('student-contact-edit-form');
+    if (form) {
+      form.style.display = form.style.display === 'none' ? 'block' : 'none';
+    }
+  },
+
+  async saveContactInfoEdit(tutorId) {
+    const phoneInput = document.getElementById('student-edit-phone');
+    const countryInput = document.getElementById('student-edit-country');
+
+    const phone = phoneInput ? phoneInput.value.trim() : '';
+    const country = countryInput ? countryInput.value.trim() : '';
+
+    try {
+      await API.updateContactInfo(tutorId, { phone, country });
+      const conv = this.getTutorConversations().find(c => String(c.tutor_id) === String(tutorId));
+      if (conv) {
+        if (phone) conv.tutor_phone = phone;
+        if (country) conv.tutor_country = country;
+      }
+      showToast('Contact details updated.', 'success');
+      this.renderStudentContactInfo();
+    } catch (err) {
+      showToast('Failed to update contact info.', 'error');
+    }
+  },
+
+  insertNoteSnippet(snippet) {
+    const input = document.getElementById('student-contact-note-input');
+    if (input) {
+      input.value += snippet;
+      input.focus();
+    }
+  },
+
+  async loadContactNotes(contactId) {
+    const listEl = document.getElementById('student-contact-notes-list');
+    if (!listEl) return;
+    try {
+      const res = await API.getContactNotes(contactId);
+      const notes = res.notes || [];
+      if (notes.length === 0) {
+        listEl.innerHTML = `
+          <div style="font-size: 0.76rem; color: var(--text-secondary); text-align: center; padding: 0.5rem 0;">No notes added yet.</div>
+        `;
+        return;
+      }
+      listEl.innerHTML = notes.map(n => {
+        const timeStr = n.created_at ? new Date(n.created_at).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
+        return `
+          <div class="contact-note-item" id="student-note-item-${n.id}">
+            <div class="contact-note-text">${this.escapeHtml(n.note)}</div>
+            <div class="contact-note-meta-row">
+              <span>${timeStr}</span>
+              <button type="button" class="contact-note-del-btn" onclick="Student.deleteContactNote(${n.id}, '${contactId}')" title="Delete note">×</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    } catch (err) {
+      listEl.innerHTML = `<div style="font-size: 0.76rem; color: var(--text-secondary); text-align: center; padding: 0.5rem 0;">No notes available.</div>`;
+    }
+  },
+
+  async saveContactNote(contactId) {
+    const input = document.getElementById('student-contact-note-input');
+    const text = (input?.value || '').trim();
+    if (!text) {
+      showToast('Please type a note first.', 'warning');
+      return;
+    }
+    try {
+      await API.addContactNote(contactId, text);
+      input.value = '';
+      showToast('Note saved permanently.', 'success');
+      this.loadContactNotes(contactId);
+    } catch (err) {
+      showToast('Failed to save note.', 'error');
+    }
+  },
+
+  async deleteContactNote(noteId, contactId) {
+    try {
+      await API.deleteContactNote(noteId);
+      showToast('Note deleted.', 'info');
+      this.loadContactNotes(contactId);
+    } catch (err) {
+      showToast('Failed to delete note.', 'error');
+    }
+  },
+
   appendMessageToActiveThread(m) {
-    const threadEl = document.querySelector('#student-messages-stream .messenger-thread');
+    const threadEl = document.getElementById('student-messages-thread-container');
     if (!threadEl) {
       this.renderStudentMessages();
       return;
     }
 
-    const isMe = m.sender_role === 'student' || m.sender === 'student';
-    const timeStr = m.created_at ? new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : (m.time || '');
+    const isMe = m.sender_role === 'student';
+    const timeStr = m.created_at ? new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
     const statusHtml = isMe ? (m.status === 'seen' || m.is_read === 1 ? '• Seen' : '• Delivered') : '';
 
     const div = document.createElement('div');
-    div.className = `inquiry-message-card ${isMe ? 'outgoing' : 'incoming'}`;
+    div.className = `messenger-message ${isMe ? 'outgoing' : 'incoming'}`;
     div.id = `student-msg-row-${m.id}`;
 
-    div.innerHTML = `
-      <div class="inquiry-bubble-header">
-        <div class="inquiry-bubble-author">
-          <span class="inquiry-role-pill ${isMe ? 'student' : 'tutor'}">${isMe ? '🎓 My Inquiry' : '🧑‍🏫 Educator Response'}</span>
-          <strong class="inquiry-author-name">${isMe ? 'You' : 'Educator'}</strong>
+    if (isMe) {
+      div.style.cssText = 'display: flex; flex-direction: column; align-items: flex-end; align-self: flex-end; max-width: 75%;';
+      div.innerHTML = `
+        <div class="messenger-bubble" style="background: #1D64F2; color: #FFFFFF; border-radius: 18px 18px 4px 18px; padding: 0.85rem 1.15rem; font-size: 0.92rem; line-height: 1.5; box-shadow: 0 4px 14px rgba(29, 100, 242, 0.22);">
+          <div id="student-msg-content-${m.id}" style="color: #FFFFFF;">${this.formatMessageBody(m)}</div>
         </div>
-        <div class="inquiry-topic-tag">${this.escapeHtml(m.subject || (isMe ? 'Inquiry' : 'Response'))}</div>
-      </div>
-      <div class="inquiry-bubble-content" id="student-msg-content-${m.id}">
-        ${this.formatMessageBody(m)}
-      </div>
-      <div class="messenger-bubble-footer">
-        <span>${timeStr} ${statusHtml}</span>
-        ${m.is_edited ? '<span class="messenger-edited-tag">(edited)</span>' : ''}
-        ${isMe && (m.content || m.text) ? `
-          <button type="button" class="messenger-edit-btn" onclick="Student.startEditMessage('${m.id}')" title="Edit inquiry">
+        <div style="margin-top: 0.25rem; font-size: 0.72rem; color: #9CA3AF; padding-right: 0.25rem; display: flex; align-items: center; gap: 0.35rem;">
+          <span>${timeStr}</span>
+          ${statusHtml ? `<span class="messenger-msg-status">${statusHtml}</span>` : ''}
+          <button type="button" class="messenger-edit-btn" onclick="Student.startEditMessage('${m.id}')" title="Edit message">
             ${Icons.edit(11)}
           </button>
-        ` : ''}
-      </div>
-    `;
+        </div>
+      `;
+    } else {
+      div.style.cssText = 'display: flex; align-items: flex-end; gap: 0.65rem; align-self: flex-start; max-width: 75%;';
+      div.innerHTML = `
+        <div style="width: 30px; height: 30px; border-radius: 50%; background: rgba(198, 138, 40, 0.15); color: var(--gold-700); font-weight: 700; font-size: 0.78rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+          T
+        </div>
+        <div>
+          <div class="messenger-bubble" style="background: #F3F4F6; color: #1F2937; border-radius: 18px 18px 18px 4px; padding: 0.85rem 1.15rem; font-size: 0.92rem; line-height: 1.5; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);">
+            <div id="student-msg-content-${m.id}">${this.formatMessageBody(m)}</div>
+          </div>
+          <div style="margin-top: 0.25rem; font-size: 0.72rem; color: #9CA3AF; padding-left: 0.25rem;">
+            <span>${timeStr}</span>
+          </div>
+        </div>
+      `;
+    }
 
     threadEl.appendChild(div);
     this.scrollStudentMessengerToBottom();
+  },
+
+  formatFileSize(bytes) {
+    if (!bytes || isNaN(bytes)) return '';
+    const b = Number(bytes);
+    if (b < 1024) return b + ' B';
+    if (b < 1024 * 1024) return (b / 1024).toFixed(1) + ' KB';
+    return (b / (1024 * 1024)).toFixed(1) + ' MB';
+  },
+
+  formatMessageBody(m) {
+    let html = '';
+    const text = (m.content || m.text || '').trim();
+    if (text) {
+      let escaped = this.escapeHtml(text);
+      const urlRegex = /(https?:\/\/[^\s<]+[^<.,:;"')\]\s])/g;
+      escaped = escaped.replace(urlRegex, (url) => {
+        return `<a href="${url}" target="_blank" rel="noopener noreferrer" class="messenger-bubble-link">${url}</a>`;
+      });
+      escaped = escaped.replace(/\n/g, '<br>');
+      html += `<div class="messenger-bubble-text">${escaped}</div>`;
+    }
+
+    if (m.attachment_url) {
+      const isImg = (m.attachment_type && m.attachment_type.startsWith('image/')) ||
+                    /\.(png|jpe?g|gif|webp|svg|bmp)$/i.test(m.attachment_url) ||
+                    /\.(png|jpe?g|gif|webp|svg|bmp)$/i.test(m.attachment_name || '');
+      if (isImg) {
+        html += `
+          <div class="messenger-bubble-img-wrap">
+            <img src="${m.attachment_url}" alt="${this.escapeHtml(m.attachment_name || 'Photo')}" class="messenger-bubble-img" onclick="window.open('${m.attachment_url}', '_blank')" />
+          </div>
+        `;
+      } else {
+        html += `
+          <a href="${m.attachment_url}" target="_blank" download="${this.escapeHtml(m.attachment_name || 'attachment')}" class="messenger-file-attachment">
+            <span class="messenger-file-icon">📄</span>
+            <div class="messenger-file-details">
+              <span class="messenger-file-name">${this.escapeHtml(m.attachment_name || 'Download Attachment')}</span>
+              <span class="messenger-file-size">${this.formatFileSize(m.attachment_size)}</span>
+            </div>
+            <span class="messenger-file-download-icon">⬇</span>
+          </a>
+        `;
+      }
+    }
+    return html;
+  },
+
+  renderAttachmentPreview() {
+    const previewEl = document.getElementById('student-composer-attachment-preview');
+    if (!previewEl) return;
+    const att = this.pendingMessageAttachment;
+    if (!att) {
+      previewEl.style.display = 'none';
+      previewEl.innerHTML = '';
+      return;
+    }
+
+    const isImg = att.type && att.type.startsWith('image/');
+    previewEl.style.display = 'flex';
+    previewEl.innerHTML = `
+      <div class="messenger-attachment-preview">
+        ${isImg ? `
+          <img src="${att.url}" alt="${this.escapeHtml(att.name)}" class="messenger-attachment-thumb" />
+        ` : `
+          <span class="messenger-attachment-icon-chip">📎</span>
+        `}
+        <div class="messenger-attachment-info">
+          <span class="messenger-attachment-name">${this.escapeHtml(att.name)}</span>
+          <span class="messenger-attachment-meta">${this.formatFileSize(att.size)}</span>
+        </div>
+        <button type="button" class="messenger-attachment-remove" onclick="Student.removePendingAttachment()" title="Remove attachment">×</button>
+      </div>
+    `;
+  },
+
+  removePendingAttachment() {
+    this.pendingMessageAttachment = null;
+    this.renderAttachmentPreview();
+  },
+
+  triggerPictureUpload() {
+    const inp = document.getElementById('student-messenger-pic-input');
+    if (inp) {
+      inp.value = '';
+      inp.click();
+    }
+  },
+
+  triggerFileUpload() {
+    const inp = document.getElementById('student-messenger-doc-input');
+    if (inp) {
+      inp.value = '';
+      inp.click();
+    }
+  },
+
+  async handleAttachmentUpload(inputEl, isPic) {
+    if (!inputEl || !inputEl.files || inputEl.files.length === 0) return;
+    const file = inputEl.files[0];
+
+    if (file.size > 15 * 1024 * 1024) {
+      showToast('File exceeds 15MB size limit.', 'warning');
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      showToast('Uploading attachment...', 'info');
+      const res = await API.uploadMessageAttachment(formData);
+      if (res && res.url) {
+        this.pendingMessageAttachment = {
+          url: res.url,
+          name: res.name || file.name,
+          type: res.type || file.type,
+          size: res.size || file.size
+        };
+        this.renderAttachmentPreview();
+        showToast('Attachment ready to send.', 'success');
+      } else {
+        showToast('Upload did not return URL.', 'error');
+      }
+    } catch (err) {
+      showToast(err.message || 'Failed to upload attachment.', 'error');
+    }
+  },
+
+  insertLinkPrompt() {
+    const url = prompt('Enter the link / URL to share with your tutor (e.g. https://...):');
+    if (!url) return;
+    const cleanUrl = url.trim();
+    if (!cleanUrl) return;
+    const validUrl = /^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(cleanUrl) ? cleanUrl : 'https://' + cleanUrl;
+
+    const textarea = document.getElementById('student-composer-input');
+    if (textarea) {
+      const space = textarea.value.length > 0 && !textarea.value.endsWith(' ') ? ' ' : '';
+      textarea.value = textarea.value + space + validUrl + ' ';
+      textarea.focus();
+    }
   },
 
   async sendStudentMessage() {
@@ -2653,7 +2963,6 @@ const Student = {
       created_at: new Date().toISOString()
     };
 
-    // Immediately push to state and append to DOM thread - NO RELOAD, NO LOADING STATE
     this.studentMessages.push(tempMsg);
     this.appendMessageToActiveThread(tempMsg);
     this.updateSidebarConversations();
@@ -2672,9 +2981,7 @@ const Student = {
             attachment_type: attachment ? attachment.type : null,
             attachment_size: attachment ? attachment.size : null
           });
-        } catch (e) {
-          // Fallback to legacy endpoint
-        }
+        } catch (e) {}
       }
       if (!res) {
         res = await API.sendMessageToTutor(activeConv.tutor_id, {

@@ -2818,17 +2818,44 @@
           </a>
         </div>
 
-        <!-- Messenger 2-Column Interface for Student -->
+        <!-- Messenger 3-Column Interface for Student -->
         <div class="messenger-hub" id="student-messenger-hub">
-          <!-- Left Sidebar: Educators List -->
+          <!-- Column 1: Left Sidebar: Chats List -->
           <div class="messenger-hub-sidebar">
             <div class="messenger-sidebar-header">
               <div class="messenger-sidebar-title-row">
-                <h3 class="messenger-sidebar-title">Mentorship Inquiries</h3>
+                <h3 class="messenger-sidebar-title">Chats</h3>
+                <button type="button" class="messenger-sidebar-icon-btn" onclick="Student.toggleSidebarSearch()" title="Search chats">
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                </button>
               </div>
-              <div class="messenger-search-wrap">
+
+              <!-- Filter Controls Matching Reference: All chat dropdown, Last 7days dropdown, Unread tab -->
+              <div class="messenger-sub-filters">
+                <div class="messenger-select-pill-wrap">
+                  <select id="student-msg-chat-type" class="messenger-select-pill" onchange="Student.filterChatType(this.value)">
+                    <option value="all">📁 All chat</option>
+                    <option value="active">Active</option>
+                    <option value="archived">Archived</option>
+                  </select>
+                </div>
+                <div class="messenger-select-pill-wrap">
+                  <select id="student-msg-time-filter" class="messenger-select-pill" onchange="Student.filterTimeRange(this.value)">
+                    <option value="all">All time</option>
+                    <option value="7days" selected>Last 7days</option>
+                    <option value="today">Today</option>
+                    <option value="30days">Last 30days</option>
+                  </select>
+                </div>
+                <button type="button" class="messenger-filter-pill student-msg-filter-btn" id="student-unread-filter-btn" data-filter="unread" onclick="Student.toggleFilterUnread(this)">
+                  Unread
+                </button>
+              </div>
+
+              <!-- Search Input -->
+              <div class="messenger-search-wrap" id="student-messenger-search-wrap">
                 <span class="messenger-search-icon">🔍</span>
-                <input type="text" id="student-messages-search-input" class="messenger-search-input" placeholder="Search inquiries by tutor name or topic..." oninput="Student.searchMessages(this.value)" />
+                <input type="text" id="student-messages-search-input" class="messenger-search-input" placeholder="Search chats by name or message..." oninput="Student.searchMessages(this.value)" />
               </div>
             </div>
 
@@ -2838,9 +2865,14 @@
             </div>
           </div>
 
-          <!-- Right Column: Active Conversation Thread -->
+          <!-- Column 2: Middle Chat Area -->
           <div class="messenger-hub-main" id="student-messenger-main-pane">
             <!-- Dynamically populated via Student.renderStudentActiveConversation() -->
+          </div>
+
+          <!-- Column 3: Contact Info (Right Sidebar) -->
+          <div class="messenger-hub-contact-info" id="student-messenger-contact-pane">
+            <!-- Dynamically populated via Student.renderStudentContactInfo() -->
           </div>
         </div>
 
@@ -4008,22 +4040,44 @@
           <span class="badge-accent" id="teacher-messages-page-count-badge">0 Messages</span>
         </div>
 
-        <!-- Messenger 2-Column Interface (Facebook Messenger Style) -->
+        <!-- Messenger 3-Column Interface (Reference CRM / Modern Messenger Layout) -->
         <div class="messenger-hub" id="teacher-messenger-hub">
-          <!-- Left Sidebar: Conversations List -->
+          <!-- Column 1: Left Sidebar: Chats List -->
           <div class="messenger-hub-sidebar">
             <div class="messenger-sidebar-header">
               <div class="messenger-sidebar-title-row">
-                <h3 class="messenger-sidebar-title">Student Inquiries</h3>
+                <h3 class="messenger-sidebar-title">Chats</h3>
+                <button type="button" class="messenger-sidebar-icon-btn" onclick="Teacher.toggleSidebarSearch()" title="Search chats">
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                </button>
               </div>
-              <div class="messenger-search-wrap">
+
+              <!-- Filter Controls Matching Reference: All chat dropdown, Last 7days dropdown, Unread tab -->
+              <div class="messenger-sub-filters">
+                <div class="messenger-select-pill-wrap">
+                  <select id="teacher-msg-chat-type" class="messenger-select-pill" onchange="Teacher.filterChatType(this.value)">
+                    <option value="all">📁 All chat</option>
+                    <option value="active">Active</option>
+                    <option value="archived">Archived</option>
+                  </select>
+                </div>
+                <div class="messenger-select-pill-wrap">
+                  <select id="teacher-msg-time-filter" class="messenger-select-pill" onchange="Teacher.filterTimeRange(this.value)">
+                    <option value="all">All time</option>
+                    <option value="7days" selected>Last 7days</option>
+                    <option value="today">Today</option>
+                    <option value="30days">Last 30days</option>
+                  </select>
+                </div>
+                <button type="button" class="messenger-filter-pill teacher-msg-filter-btn" id="teacher-unread-filter-btn" data-filter="unread" onclick="Teacher.toggleFilterUnread(this)">
+                  Unread
+                </button>
+              </div>
+
+              <!-- Search Input (Expandable) -->
+              <div class="messenger-search-wrap" id="teacher-messenger-search-wrap">
                 <span class="messenger-search-icon">🔍</span>
-                <input type="text" id="teacher-messages-search-input" class="messenger-search-input" placeholder="Search inquiries by student or topic..." oninput="Teacher.searchMessages(this.value)" />
-              </div>
-              <div class="messenger-filter-tabs">
-                <button type="button" class="messenger-filter-pill teacher-msg-filter-btn active" data-filter="all" onclick="Teacher.filterMessages('all', this)">All Inquiries</button>
-                <button type="button" class="messenger-filter-pill teacher-msg-filter-btn" data-filter="unread" onclick="Teacher.filterMessages('unread', this)">Unread</button>
-                <button type="button" class="messenger-filter-pill teacher-msg-filter-btn" data-filter="seen" onclick="Teacher.filterMessages('seen', this)">Seen</button>
+                <input type="text" id="teacher-messages-search-input" class="messenger-search-input" placeholder="Search chats by name or message..." oninput="Teacher.searchMessages(this.value)" />
               </div>
             </div>
 
@@ -4033,9 +4087,14 @@
             </div>
           </div>
 
-          <!-- Right Column: Active Conversation Pane -->
+          <!-- Column 2: Middle Chat Area -->
           <div class="messenger-hub-main" id="teacher-messenger-main-pane">
             <!-- Dynamically populated via Teacher.renderTeacherActiveConversation() -->
+          </div>
+
+          <!-- Column 3: Contact Info (Right Sidebar) -->
+          <div class="messenger-hub-contact-info" id="teacher-messenger-contact-pane">
+            <!-- Dynamically populated via Teacher.renderTeacherContactInfo() -->
           </div>
         </div>
 

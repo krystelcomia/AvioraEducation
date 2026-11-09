@@ -746,6 +746,19 @@
   margin-bottom: 0.35rem;
 }
 
+.btn-request-withdrawal {
+  background: var(--gold-500);
+  color: #FFFFFF;
+  border: 1px solid var(--gold-600);
+  font-weight: 700;
+  transition: all var(--transition-fast);
+}
+
+.btn-request-withdrawal:hover:not(:disabled) {
+  background: var(--gold-600);
+  transform: translateY(-1px);
+}
+
 /* Virtual Classes Cards Grid */
 .teacher-classes-grid {
   display: grid;

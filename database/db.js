@@ -343,8 +343,22 @@ function initSchema() {
       UNIQUE(tutor_id, date, day_of_week)
     );
 
+    CREATE TABLE IF NOT EXISTS tutor_payout_requests (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      tutor_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      amount REAL NOT NULL,
+      gross_amount REAL DEFAULT 0,
+      commission_cut REAL DEFAULT 0,
+      status TEXT DEFAULT 'pending' CHECK(status IN ('pending', 'approved', 'disbursed', 'rejected')),
+      month_key TEXT,
+      notes TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
     -- Enforce case-insensitive uniqueness and relational indexes across the entire system
     CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email_nocase ON users(email COLLATE NOCASE);
+    CREATE INDEX IF NOT EXISTS idx_tutor_payout_requests_tutor ON tutor_payout_requests(tutor_id);
     CREATE INDEX IF NOT EXISTS idx_student_profiles_user_id ON student_profiles(user_id);
     CREATE INDEX IF NOT EXISTS idx_tutor_profiles_user_id ON tutor_profiles(user_id);
     CREATE INDEX IF NOT EXISTS idx_teacher_applications_user_id ON teacher_applications(user_id);
@@ -409,6 +423,23 @@ function initSchema() {
         db.prepare("ALTER TABLE users ADD COLUMN last_active_at DATETIME").run();
       }
     }
+  } catch (e) {}
+  try {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS tutor_payout_requests (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        tutor_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        amount REAL NOT NULL,
+        gross_amount REAL DEFAULT 0,
+        commission_cut REAL DEFAULT 0,
+        status TEXT DEFAULT 'pending' CHECK(status IN ('pending', 'approved', 'disbursed', 'rejected')),
+        month_key TEXT,
+        notes TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      );
+      CREATE INDEX IF NOT EXISTS idx_tutor_payout_requests_tutor ON tutor_payout_requests(tutor_id);
+    `);
   } catch (e) {}
   try {
     const msgCols = db.prepare("PRAGMA table_info(messages)").all();

@@ -167,6 +167,7 @@ const API = {
   detectDocument: (formData) => apiRequest('/teacher/detect-document', { method: 'POST', body: formData }),
   submitTeacherApplication: (formData) => apiRequest('/teacher/apply', { method: 'POST', body: formData }),
   getTeacherDashboard: () => apiRequest('/teacher/dashboard'),
+  requestTeacherPayout: (body = {}) => apiRequest('/teacher/payout/request', { method: 'POST', body }),
   updateRequestStatus: (id, body) => apiRequest(`/teacher/requests/${id}/status`, { method: 'POST', body }),
   getTeacherClasses: () => apiRequest('/teacher/classes'),
   getClassRecord: (id) => apiRequest(`/teacher/classes/${id}/record`),

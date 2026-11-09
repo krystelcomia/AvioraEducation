@@ -5183,9 +5183,23 @@ app.get('/api/teacher/dashboard', authenticateToken, requireRole('teacher'), (re
 
     const completed = requests.filter(r => r.status === 'completed');
     const grossRevenue = completed.reduce((sum, r) => sum + r.total_amount, 0);
-    const platformCommissionRate = 0.15; // 15% platform cut for company
+    const platformCommissionRate = 0.30; // 30% platform cut for company
     const platformCommissionAmount = Math.round(grossRevenue * platformCommissionRate * 100) / 100;
     const netEarnings = Math.round((grossRevenue - platformCommissionAmount) * 100) / 100;
+
+    // Check existing payout request status
+    let latestPayout = null;
+    try {
+      latestPayout = db.prepare(`
+        SELECT * FROM tutor_payout_requests 
+        WHERE tutor_id = ? 
+        ORDER BY created_at DESC 
+        LIMIT 1
+      `).get(teacherId);
+    } catch (e) {}
+
+    const hasPendingPayout = latestPayout ? latestPayout.status === 'pending' : false;
+    const payoutStatus = latestPayout ? latestPayout.status : 'unrequested';
 
     // Current month calculations
     const now = new Date();
@@ -5223,10 +5237,10 @@ app.get('/api/teacher/dashboard', authenticateToken, requireRole('teacher'), (re
         students_count: m.students_set.size,
         sessions_count: m.sessions_count,
         gross_amount: gross,
-        commission_rate: 15,
+        commission_rate: 30,
         commission_cut: commission,
         net_payout: net,
-        status: isPastMonth ? 'Disbursed' : 'Pending Settlement'
+        status: hasPendingPayout ? 'Payout Requested' : (isPastMonth ? 'Disbursed' : 'Pending Settlement')
       };
     }).sort((a, b) => b.month_key.localeCompare(a.month_key));
 
@@ -5255,8 +5269,12 @@ app.get('/api/teacher/dashboard', authenticateToken, requireRole('teacher'), (re
       const net = Math.round((gross - commission) * 100) / 100;
       return {
         ...s,
+        completed_sessions: s.sessions_count,
+        sessions_count: s.sessions_count,
         gross_amount: gross,
+        platform_cut: commission,
         commission_cut: commission,
+        tutor_net: net,
         net_tutor_share: net
       };
     });
@@ -5274,12 +5292,15 @@ app.get('/api/teacher/dashboard', authenticateToken, requireRole('teacher'), (re
       completed_sessions: completed.length,
       total_hours: totalHours,
       gross_revenue_students: grossRevenue,
-      platform_commission_rate: 15,
+      platform_commission_rate: 30,
       platform_commission_amount: platformCommissionAmount,
       net_earnings_tutor: netEarnings,
       current_month_gross: currentMonthGross,
       current_month_commission: currentMonthCommission,
       current_month_net: currentMonthNet,
+      payout_status: payoutStatus,
+      has_pending_payout: hasPendingPayout,
+      latest_payout_amount: latestPayout ? latestPayout.amount : 0,
       rating: tutorProfile ? tutorProfile.rating : 5.0,
       reviews_count: tutorProfile ? tutorProfile.reviews_count : 0,
       pending_tasks_count: pendingTasks ? pendingTasks.count : 0
@@ -5289,6 +5310,94 @@ app.get('/api/teacher/dashboard', authenticateToken, requireRole('teacher'), (re
   } catch (error) {
     console.error('Teacher dashboard error:', error);
     res.status(500).json({ error: 'Failed to retrieve teacher dashboard data.' });
+  }
+});
+
+// Request tutor salary withdrawal / payout
+app.post('/api/teacher/payout/request', requireRole('teacher'), (req, res) => {
+  try {
+    const teacherId = req.user.id;
+
+    // Check tutor's completed tutoring sessions
+    const completed = db.prepare(`
+      SELECT total_amount, duration_hours 
+      FROM tutoring_requests 
+      WHERE tutor_id = ? AND status = 'completed'
+    `).all(teacherId);
+
+    const grossRevenue = completed.reduce((sum, r) => sum + r.total_amount, 0);
+    const platformCommissionRate = 0.30; // 30% company commission cut
+    const platformCommissionAmount = Math.round(grossRevenue * platformCommissionRate * 100) / 100;
+    const netEarnings = Math.round((grossRevenue - platformCommissionAmount) * 100) / 100;
+
+    if (netEarnings <= 0) {
+      return res.status(400).json({ error: 'No completed session earnings available to withdraw.' });
+    }
+
+    // Check if there is already a pending payout request
+    const existingPending = db.prepare(`
+      SELECT * FROM tutor_payout_requests 
+      WHERE tutor_id = ? AND status = 'pending'
+      ORDER BY created_at DESC LIMIT 1
+    `).get(teacherId);
+
+    if (existingPending) {
+      return res.json({
+        success: true,
+        message: `A withdrawal request for $${existingPending.amount.toFixed(2)} is already pending administrator processing.`,
+        payoutRequest: existingPending
+      });
+    }
+
+    const now = new Date();
+    const currentMonthPrefix = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+    const insertStmt = db.prepare(`
+      INSERT INTO tutor_payout_requests (tutor_id, amount, gross_amount, commission_cut, status, month_key, notes)
+      VALUES (?, ?, ?, ?, 'pending', ?, ?)
+    `);
+    const insertRes = insertStmt.run(
+      teacherId,
+      netEarnings,
+      grossRevenue,
+      platformCommissionAmount,
+      currentMonthPrefix,
+      `Salary withdrawal requested by tutor ${req.user.name}`
+    );
+
+    const payoutId = insertRes.lastInsertRowid;
+
+    // Trigger notification to all administrators
+    const admins = db.prepare("SELECT id FROM users WHERE role = 'admin'").all();
+    for (const admin of admins) {
+      sendNotification(
+        admin.id,
+        'New Salary Withdrawal Request',
+        `Tutor ${req.user.name} has submitted a salary withdrawal request for $${netEarnings.toFixed(2)} (70% net payout after 30% company commission).`,
+        'payment',
+        '/#admin'
+      );
+    }
+
+    // Confirmation notification to the requesting tutor
+    sendNotification(
+      teacherId,
+      'Salary Withdrawal Request Submitted',
+      `Your request to withdraw $${netEarnings.toFixed(2)} (70% net earnings) has been submitted. The administrator has been notified.`,
+      'payment',
+      '#teacher-dashboard'
+    );
+
+    res.json({
+      success: true,
+      message: `Withdrawal request for $${netEarnings.toFixed(2)} submitted successfully! Administrator has been notified.`,
+      payoutId,
+      amount: netEarnings,
+      status: 'pending'
+    });
+  } catch (error) {
+    console.error('Error requesting teacher payout:', error);
+    res.status(500).json({ error: 'Failed to process salary withdrawal request.' });
   }
 });
 

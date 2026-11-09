@@ -2,7 +2,7 @@
  * AVIORA EDUCATION - TUTOR PROFILE, ACCOUNT & TEACHING WORKSPACE
  * Features:
  *  - Header & Tab Navigation: Dashboard, Class, Students, Schedule, Profile & Rates
- *  - Financial Dashboard: Gross Student Revenue, Aviora 15% Commission Cut, Net Take-Home Earnings, Monthly Ledger
+ *  - Financial Dashboard: Gross Student Revenue, Aviora 30% Commission Cut, Net Take-Home Earnings, Monthly Ledger
  *  - Virtual Classes: Room status, Launch Virtual Session (alerts student, opens WebRTC classroom)
  *  - Students Management: Respective subjects roster, Assign Coursework Tasks, Grade Submissions with Feedback
  *  - Schedule & Availability: Weekly timetable calendar with interactive Occupied / Available slot toggling
@@ -877,15 +877,46 @@ const Teacher = {
       const grossVal = stats.gross_revenue_students || 0;
       if (grossEl) grossEl.textContent = `$${grossVal.toFixed(2)}`;
 
-      // 2. Aviora Platform Commission / Cut (15%)
+      // 2. Aviora Platform Commission / Cut (30%)
       const cutEl = document.getElementById('teacher-stat-commission-cut');
-      const cutVal = stats.platform_commission_amount || (grossVal * 0.15);
+      const cutVal = stats.platform_commission_amount != null ? stats.platform_commission_amount : (grossVal * 0.30);
       if (cutEl) cutEl.textContent = `$${cutVal.toFixed(2)}`;
 
-      // 3. Net Tutor Take-Home Earnings (85%)
+      // 3. Net Tutor Take-Home Earnings (70%)
       const netEl = document.getElementById('teacher-stat-net-earnings');
-      const netVal = stats.net_earnings_tutor || (grossVal * 0.85);
+      const netVal = stats.net_earnings_tutor != null ? stats.net_earnings_tutor : (grossVal * 0.70);
       if (netEl) netEl.textContent = `$${netVal.toFixed(2)}`;
+
+      // Update Request Withdrawal button state next to salary amount
+      const requestBtn = document.getElementById('btn-request-payout-dashboard');
+      if (requestBtn) {
+        if (stats.has_pending_payout) {
+          requestBtn.disabled = true;
+          requestBtn.innerHTML = `${Icons.check(13)} Requested`;
+          requestBtn.style.background = 'rgba(16, 185, 129, 0.15)';
+          requestBtn.style.color = '#10B981';
+          requestBtn.style.borderColor = 'rgba(16, 185, 129, 0.3)';
+          requestBtn.style.boxShadow = 'none';
+          requestBtn.style.cursor = 'default';
+          requestBtn.title = 'Withdrawal request submitted, pending administrator review';
+        } else if (netVal <= 0) {
+          requestBtn.disabled = true;
+          requestBtn.innerHTML = `Request`;
+          requestBtn.style.opacity = '0.5';
+          requestBtn.style.cursor = 'not-allowed';
+          requestBtn.title = 'No earnings available to withdraw yet';
+        } else {
+          requestBtn.disabled = false;
+          requestBtn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right: 0.25rem;"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>Request`;
+          requestBtn.style.opacity = '1';
+          requestBtn.style.cursor = 'pointer';
+          requestBtn.style.background = '';
+          requestBtn.style.color = '';
+          requestBtn.style.borderColor = '';
+          requestBtn.style.boxShadow = '0 2px 6px rgba(198, 138, 40, 0.25)';
+          requestBtn.title = `Request salary withdrawal of $${netVal.toFixed(2)}`;
+        }
+      }
 
       // 4. Current Month Net Payout & Sessions
       const monthNetEl = document.getElementById('teacher-stat-month-net');
@@ -911,6 +942,56 @@ const Teacher = {
     }
   },
 
+  async requestSalaryPayout() {
+    try {
+      const stats = this.dashboardData?.stats || {};
+      const netVal = stats.net_earnings_tutor != null ? stats.net_earnings_tutor : ((stats.gross_revenue_students || 0) * 0.70);
+
+      if (stats.has_pending_payout) {
+        showToast('A salary withdrawal request is already pending administrator processing.', 'info');
+        return;
+      }
+
+      if (netVal <= 0) {
+        showToast('No earnings available for withdrawal at this time.', 'info');
+        return;
+      }
+
+      const confirmed = confirm(`Submit a salary withdrawal request for $${netVal.toFixed(2)} (70% net tutor share after 30% company commission)?\n\nThis will immediately notify the administrator to review and process your payout.`);
+      if (!confirmed) return;
+
+      const btn = document.getElementById('btn-request-payout-dashboard');
+      if (btn) {
+        btn.disabled = true;
+        btn.textContent = 'Submitting...';
+      }
+
+      const res = await API.requestTeacherPayout({ amount: netVal });
+
+      if (res && res.success) {
+        showToast(res.message || 'Withdrawal request submitted! Administrator has been notified.', 'success');
+        if (typeof NotificationsUI !== 'undefined' && NotificationsUI.fetchRealtimeUpdates) {
+          NotificationsUI.fetchRealtimeUpdates();
+        }
+        await this.loadTeacherDashboard();
+      } else {
+        showToast(res?.error || 'Failed to submit withdrawal request. Please try again.', 'error');
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right: 0.25rem;"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>Request`;
+        }
+      }
+    } catch (err) {
+      console.error('Request salary payout error:', err);
+      showToast(err.message || 'Failed to submit withdrawal request.', 'error');
+      const btn = document.getElementById('btn-request-payout-dashboard');
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right: 0.25rem;"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>Request`;
+      }
+    }
+  },
+
   renderMonthlyFinancials(monthlyList) {
     const tbody = document.getElementById('teacher-monthly-financials-tbody');
     if (!tbody) return;
@@ -926,34 +1007,59 @@ const Teacher = {
       return;
     }
 
-    tbody.innerHTML = monthlyList.map(m => `
-      <tr>
-        <td>
-          <strong style="color: var(--text-primary); font-size: 0.95rem;">${m.month_label}</strong>
-        </td>
-        <td style="color: var(--text-secondary);">
-          ${m.students_count} active student${m.students_count === 1 ? '' : 's'}
-        </td>
-        <td>
-          <span class="badge-gold">${m.sessions_count} lesson${m.sessions_count === 1 ? '' : 's'}</span>
-        </td>
-        <td>
-          <strong style="color: var(--gold-400); font-weight: 700;">$${Number(m.gross_amount || 0).toFixed(2)}</strong>
-        </td>
-        <td>
-          <span style="color: #EF4444; font-weight: 600;">-$${Number(m.commission_cut || 0).toFixed(2)}</span>
-          <span style="font-size: 0.75rem; color: var(--text-secondary); margin-left: 0.2rem;">(15%)</span>
-        </td>
-        <td>
-          <strong style="color: #10B981; font-size: 1rem; font-weight: 800;">$${Number(m.net_payout || 0).toFixed(2)}</strong>
-        </td>
-        <td style="text-align: right;">
-          <span class="status-pill ${m.status === 'Paid Out' ? 'accepted' : 'pending'}" style="font-size: 0.775rem;">
-            ${m.status || 'Pending Settlement'}
-          </span>
-        </td>
-      </tr>
-    `).join('');
+    const hasPendingPayout = this.dashboardData?.stats?.has_pending_payout || false;
+
+    tbody.innerHTML = monthlyList.map(m => {
+      const gross = Number(m.gross_amount || 0);
+      const commission = Number(m.commission_cut || (gross * 0.30));
+      const net = Number(m.net_payout || (gross - commission));
+      const isRequested = hasPendingPayout || m.status === 'Payout Requested' || m.status === 'Pending Admin Review';
+      const isDisbursed = m.status === 'Disbursed' || m.status === 'Paid Out';
+
+      return `
+        <tr>
+          <td>
+            <div style="display: flex; align-items: center; gap: 0.45rem;">
+              <span style="color: var(--gold-400);">${Icons.calendar(15)}</span>
+              <strong style="color: var(--text-primary); font-size: 0.95rem;">${m.month_label}</strong>
+            </div>
+          </td>
+          <td style="color: var(--text-secondary);">
+            ${m.students_count} active student${m.students_count === 1 ? '' : 's'}
+          </td>
+          <td>
+            <span class="badge-gold" style="font-size: 0.78rem; font-weight: 600;">${m.sessions_count} lesson${m.sessions_count === 1 ? '' : 's'}</span>
+          </td>
+          <td>
+            <strong style="color: var(--gold-400); font-weight: 700; font-size: 0.95rem;">$${gross.toFixed(2)}</strong>
+          </td>
+          <td>
+            <span style="color: #EF4444; font-weight: 600;">-$${commission.toFixed(2)}</span>
+            <span style="font-size: 0.75rem; color: #EF4444; opacity: 0.85; margin-left: 0.2rem;">(30%)</span>
+          </td>
+          <td>
+            <strong style="color: #10B981; font-size: 1rem; font-weight: 800;">$${net.toFixed(2)}</strong>
+            <span style="font-size: 0.75rem; color: #10B981; opacity: 0.85; margin-left: 0.2rem;">(70%)</span>
+          </td>
+          <td style="text-align: right;">
+            <div style="display: flex; align-items: center; justify-content: flex-end; gap: 0.5rem;">
+              ${isDisbursed ? `
+                <span class="status-pill accepted" style="font-size: 0.775rem;">Disbursed</span>
+              ` : isRequested ? `
+                <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #10B981; border: 1px solid rgba(16, 185, 129, 0.3); font-weight: 700; padding: 0.25rem 0.55rem; font-size: 0.75rem; border-radius: 6px;">Requested ✓</span>
+              ` : `
+                <span class="status-pill pending" style="font-size: 0.775rem;">Pending Settlement</span>
+                ${net > 0 ? `
+                  <button type="button" class="btn btn-primary btn-xs" onclick="Teacher.requestSalaryPayout()" style="padding: 0.2rem 0.6rem; font-size: 0.75rem; font-weight: 700;" title="Request salary withdrawal">
+                    Request
+                  </button>
+                ` : ''}
+              `}
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join('');
   },
 
   renderStudentRevenueBreakdown(breakdownList) {
@@ -971,34 +1077,45 @@ const Teacher = {
       return;
     }
 
-    tbody.innerHTML = breakdownList.map(item => `
-      <tr>
-        <td>
-          <div class="user-cell">
-            <img src="${item.student_avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=100&q=80'}" class="user-cell-avatar" />
-            <div>
-              <div class="user-cell-name">${item.student_name}</div>
-              <div class="user-cell-email">${item.student_email}</div>
+    tbody.innerHTML = breakdownList.map(item => {
+      const sessions = item.completed_sessions ?? item.sessions_count ?? 1;
+      const gross = Number(item.gross_amount || 0);
+      const commission = Number(item.platform_cut ?? item.commission_cut ?? (gross * 0.30));
+      const net = Number(item.tutor_net ?? item.net_tutor_share ?? (gross - commission));
+
+      return `
+        <tr>
+          <td>
+            <div class="user-cell">
+              <img src="${item.student_avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=100&q=80'}" class="user-cell-avatar" />
+              <div>
+                <div class="user-cell-name">${item.student_name}</div>
+                <div class="user-cell-email">${item.student_email || ''}</div>
+              </div>
             </div>
-          </div>
-        </td>
-        <td>
-          <span class="badge-accent">${item.subject}</span>
-        </td>
-        <td>
-          ${item.completed_sessions} completed session${item.completed_sessions === 1 ? '' : 's'}
-        </td>
-        <td>
-          <strong style="color: var(--gold-400);">$${Number(item.gross_amount || 0).toFixed(2)}</strong>
-        </td>
-        <td>
-          <span style="color: #EF4444;">-$${Number(item.platform_cut || 0).toFixed(2)}</span>
-        </td>
-        <td>
-          <strong style="color: #10B981;">$${Number(item.tutor_net || 0).toFixed(2)}</strong>
-        </td>
-      </tr>
-    `).join('');
+          </td>
+          <td>
+            <span class="badge-accent">${item.subject || 'Tutoring'}</span>
+          </td>
+          <td>
+            <span class="badge-gold" style="font-size: 0.78rem; font-weight: 600;">
+              ${sessions} completed session${sessions === 1 ? '' : 's'}
+            </span>
+          </td>
+          <td>
+            <strong style="color: var(--gold-400); font-weight: 700; font-size: 0.95rem;">$${gross.toFixed(2)}</strong>
+          </td>
+          <td>
+            <span style="color: #EF4444; font-weight: 600;">-$${commission.toFixed(2)}</span>
+            <span style="font-size: 0.75rem; color: #EF4444; opacity: 0.85; margin-left: 0.2rem;">(30%)</span>
+          </td>
+          <td>
+            <strong style="color: #10B981; font-size: 1rem; font-weight: 800;">$${net.toFixed(2)}</strong>
+            <span style="font-size: 0.75rem; color: #10B981; opacity: 0.85; margin-left: 0.2rem;">(70%)</span>
+          </td>
+        </tr>
+      `;
+    }).join('');
   },
 
   renderDashboard() {

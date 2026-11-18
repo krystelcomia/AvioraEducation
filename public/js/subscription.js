@@ -14,6 +14,7 @@ const StudentSub = {
   studentScheduleData: null,
   trialDuration: 25,
   popularityStats: null,
+  appliedVoucher: null,
 
 
   highlightBookingWithTutor(tutorId) {
@@ -848,16 +849,8 @@ const StudentSub = {
       this.selectedTutor = this.allTutors[0];
     }
 
-    // Populate tutors dropdown
-    const tutorSelect = document.getElementById('sub-enroll-tutor-select');
-    if (tutorSelect && this.allTutors.length > 0) {
-      tutorSelect.innerHTML = this.allTutors.map(t => `
-        <option value="${t.id}" ${this.selectedTutor && this.selectedTutor.id === t.id ? 'selected' : ''}>${t.name} — ${t.headline || t.subject || 'Faculty Specialist'} ($${t.hourly_rate}/hr)</option>
-      `).join('');
-      if (this.selectedTutor) {
-        tutorSelect.value = this.selectedTutor.id;
-      }
-    }
+    // Educator & plan are automatically determined from the student's chosen tutor and package
+    this.removeVoucherCode(true);
 
     // Tutor subjects
     const subjects = this.getTutorSubjects(this.selectedTutor);
@@ -883,7 +876,7 @@ const StudentSub = {
     }
 
     if (modalBadge) modalBadge.textContent = planConfig.isTrial ? 'Trial Session' : 'Plan Enrollment';
-    if (stepTag) stepTag.textContent = planConfig.isTrial ? 'Step 1: Trial Educator, Duration & Schedule' : `Step 1: Educator & Schedule (${lessonCount} Lessons)`;
+    if (stepTag) stepTag.textContent = planConfig.isTrial ? 'Step 1: Duration & Schedule Setup' : `Step 1: Schedule & Review (${lessonCount} Lessons)`;
     if (modalTitle) modalTitle.textContent = planConfig.isTrial ? 'Trial Lesson (25m / 50m) & Tutor Scheduling' : `${planConfig.name} & Tutor Scheduling`;
     
     if (step2Title) {
@@ -1552,10 +1545,149 @@ const StudentSub = {
     });
   },
 
+  onVoucherInputChanged() {
+    const input = document.getElementById('sub-voucher-code-input');
+    const statusEl = document.getElementById('sub-voucher-status-msg');
+    const val = input ? input.value.trim().toUpperCase() : '';
+    if (this.appliedVoucher && val !== this.appliedVoucher.code.toUpperCase()) {
+      this.appliedVoucher = null;
+      const badge = document.getElementById('sub-voucher-badge');
+      const removeBtn = document.getElementById('btn-remove-voucher');
+      if (badge) badge.style.display = 'none';
+      if (removeBtn) removeBtn.style.display = 'none';
+      this.updateSummary();
+    }
+    if (!val && statusEl) {
+      statusEl.style.display = 'none';
+      statusEl.textContent = '';
+    }
+  },
+
+  async applyVoucherCode() {
+    const input = document.getElementById('sub-voucher-code-input');
+    const applyBtn = document.getElementById('btn-apply-voucher');
+    const removeBtn = document.getElementById('btn-remove-voucher');
+    const badge = document.getElementById('sub-voucher-badge');
+    const statusEl = document.getElementById('sub-voucher-status-msg');
+
+    const rawCode = input ? input.value.trim() : '';
+    if (!rawCode) {
+      this.appliedVoucher = null;
+      if (badge) badge.style.display = 'none';
+      if (removeBtn) removeBtn.style.display = 'none';
+      if (statusEl) {
+        statusEl.style.display = 'block';
+        statusEl.style.color = '#DC2626';
+        statusEl.textContent = 'Please enter a voucher code to apply.';
+      }
+      this.updateSummary();
+      return false;
+    }
+
+    try {
+      if (applyBtn) {
+        applyBtn.disabled = true;
+        applyBtn.textContent = 'Checking...';
+      }
+
+      const res = await API.validateVoucher(rawCode);
+      if (res && res.valid) {
+        this.appliedVoucher = {
+          code: res.code,
+          discount_percent: Number(res.discount_percent) || 5.0,
+          description: res.description || '5% Discount Voucher'
+        };
+        if (input) {
+          input.value = res.code;
+          input.readOnly = true;
+        }
+        if (badge) {
+          badge.textContent = `${this.appliedVoucher.discount_percent}% Off (${res.code})`;
+          badge.style.display = 'inline-block';
+        }
+        if (applyBtn) applyBtn.style.display = 'none';
+        if (removeBtn) removeBtn.style.display = 'inline-flex';
+        if (statusEl) {
+          statusEl.style.display = 'block';
+          statusEl.style.color = '#059669';
+          statusEl.style.fontWeight = '600';
+          statusEl.textContent = `Voucher "${res.code}" verified! A ${this.appliedVoucher.discount_percent}% discount will be applied to your total.`;
+        }
+        showToast(`Voucher "${res.code}" applied (${this.appliedVoucher.discount_percent}% discount)!`, 'success');
+        this.updateSummary();
+        return true;
+      }
+
+      this.appliedVoucher = null;
+      if (badge) badge.style.display = 'none';
+      if (statusEl) {
+        statusEl.style.display = 'block';
+        statusEl.style.color = '#DC2626';
+        statusEl.textContent = res?.error || 'Incorrect voucher code. No discount applied.';
+      }
+      this.updateSummary();
+      return false;
+    } catch (err) {
+      this.appliedVoucher = null;
+      if (badge) badge.style.display = 'none';
+      if (statusEl) {
+        statusEl.style.display = 'block';
+        statusEl.style.color = '#DC2626';
+        statusEl.style.fontWeight = '600';
+        statusEl.textContent = err.message || 'Incorrect voucher code. Please check the code and try again.';
+      }
+      showToast(err.message || 'Incorrect voucher code.', 'error');
+      this.updateSummary();
+      return false;
+    } finally {
+      if (applyBtn) {
+        applyBtn.disabled = false;
+        applyBtn.textContent = 'Apply Code';
+      }
+    }
+  },
+
+  removeVoucherCode(silent = false) {
+    this.appliedVoucher = null;
+    const input = document.getElementById('sub-voucher-code-input');
+    const applyBtn = document.getElementById('btn-apply-voucher');
+    const removeBtn = document.getElementById('btn-remove-voucher');
+    const badge = document.getElementById('sub-voucher-badge');
+    const statusEl = document.getElementById('sub-voucher-status-msg');
+
+    if (input) {
+      input.value = '';
+      input.readOnly = false;
+    }
+    if (applyBtn) {
+      applyBtn.style.display = 'inline-flex';
+      applyBtn.disabled = false;
+      applyBtn.textContent = 'Apply Code';
+    }
+    if (removeBtn) removeBtn.style.display = 'none';
+    if (badge) badge.style.display = 'none';
+    if (statusEl) {
+      statusEl.style.display = 'none';
+      statusEl.textContent = '';
+    }
+    if (!silent) {
+      showToast('Voucher removed.', 'info');
+    }
+    if (Array.isArray(this.selectedLessons) && this.selectedLessons.length > 0) {
+      this.updateSummary();
+    }
+  },
+
   updateSummary() {
     const planConfig = this.getPlanConfig(this.activePackageKey);
     const totalCount = this.selectedLessons.length;
-    const totalCost = this.selectedLessons.reduce((sum, l) => sum + (Number(l.hourly_rate) || 0), 0);
+    const subtotalCost = Math.round(this.selectedLessons.reduce((sum, l) => sum + (Number(l.hourly_rate) || 0), 0) * 100) / 100;
+    const discountPercent = this.appliedVoucher ? (Number(this.appliedVoucher.discount_percent) || 5.0) : 0;
+    const discountAmount = this.appliedVoucher
+      ? Math.round((subtotalCost * (discountPercent / 100)) * 100) / 100
+      : 0;
+    const totalCost = Math.max(0, Math.round((subtotalCost - discountAmount) * 100) / 100);
+
     const scheduledLessons = this.selectedLessons.filter(l => l.scheduled_date && l.scheduled_time);
     const scheduledCount = scheduledLessons.length;
     const isComplete = scheduledCount === totalCount;
@@ -1603,6 +1735,26 @@ const StudentSub = {
       }).join('');
     }
 
+    // Subtotal & Voucher Discount rows
+    const subtotalRow = document.getElementById('sub-summary-subtotal-row');
+    const subtotalText = document.getElementById('sub-summary-subtotal-text');
+    const discountRow = document.getElementById('sub-summary-discount-row');
+    const discountLabel = document.getElementById('sub-summary-discount-label');
+    const discountText = document.getElementById('sub-summary-discount-text');
+
+    if (subtotalRow && discountRow) {
+      if (isComplete && this.appliedVoucher && discountAmount > 0) {
+        subtotalRow.style.display = 'flex';
+        if (subtotalText) subtotalText.textContent = fmtAmount(subtotalCost);
+        discountRow.style.display = 'flex';
+        if (discountLabel) discountLabel.textContent = `Voucher Discount (${discountPercent}% — ${this.appliedVoucher.code}):`;
+        if (discountText) discountText.textContent = `-${fmtAmount(discountAmount)}`;
+      } else {
+        subtotalRow.style.display = 'none';
+        discountRow.style.display = 'none';
+      }
+    }
+
     // Total text at bottom of summary: visible ONLY once all lessons are completely set up
     const summaryAmountEl = document.getElementById('sub-summary-amount-text');
     if (summaryAmountEl) {
@@ -1618,10 +1770,13 @@ const StudentSub = {
     const calcFormulaEl = document.getElementById('sub-summary-calc-formula');
     if (calcFormulaEl) {
       if (isComplete) {
+        const voucherSuffix = (this.appliedVoucher && discountAmount > 0)
+          ? ` — ${discountPercent}% off (${this.appliedVoucher.code})`
+          : '';
         if (planConfig.isTrial) {
-          calcFormulaEl.textContent = `1-on-1 ${this.trialDuration}-Minute Trial Session with ${this.selectedTutor?.name || 'Educator'} (${fmtAmount(totalCost)})`;
+          calcFormulaEl.textContent = `1-on-1 ${this.trialDuration}-Minute Trial Session with ${this.selectedTutor?.name || 'Educator'} (${fmtAmount(subtotalCost)}${voucherSuffix})`;
         } else {
-          calcFormulaEl.textContent = `Sum of ${totalCount} lessons: ${this.selectedLessons.map((l, idx) => `Lesson ${idx + 1} (${fmtAmount(l.hourly_rate)})`).join(' + ')}`;
+          calcFormulaEl.textContent = `Sum of ${totalCount} lessons: ${this.selectedLessons.map((l, idx) => `Lesson ${idx + 1} (${fmtAmount(l.hourly_rate)})`).join(' + ')}${voucherSuffix}`;
         }
       } else {
         calcFormulaEl.textContent = `The total amount to be paid will be visible once all ${totalCount} lesson${totalCount > 1 ? 's are' : ' is'} scheduled.`;
@@ -1658,10 +1813,26 @@ const StudentSub = {
       return;
     }
 
+    // If student typed a voucher code without pressing Apply yet, verify it first
+    const voucherInput = document.getElementById('sub-voucher-code-input');
+    const rawVoucher = voucherInput ? voucherInput.value.trim() : '';
+    if (rawVoucher && (!this.appliedVoucher || rawVoucher.toUpperCase() !== this.appliedVoucher.code.toUpperCase())) {
+      const ok = await this.applyVoucherCode();
+      if (!ok) {
+        if (voucherInput) voucherInput.focus();
+        return;
+      }
+    }
+
     const planConfig = this.getPlanConfig(this.activePackageKey);
     const notesInput = document.getElementById('sub-enroll-notes');
     const notes = notesInput ? notesInput.value.trim() : '';
-    const totalCost = this.selectedLessons.reduce((sum, l) => sum + (Number(l.hourly_rate) || 0), 0);
+    const subtotalCost = Math.round(this.selectedLessons.reduce((sum, l) => sum + (Number(l.hourly_rate) || 0), 0) * 100) / 100;
+    const discountPercent = this.appliedVoucher ? (Number(this.appliedVoucher.discount_percent) || 5.0) : 0;
+    const discountAmount = this.appliedVoucher
+      ? Math.round((subtotalCost * (discountPercent / 100)) * 100) / 100
+      : 0;
+    const totalCost = Math.max(0, Math.round((subtotalCost - discountAmount) * 100) / 100);
 
     const submitBtn = document.getElementById('btn-sub-enroll-submit');
     const originalText = submitBtn ? submitBtn.innerHTML : '';
@@ -1674,6 +1845,7 @@ const StudentSub = {
       const payload = {
         package_key: this.activePackageKey,
         trial_duration: planConfig.isTrial ? (this.trialDuration || 25) : 50,
+        voucher_code: this.appliedVoucher ? this.appliedVoucher.code : null,
         total_amount: totalCost,
         lessons: this.selectedLessons.map(l => ({
           lesson_number: l.index + 1,
@@ -1714,6 +1886,7 @@ const StudentSub = {
   resetState() {
     this.data = null;
     this.selectedTutor = null;
+    this.removeVoucherCode(true);
     const studentTrialCard = document.getElementById('card-trial-student');
     const visitorTrialCard = document.getElementById('card-trial-visitor');
     const modalTrialBtn = document.getElementById('modal-plan-btn-trial');

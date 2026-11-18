@@ -5589,12 +5589,60 @@ app.get('/api/student/subscription', authenticateToken, requireRole('student'), 
   }
 });
 
+function lookupValidVoucher(rawCode) {
+  const clean = String(rawCode || '').trim();
+  if (!clean) return null;
+  return db.prepare(`
+    SELECT id, code, discount_percent, description
+    FROM vouchers
+    WHERE UPPER(code) = UPPER(?)
+      AND is_active = 1
+      AND (expires_at IS NULL OR expires_at > CURRENT_TIMESTAMP)
+      AND (max_uses IS NULL OR COALESCE(used_count, 0) < max_uses)
+    LIMIT 1
+  `).get(clean) || null;
+}
+
+// Validate Voucher Code for 5% Discount on Subscription / Lesson Setup Total
+app.post('/api/student/vouchers/validate', authenticateToken, requireRole('student'), (req, res) => {
+  try {
+    const cleanCode = String(req.body?.code || '').trim();
+    if (!cleanCode) {
+      return res.status(400).json({ valid: false, error: 'Please enter a voucher code.' });
+    }
+    const voucher = lookupValidVoucher(cleanCode);
+    if (!voucher) {
+      return res.status(404).json({ valid: false, error: 'Incorrect or expired voucher code. No discount applied.' });
+    }
+    res.json({
+      valid: true,
+      code: voucher.code,
+      discount_percent: Number(voucher.discount_percent) || 5.0,
+      description: voucher.description || '5% Discount Voucher'
+    });
+  } catch (error) {
+    console.error('Validate voucher error:', error);
+    res.status(500).json({ valid: false, error: 'Failed to verify voucher code.' });
+  }
+});
+
 // Student Purchases / Activates a Subscription Package & Schedules with Tutor
 app.post('/api/student/subscription/purchase', authenticateToken, requireRole('student'), (req, res) => {
   try {
     const studentId = req.user.id;
-    const { package_key, tutor_id, lessons_with_tutor, subject, scheduled_date, scheduled_time, notes, lessons, trial_duration } = req.body;
+    const { package_key, tutor_id, lessons_with_tutor, subject, scheduled_date, scheduled_time, notes, lessons, trial_duration, voucher_code } = req.body;
     const resolvedTrialDuration = Number(trial_duration) === 50 ? 50 : 25;
+
+    let appliedVoucher = null;
+    const cleanVoucherInput = String(voucher_code || '').trim();
+    if (cleanVoucherInput) {
+      appliedVoucher = lookupValidVoucher(cleanVoucherInput);
+      if (!appliedVoucher) {
+        return res.status(400).json({
+          error: 'Incorrect or expired voucher code. Please enter a valid code or clear the voucher field.'
+        });
+      }
+    }
 
     const packageMap = {
       'trial': { key: 'trial', name: `Trial Lesson (${resolvedTrialDuration}-Min)`, lessons: 1, price: 0.00, days: 14, is_trial: 1, duration_minutes: resolvedTrialDuration, commission_rate: 0.50 },
@@ -5737,6 +5785,30 @@ app.post('/api/student/subscription/purchase', authenticateToken, requireRole('s
         });
       }
 
+      const subtotalCalculatedPrice = Math.round(totalCalculatedPrice * 100) / 100;
+      const discountPercent = appliedVoucher ? (Number(appliedVoucher.discount_percent) || 5.0) : 0;
+      const discountAmount = appliedVoucher
+        ? Math.round((subtotalCalculatedPrice * (discountPercent / 100)) * 100) / 100
+        : 0;
+      const finalCalculatedPrice = Math.max(0, Math.round((subtotalCalculatedPrice - discountAmount) * 100) / 100);
+
+      if (appliedVoucher && subtotalCalculatedPrice > 0) {
+        let allocatedDiscountedSum = 0;
+        for (let idx = 0; idx < validatedLessons.length; idx++) {
+          const vl = validatedLessons[idx];
+          if (idx === validatedLessons.length - 1) {
+            vl.discounted_rate = Math.max(0, Math.round((finalCalculatedPrice - allocatedDiscountedSum) * 100) / 100);
+          } else {
+            vl.discounted_rate = Math.round((vl.rate * (1 - discountPercent / 100)) * 100) / 100;
+            allocatedDiscountedSum = Math.round((allocatedDiscountedSum + vl.discounted_rate) * 100) / 100;
+          }
+        }
+      } else {
+        for (const vl of validatedLessons) {
+          vl.discounted_rate = vl.rate;
+        }
+      }
+
       const durationHours = selectedPkg.is_trial ? (selectedPkg.duration_minutes / 60) : (50 / 60);
       const paymentMethod = selectedPkg.is_trial ? 'trial' : 'subscription';
 
@@ -5761,7 +5833,7 @@ app.post('/api/student/subscription/purchase', authenticateToken, requireRole('s
           vl.scheduled_time,
           durationHours,
           vl.rate,
-          vl.rate,
+          vl.discounted_rate,
           sessionNotes,
           paymentMethod
         );
@@ -5784,9 +5856,11 @@ app.post('/api/student/subscription/purchase', authenticateToken, requireRole('s
       const insertSub = db.prepare(`
         INSERT INTO student_subscriptions (
           user_id, plan_name, lessons_total, lessons_remaining, price_paid,
+          voucher_code, discount_percent, discount_amount, original_price,
           purchase_date, expires_at, status, is_trial
         ) VALUES (
           ?, ?, ?, 0, ?,
+          ?, ?, ?, ?,
           CURRENT_TIMESTAMP, datetime('now', '+' || ? || ' days'), 'active', ?
         )
       `);
@@ -5795,16 +5869,28 @@ app.post('/api/student/subscription/purchase', authenticateToken, requireRole('s
         studentId,
         selectedPkg.name,
         selectedPkg.lessons,
-        totalCalculatedPrice,
+        finalCalculatedPrice,
+        appliedVoucher ? appliedVoucher.code : null,
+        discountPercent,
+        discountAmount,
+        subtotalCalculatedPrice,
         selectedPkg.days,
         selectedPkg.is_trial
       );
+
+      if (appliedVoucher) {
+        db.prepare('UPDATE vouchers SET used_count = COALESCE(used_count, 0) + 1 WHERE id = ?').run(appliedVoucher.id);
+      }
+
+      const voucherNote = appliedVoucher
+        ? ` (${discountPercent}% voucher '${appliedVoucher.code}' saved $${discountAmount.toFixed(2)})`
+        : '';
 
       // Student notification
       sendNotification(
         studentId,
         `${selectedPkg.name} Confirmed`,
-        `Your ${selectedPkg.name} enrollment has been confirmed! Total cost paid: $${totalCalculatedPrice.toFixed(2)} based on your instructor's rate. All ${selectedPkg.lessons} lesson${selectedPkg.lessons > 1 ? 's have' : ' has'} been scheduled.`,
+        `Your ${selectedPkg.name} enrollment has been confirmed! Total cost paid: $${finalCalculatedPrice.toFixed(2)}${voucherNote}. All ${selectedPkg.lessons} lesson${selectedPkg.lessons > 1 ? 's have' : ' has'} been scheduled.`,
         'subscription',
         '#subscriptions'
       );
@@ -5813,10 +5899,14 @@ app.post('/api/student/subscription/purchase', authenticateToken, requireRole('s
 
       return res.status(201).json({
         success: true,
-        message: `Successfully enrolled in ${selectedPkg.name}! All ${selectedPkg.lessons} lesson${selectedPkg.lessons > 1 ? 's have' : ' has'} been scheduled for a total of $${totalCalculatedPrice.toFixed(2)} based on teacher rates.`,
+        message: `Successfully enrolled in ${selectedPkg.name}! All ${selectedPkg.lessons} lesson${selectedPkg.lessons > 1 ? 's have' : ' has'} been scheduled for a total of $${finalCalculatedPrice.toFixed(2)}${voucherNote}.`,
         plan: selectedPkg.name,
         lessons_total: selectedPkg.lessons,
-        total_paid: totalCalculatedPrice,
+        subtotal: subtotalCalculatedPrice,
+        voucher_code: appliedVoucher ? appliedVoucher.code : null,
+        discount_percent: discountPercent,
+        discount_amount: discountAmount,
+        total_paid: finalCalculatedPrice,
         remainingLessons: 0,
         isTrial: !!selectedPkg.is_trial,
         trialDuration: selectedPkg.is_trial ? selectedPkg.duration_minutes : null,

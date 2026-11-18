@@ -6778,22 +6778,17 @@
 
       <div class="modal-body" style="overflow-y: auto; flex: 1; padding: 1.5rem 1.75rem;">
 
-        <!-- Plan & Lesson Count Selector: Allows student to switch plan or choose how many lessons on the fly -->
-        <div class="sub-enroll-plan-selector-box" style="background: linear-gradient(135deg, #FFFDF8 0%, #F9F5EC 100%); border: 1.5px solid rgba(198, 138, 40, 0.35); border-radius: var(--radius-md); padding: 0.9rem 1.15rem; margin-bottom: 1.35rem; box-shadow: var(--shadow-sm);">
-          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.6rem;">
+        <!-- Automatically Determined Selected Plan Bar (and Trial Duration when applicable) -->
+        <div class="sub-enroll-plan-selector-box" style="background: linear-gradient(135deg, #FFFDF8 0%, #F9F5EC 100%); border: 1.5px solid rgba(198, 138, 40, 0.35); border-radius: var(--radius-md); padding: 0.85rem 1.15rem; margin-bottom: 1.25rem; box-shadow: var(--shadow-sm);">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
             <div style="display: flex; align-items: center; gap: 0.45rem;">
               <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--gold-600);"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg>
-              <strong style="font-size: 0.86rem; color: var(--charcoal-900);">Select Subscription Plan or Number of Lessons:</strong>
+              <div>
+                <strong style="font-size: 0.86rem; color: var(--charcoal-900);">Selected Subscription Plan</strong>
+                <div style="font-size: 0.74rem; color: var(--text-secondary);">Automatically set from the plan you chose</div>
+              </div>
             </div>
-            <span id="sub-modal-active-plan-badge" class="badge-gold" style="font-size: 0.74rem; font-weight: 800;">4 Lessons Package</span>
-          </div>
-          <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
-            <button type="button" class="btn btn-sm sub-modal-plan-btn" id="modal-plan-btn-trial" onclick="StudentSub.switchPlanInModal('trial')">Trial Lesson (25m / 50m)</button>
-            <button type="button" class="btn btn-sm sub-modal-plan-btn" id="modal-plan-btn-4" onclick="StudentSub.switchPlanInModal('4_lessons')">4 Lessons Package</button>
-            <button type="button" class="btn btn-sm sub-modal-plan-btn" id="modal-plan-btn-8" onclick="StudentSub.switchPlanInModal('8_lessons')">8 Lessons Package</button>
-            <button type="button" class="btn btn-sm sub-modal-plan-btn" id="modal-plan-btn-12" onclick="StudentSub.switchPlanInModal('12_lessons')">12 Lessons Package</button>
-            <button type="button" class="btn btn-sm sub-modal-plan-btn" id="modal-plan-btn-16" onclick="StudentSub.switchPlanInModal('16_lessons')">16 Lessons Package</button>
-            <button type="button" class="btn btn-sm sub-modal-plan-btn" id="modal-plan-btn-20" onclick="StudentSub.switchPlanInModal('20_lessons')">20 Lessons Package ★ Suggested</button>
+            <span id="sub-modal-active-plan-badge" class="badge-gold" style="font-size: 0.78rem; font-weight: 800;">4 Lessons Package</span>
           </div>
 
           <!-- Trial Session Duration Selector (25-Minute vs 50-Minute) -->
@@ -6813,36 +6808,19 @@
 
         
 
-        <!-- 1. Select Faculty Educator -->
+        <!-- 1. Assigned Faculty Educator (Automatically Determined) -->
         <div style="margin-bottom: 1.25rem;">
           <label class="form-label" style="font-weight: 700; color: var(--charcoal-900); display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-            <span>1. Select Faculty Educator</span>
-            <span style="font-size: 0.75rem; font-weight: 500; color: var(--text-secondary);">Select educator &amp; customize topics per lesson below</span>
+            <span>1. Assigned Faculty Educator</span>
+            <span style="font-size: 0.75rem; font-weight: 500; color: var(--text-secondary);">Automatically set from your chosen tutor • pick topic per lesson below</span>
           </label>
-          <div style="display: grid; grid-template-columns: 1.15fr 0.85fr; gap: 0.85rem; margin-bottom: 0.75rem; align-items: start;">
-            <div>
-              <label style="font-size: 0.78rem; font-weight: 600; color: var(--charcoal-700); margin-bottom: 0.25rem; display: block;">Accredited Educator</label>
-              <select id="sub-enroll-tutor-select" class="form-control" style="font-weight: 600; font-size: 0.9rem; border: 1.5px solid rgba(198, 138, 40, 0.35);" onchange="StudentSub.onTutorSelected(this.value)">
-                <!-- Populated via subscription.js -->
-              </select>
-            </div>
-            <div>
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem;">
-                <label style="font-size: 0.78rem; font-weight: 600; color: var(--charcoal-700); margin: 0;">Educator's Disciplines</label>
-                <span style="font-size: 0.7rem; color: var(--gold-700); font-weight: 600;">Pick topic per lesson</span>
-              </div>
-              <div id="sub-enroll-tutor-disciplines-tags" style="display: flex; flex-wrap: wrap; gap: 0.35rem; min-height: 38px; align-items: center; background: rgba(0,0,0,0.02); border: 1px dashed rgba(198, 138, 40, 0.3); border-radius: var(--radius-sm); padding: 0.35rem 0.5rem;">
-                <!-- Populated with tutor's disciplines badges -->
-              </div>
-            </div>
-          </div>
 
           <!-- Selected Tutor Preview Card -->
-          <div id="sub-enroll-tutor-preview" style="display: flex; align-items: center; gap: 1rem; background: #FFFFFF; border: 1px solid var(--border-light); border-radius: var(--radius-md); padding: 0.85rem 1rem; box-shadow: var(--shadow-sm);">
+          <div id="sub-enroll-tutor-preview" style="display: flex; align-items: center; gap: 1rem; background: #FFFFFF; border: 1px solid var(--border-light); border-radius: var(--radius-md); padding: 0.85rem 1rem; box-shadow: var(--shadow-sm); margin-bottom: 0.65rem;">
             <img id="sub-enroll-tutor-avatar" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80" style="width: 52px; height: 52px; border-radius: 50%; object-fit: cover; border: 2px solid var(--gold-400);" />
             <div style="flex: 1; min-width: 0;">
               <div style="display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap;">
-                <strong id="sub-enroll-tutor-name" style="color: var(--charcoal-950); font-size: 0.98rem;">Select a Tutor</strong>
+                <strong id="sub-enroll-tutor-name" style="color: var(--charcoal-950); font-size: 0.98rem;">Assigned Educator</strong>
                 <span class="badge-gold" style="font-size: 0.68rem; padding: 0.15rem 0.45rem;">Verified Faculty</span>
               </div>
               <div id="sub-enroll-tutor-headline" style="font-size: 0.82rem; color: var(--text-secondary); margin-top: 0.15rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Faculty Specialist</div>
@@ -6850,6 +6828,16 @@
             <div style="text-align: right;">
               <div id="sub-enroll-tutor-rate-display" style="font-size: 1.05rem; font-weight: 800; color: var(--gold-700); font-family: var(--font-heading);">$58.00 / hr</div>
               <div id="sub-enroll-tutor-rating" style="font-size: 0.8rem; font-weight: 600; color: var(--charcoal-600); margin-top: 0.15rem;">★ 5.0 (42)</div>
+            </div>
+          </div>
+
+          <div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.3rem;">
+              <label style="font-size: 0.78rem; font-weight: 600; color: var(--charcoal-700); margin: 0;">Educator's Disciplines</label>
+              <span style="font-size: 0.7rem; color: var(--gold-700); font-weight: 600;">Pick topic per lesson below</span>
+            </div>
+            <div id="sub-enroll-tutor-disciplines-tags" style="display: flex; flex-wrap: wrap; gap: 0.35rem; min-height: 36px; align-items: center; background: rgba(0,0,0,0.02); border: 1px dashed rgba(198, 138, 40, 0.3); border-radius: var(--radius-sm); padding: 0.35rem 0.55rem;">
+              <!-- Populated with tutor's disciplines badges -->
             </div>
           </div>
         </div>
@@ -6936,6 +6924,22 @@
           <textarea id="sub-enroll-notes" class="form-control" rows="2" placeholder="e.g. Diagnostic assessment on kinematics, calculus, problem solving, or revision..."></textarea>
         </div>
 
+        <!-- Voucher Code (End of Setup Process — 5% Discount on Total) -->
+        <div class="sub-voucher-box" style="margin-bottom: 1.2rem; background: #FFFFFF; border: 1.5px dashed rgba(198, 138, 40, 0.4); border-radius: var(--radius-md); padding: 0.95rem 1.15rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; margin-bottom: 0.45rem; flex-wrap: wrap;">
+            <label class="form-label" for="sub-voucher-code-input" style="font-weight: 700; color: var(--charcoal-900); margin: 0;">
+              Voucher Code <span style="font-size: 0.78rem; font-weight: 500; color: var(--charcoal-600);">(Optional — 5% discount on total)</span>
+            </label>
+            <span id="sub-voucher-badge" class="badge-gold" style="display: none; font-size: 0.72rem; background: rgba(16, 185, 129, 0.14); color: #065F46; border: 1px solid rgba(16, 185, 129, 0.35);">5% Discount Applied</span>
+          </div>
+          <div style="display: flex; gap: 0.5rem; align-items: stretch;">
+            <input type="text" id="sub-voucher-code-input" class="form-control" placeholder="Enter voucher code (e.g. AVIORA5)" style="flex: 1; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em;" oninput="StudentSub.onVoucherInputChanged()" onkeydown="if(event.key==='Enter'){event.preventDefault();StudentSub.applyVoucherCode();}" />
+            <button type="button" class="btn btn-outline-gold btn-sm" id="btn-apply-voucher" onclick="StudentSub.applyVoucherCode()" style="white-space: nowrap; font-weight: 700; padding: 0.45rem 1rem;">Apply Code</button>
+            <button type="button" class="btn btn-secondary btn-sm" id="btn-remove-voucher" onclick="StudentSub.removeVoucherCode()" style="display: none; white-space: nowrap; font-weight: 700; padding: 0.45rem 0.75rem;">Remove</button>
+          </div>
+          <div id="sub-voucher-status-msg" style="font-size: 0.78rem; margin-top: 0.45rem; display: none;"></div>
+        </div>
+
         <!-- Order Summary & Dynamic Rate Breakdown Box -->
         <div class="payment-summary-box" style="margin-bottom: 1.25rem; background: #FAF7F2; border: 1.5px solid rgba(198, 138, 40, 0.25); border-radius: var(--radius-md); padding: 1.15rem;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.65rem;">
@@ -6951,6 +6955,14 @@
           <div class="payment-summary-row" style="display: flex; justify-content: space-between; font-size: 0.84rem; margin-bottom: 0.35rem; padding-top: 0.5rem; border-top: 1px dashed rgba(0,0,0,0.1);">
             <span style="color: var(--charcoal-600);">Session Duration:</span>
             <strong id="sub-summary-duration-text" style="color: var(--gold-700);">50 Minutes per lesson</strong>
+          </div>
+          <div id="sub-summary-subtotal-row" class="payment-summary-row" style="display: none; justify-content: space-between; font-size: 0.86rem; margin-bottom: 0.3rem; color: var(--charcoal-700);">
+            <span>Subtotal (Before Voucher):</span>
+            <strong id="sub-summary-subtotal-text">$0.00</strong>
+          </div>
+          <div id="sub-summary-discount-row" class="payment-summary-row" style="display: none; justify-content: space-between; font-size: 0.86rem; margin-bottom: 0.35rem; color: #059669;">
+            <span id="sub-summary-discount-label">Voucher Discount (5%):</span>
+            <strong id="sub-summary-discount-text">-$0.00</strong>
           </div>
           <div class="payment-summary-row" style="display: flex; justify-content: space-between; font-size: 1.05rem; padding-top: 0.65rem; margin-top: 0.45rem; border-top: 1.5px solid rgba(0,0,0,0.12); align-items: baseline;">
             <div>

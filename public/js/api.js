@@ -142,6 +142,7 @@ const API = {
   getStudentWalletChat: (markRead = true) => apiRequest(`/student/wallet/chat?mark_read=${markRead ? '1' : '0'}`),
   sendStudentWalletChat: (body) => apiRequest('/student/wallet/chat', { method: 'POST', body }),
   getStudentSubscription: () => apiRequest('/student/subscription'),
+  validateVoucher: (code) => apiRequest('/student/vouchers/validate', { method: 'POST', body: { code } }),
   purchaseSubscription: (payload) => apiRequest('/student/subscription/purchase', { method: 'POST', body: typeof payload === 'string' ? { package_key: payload } : payload }),
   createRequest: (body) => apiRequest('/student/requests', { method: 'POST', body }),
   cancelRequest: (id) => apiRequest(`/student/requests/${id}/cancel`, { method: 'POST' }),

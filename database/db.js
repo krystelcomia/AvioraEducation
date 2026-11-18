@@ -418,8 +418,21 @@ function initSchema() {
       UNIQUE(student_id, source_type, source_id)
     );
 
+    CREATE TABLE IF NOT EXISTS vouchers (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      code TEXT UNIQUE NOT NULL,
+      discount_percent REAL NOT NULL DEFAULT 5.0,
+      description TEXT,
+      is_active INTEGER DEFAULT 1,
+      max_uses INTEGER,
+      used_count INTEGER DEFAULT 0,
+      expires_at DATETIME,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
     -- Enforce case-insensitive uniqueness and relational indexes across the entire system
     CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email_nocase ON users(email COLLATE NOCASE);
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_vouchers_code_nocase ON vouchers(code COLLATE NOCASE);
     CREATE INDEX IF NOT EXISTS idx_tutor_payout_requests_tutor ON tutor_payout_requests(tutor_id);
     CREATE INDEX IF NOT EXISTS idx_wallet_support_student ON wallet_support_messages(student_id);
     CREATE INDEX IF NOT EXISTS idx_wallet_forfeitures_student ON wallet_forfeitures(student_id);
@@ -814,6 +827,32 @@ function initSchema() {
     `).run();
   } catch (e) {
     console.warn('Wallet validity migration notice:', e.message);
+  }
+
+  // Ensure voucher columns on student_subscriptions and seed official 5% voucher codes
+  try {
+    const subCols = db.prepare("PRAGMA table_info(student_subscriptions)").all();
+    const subVoucherCols = [
+      ['voucher_code', 'TEXT'],
+      ['discount_percent', 'REAL DEFAULT 0'],
+      ['discount_amount', 'REAL DEFAULT 0'],
+      ['original_price', 'REAL']
+    ];
+    for (const [colName, colType] of subVoucherCols) {
+      if (!subCols.some(c => c.name === colName)) {
+        db.prepare(`ALTER TABLE student_subscriptions ADD COLUMN ${colName} ${colType}`).run();
+      }
+    }
+    db.prepare(`
+      INSERT OR IGNORE INTO vouchers (code, discount_percent, description, is_active)
+      VALUES ('AVIORA5', 5.0, 'Official Aviora 5% Package Discount Voucher', 1)
+    `).run();
+    db.prepare(`
+      INSERT OR IGNORE INTO vouchers (code, discount_percent, description, is_active)
+      VALUES ('WELCOME5', 5.0, 'Welcome 5% Discount on Lesson Setup', 1)
+    `).run();
+  } catch (e) {
+    console.warn('Voucher migration notice:', e.message);
   }
 
     // Backfill subject_rates for any existing tutor_profiles and teacher_applications that don't have it set yet

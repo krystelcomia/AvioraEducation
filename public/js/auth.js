@@ -1778,41 +1778,119 @@ const Auth = {
 
 
   walletTutor: null,
+  walletDetails: null,
+  selectedWalletCategory: 'all',
+  selectedWalletEntity: 'all',
 
   getStoredWallet(userId) {
     if (!userId) return null;
     try {
       const bal = localStorage.getItem(`aviora_wallet_balance_${userId}`);
       const tutor = localStorage.getItem(`aviora_wallet_tutor_${userId}`);
+      const details = localStorage.getItem(`aviora_wallet_details_${userId}`);
       if (bal !== null && bal !== undefined) {
         return {
           balance: parseFloat(bal) || 0,
-          tutor: tutor ? JSON.parse(tutor) : null
+          tutor: tutor ? JSON.parse(tutor) : null,
+          details: details ? JSON.parse(details) : null
         };
       }
     } catch (e) {}
     return null;
   },
 
-  setStoredWallet(userId, balance, tutorInfo) {
+  setStoredWallet(userId, balance, tutorInfo, walletDetails = null) {
     if (!userId) return;
     try {
       const num = parseFloat(balance) || 0;
-      if (num > 0) {
+      if (num > 0 || (walletDetails && (walletDetails.cancellations || []).length > 0)) {
         localStorage.setItem(`aviora_wallet_balance_${userId}`, String(num));
         if (tutorInfo) {
           localStorage.setItem(`aviora_wallet_tutor_${userId}`, JSON.stringify(tutorInfo));
         }
+        if (walletDetails) {
+          localStorage.setItem(`aviora_wallet_details_${userId}`, JSON.stringify(walletDetails));
+        }
       } else {
         localStorage.removeItem(`aviora_wallet_balance_${userId}`);
         localStorage.removeItem(`aviora_wallet_tutor_${userId}`);
+        localStorage.removeItem(`aviora_wallet_details_${userId}`);
       }
     } catch (e) {}
   },
 
-  updateWalletBalance(balance, tutorInfo) {
+  getTutorWalletBalance(tutorIdOrProfileId, tutorObj = null) {
+    if (!tutorIdOrProfileId && !tutorObj) return 0;
+    const d = this.walletDetails;
+    if (d && Array.isArray(d.tutor_credits)) {
+      const match = d.tutor_credits.find(tc =>
+        tc.tutor_id == tutorIdOrProfileId ||
+        tc.tutor_profile_id == tutorIdOrProfileId ||
+        (tutorObj && (tc.tutor_id == tutorObj.user_id || tc.tutor_id == tutorObj.id || tc.tutor_profile_id == tutorObj.id))
+      );
+      if (match) return parseFloat(match.balance) || 0;
+      return 0;
+    }
+    const eligibleTutorId = (this.currentUser && this.currentUser.wallet_tutor_id) || (this.walletTutor && this.walletTutor.id);
+    if (eligibleTutorId && (eligibleTutorId == tutorIdOrProfileId || (tutorObj && (eligibleTutorId == tutorObj.user_id || eligibleTutorId == tutorObj.id)))) {
+      return (this.currentUser && parseFloat(this.currentUser.wallet_balance)) || 0;
+    }
+    return 0;
+  },
+
+  getBuddyWalletBalance(sessionId = null) {
+    const d = this.walletDetails;
+    if (!d) return 0;
+    if (sessionId && Array.isArray(d.buddy_credits)) {
+      const m = d.buddy_credits.find(bc => bc.session_id == sessionId || bc.key === `buddy_${sessionId}`);
+      if (m) return parseFloat(m.balance) || 0;
+      return 0;
+    }
+    return parseFloat(d.buddy_balance) || 0;
+  },
+
+  setWalletCategoryFilter(cat) {
+    this.selectedWalletCategory = cat || 'all';
+    if (cat === 'tutor') {
+      const firstTutorCredit = (this.walletDetails?.tutor_credits || []).find(t => t.balance > 0) || (this.walletDetails?.tutor_credits || [])[0];
+      this.selectedWalletEntity = firstTutorCredit ? firstTutorCredit.key : 'category_tutor';
+    } else if (cat === 'buddy') {
+      this.selectedWalletEntity = 'buddy_all';
+    } else {
+      this.selectedWalletEntity = 'all';
+    }
+    this.renderCategorizedWalletUI();
+  },
+
+  selectWalletEntity(entityKey, customTutorMeta = null) {
+    this.selectedWalletEntity = entityKey || 'all';
+    if (String(entityKey).startsWith('tutor_')) {
+      this.selectedWalletCategory = 'tutor';
+      if (customTutorMeta) {
+        this._customSelectedTutorMeta = customTutorMeta;
+      }
+    } else if (String(entityKey).startsWith('buddy')) {
+      this.selectedWalletCategory = 'buddy';
+    } else if (entityKey === 'category_tutor') {
+      this.selectedWalletCategory = 'tutor';
+    } else {
+      this.selectedWalletCategory = 'all';
+    }
+    this.renderCategorizedWalletUI();
+  },
+
+  updateWalletBalance(balance, tutorInfo, walletDetails = null) {
     const num = parseFloat(balance) || 0;
-    const formatted = (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.format(num) : `$${num.toFixed(2)}`;
+    const fmt = (v) => (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.format(v) : `$${(parseFloat(v) || 0).toFixed(2)}`;
+    const formatted = fmt(num);
+
+    if (walletDetails) {
+      this.walletDetails = walletDetails;
+    } else if (!this.walletDetails && this.currentUser) {
+      const stored = this.getStoredWallet(this.currentUser.id);
+      if (stored && stored.details) this.walletDetails = stored.details;
+    }
+
     if (this.currentUser) {
       this.currentUser.wallet_balance = num;
       if (tutorInfo && tutorInfo.id) {
@@ -1821,7 +1899,7 @@ const Auth = {
         this.currentUser.wallet_tutor_id = null;
       }
       Storage.setUser(this.currentUser);
-      this.setStoredWallet(this.currentUser.id, num, tutorInfo || this.walletTutor);
+      this.setStoredWallet(this.currentUser.id, num, tutorInfo || this.walletTutor, this.walletDetails);
     }
 
     if (tutorInfo) {
@@ -1832,56 +1910,419 @@ const Auth = {
 
     const navBal = document.getElementById('nav-wallet-balance');
     if (navBal) navBal.textContent = formatted;
-    const dropBal = document.getElementById('wallet-dropdown-balance');
-    if (dropBal) dropBal.textContent = formatted;
-    const payBal = document.getElementById('pay-wallet-balance-label');
-    if (payBal) payBal.textContent = formatted;
-    const pagePayBal = document.getElementById('page-pay-wallet-balance');
-    if (pagePayBal) pagePayBal.textContent = formatted;
 
-    const bookBtn = document.getElementById('wallet-book-btn');
-    const tutorBanner = document.getElementById('wallet-tutor-banner');
-    const tutorNameEl = document.getElementById('wallet-tutor-name');
+    this.renderCategorizedWalletUI();
+  },
 
-    if (bookBtn) {
-      if (num <= 0) {
-        bookBtn.disabled = true;
-        bookBtn.style.opacity = '0.55';
-        bookBtn.style.cursor = 'not-allowed';
-        bookBtn.textContent = 'Book Another Lesson (Requires Balance)';
+  renderCategorizedWalletUI() {
+    const fmt = (v) => (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.format(v) : `$${(parseFloat(v) || 0).toFixed(2)}`;
+    const d = this.walletDetails || {};
+    const totalBal = parseFloat(d.wallet_balance ?? d.balance ?? this.currentUser?.wallet_balance ?? 0) || 0;
+    const tutorCredits = Array.isArray(d.tutor_credits) ? d.tutor_credits : (this.walletTutor && totalBal > 0 ? [{
+      key: `tutor_${this.walletTutor.id}`,
+      tutor_id: this.walletTutor.id,
+      tutor_profile_id: this.walletTutor.id,
+      name: this.walletTutor.name,
+      balance: totalBal,
+      cancellations_count: 1,
+      cancellations: [{
+        id: 'default_cancel',
+        category: 'tutor',
+        category_label: 'Tutor Lesson Credit',
+        entity_key: `tutor_${this.walletTutor.id}`,
+        tutor_id: this.walletTutor.id,
+        tutor_name: this.walletTutor.name,
+        title: `Cancelled Lesson Credit — ${this.walletTutor.name}`,
+        subtitle: 'Refunded lesson credit (Available for rebooking)',
+        date: 'Credited',
+        amount: totalBal,
+        reason: 'Cancelled Lesson (≥3h Notice) • Non-Withdrawable',
+        withdrawable: false
+      }]
+    }] : []);
+    const buddyCredits = Array.isArray(d.buddy_credits) ? d.buddy_credits : [];
+    const tutorTotalBal = typeof d.tutor_balance === 'number'
+      ? d.tutor_balance
+      : tutorCredits.reduce((s, tc) => s + (parseFloat(tc.balance) || 0), 0);
+    const buddyTotalBal = typeof d.buddy_balance === 'number'
+      ? d.buddy_balance
+      : buddyCredits.reduce((s, bc) => s + (parseFloat(bc.balance) || 0), 0);
+    const allCancellations = Array.isArray(d.cancellations) && d.cancellations.length > 0
+      ? d.cancellations
+      : tutorCredits.flatMap(tc => tc.cancellations || []);
+
+    // Update top nav badge to show total wallet credit
+    const navBal = document.getElementById('nav-wallet-balance');
+    if (navBal) navBal.textContent = fmt(totalBal);
+
+    // Update Category Tabs
+    const tabAll = document.getElementById('wallet-tab-all');
+    const tabTutor = document.getElementById('wallet-tab-tutor');
+    const tabBuddy = document.getElementById('wallet-tab-buddy');
+    const tabAllVal = document.getElementById('wallet-tab-all-val');
+    const tabTutorVal = document.getElementById('wallet-tab-tutor-val');
+    const tabBuddyVal = document.getElementById('wallet-tab-buddy-val');
+
+    if (tabAllVal) tabAllVal.textContent = fmt(totalBal);
+    if (tabTutorVal) tabTutorVal.textContent = fmt(tutorTotalBal);
+    if (tabBuddyVal) tabBuddyVal.textContent = fmt(buddyTotalBal);
+
+    const styleTab = (btn, active) => {
+      if (!btn) return;
+      if (active) {
+        btn.style.background = 'var(--gold-600)';
+        btn.style.color = '#FFFFFF';
+        btn.style.borderColor = 'var(--gold-600)';
+        btn.style.fontWeight = '800';
       } else {
-        bookBtn.disabled = false;
-        bookBtn.style.opacity = '1';
-        bookBtn.style.cursor = 'pointer';
-        const tName = this.walletTutor ? this.walletTutor.name : '';
-        bookBtn.textContent = tName ? `Book Lesson with ${tName}` : 'Book Another Lesson';
+        btn.style.background = '#FFFFFF';
+        btn.style.color = 'var(--charcoal-800)';
+        btn.style.borderColor = 'rgba(198, 138, 40, 0.35)';
+        btn.style.fontWeight = '700';
+      }
+    };
+    styleTab(tabAll, this.selectedWalletCategory === 'all');
+    styleTab(tabTutor, this.selectedWalletCategory === 'tutor');
+    styleTab(tabBuddy, this.selectedWalletCategory === 'buddy');
+
+    // Build Entity Selector options (Tutors & Aviora Buddy)
+    const selector = document.getElementById('wallet-entity-selector');
+    const allTutorsMap = new Map();
+    tutorCredits.forEach(tc => {
+      allTutorsMap.set(Number(tc.tutor_id), {
+        key: `tutor_${tc.tutor_id}`,
+        tutor_id: Number(tc.tutor_id),
+        tutor_profile_id: tc.tutor_profile_id || tc.tutor_id,
+        name: tc.name,
+        balance: parseFloat(tc.balance) || 0
+      });
+    });
+    if (Array.isArray(d.all_tutors)) {
+      d.all_tutors.forEach(t => {
+        const uid = Number(t.tutor_id || t.user_id || t.id);
+        if (!allTutorsMap.has(uid)) {
+          allTutorsMap.set(uid, {
+            key: `tutor_${uid}`,
+            tutor_id: uid,
+            tutor_profile_id: t.tutor_profile_id || t.profile_id || uid,
+            name: t.name,
+            balance: parseFloat(t.balance) || 0
+          });
+        }
+      });
+    }
+    if (this._customSelectedTutorMeta && this._customSelectedTutorMeta.tutorId) {
+      const uid = Number(this._customSelectedTutorMeta.tutorId);
+      if (!allTutorsMap.has(uid)) {
+        allTutorsMap.set(uid, {
+          key: `tutor_${uid}`,
+          tutor_id: uid,
+          tutor_profile_id: this._customSelectedTutorMeta.profileId || uid,
+          name: this._customSelectedTutorMeta.name || 'Selected Educator',
+          balance: 0
+        });
       }
     }
 
+    const tutorOptionsList = Array.from(allTutorsMap.values()).sort((a, b) => (b.balance - a.balance) || a.name.localeCompare(b.name));
+    const buddySessionsList = Array.isArray(d.all_buddy_sessions) ? d.all_buddy_sessions : [];
+
+    if (selector) {
+      selector.innerHTML = `
+        <option value="all" ${this.selectedWalletEntity === 'all' ? 'selected' : ''}>All Credits — ${fmt(totalBal)}</option>
+        <optgroup label="🧑‍🏫 Tutor Lesson Credits (${fmt(tutorTotalBal)})">
+          <option value="category_tutor" ${this.selectedWalletEntity === 'category_tutor' ? 'selected' : ''}>All Tutor Lesson Credits — ${fmt(tutorTotalBal)}</option>
+          ${tutorOptionsList.map(t => `
+            <option value="${t.key}" ${this.selectedWalletEntity === t.key ? 'selected' : ''}>Tutor: ${t.name} — ${fmt(t.balance)}</option>
+          `).join('')}
+        </optgroup>
+        <optgroup label="🤝 Aviora Buddy Credits (${fmt(buddyTotalBal)})">
+          <option value="buddy_all" ${this.selectedWalletEntity === 'buddy_all' ? 'selected' : ''}>Aviora Buddy (All Buddy Credits) — ${fmt(buddyTotalBal)}</option>
+          ${buddyCredits.map(b => `
+            <option value="${b.key}" ${this.selectedWalletEntity === b.key ? 'selected' : ''}>Aviora Buddy (${b.session_code} • ${b.partner_name}) — ${fmt(b.balance)}</option>
+          `).join('')}
+          ${buddySessionsList.filter(bs => !buddyCredits.some(bc => bc.session_id === bs.session_id)).map(bs => `
+            <option value="${bs.key}" ${this.selectedWalletEntity === bs.key ? 'selected' : ''}>Aviora Buddy (${bs.session_code} • ${bs.subject}) — ${fmt(bs.balance || 0)}</option>
+          `).join('')}
+        </optgroup>
+      `;
+      selector.value = this.selectedWalletEntity;
+    }
+
+    // Determine active balance & banner based on selection
+    const rowLabel = document.getElementById('wallet-balance-row-label');
+    const dropBal = document.getElementById('wallet-dropdown-balance');
+    const tutorBanner = document.getElementById('wallet-tutor-banner');
+    const bannerTypeTag = document.getElementById('wallet-banner-type-tag');
+    const tutorNameEl = document.getElementById('wallet-tutor-name');
+    const bannerAmountEl = document.getElementById('wallet-banner-amount');
+    const bannerSubtextEl = document.getElementById('wallet-banner-subtext');
+    const bookBtn = document.getElementById('wallet-book-btn');
+
+    let displayedBalance = totalBal;
+    let activeTargetType = 'all'; // 'all' | 'tutor' | 'buddy'
+    let activeTutorObj = null;
+    let activeBuddyObj = null;
+
+    if (String(this.selectedWalletEntity).startsWith('tutor_')) {
+      activeTargetType = 'tutor';
+      const tid = Number(String(this.selectedWalletEntity).replace('tutor_', ''));
+      activeTutorObj = allTutorsMap.get(tid) || tutorCredits.find(tc => tc.tutor_id == tid) || { tutor_id: tid, name: 'Selected Tutor', balance: 0 };
+      displayedBalance = parseFloat(activeTutorObj.balance) || 0;
+      if (rowLabel) rowLabel.textContent = `Tutor Credit (${activeTutorObj.name}):`;
+    } else if (this.selectedWalletEntity === 'category_tutor') {
+      activeTargetType = 'tutor';
+      activeTutorObj = tutorCredits.find(tc => tc.balance > 0) || tutorCredits[0] || tutorOptionsList[0] || null;
+      displayedBalance = tutorTotalBal;
+      if (rowLabel) rowLabel.textContent = 'Tutor Lesson Credits:';
+    } else if (String(this.selectedWalletEntity).startsWith('buddy')) {
+      activeTargetType = 'buddy';
+      if (this.selectedWalletEntity !== 'buddy_all') {
+        const bid = Number(String(this.selectedWalletEntity).replace('buddy_', ''));
+        activeBuddyObj = buddyCredits.find(bc => bc.session_id == bid) || buddySessionsList.find(bs => bs.session_id == bid) || null;
+        displayedBalance = activeBuddyObj ? (parseFloat(activeBuddyObj.balance) || 0) : buddyTotalBal;
+        if (rowLabel) rowLabel.textContent = activeBuddyObj ? `Aviora Buddy (${activeBuddyObj.session_code}):` : 'Aviora Buddy Credit:';
+      } else {
+        displayedBalance = buddyTotalBal;
+        if (rowLabel) rowLabel.textContent = 'Aviora Buddy Credit:';
+      }
+    } else {
+      activeTargetType = 'all';
+      activeTutorObj = tutorCredits.find(tc => tc.balance > 0) || (this.walletTutor ? { tutor_id: this.walletTutor.id, name: this.walletTutor.name, balance: tutorTotalBal } : null);
+      displayedBalance = totalBal;
+      if (rowLabel) rowLabel.textContent = 'Total Wallet Credit:';
+    }
+
+    if (dropBal) dropBal.textContent = fmt(displayedBalance);
+
+    // Update Banner
     if (tutorBanner && tutorNameEl) {
-      if (num > 0 && this.walletTutor && this.walletTutor.name) {
+      if (activeTargetType === 'tutor' && activeTutorObj) {
         tutorBanner.style.display = 'block';
-        tutorNameEl.textContent = this.walletTutor.name;
+        if (bannerTypeTag) bannerTypeTag.textContent = 'Selected Tutor Balance (Non-Withdrawable)';
+        tutorNameEl.textContent = activeTutorObj.name;
+        if (bannerAmountEl) bannerAmountEl.textContent = fmt(activeTutorObj.balance);
+        if (bannerSubtextEl) {
+          bannerSubtextEl.textContent = activeTutorObj.balance > 0
+            ? `You have ${fmt(activeTutorObj.balance)} in lesson credit associated with ${activeTutorObj.name}. This credit can only be used to book with this tutor.`
+            : `You currently have ${fmt(0)} in lesson credit associated with ${activeTutorObj.name}.`;
+        }
+      } else if (activeTargetType === 'buddy') {
+        tutorBanner.style.display = 'block';
+        if (bannerTypeTag) bannerTypeTag.textContent = 'Selected Aviora Buddy Balance (Non-Withdrawable)';
+        tutorNameEl.textContent = activeBuddyObj ? `Aviora Buddy (${activeBuddyObj.session_code})` : 'Aviora Buddy Co-Learning';
+        if (bannerAmountEl) bannerAmountEl.textContent = fmt(displayedBalance);
+        if (bannerSubtextEl) {
+          bannerSubtextEl.textContent = displayedBalance > 0
+            ? `You have ${fmt(displayedBalance)} in Aviora Buddy credit from a cancelled session or partner no-show. Use it to book an Aviora Buddy duo session.`
+            : `You currently have ${fmt(0)} in Aviora Buddy credit.`;
+        }
+      } else if (activeTutorObj && activeTutorObj.balance > 0) {
+        tutorBanner.style.display = 'block';
+        if (bannerTypeTag) bannerTypeTag.textContent = 'Eligible Rebooking Tutor';
+        tutorNameEl.textContent = activeTutorObj.name;
+        if (bannerAmountEl) bannerAmountEl.textContent = fmt(activeTutorObj.balance);
+        if (bannerSubtextEl) {
+          bannerSubtextEl.textContent = 'This credited amount can only be used to book a new lesson with this same tutor.';
+        }
+      } else if (buddyTotalBal > 0) {
+        tutorBanner.style.display = 'block';
+        if (bannerTypeTag) bannerTypeTag.textContent = 'Eligible Aviora Buddy Credit';
+        tutorNameEl.textContent = 'Aviora Buddy Duo Session';
+        if (bannerAmountEl) bannerAmountEl.textContent = fmt(buddyTotalBal);
+        if (bannerSubtextEl) {
+          bannerSubtextEl.textContent = 'This credited amount can be used to book a new 30-minute Aviora Buddy session.';
+        }
       } else {
         tutorBanner.style.display = 'none';
+      }
+    }
+
+    // Render Categorized Credits List (Tutor Lesson Credits & Aviora Buddy Credits)
+    const catContainer = document.getElementById('wallet-categorized-credits-container');
+    if (catContainer) {
+      const showTutorSection = this.selectedWalletCategory === 'all' || this.selectedWalletCategory === 'tutor';
+      const showBuddySection = this.selectedWalletCategory === 'all' || this.selectedWalletCategory === 'buddy';
+
+      const tutorItemsToRender = (String(this.selectedWalletEntity).startsWith('tutor_') && activeTutorObj)
+        ? [activeTutorObj]
+        : (tutorCredits.length > 0 ? tutorCredits : tutorOptionsList.slice(0, 2));
+
+      const buddyItemsToRender = buddyCredits.length > 0
+        ? buddyCredits
+        : [{
+            key: 'buddy_all',
+            session_code: 'Aviora Buddy',
+            subject: '30-Min Peer Co-Learning',
+            partner_name: 'Duo Session',
+            balance: buddyTotalBal
+          }];
+
+      catContainer.innerHTML = `
+        <div style="border: 1px solid rgba(198, 138, 40, 0.22); border-radius: 8px; padding: 0.55rem 0.65rem; background: rgba(250, 247, 242, 0.6);">
+          <div style="font-size: 0.68rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; color: var(--charcoal-700); margin-bottom: 0.4rem; display: flex; justify-content: space-between;">
+            <span>Credits by Category</span>
+            <span style="color: var(--gold-700);">Click to Inspect</span>
+          </div>
+          ${showTutorSection ? `
+            <div style="margin-bottom: ${showBuddySection ? '0.45rem' : '0'};">
+              <div style="font-size: 0.7rem; font-weight: 700; color: var(--gold-800); margin-bottom: 0.25rem;">🧑‍🏫 Tutor Lesson Credits (${fmt(tutorTotalBal)})</div>
+              ${tutorItemsToRender.map(tc => {
+                const isSel = this.selectedWalletEntity === tc.key;
+                return `
+                  <div onclick="Auth.selectWalletEntity('${tc.key}')" style="display: flex; justify-content: space-between; align-items: center; padding: 0.35rem 0.5rem; border-radius: 6px; margin-bottom: 0.2rem; cursor: pointer; background: ${isSel ? 'rgba(198, 138, 40, 0.16)' : '#FFFFFF'}; border: 1px solid ${isSel ? 'var(--gold-500)' : 'rgba(0,0,0,0.07)'};">
+                    <span style="font-size: 0.76rem; font-weight: 700; color: var(--charcoal-900);">${tc.name}</span>
+                    <strong style="font-size: 0.78rem; color: ${(tc.balance || 0) > 0 ? 'var(--gold-700)' : 'var(--charcoal-500)'};">${fmt(tc.balance || 0)}</strong>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          ` : ''}
+          ${showBuddySection ? `
+            <div>
+              <div style="font-size: 0.7rem; font-weight: 700; color: #065F46; margin-bottom: 0.25rem;">🤝 Aviora Buddy Credits (${fmt(buddyTotalBal)})</div>
+              ${buddyItemsToRender.map(bc => {
+                const isSel = this.selectedWalletEntity === bc.key || (this.selectedWalletEntity === 'buddy_all' && bc.key === 'buddy_all');
+                return `
+                  <div onclick="Auth.selectWalletEntity('${bc.key}')" style="display: flex; justify-content: space-between; align-items: center; padding: 0.35rem 0.5rem; border-radius: 6px; cursor: pointer; background: ${isSel ? 'rgba(16, 185, 129, 0.14)' : '#FFFFFF'}; border: 1px solid ${isSel ? '#10B981' : 'rgba(0,0,0,0.07)'};">
+                    <span style="font-size: 0.76rem; font-weight: 700; color: var(--charcoal-900);">${bc.session_code} (${bc.partner_name || bc.subject})</span>
+                    <strong style="font-size: 0.78rem; color: ${(bc.balance || 0) > 0 ? '#059669' : 'var(--charcoal-500)'};">${fmt(bc.balance || 0)}</strong>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          ` : ''}
+        </div>
+      `;
+    }
+
+    // Render Cancellations & Non-Withdrawable Refund History
+    const cancelContainer = document.getElementById('wallet-cancellations-container');
+    if (cancelContainer) {
+      let filteredCancels = allCancellations;
+      if (String(this.selectedWalletEntity).startsWith('tutor_')) {
+        filteredCancels = allCancellations.filter(c => c.entity_key === this.selectedWalletEntity);
+      } else if (this.selectedWalletEntity === 'category_tutor') {
+        filteredCancels = allCancellations.filter(c => c.category === 'tutor');
+      } else if (String(this.selectedWalletEntity).startsWith('buddy')) {
+        filteredCancels = this.selectedWalletEntity === 'buddy_all'
+          ? allCancellations.filter(c => c.category === 'buddy')
+          : allCancellations.filter(c => c.entity_key === this.selectedWalletEntity);
+      }
+
+      if (filteredCancels.length > 0) {
+        cancelContainer.innerHTML = `
+          <div style="border: 1px solid rgba(0,0,0,0.08); border-radius: 8px; padding: 0.55rem 0.65rem; background: #FFFFFF;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
+              <span style="font-size: 0.68rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; color: var(--charcoal-700);">Cancellations &amp; Refund Ledger</span>
+              <span style="font-size: 0.64rem; font-weight: 800; color: #B45309; background: rgba(245, 158, 11, 0.14); padding: 0.1rem 0.4rem; border-radius: 999px;">Cannot Be Withdrawn</span>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 0.35rem; max-height: 120px; overflow-y: auto;">
+              ${filteredCancels.map(c => `
+                <div style="padding: 0.35rem 0.45rem; border-radius: 6px; background: rgba(250, 247, 242, 0.7); border-left: 3px solid ${c.category === 'buddy' ? '#10B981' : 'var(--gold-500)'}; font-size: 0.72rem;">
+                  <div style="display: flex; justify-content: space-between; align-items: center; font-weight: 700; color: var(--charcoal-900);">
+                    <span>${c.title}</span>
+                    <span style="color: ${c.category === 'buddy' ? '#059669' : 'var(--gold-700)'}; font-weight: 800;">+${fmt(c.amount)}</span>
+                  </div>
+                  <div style="font-size: 0.67rem; color: var(--charcoal-600); margin-top: 0.1rem;">${c.reason}</div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `;
+      } else {
+        cancelContainer.innerHTML = `
+          <div style="border: 1px dashed rgba(0,0,0,0.12); border-radius: 8px; padding: 0.45rem 0.65rem; font-size: 0.72rem; color: var(--charcoal-500); text-align: center;">
+            No cancelled sessions recorded for this selection.
+          </div>
+        `;
+      }
+    }
+
+    // Update Action Button
+    if (bookBtn) {
+      if (activeTargetType === 'buddy') {
+        if (displayedBalance <= 0) {
+          bookBtn.disabled = true;
+          bookBtn.style.opacity = '0.55';
+          bookBtn.style.cursor = 'not-allowed';
+          bookBtn.textContent = 'Book Aviora Buddy (Requires Buddy Credit)';
+        } else {
+          bookBtn.disabled = false;
+          bookBtn.style.opacity = '1';
+          bookBtn.style.cursor = 'pointer';
+          bookBtn.textContent = `Book Aviora Buddy (${fmt(displayedBalance)} Credit)`;
+        }
+      } else if (activeTargetType === 'tutor' && activeTutorObj) {
+        if ((activeTutorObj.balance || 0) <= 0) {
+          bookBtn.disabled = true;
+          bookBtn.style.opacity = '0.55';
+          bookBtn.style.cursor = 'not-allowed';
+          bookBtn.textContent = `No Credit Available for ${activeTutorObj.name}`;
+        } else {
+          bookBtn.disabled = false;
+          bookBtn.style.opacity = '1';
+          bookBtn.style.cursor = 'pointer';
+          bookBtn.textContent = `Book Lesson with ${activeTutorObj.name} (${fmt(activeTutorObj.balance)})`;
+        }
+      } else {
+        if (totalBal <= 0) {
+          bookBtn.disabled = true;
+          bookBtn.style.opacity = '0.55';
+          bookBtn.style.cursor = 'not-allowed';
+          bookBtn.textContent = 'Book Another Lesson (Requires Balance)';
+        } else {
+          bookBtn.disabled = false;
+          bookBtn.style.opacity = '1';
+          bookBtn.style.cursor = 'pointer';
+          if (activeTutorObj && activeTutorObj.balance > 0) {
+            bookBtn.textContent = `Book Lesson with ${activeTutorObj.name}`;
+          } else if (buddyTotalBal > 0) {
+            bookBtn.textContent = `Book Aviora Buddy (${fmt(buddyTotalBal)} Credit)`;
+          } else {
+            bookBtn.textContent = 'Book Another Lesson';
+          }
+        }
       }
     }
   },
 
   bookWithWalletTutor() {
-    const user = this.currentUser;
-    const balance = user ? (parseFloat(user.wallet_balance) || 0) : 0;
-    if (balance <= 0) {
-      showToast('A new lesson can only be booked if there is a balance available.', 'warning');
-      return;
-    }
-    const tutorId = this.walletTutor?.id || user?.wallet_tutor_id;
-    if (!tutorId) {
-      showToast('A new lesson can only be booked with the same tutor whose previous session was cancelled.', 'warning');
-      return;
-    }
     const dropdown = document.getElementById('nav-wallet-dropdown');
     if (dropdown) dropdown.style.display = 'none';
+
+    if (String(this.selectedWalletEntity).startsWith('buddy') || (this.selectedWalletCategory === 'buddy')) {
+      window.location.hash = '#student-buddy';
+      setTimeout(() => {
+        if (typeof AvioraBuddy !== 'undefined' && AvioraBuddy.openPeerModal) {
+          AvioraBuddy.openPeerModal();
+        }
+      }, 250);
+      return;
+    }
+
+    let tutorId = null;
+    if (String(this.selectedWalletEntity).startsWith('tutor_')) {
+      tutorId = Number(String(this.selectedWalletEntity).replace('tutor_', ''));
+    } else {
+      const firstCreditTutor = (this.walletDetails?.tutor_credits || []).find(tc => tc.balance > 0);
+      tutorId = firstCreditTutor?.tutor_id || this.walletTutor?.id || this.currentUser?.wallet_tutor_id;
+    }
+
+    const tutorBal = tutorId ? this.getTutorWalletBalance(tutorId) : 0;
+    if (tutorBal <= 0) {
+      if ((this.walletDetails?.buddy_balance || 0) > 0) {
+        window.location.hash = '#student-buddy';
+        setTimeout(() => {
+          if (typeof AvioraBuddy !== 'undefined' && AvioraBuddy.openPeerModal) {
+            AvioraBuddy.openPeerModal();
+          }
+        }, 250);
+        return;
+      }
+      showToast('A new lesson can only be booked if there is a balance available for that tutor.', 'warning');
+      return;
+    }
 
     if (typeof Tutors !== 'undefined' && Tutors.openBookingModal) {
       Tutors.openBookingModal(tutorId);
@@ -1896,7 +2337,7 @@ const Auth = {
       if (typeof API !== 'undefined' && API.getStudentWallet) {
         const data = await API.getStudentWallet();
         if (data && typeof data.wallet_balance !== 'undefined') {
-          this.updateWalletBalance(data.wallet_balance, data.wallet_tutor || null);
+          this.updateWalletBalance(data.wallet_balance, data.wallet_tutor || null, data);
         }
       }
     } catch (e) {
@@ -1980,7 +2421,7 @@ const Auth = {
               </svg>
               <span class="nav-wallet-balance" id="nav-wallet-balance">${walletBalance}</span>
             </button>
-            <div class="nav-wallet-dropdown" id="nav-wallet-dropdown" style="display: none;">
+            <div class="nav-wallet-dropdown" id="nav-wallet-dropdown" style="display: none; width: 380px; max-width: 94vw;">
               <div class="wallet-dropdown-header">
                 <div style="display: flex; align-items: center; gap: 0.5rem;">
                   <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--gold-600)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -1992,25 +2433,61 @@ const Auth = {
                 </div>
                 <span class="wallet-status-pill">Non-Withdrawable</span>
               </div>
-              <div class="wallet-dropdown-body">
-                <div class="wallet-balance-row">
-                  <span class="wallet-balance-label">Lesson Credit:</span>
+              <div class="wallet-dropdown-body" style="max-height: 440px; overflow-y: auto;">
+                <!-- Categorized Credit Type Pills -->
+                <div id="wallet-category-tabs" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.35rem; margin-bottom: 0.75rem;">
+                  <button type="button" id="wallet-tab-all" onclick="Auth.setWalletCategoryFilter('all')" style="padding: 0.35rem 0.3rem; font-size: 0.71rem; font-weight: 800; border-radius: 6px; border: 1.5px solid var(--gold-500); background: var(--gold-600); color: #FFFFFF; cursor: pointer; text-align: center;">
+                    All (<span id="wallet-tab-all-val">${walletBalance}</span>)
+                  </button>
+                  <button type="button" id="wallet-tab-tutor" onclick="Auth.setWalletCategoryFilter('tutor')" style="padding: 0.35rem 0.3rem; font-size: 0.71rem; font-weight: 700; border-radius: 6px; border: 1px solid rgba(198, 138, 40, 0.35); background: #FFFFFF; color: var(--charcoal-800); cursor: pointer; text-align: center;">
+                    Tutor (<span id="wallet-tab-tutor-val">$0.00</span>)
+                  </button>
+                  <button type="button" id="wallet-tab-buddy" onclick="Auth.setWalletCategoryFilter('buddy')" style="padding: 0.35rem 0.3rem; font-size: 0.71rem; font-weight: 700; border-radius: 6px; border: 1px solid rgba(198, 138, 40, 0.35); background: #FFFFFF; color: var(--charcoal-800); cursor: pointer; text-align: center;">
+                    Buddy (<span id="wallet-tab-buddy-val">$0.00</span>)
+                  </button>
+                </div>
+
+                <!-- Select Tutor or Aviora Buddy Filter -->
+                <div style="margin-bottom: 0.65rem;">
+                  <label for="wallet-entity-selector" style="display: block; font-size: 0.69rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; color: var(--charcoal-600); margin-bottom: 0.25rem;">
+                    View Balance by Tutor or Aviora Buddy:
+                  </label>
+                  <select id="wallet-entity-selector" class="form-control" style="font-size: 0.78rem; font-weight: 700; padding: 0.4rem 0.6rem; height: auto; border: 1.5px solid rgba(198, 138, 40, 0.35); border-radius: 7px;" onchange="Auth.selectWalletEntity(this.value)">
+                    <option value="all">All Credits (Combined Balance)</option>
+                  </select>
+                </div>
+
+                <!-- Active Balance Row -->
+                <div class="wallet-balance-row" style="margin-bottom: 0.65rem;">
+                  <span class="wallet-balance-label" id="wallet-balance-row-label">Total Wallet Credit:</span>
                   <span class="wallet-balance-val" id="wallet-dropdown-balance">${walletBalance}</span>
                 </div>
+
+                <!-- Selected Tutor / Selected Aviora Buddy Banner -->
                 <div id="wallet-tutor-banner" style="display: none; background: rgba(198, 138, 40, 0.1); border: 1.5px solid var(--gold-500); border-radius: 8px; padding: 0.65rem 0.85rem; margin-bottom: 0.75rem;">
-                  <div style="font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--gold-800); font-weight: 800;">
+                  <div id="wallet-banner-type-tag" style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--gold-800); font-weight: 800;">
                     Eligible Rebooking Tutor
                   </div>
-                  <div style="display: flex; align-items: center; gap: 0.45rem; margin-top: 0.3rem;">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--gold-600);"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-                    <strong style="color: var(--charcoal-900); font-size: 0.86rem;" id="wallet-tutor-name">-</strong>
+                  <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.45rem; margin-top: 0.3rem;">
+                    <div style="display: flex; align-items: center; gap: 0.4rem;">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--gold-600);"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                      <strong style="color: var(--charcoal-900); font-size: 0.86rem;" id="wallet-tutor-name">-</strong>
+                    </div>
+                    <strong style="color: var(--gold-700); font-size: 0.88rem; font-family: var(--font-heading);" id="wallet-banner-amount">$0.00</strong>
                   </div>
-                  <div style="font-size: 0.73rem; color: var(--charcoal-700); margin-top: 0.2rem; line-height: 1.4;">
+                  <div id="wallet-banner-subtext" style="font-size: 0.73rem; color: var(--charcoal-700); margin-top: 0.2rem; line-height: 1.4;">
                     This credited amount can only be used to book a new lesson with this same tutor.
                   </div>
                 </div>
-                <p class="wallet-dropdown-note">
-                  If you cancel a lesson or Aviora Buddy session (at least 3 hours before start time), or if your peer partner does not attend an Aviora Buddy session, the cost is refunded to your wallet. While the refunded amount is visible here, it cannot be withdrawn; instead, it can be used to book another lesson or Aviora Buddy session.
+
+                <!-- Categorized Credits Breakdown -->
+                <div id="wallet-categorized-credits-container" style="margin-bottom: 0.65rem;"></div>
+
+                <!-- Cancellations & Non-Withdrawable Refund History -->
+                <div id="wallet-cancellations-container" style="margin-bottom: 0.65rem;"></div>
+
+                <p class="wallet-dropdown-note" id="wallet-dropdown-note" style="font-size: 0.75rem; line-height: 1.45; margin: 0;">
+                  If you cancel a lesson or Aviora Buddy session (at least 3 hours before start time), or if your peer partner does not attend an Aviora Buddy session, the cost is refunded to your wallet by category. While cancellations and balances are reflected here, these funds <strong>cannot be withdrawn</strong>; they can only be used to book with the respective tutor or Aviora Buddy.
                 </p>
               </div>
               <div class="wallet-dropdown-footer">
@@ -2093,6 +2570,9 @@ const Auth = {
         }
 
         this.setupLogoutDropdown();
+        if (isStudent) {
+          this.renderCategorizedWalletUI();
+        }
       }
 
       // Configure Header Navigation Links

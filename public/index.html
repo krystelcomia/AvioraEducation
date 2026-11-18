@@ -107,7 +107,7 @@
               </svg>
               <span class="nav-wallet-balance" id="nav-wallet-balance">$0.00</span>
             </button>
-            <div class="nav-wallet-dropdown" id="nav-wallet-dropdown" style="display: none;">
+            <div class="nav-wallet-dropdown" id="nav-wallet-dropdown" style="display: none; width: 380px; max-width: 94vw;">
               <div class="wallet-dropdown-header">
                 <div style="display: flex; align-items: center; gap: 0.5rem;">
                   <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--gold-600)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -119,25 +119,61 @@
                 </div>
                 <span class="wallet-status-pill">Non-Withdrawable</span>
               </div>
-              <div class="wallet-dropdown-body">
-                <div class="wallet-balance-row">
-                  <span class="wallet-balance-label">Lesson Credit:</span>
+              <div class="wallet-dropdown-body" style="max-height: 440px; overflow-y: auto;">
+                <!-- Categorized Credit Type Pills -->
+                <div id="wallet-category-tabs" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.35rem; margin-bottom: 0.75rem;">
+                  <button type="button" id="wallet-tab-all" onclick="Auth.setWalletCategoryFilter('all')" style="padding: 0.35rem 0.3rem; font-size: 0.71rem; font-weight: 800; border-radius: 6px; border: 1.5px solid var(--gold-500); background: var(--gold-600); color: #FFFFFF; cursor: pointer; text-align: center;">
+                    All (<span id="wallet-tab-all-val">$0</span>)
+                  </button>
+                  <button type="button" id="wallet-tab-tutor" onclick="Auth.setWalletCategoryFilter('tutor')" style="padding: 0.35rem 0.3rem; font-size: 0.71rem; font-weight: 700; border-radius: 6px; border: 1px solid rgba(198, 138, 40, 0.35); background: #FFFFFF; color: var(--charcoal-800); cursor: pointer; text-align: center;">
+                    Tutor (<span id="wallet-tab-tutor-val">$0</span>)
+                  </button>
+                  <button type="button" id="wallet-tab-buddy" onclick="Auth.setWalletCategoryFilter('buddy')" style="padding: 0.35rem 0.3rem; font-size: 0.71rem; font-weight: 700; border-radius: 6px; border: 1px solid rgba(198, 138, 40, 0.35); background: #FFFFFF; color: var(--charcoal-800); cursor: pointer; text-align: center;">
+                    Buddy (<span id="wallet-tab-buddy-val">$0</span>)
+                  </button>
+                </div>
+
+                <!-- Select Tutor or Aviora Buddy Filter -->
+                <div style="margin-bottom: 0.65rem;">
+                  <label for="wallet-entity-selector" style="display: block; font-size: 0.69rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; color: var(--charcoal-600); margin-bottom: 0.25rem;">
+                    View Balance by Tutor or Aviora Buddy:
+                  </label>
+                  <select id="wallet-entity-selector" class="form-control" style="font-size: 0.78rem; font-weight: 700; padding: 0.4rem 0.6rem; height: auto; border: 1.5px solid rgba(198, 138, 40, 0.35); border-radius: 7px;" onchange="Auth.selectWalletEntity(this.value)">
+                    <option value="all">All Credits (Combined Balance)</option>
+                  </select>
+                </div>
+
+                <!-- Active Balance Row (Updates dynamically for Selected Tutor or Selected Aviora Buddy) -->
+                <div class="wallet-balance-row" style="margin-bottom: 0.65rem;">
+                  <span class="wallet-balance-label" id="wallet-balance-row-label">Lesson Credit:</span>
                   <span class="wallet-balance-val" id="wallet-dropdown-balance">$0.00</span>
                 </div>
+
+                <!-- Selected Tutor / Selected Aviora Buddy Banner -->
                 <div id="wallet-tutor-banner" style="display: none; background: rgba(198, 138, 40, 0.1); border: 1.5px solid var(--gold-500); border-radius: 8px; padding: 0.65rem 0.85rem; margin-bottom: 0.75rem;">
-                  <div style="font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--gold-800); font-weight: 800;">
+                  <div id="wallet-banner-type-tag" style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--gold-800); font-weight: 800;">
                     Eligible Rebooking Tutor
                   </div>
-                  <div style="display: flex; align-items: center; gap: 0.45rem; margin-top: 0.3rem;">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--gold-600);"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-                    <strong style="color: var(--charcoal-900); font-size: 0.86rem;" id="wallet-tutor-name">-</strong>
+                  <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.45rem; margin-top: 0.3rem;">
+                    <div style="display: flex; align-items: center; gap: 0.4rem;">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--gold-600);"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                      <strong style="color: var(--charcoal-900); font-size: 0.86rem;" id="wallet-tutor-name">-</strong>
+                    </div>
+                    <strong style="color: var(--gold-700); font-size: 0.88rem; font-family: var(--font-heading);" id="wallet-banner-amount">$0.00</strong>
                   </div>
-                  <div style="font-size: 0.73rem; color: var(--charcoal-700); margin-top: 0.2rem; line-height: 1.4;">
+                  <div id="wallet-banner-subtext" style="font-size: 0.73rem; color: var(--charcoal-700); margin-top: 0.2rem; line-height: 1.4;">
                     This credited amount can only be used to book a new lesson with this same tutor.
                   </div>
                 </div>
-                <p class="wallet-dropdown-note" id="wallet-dropdown-note">
-                  If you cancel a lesson (at least 3 hours before start time), the cost is refunded to your wallet. While the refunded amount is visible here, it cannot be withdrawn; instead, it can be used to book another lesson with the same tutor.
+
+                <!-- Categorized Credits Breakdown (Tutor Credits & Aviora Buddy Credits) -->
+                <div id="wallet-categorized-credits-container" style="margin-bottom: 0.65rem;"></div>
+
+                <!-- Cancellations & Non-Withdrawable Refund History -->
+                <div id="wallet-cancellations-container" style="margin-bottom: 0.65rem;"></div>
+
+                <p class="wallet-dropdown-note" id="wallet-dropdown-note" style="font-size: 0.75rem; line-height: 1.45; margin: 0;">
+                  If you cancel a lesson or Aviora Buddy session (at least 3 hours before start time), or if your peer partner does not attend an Aviora Buddy session, the cost is refunded to your wallet by category. While cancellations and balances are reflected here, these funds <strong>cannot be withdrawn</strong>; they can only be used to book with the respective tutor or Aviora Buddy.
                 </p>
               </div>
               <div class="wallet-dropdown-footer">
@@ -7719,12 +7755,27 @@
             </div>
           </div>
 
-          <div style="background: rgba(198, 138, 40, 0.08); border: 1.5px solid rgba(198, 138, 40, 0.25); border-radius: 10px; padding: 1rem; margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center;">
+          <div style="background: rgba(198, 138, 40, 0.08); border: 1.5px solid rgba(198, 138, 40, 0.25); border-radius: 10px; padding: 1rem; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center;">
             <div>
               <div style="font-weight: 800; color: var(--charcoal-900); font-size: 0.95rem;">Aviora Buddy Fee:</div>
-              <div style="font-size: 0.78rem; color: var(--text-secondary);">$6.00 flat rate co-learning fee</div>
+              <div style="font-size: 0.78rem; color: var(--text-secondary);">$6.00 flat rate co-learning fee (30-min call)</div>
             </div>
             <div style="font-family: var(--font-heading); font-size: 1.35rem; font-weight: 900; color: var(--gold-700);">$6.00</div>
+          </div>
+
+          <!-- Aviora Buddy Wallet Credit Balance Box -->
+          <div id="buddy-modal-wallet-box" style="background: rgba(16, 185, 129, 0.08); border: 1.5px solid rgba(16, 185, 129, 0.3); border-radius: 10px; padding: 0.85rem 1rem; margin-bottom: 1.25rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.5rem;">
+              <div>
+                <div style="font-size: 0.72rem; text-transform: uppercase; font-weight: 800; color: #065F46; letter-spacing: 0.04em;">Aviora Buddy Wallet Credit (Non-Withdrawable)</div>
+                <div id="buddy-modal-wallet-sub" style="font-size: 0.76rem; color: var(--charcoal-700); margin-top: 0.15rem;">Available credit from Aviora Buddy cancellations / partner no-shows</div>
+              </div>
+              <strong id="buddy-modal-wallet-balance" style="font-family: var(--font-heading); font-size: 1.15rem; font-weight: 900; color: #059669;">$0.00</strong>
+            </div>
+            <label id="buddy-modal-use-wallet-wrap" style="display: none; align-items: center; gap: 0.45rem; margin-top: 0.6rem; padding-top: 0.55rem; border-top: 1px dashed rgba(16, 185, 129, 0.3); font-size: 0.8rem; font-weight: 700; color: #065F46; cursor: pointer;">
+              <input type="checkbox" id="buddy-peer-use-wallet" value="wallet" />
+              <span>Apply $6.00 from my Aviora Buddy Wallet Credit for this session</span>
+            </label>
           </div>
 
           <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center; font-weight: 700; padding: 0.85rem;">

@@ -1145,61 +1145,343 @@ setInterval(() => {
   }
 }, 10000);
 
-// Auto-reconcile student wallet balance against unspent refunded payments
+// Auto-reconcile student wallet balance against unspent refunded payments, categorized by Tutor & Aviora Buddy
 function reconcileStudentWallet(studentId) {
   try {
+    try {
+      db.prepare("ALTER TABLE buddy_sessions ADD COLUMN payment_method TEXT DEFAULT 'card'").run();
+    } catch (e) {}
+
     const student = db.prepare('SELECT wallet_balance, wallet_tutor_id FROM users WHERE id = ?').get(studentId);
-    let balance = student ? (parseFloat(student.wallet_balance) || 0) : 0;
+    let storedBalance = student ? (parseFloat(student.wallet_balance) || 0) : 0;
 
-    const refundData = db.prepare(`
+    // 1. Cancelled paid tutor lessons (refunded to wallet per tutor)
+    const cancelledTutorRows = db.prepare(`
       SELECT 
-        SUM(COALESCE(total_amount, hourly_rate * COALESCE(duration_hours, 1.0))) as total_refunded,
-        tutor_id
-      FROM tutoring_requests
-      WHERE student_id = ? 
-        AND status = 'cancelled'
-        AND (payment_method != 'subscription' OR (total_amount IS NOT NULL AND total_amount > 0))
-    `).get(studentId);
+        tr.id,
+        tr.tutor_id,
+        tr.subject,
+        tr.requested_date,
+        tr.requested_time,
+        COALESCE(tr.total_amount, tr.hourly_rate * COALESCE(tr.duration_hours, 1.0)) as amount,
+        tr.updated_at,
+        tr.created_at,
+        u.name as tutor_name,
+        u.avatar_url as tutor_avatar,
+        tp.id as tutor_profile_id,
+        tp.headline as tutor_headline
+      FROM tutoring_requests tr
+      JOIN users u ON tr.tutor_id = u.id
+      LEFT JOIN tutor_profiles tp ON tp.user_id = u.id
+      WHERE tr.student_id = ?
+        AND tr.status = 'cancelled'
+        AND (tr.payment_method != 'subscription' OR (tr.total_amount IS NOT NULL AND tr.total_amount > 0))
+      ORDER BY tr.updated_at DESC, tr.id DESC
+    `).all(studentId);
 
-    const buddyRefundData = db.prepare(`
-      SELECT COALESCE(SUM(fee_per_student), 0) as total_buddy_refunded
-      FROM buddy_sessions
-      WHERE (student1_id = ? AND student1_refunded = 1)
-         OR (student2_id = ? AND student2_refunded = 1)
-    `).get(studentId, studentId);
-
-    const spentData = db.prepare(`
-      SELECT SUM(COALESCE(total_amount, hourly_rate * COALESCE(duration_hours, 1.0))) as total_spent
+    // Wallet credits spent per tutor
+    const spentTutorRows = db.prepare(`
+      SELECT 
+        tutor_id,
+        SUM(COALESCE(total_amount, hourly_rate * COALESCE(duration_hours, 1.0))) as total_spent
       FROM tutoring_requests
-      WHERE student_id = ? 
+      WHERE student_id = ?
         AND payment_method = 'wallet'
         AND status != 'cancelled'
-    `).get(studentId);
+      GROUP BY tutor_id
+    `).all(studentId);
 
-    const netRefundCredits = Math.max(0, Math.round(((refundData?.total_refunded || 0) + (buddyRefundData?.total_buddy_refunded || 0) - (spentData?.total_spent || 0)) * 100) / 100);
-
-    let tutorId = student ? student.wallet_tutor_id : null;
-    if (netRefundCredits > balance) {
-      balance = netRefundCredits;
-      tutorId = tutorId || refundData?.tutor_id;
-      db.prepare('UPDATE users SET wallet_balance = ?, wallet_tutor_id = ? WHERE id = ?').run(balance, tutorId, studentId);
-    } else if (balance > 0 && !tutorId && refundData?.tutor_id) {
-      tutorId = refundData.tutor_id;
-      db.prepare('UPDATE users SET wallet_tutor_id = ? WHERE id = ?').run(tutorId, studentId);
+    const spentByTutor = {};
+    for (const r of spentTutorRows) {
+      spentByTutor[r.tutor_id] = parseFloat(r.total_spent) || 0;
     }
 
-    let tutorInfo = null;
-    if (tutorId) {
-      const tUser = db.prepare('SELECT id, name, avatar_url FROM users WHERE id = ?').get(tutorId);
-      if (tUser) {
-        tutorInfo = { id: tUser.id, name: tUser.name, avatar_url: tUser.avatar_url };
+    const tutorCreditsMap = new Map();
+    const allCancellations = [];
+
+    for (const row of cancelledTutorRows) {
+      const amt = Math.round((parseFloat(row.amount) || 0) * 100) / 100;
+      if (amt <= 0) continue;
+      const tId = row.tutor_id;
+      if (!tutorCreditsMap.has(tId)) {
+        tutorCreditsMap.set(tId, {
+          key: `tutor_${tId}`,
+          type: 'tutor',
+          tutor_id: tId,
+          tutor_profile_id: row.tutor_profile_id || tId,
+          name: row.tutor_name || 'Educator',
+          avatar_url: row.tutor_avatar || '',
+          headline: row.tutor_headline || 'Verified Educator',
+          refunded_total: 0,
+          spent_total: spentByTutor[tId] || 0,
+          balance: 0,
+          cancellations_count: 0,
+          cancellations: []
+        });
+      }
+      const entry = tutorCreditsMap.get(tId);
+      entry.refunded_total = Math.round((entry.refunded_total + amt) * 100) / 100;
+      entry.cancellations_count += 1;
+
+      const cancelItem = {
+        id: `tutor_cancel_${row.id}`,
+        request_id: row.id,
+        category: 'tutor',
+        category_label: 'Tutor Lesson Credit',
+        entity_key: `tutor_${tId}`,
+        tutor_id: tId,
+        tutor_name: row.tutor_name || 'Educator',
+        title: `${row.subject || 'Tutoring Session'} — ${row.tutor_name || 'Educator'}`,
+        subtitle: `Scheduled: ${row.requested_date || 'N/A'} at ${row.requested_time || 'N/A'}`,
+        date: row.requested_date || (row.updated_at ? String(row.updated_at).split(' ')[0] : 'Recent'),
+        amount: amt,
+        reason: 'Cancelled Lesson (≥3h Notice) • Credited to Tutor Balance',
+        withdrawable: false
+      };
+      entry.cancellations.push(cancelItem);
+      allCancellations.push(cancelItem);
+    }
+
+    for (const [tId, entry] of tutorCreditsMap.entries()) {
+      entry.balance = Math.max(0, Math.round((entry.refunded_total - entry.spent_total) * 100) / 100);
+    }
+
+    // 2. Aviora Buddy refunds & cancellations
+    const buddyRefundRows = db.prepare(`
+      SELECT 
+        bs.*,
+        s1.name as student1_name, s1.avatar_url as student1_avatar,
+        s2.name as student2_name, s2.avatar_url as student2_avatar
+      FROM buddy_sessions bs
+      LEFT JOIN users s1 ON bs.student1_id = s1.id
+      LEFT JOIN users s2 ON bs.student2_id = s2.id
+      WHERE (bs.student1_id = ? AND bs.student1_refunded = 1)
+         OR (bs.student2_id = ? AND bs.student2_refunded = 1)
+      ORDER BY bs.updated_at DESC, bs.id DESC
+    `).all(studentId, studentId);
+
+    const spentBuddyRow = db.prepare(`
+      SELECT COALESCE(SUM(fee_per_student), 0) as total_buddy_spent
+      FROM buddy_sessions
+      WHERE (student1_id = ? OR student2_id = ?)
+        AND payment_method = 'wallet'
+        AND status != 'cancelled'
+    `).get(studentId, studentId);
+
+    let remainingBuddySpentToDeduct = parseFloat(spentBuddyRow?.total_buddy_spent) || 0;
+    const buddyCreditsList = [];
+    let buddyTotalBalance = 0;
+
+    for (const bs of buddyRefundRows) {
+      const fee = Math.round((parseFloat(bs.fee_per_student) || 6.00) * 100) / 100;
+      const isS1 = bs.student1_id === studentId;
+      const partnerName = isS1 ? (bs.student2_name || 'Assigned Study Peer') : (bs.student1_name || 'Assigned Study Peer');
+      const deducted = Math.min(fee, remainingBuddySpentToDeduct);
+      remainingBuddySpentToDeduct = Math.max(0, Math.round((remainingBuddySpentToDeduct - deducted) * 100) / 100);
+      const itemBalance = Math.max(0, Math.round((fee - deducted) * 100) / 100);
+      buddyTotalBalance = Math.round((buddyTotalBalance + itemBalance) * 100) / 100;
+
+      const reasonText = bs.status === 'cancelled'
+        ? 'Cancelled Aviora Buddy (≥3h Notice) • Non-Withdrawable Credit'
+        : 'Partner No-Show Refund (30-Min Call) • Non-Withdrawable Credit';
+
+      const buddyCreditItem = {
+        key: `buddy_${bs.id}`,
+        type: 'buddy',
+        session_id: bs.id,
+        session_code: bs.session_code || `BUDDY-${bs.id}`,
+        subject: bs.subject || 'Aviora Buddy Co-Learning',
+        partner_name: partnerName,
+        scheduled_date: bs.scheduled_date || 'Scheduled',
+        scheduled_time: bs.scheduled_time || '30-Min Call',
+        original_amount: fee,
+        balance: itemBalance,
+        reason: reasonText,
+        withdrawable: false
+      };
+      buddyCreditsList.push(buddyCreditItem);
+
+      allCancellations.push({
+        id: `buddy_cancel_${bs.id}`,
+        session_id: bs.id,
+        category: 'buddy',
+        category_label: 'Aviora Buddy Credit',
+        entity_key: `buddy_${bs.id}`,
+        session_code: bs.session_code || `BUDDY-${bs.id}`,
+        partner_name: partnerName,
+        title: `Aviora Buddy (${bs.session_code || 'Duo'}) — ${bs.subject || 'Co-Learning'}`,
+        subtitle: `Partner: ${partnerName} • ${bs.scheduled_date || ''} ${bs.scheduled_time || ''}`.trim(),
+        date: bs.scheduled_date && !String(bs.scheduled_date).includes('Pending') ? bs.scheduled_date : (bs.updated_at ? String(bs.updated_at).split(' ')[0] : 'Recent'),
+        amount: fee,
+        reason: reasonText,
+        withdrawable: false
+      });
+    }
+
+    let tutorTotalBalance = 0;
+    for (const entry of tutorCreditsMap.values()) {
+      tutorTotalBalance = Math.round((tutorTotalBalance + entry.balance) * 100) / 100;
+    }
+
+    let computedTotal = Math.round((tutorTotalBalance + buddyTotalBalance) * 100) / 100;
+
+    // If stored wallet_balance exceeds computed sum (e.g., seeded/manual tutor credit), attribute difference to wallet_tutor_id
+    if (storedBalance > computedTotal) {
+      const diff = Math.round((storedBalance - computedTotal) * 100) / 100;
+      let fallbackTutorId = student?.wallet_tutor_id || cancelledTutorRows[0]?.tutor_id;
+      if (!fallbackTutorId) {
+        const defaultTutor = db.prepare("SELECT u.id FROM users u JOIN tutor_profiles tp ON tp.user_id = u.id WHERE tp.is_active = 1 ORDER BY tp.id ASC LIMIT 1").get();
+        fallbackTutorId = defaultTutor ? defaultTutor.id : null;
+      }
+      if (fallbackTutorId) {
+        const tUser = db.prepare(`
+          SELECT u.id, u.name, u.avatar_url, tp.id as tutor_profile_id, tp.headline
+          FROM users u
+          LEFT JOIN tutor_profiles tp ON tp.user_id = u.id
+          WHERE u.id = ?
+        `).get(fallbackTutorId);
+        if (tUser) {
+          if (!tutorCreditsMap.has(tUser.id)) {
+            tutorCreditsMap.set(tUser.id, {
+              key: `tutor_${tUser.id}`,
+              type: 'tutor',
+              tutor_id: tUser.id,
+              tutor_profile_id: tUser.tutor_profile_id || tUser.id,
+              name: tUser.name,
+              avatar_url: tUser.avatar_url || '',
+              headline: tUser.headline || 'Verified Educator',
+              refunded_total: diff,
+              spent_total: 0,
+              balance: diff,
+              cancellations_count: 1,
+              cancellations: []
+            });
+          } else {
+            const existing = tutorCreditsMap.get(tUser.id);
+            existing.balance = Math.round((existing.balance + diff) * 100) / 100;
+            existing.refunded_total = Math.round((existing.refunded_total + diff) * 100) / 100;
+          }
+          const tEntry = tutorCreditsMap.get(tUser.id);
+          if (tEntry.cancellations.length === 0) {
+            const seededCancel = {
+              id: `tutor_cancel_seed_${tUser.id}`,
+              category: 'tutor',
+              category_label: 'Tutor Lesson Credit',
+              entity_key: `tutor_${tUser.id}`,
+              tutor_id: tUser.id,
+              tutor_name: tUser.name,
+              title: `Cancelled Lesson Credit — ${tUser.name}`,
+              subtitle: 'Refunded lesson credit (Available for rebooking)',
+              date: 'Credited',
+              amount: diff,
+              reason: 'Cancelled Lesson (≥3h Notice) • Credited to Tutor Balance',
+              withdrawable: false
+            };
+            tEntry.cancellations.push(seededCancel);
+            allCancellations.push(seededCancel);
+          }
+          tutorTotalBalance = Math.round((tutorTotalBalance + diff) * 100) / 100;
+          computedTotal = Math.round((tutorTotalBalance + buddyTotalBalance) * 100) / 100;
+        }
       }
     }
 
-    return { balance, tutorId, tutorInfo };
+    const tutorCreditsList = Array.from(tutorCreditsMap.values());
+    const activeTutorCredits = tutorCreditsList.filter(t => t.balance > 0);
+    let primaryTutorId = student?.wallet_tutor_id || (activeTutorCredits[0]?.tutor_id) || (tutorCreditsList[0]?.tutor_id) || null;
+    if (primaryTutorId && !tutorCreditsMap.get(primaryTutorId)?.balance && activeTutorCredits.length > 0) {
+      primaryTutorId = activeTutorCredits[0].tutor_id;
+    }
+
+    if (computedTotal !== storedBalance || primaryTutorId !== (student?.wallet_tutor_id || null)) {
+      db.prepare('UPDATE users SET wallet_balance = ?, wallet_tutor_id = ? WHERE id = ?').run(computedTotal, primaryTutorId, studentId);
+    }
+
+    let tutorInfo = null;
+    if (primaryTutorId) {
+      const tUser = db.prepare('SELECT id, name, avatar_url FROM users WHERE id = ?').get(primaryTutorId);
+      if (tUser) {
+        const tCredit = tutorCreditsMap.get(primaryTutorId);
+        tutorInfo = {
+          id: tUser.id,
+          name: tUser.name,
+          avatar_url: tUser.avatar_url,
+          balance: tCredit ? tCredit.balance : computedTotal
+        };
+      }
+    }
+
+    // Also include all active tutors and the student's buddy sessions so selecting ANY tutor or Aviora Buddy shows its associated balance
+    const allActiveTutors = db.prepare(`
+      SELECT u.id as user_id, tp.id as profile_id, u.name, u.avatar_url, tp.headline, tp.hourly_rate
+      FROM tutor_profiles tp
+      JOIN users u ON tp.user_id = u.id
+      WHERE tp.is_active = 1
+      ORDER BY u.name ASC
+    `).all().map(t => {
+      const cEntry = tutorCreditsMap.get(t.user_id);
+      return {
+        key: `tutor_${t.user_id}`,
+        tutor_id: t.user_id,
+        tutor_profile_id: t.profile_id,
+        name: t.name,
+        avatar_url: t.avatar_url,
+        headline: t.headline,
+        balance: cEntry ? cEntry.balance : 0,
+        cancellations_count: cEntry ? cEntry.cancellations_count : 0
+      };
+    });
+
+    const studentBuddySessions = db.prepare(`
+      SELECT bs.id, bs.session_code, bs.subject, bs.status, bs.scheduled_date, bs.scheduled_time,
+             s1.name as student1_name, s2.name as student2_name, bs.student1_id, bs.student2_id
+      FROM buddy_sessions bs
+      LEFT JOIN users s1 ON bs.student1_id = s1.id
+      LEFT JOIN users s2 ON bs.student2_id = s2.id
+      WHERE bs.student1_id = ? OR bs.student2_id = ?
+      ORDER BY bs.id DESC
+    `).all(studentId, studentId).map(bs => {
+      const bCredit = buddyCreditsList.find(b => b.session_id === bs.id);
+      const partnerName = bs.student1_id === studentId ? (bs.student2_name || 'Study Peer') : (bs.student1_name || 'Study Peer');
+      return {
+        key: `buddy_${bs.id}`,
+        session_id: bs.id,
+        session_code: bs.session_code,
+        subject: bs.subject,
+        partner_name: partnerName,
+        status: bs.status,
+        balance: bCredit ? bCredit.balance : 0
+      };
+    });
+
+    return {
+      balance: computedTotal,
+      tutor_balance: tutorTotalBalance,
+      buddy_balance: buddyTotalBalance,
+      tutorId: primaryTutorId,
+      tutorInfo,
+      tutor_credits: tutorCreditsList,
+      buddy_credits: buddyCreditsList,
+      cancellations: allCancellations,
+      all_tutors: allActiveTutors,
+      all_buddy_sessions: studentBuddySessions,
+      withdrawable: false
+    };
   } catch (err) {
     console.error('reconcileStudentWallet error:', err);
-    return { balance: 0, tutorId: null, tutorInfo: null };
+    return {
+      balance: 0,
+      tutor_balance: 0,
+      buddy_balance: 0,
+      tutorId: null,
+      tutorInfo: null,
+      tutor_credits: [],
+      buddy_credits: [],
+      cancellations: [],
+      all_tutors: [],
+      all_buddy_sessions: [],
+      withdrawable: false
+    };
   }
 }
 
@@ -2724,6 +3006,7 @@ app.get('/api/auth/me', authenticateToken, (req, res) => {
       req.user.wallet_balance = walletData.balance;
       req.user.wallet_tutor_id = walletData.tutorId;
       extra.wallet_tutor = walletData.tutorInfo;
+      extra.wallet_details = walletData;
     } else if ((req.user.role === 'teacher' || req.user.role === 'tutor')) {
       const teacherApp = db.prepare('SELECT * FROM teacher_applications WHERE user_id = ?').get(userId);
       const tutorProfile = db.prepare('SELECT * FROM tutor_profiles WHERE user_id = ?').get(userId);
@@ -4335,7 +4618,10 @@ app.get('/api/student/dashboard', authenticateToken, requireRole('student'), (re
       requests,
       subscription: activeSub || null,
       wallet_balance: walletData.balance,
-      wallet_tutor: walletData.tutorInfo
+      tutor_balance: walletData.tutor_balance,
+      buddy_balance: walletData.buddy_balance,
+      wallet_tutor: walletData.tutorInfo,
+      wallet_details: walletData
     });
   } catch (error) {
     console.error('Student dashboard error:', error);
@@ -4347,15 +4633,22 @@ app.get('/api/student/dashboard', authenticateToken, requireRole('student'), (re
 // STUDENT SUBSCRIPTION & ANALYTICS ROUTES
 // ==========================================
 
-// Student Wallet Balance (non-withdrawable lesson credits)
+// Student Wallet Balance (non-withdrawable lesson credits, categorized by Tutor & Aviora Buddy)
 app.get('/api/student/wallet', authenticateToken, requireRole('student'), (req, res) => {
   try {
     const walletData = reconcileStudentWallet(req.user.id);
     res.json({
       wallet_balance: walletData.balance,
+      tutor_balance: walletData.tutor_balance,
+      buddy_balance: walletData.buddy_balance,
       formatted_balance: `${walletData.balance.toFixed(2)}`,
       withdrawable: false,
       wallet_tutor: walletData.tutorInfo,
+      tutor_credits: walletData.tutor_credits,
+      buddy_credits: walletData.buddy_credits,
+      cancellations: walletData.cancellations,
+      all_tutors: walletData.all_tutors,
+      all_buddy_sessions: walletData.all_buddy_sessions,
       currency: 'USD'
     });
   } catch (error) {
@@ -5125,8 +5418,8 @@ app.post('/api/student/requests', authenticateToken, requireRole('student'), (re
 
       remainingCreditsAfter = newRemaining;
     } else if (finalPaymentMethod === 'wallet') {
-      const studentUser = db.prepare('SELECT wallet_balance, wallet_tutor_id FROM users WHERE id = ?').get(studentId);
-      const currentWallet = studentUser ? (parseFloat(studentUser.wallet_balance) || 0) : 0;
+      const walletState = reconcileStudentWallet(studentId);
+      const currentWallet = walletState.balance || 0;
 
       if (currentWallet <= 0) {
         return res.status(400).json({
@@ -5134,39 +5427,36 @@ app.post('/api/student/requests', authenticateToken, requireRole('student'), (re
         });
       }
 
-      // The new lesson must be with the same tutor whose previous session was cancelled
-      let eligibleTutorId = studentUser ? studentUser.wallet_tutor_id : null;
-      if (!eligibleTutorId) {
-        const lastCancelled = db.prepare(`
-          SELECT tutor_id FROM tutoring_requests 
-          WHERE student_id = ? AND status = 'cancelled'
-          ORDER BY updated_at DESC, id DESC LIMIT 1
-        `).get(studentId);
-        if (lastCancelled) {
-          eligibleTutorId = lastCancelled.tutor_id;
+      // Check the wallet balance specifically associated with the selected tutor
+      const tutorCreditEntry = (walletState.tutor_credits || []).find(tc => parseInt(tc.tutor_id, 10) === parseInt(tutor_user_id, 10));
+      const tutorSpecificBalance = tutorCreditEntry ? (parseFloat(tutorCreditEntry.balance) || 0) : 0;
+
+      if (tutorSpecificBalance <= 0) {
+        const otherTutor = (walletState.tutor_credits || []).find(tc => tc.balance > 0);
+        if (otherTutor) {
+          return res.status(400).json({
+            error: `You have $0.00 wallet credit with ${tutorUser?.name || 'this tutor'}. Your tutor lesson credit ($${otherTutor.balance.toFixed(2)}) is associated with ${otherTutor.name}.`
+          });
         }
-      }
-
-      if (eligibleTutorId && parseInt(tutor_user_id) !== parseInt(eligibleTutorId)) {
-        const lockedTutor = db.prepare('SELECT name FROM users WHERE id = ?').get(eligibleTutorId);
-        const lockedName = lockedTutor ? lockedTutor.name : 'the original tutor';
+        if (walletState.buddy_balance > 0) {
+          return res.status(400).json({
+            error: `You have $0.00 tutor lesson credit with ${tutorUser?.name || 'this tutor'}. Your $${walletState.buddy_balance.toFixed(2)} balance is an Aviora Buddy credit and can be used for Aviora Buddy sessions.`
+          });
+        }
         return res.status(400).json({
-          error: `Your wallet credit can only be used to rebook with ${lockedName}, whose previous session was cancelled.`
+          error: `You have $0.00 wallet credit associated with ${tutorUser?.name || 'this tutor'}.`
         });
       }
 
-      if (currentWallet < calculatedAmount) {
+      if (tutorSpecificBalance < calculatedAmount) {
         return res.status(400).json({
-          error: `Insufficient wallet balance ($${currentWallet.toFixed(2)} available). This lesson costs $${calculatedAmount.toFixed(2)}. Please choose another payment method.`
+          error: `Insufficient wallet balance for ${tutorUser?.name || 'this tutor'} ($${tutorSpecificBalance.toFixed(2)} available for this tutor). This lesson costs $${calculatedAmount.toFixed(2)}. Please choose another payment method.`
         });
       }
 
-      const newBalance = Math.round((currentWallet - calculatedAmount) * 100) / 100;
-      if (newBalance <= 0) {
-        db.prepare('UPDATE users SET wallet_balance = 0.00, wallet_tutor_id = NULL WHERE id = ?').run(studentId);
-      } else {
-        db.prepare('UPDATE users SET wallet_balance = ?, wallet_tutor_id = ? WHERE id = ?').run(newBalance, eligibleTutorId || tutor_user_id, studentId);
-      }
+      const newBalance = Math.max(0, Math.round((currentWallet - calculatedAmount) * 100) / 100);
+      const remainingTutorForUser = newBalance > 0 ? (walletState.tutorId || tutor_user_id) : null;
+      db.prepare('UPDATE users SET wallet_balance = ?, wallet_tutor_id = ? WHERE id = ?').run(newBalance, remainingTutorForUser, studentId);
     }
 
     const insert = db.prepare(`
@@ -5199,15 +5489,15 @@ app.post('/api/student/requests', authenticateToken, requireRole('student'), (re
       '/#teacher-requests'
     );
 
-    // Notify student confirmation
-    const updatedStudentAfterBook = db.prepare('SELECT wallet_balance FROM users WHERE id = ?').get(studentId);
-    const updatedWalletBal = updatedStudentAfterBook ? (parseFloat(updatedStudentAfterBook.wallet_balance) || 0) : 0;
+    // Reconcile updated wallet state after booking
+    const updatedWalletState = reconcileStudentWallet(studentId);
+    const updatedWalletBal = updatedWalletState.balance || 0;
 
     let paymentMsg = `Payment of ${calculatedAmount.toFixed(2)} was processed successfully via Card.`;
     if (finalPaymentMethod === 'subscription') {
       paymentMsg = `1 subscription lesson credit was applied ($0.00 charged). You have ${remainingCreditsAfter} lesson${remainingCreditsAfter === 1 ? '' : 's'} remaining.`;
     } else if (finalPaymentMethod === 'wallet') {
-      paymentMsg = `Paid using ${calculatedAmount.toFixed(2)} from your Aviora wallet credit balance (remaining: ${updatedWalletBal.toFixed(2)}).`;
+      paymentMsg = `Paid using ${calculatedAmount.toFixed(2)} from your Aviora wallet credit balance with ${tutorUser?.name || 'your tutor'} (remaining wallet balance: ${updatedWalletBal.toFixed(2)}).`;
     }
 
     sendNotification(
@@ -5224,7 +5514,8 @@ app.post('/api/student/requests', authenticateToken, requireRole('student'), (re
       paymentMethod: finalPaymentMethod,
       remainingLessons: remainingCreditsAfter,
       new_wallet_balance: updatedWalletBal,
-      wallet_tutor: remainingTutorInfo
+      wallet_tutor: updatedWalletState.tutorInfo,
+      wallet_details: updatedWalletState
     });
   } catch (error) {
     console.error('Create tutoring request error:', error);
@@ -5340,13 +5631,16 @@ app.post('/api/student/requests/:id/cancel', authenticateToken, requireRole('stu
       tutorInfo = { id: tUser.id, name: tUser.name, avatar_url: tUser.avatar_url };
     }
 
+    const updatedWalletState = reconcileStudentWallet(studentId);
+
     res.json({
       message: refundAmount > 0
         ? `Booking cancelled successfully. ${refundAmount.toFixed(2)} has been credited back to your Aviora wallet (non-withdrawable lesson credit).`
         : 'Booking cancelled successfully and your lesson credit has been restored.',
       refunded_amount: refundAmount,
-      new_wallet_balance: newBalance,
-      wallet_tutor: tutorInfo
+      new_wallet_balance: updatedWalletState.balance,
+      wallet_tutor: updatedWalletState.tutorInfo,
+      wallet_details: updatedWalletState
     });
   } catch (error) {
     console.error('Cancel request error:', error);
@@ -8472,12 +8766,25 @@ app.post('/api/buddy/create', authenticateToken, (req, res) => {
       subject,
       topic,
       scheduled_date,
-      scheduled_time
+      scheduled_time,
+      payment_method
     } = req.body;
 
     const sessionType = 'peer_study';
     const s1 = userId;
     let s2 = student2_id ? parseInt(student2_id, 10) : null;
+    const useBuddyWallet = payment_method === 'wallet';
+
+    if (useBuddyWallet) {
+      const walletState = reconcileStudentWallet(userId);
+      if ((walletState.buddy_balance || 0) < 6.00) {
+        return res.status(400).json({
+          error: `Insufficient Aviora Buddy wallet credit ($${(walletState.buddy_balance || 0).toFixed(2)} available, $6.00 required).`
+        });
+      }
+      const newTotalBal = Math.max(0, Math.round(((walletState.balance || 0) - 6.00) * 100) / 100);
+      db.prepare('UPDATE users SET wallet_balance = ? WHERE id = ?').run(newTotalBal, userId);
+    }
 
     // Generate unique session code
     let sessionCode = `BUDDY-${Math.floor(1000 + Math.random() * 9000)}`;
@@ -8489,17 +8796,18 @@ app.post('/api/buddy/create', authenticateToken, (req, res) => {
     const finalTime = scheduled_time || 'Pending Admin Scheduling';
     const finalSubject = (subject && subject.trim()) || 'Peer Co-Learning & Discussion Studio';
     const finalTopic = (topic && topic.trim()) || 'Concept Mastery, Equation Duel & Discussion Topics';
+    const finalPayMethod = useBuddyWallet ? 'wallet' : 'card';
 
     // Bookings remain in pending status because admin handles scheduling and student assignments
     const insert = db.prepare(`
       INSERT INTO buddy_sessions (
         session_code, session_type, tutor_id, student1_id, student2_id,
         subject, topic, scheduled_date, scheduled_time, fee_per_student, total_fee,
-        status, room_status, room_started_at
+        status, room_status, room_started_at, payment_method
       ) VALUES (
         ?, ?, NULL, ?, ?,
         ?, ?, ?, ?, 6.00, 12.00,
-        'pending', 'closed', CURRENT_TIMESTAMP
+        'pending', 'closed', CURRENT_TIMESTAMP, ?
       )
     `);
 
@@ -8511,7 +8819,8 @@ app.post('/api/buddy/create', authenticateToken, (req, res) => {
       finalSubject,
       finalTopic,
       finalDate,
-      finalTime
+      finalTime,
+      finalPayMethod
     );
 
     const newSessionId = result.lastInsertRowid;
@@ -8533,7 +8842,7 @@ app.post('/api/buddy/create', authenticateToken, (req, res) => {
     sendNotification(
       userId,
       'Aviora Buddy Booking Received ($6)',
-      `Your booking for "${finalSubject}" is received with status: Pending. The platform administrator will assign your peer and finalize your schedule shortly. Code: ${sessionCode}`,
+      `Your booking for "${finalSubject}" is received with status: Pending${useBuddyWallet ? ' (Paid via Aviora Buddy Wallet Credit)' : ''}. The platform administrator will assign your peer and finalize your schedule shortly. Code: ${sessionCode}`,
       'booking',
       '#aviora-buddy'
     );
@@ -8561,10 +8870,14 @@ app.post('/api/buddy/create', authenticateToken, (req, res) => {
       WHERE bs.id = ?
     `).get(newSessionId);
 
+    const updatedWalletState = reconcileStudentWallet(userId);
+
     res.status(201).json({
       success: true,
-      message: `Aviora Buddy booking submitted! Status: Pending Admin Scheduling. You will be notified once confirmed. Code: ${sessionCode}`,
-      session: created
+      message: `Aviora Buddy booking submitted${useBuddyWallet ? ' using $6.00 Aviora Buddy Wallet Credit' : ''}! Status: Pending Admin Scheduling. Code: ${sessionCode}`,
+      session: created,
+      wallet_balance: updatedWalletState.balance,
+      wallet_details: updatedWalletState
     });
   } catch (error) {
     console.error('Create buddy session error:', error);
@@ -8866,10 +9179,13 @@ app.post('/api/buddy/session/:id/partner-noshow-refund', authenticateToken, (req
       VALUES (?, ?, 'Aviora System', 'system', ?)
     `).run(sessionId, userId, `Partner no-show verified: A full refund of $${refundAmount.toFixed(2)} has been credited to ${req.user.name}'s non-withdrawable in-app wallet.`);
 
+    const updatedWalletState = reconcileStudentWallet(userId);
+
     return res.json({
       success: true,
       refund_amount: refundAmount,
-      wallet_balance: newBalance,
+      wallet_balance: updatedWalletState.balance,
+      wallet_details: updatedWalletState,
       withdrawable: false,
       message: `Partner no-show verified. $${refundAmount.toFixed(2)} has been credited to your in-app wallet (non-withdrawable balance).`
     });
@@ -8979,13 +9295,16 @@ app.post('/api/buddy/session/:id/cancel', authenticateToken, (req, res) => {
       );
     }
 
+    const updatedWalletState = reconcileStudentWallet(userId);
+
     return res.json({
       success: true,
       eligible_for_refund: isEligibleForRefund,
       refund_credited: isEligibleForRefund,
       refund_amount: isEligibleForRefund ? refundAmount : 0,
       retained_by_company: !isEligibleForRefund,
-      wallet_balance: newBalance,
+      wallet_balance: updatedWalletState.balance,
+      wallet_details: updatedWalletState,
       withdrawable: false,
       message
     });

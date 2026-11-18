@@ -607,59 +607,67 @@ const BookLesson = {
       if (cardInputs) cardInputs.style.display = 'block';
     }
 
-    // Configure Wallet Option
+    // Configure Wallet Option (Display balance specifically associated with the selected tutor)
     const walletOption = document.getElementById('page-pay-opt-wallet');
     const walletCardBox = document.getElementById('page-pay-method-wallet');
     const walletBalLabel = document.getElementById('page-pay-wallet-balance');
     const walletDesc = document.getElementById('page-pay-wallet-desc');
     const walletStatus = document.getElementById('page-pay-wallet-status');
-    const userWallet = (Auth.currentUser && parseFloat(Auth.currentUser.wallet_balance)) || 0;
+    const tutorWalletBal = (typeof Auth !== 'undefined' && Auth.getTutorWalletBalance && this.selectedTutor)
+      ? Auth.getTutorWalletBalance(this.selectedTutor.user_id || this.selectedTutor.id, this.selectedTutor)
+      : ((Auth.currentUser && parseFloat(Auth.currentUser.wallet_balance)) || 0);
+    const totalWalletBal = (Auth.currentUser && parseFloat(Auth.currentUser.wallet_balance)) || 0;
     const price = this.getTutorSubjectRate(this.selectedTutor, this.selectedSubject);
 
-    if (walletBalLabel) walletBalLabel.textContent = `$${userWallet.toFixed(2)}`;
+    if (this.selectedTutor && typeof Auth !== 'undefined' && Auth.selectWalletEntity) {
+      const uid = this.selectedTutor.user_id || this.selectedTutor.id;
+      Auth.selectWalletEntity(`tutor_${uid}`, { tutorId: uid, profileId: this.selectedTutor.id, name: this.selectedTutor.name });
+    }
 
-    const eligibleTutorId = (Auth.currentUser && Auth.currentUser.wallet_tutor_id) || (Auth.walletTutor && Auth.walletTutor.id);
-    const eligibleTutorName = (Auth.walletTutor && Auth.walletTutor.name) || 'the original tutor';
-    const isSameTutor = !eligibleTutorId || (this.selectedTutor && (this.selectedTutor.id == eligibleTutorId || this.selectedTutor.user_id == eligibleTutorId));
+    if (walletBalLabel) walletBalLabel.textContent = `$${tutorWalletBal.toFixed(2)}`;
 
-    if (userWallet <= 0) {
+    const otherCreditTutor = (Auth.walletDetails?.tutor_credits || []).find(tc => tc.balance > 0);
+    const eligibleTutorName = (otherCreditTutor && otherCreditTutor.name) || (Auth.walletTutor && Auth.walletTutor.name) || 'another tutor';
+    const selTutorName = this.selectedTutor ? this.selectedTutor.name : 'this tutor';
+
+    if (tutorWalletBal <= 0 && totalWalletBal <= 0) {
       if (walletCardBox) walletCardBox.style.opacity = '0.55';
       if (walletOption) walletOption.disabled = true;
-      if (walletDesc) walletDesc.textContent = 'A new lesson can only be booked if there is a balance available in your wallet.';
+      if (walletDesc) walletDesc.textContent = `Balance with ${selTutorName}: $0.00. A new lesson can only be booked with wallet credit if you have a balance for this tutor.`;
       if (walletStatus) {
-        walletStatus.textContent = '$0.00 Balance';
+        walletStatus.textContent = '$0.00 Tutor Balance';
         walletStatus.style.color = 'var(--charcoal-500)';
       }
-    } else if (!isSameTutor) {
+    } else if (tutorWalletBal <= 0 && totalWalletBal > 0) {
       if (walletCardBox) {
         walletCardBox.classList.add('disabled');
         walletCardBox.style.opacity = '0.55';
         walletCardBox.style.cursor = 'not-allowed';
       }
       if (walletOption) walletOption.disabled = true;
-      if (walletDesc) walletDesc.textContent = `Wallet credit ($${userWallet.toFixed(2)}) can only be used to rebook with ${eligibleTutorName} whose previous session was cancelled.`;
+      if (walletDesc) walletDesc.textContent = `Balance with ${selTutorName}: $0.00. Your existing wallet credit is associated with ${eligibleTutorName} or Aviora Buddy.`;
       if (walletStatus) {
-        walletStatus.textContent = 'Locked to Another Tutor';
+        walletStatus.textContent = '$0.00 for This Tutor';
         walletStatus.style.color = 'var(--danger)';
       }
-    } else if (userWallet >= price) {
+    } else if (tutorWalletBal >= price) {
       if (walletCardBox) {
         walletCardBox.classList.remove('disabled');
         walletCardBox.style.opacity = '1';
         walletCardBox.style.cursor = 'pointer';
       }
       if (walletOption) walletOption.disabled = false;
-      if (walletDesc) walletDesc.textContent = `Use $${price.toFixed(2)} from your credited balance with ${this.selectedTutor ? this.selectedTutor.name : 'your tutor'} to book this lesson.`;
+      if (walletDesc) walletDesc.textContent = `Use $${price.toFixed(2)} from your $${tutorWalletBal.toFixed(2)} credited balance associated with ${selTutorName}.`;
       if (walletStatus) {
-        walletStatus.textContent = 'Eligible (Same Tutor)';
+        walletStatus.textContent = 'Eligible Tutor Balance';
         walletStatus.style.color = 'var(--success)';
       }
     } else {
       if (walletCardBox) walletCardBox.style.opacity = '0.65';
       if (walletOption) walletOption.disabled = true;
-      if (walletDesc) walletDesc.textContent = `Balance: $${userWallet.toFixed(2)} (Insufficient for this $${price.toFixed(2)} lesson with ${this.selectedTutor ? this.selectedTutor.name : 'this tutor'})`;
+      if (walletDesc) walletDesc.textContent = `Balance for ${selTutorName}: $${tutorWalletBal.toFixed(2)} (Insufficient for this $${price.toFixed(2)} lesson)`;
       if (walletStatus) {
-        walletStatus.textContent = `$${userWallet.toFixed(2)} Available`;
+        walletStatus.textContent = `$${tutorWalletBal.toFixed(2)} Available`;
         walletStatus.style.color = 'var(--charcoal-500)';
       }
     }
@@ -668,25 +676,18 @@ const BookLesson = {
   },
 
   setPaymentMethod(method) {
-    const user = Auth.currentUser;
-    const userWallet = user ? (parseFloat(user.wallet_balance) || 0) : 0;
+    const tutorWalletBal = (typeof Auth !== 'undefined' && Auth.getTutorWalletBalance && this.selectedTutor)
+      ? Auth.getTutorWalletBalance(this.selectedTutor.user_id || this.selectedTutor.id, this.selectedTutor)
+      : ((Auth.currentUser && parseFloat(Auth.currentUser.wallet_balance)) || 0);
     const price = this.getTutorSubjectRate(this.selectedTutor, this.selectedSubject);
 
-    const eligibleTutorId = (Auth.currentUser && Auth.currentUser.wallet_tutor_id) || (Auth.walletTutor && Auth.walletTutor.id);
-    const eligibleTutorName = (Auth.walletTutor && Auth.walletTutor.name) || 'the original tutor';
-    const isSameTutor = !eligibleTutorId || (this.selectedTutor && (this.selectedTutor.id == eligibleTutorId || this.selectedTutor.user_id == eligibleTutorId));
-
     if (method === 'wallet') {
-      if (userWallet <= 0) {
-        showToast('A new lesson can only be booked if there is a balance available.', 'warning');
+      if (tutorWalletBal <= 0) {
+        showToast(`You have $0.00 wallet credit associated with ${this.selectedTutor ? this.selectedTutor.name : 'this tutor'}.`, 'warning');
         return;
       }
-      if (!isSameTutor) {
-        showToast(`The lesson can only be booked with the same tutor whose previous session was cancelled (${eligibleTutorName}).`, 'warning');
-        return;
-      }
-      if (userWallet < price) {
-        showToast(`Insufficient wallet credit ($${userWallet.toFixed(2)} available, $${price.toFixed(2)} required).`, 'warning');
+      if (tutorWalletBal < price) {
+        showToast(`Insufficient wallet credit for ${this.selectedTutor ? this.selectedTutor.name : 'this tutor'} ($${tutorWalletBal.toFixed(2)} available, $${price.toFixed(2)} required).`, 'warning');
         return;
       }
     }
@@ -777,7 +778,7 @@ const BookLesson = {
       const res = await API.createRequest(payload);
       showToast(res.message, 'success');
       if (typeof res.new_wallet_balance !== 'undefined' && typeof Auth !== 'undefined' && Auth.updateWalletBalance) {
-        Auth.updateWalletBalance(res.new_wallet_balance, res.wallet_tutor);
+        Auth.updateWalletBalance(res.new_wallet_balance, res.wallet_tutor, res.wallet_details);
       }
 
       // Refresh student dashboard data

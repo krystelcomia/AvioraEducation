@@ -1157,7 +1157,10 @@ const AvioraBuddy = {
 
       // Update wallet balance across student UI
       if (typeof Auth !== 'undefined' && data.wallet_balance !== undefined) {
-        Auth.updateWalletBalance(data.wallet_balance);
+        Auth.updateWalletBalance(data.wallet_balance, data.wallet_details?.tutorInfo || null, data.wallet_details || null);
+        if (Auth.selectWalletEntity) {
+          Auth.selectWalletEntity(`buddy_${sessionId}`);
+        }
       }
 
       showToast(data.message || 'Partner no-show refund credited! $6.00 added to your in-app wallet.', 'success');
@@ -1224,7 +1227,10 @@ const AvioraBuddy = {
       if (!res.ok) throw new Error(data.error || 'Failed to cancel session.');
 
       if (data.refund_credited && typeof Auth !== 'undefined' && data.wallet_balance !== undefined) {
-        Auth.updateWalletBalance(data.wallet_balance);
+        Auth.updateWalletBalance(data.wallet_balance, data.wallet_details?.tutorInfo || null, data.wallet_details || null);
+        if (Auth.selectWalletEntity) {
+          Auth.selectWalletEntity(`buddy_${sessionId}`);
+        }
       }
 
       showToast(data.message, data.refund_credited ? 'success' : 'warning');
@@ -2056,6 +2062,28 @@ const AvioraBuddy = {
     const modal = document.getElementById('modal-create-buddy-peer');
     if (!modal) return;
 
+    // Select Aviora Buddy in student wallet so the balance for Aviora Buddy appears
+    if (typeof Auth !== 'undefined') {
+      if (Auth.selectWalletEntity) {
+        Auth.selectWalletEntity('buddy_all');
+      }
+      const buddyBal = Auth.getBuddyWalletBalance ? Auth.getBuddyWalletBalance() : 0;
+      const fmt = (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.format(buddyBal) : `$${buddyBal.toFixed(2)}`;
+      const balEl = document.getElementById('buddy-modal-wallet-balance');
+      const useWrap = document.getElementById('buddy-modal-use-wallet-wrap');
+      const useChk = document.getElementById('buddy-peer-use-wallet');
+      if (balEl) balEl.textContent = fmt;
+      if (useWrap) {
+        if (buddyBal >= 6.00) {
+          useWrap.style.display = 'flex';
+          if (useChk) useChk.checked = true;
+        } else {
+          useWrap.style.display = 'none';
+          if (useChk) useChk.checked = false;
+        }
+      }
+    }
+
     // Populate peers dropdown
     const select = document.getElementById('buddy-peer-select');
     if (select) {
@@ -2089,13 +2117,15 @@ const AvioraBuddy = {
     const topicInp = document.getElementById('buddy-peer-topic');
     const dateInp = document.getElementById('buddy-peer-date');
     const timeInp = document.getElementById('buddy-peer-time');
+    const useWalletChk = document.getElementById('buddy-peer-use-wallet');
 
     const payload = {
       student2_id: peerSelect && peerSelect.value ? peerSelect.value : null,
       subject: subjectInp && subjectInp.value.trim() ? subjectInp.value.trim() : 'AP Calculus & Co-Learning Studio',
       topic: topicInp && topicInp.value.trim() ? topicInp.value.trim() : 'Quiz Bee, Math Duel & Conversational Questions',
       scheduled_date: dateInp && dateInp.value ? dateInp.value : 'Pending Admin Scheduling',
-      scheduled_time: timeInp && timeInp.value ? timeInp.value : 'Pending Admin Scheduling'
+      scheduled_time: timeInp && timeInp.value ? timeInp.value : 'Pending Admin Scheduling',
+      payment_method: (useWalletChk && useWalletChk.checked) ? 'wallet' : 'card'
     };
 
     try {
@@ -2116,6 +2146,10 @@ const AvioraBuddy = {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
+
+      if (typeof Auth !== 'undefined' && data.wallet_balance !== undefined) {
+        Auth.updateWalletBalance(data.wallet_balance, data.wallet_details?.tutorInfo || null, data.wallet_details || null);
+      }
 
       showToast(data.message || 'Aviora Buddy booking submitted! Status: Pending Admin Scheduling.', 'success');
       this.closeModal('modal-create-buddy-peer');

@@ -186,7 +186,7 @@ const Student = {
       });
       this.subscription = data.subscription || null;
       if (typeof data.wallet_balance !== 'undefined' && typeof Auth !== 'undefined' && Auth.updateWalletBalance) {
-        Auth.updateWalletBalance(data.wallet_balance, data.wallet_tutor || null);
+        Auth.updateWalletBalance(data.wallet_balance, data.wallet_tutor || null, data.wallet_details || null);
       }
 
       // Update Header info
@@ -1531,7 +1531,10 @@ const Student = {
           this.saveCancelledRequest(requestId);
           const walletTutor = res.wallet_tutor || (session ? { id: session.tutor_id, name: session.tutor_name } : null);
           if (typeof res.new_wallet_balance !== 'undefined' && typeof Auth !== 'undefined' && Auth.updateWalletBalance) {
-            Auth.updateWalletBalance(res.new_wallet_balance, walletTutor);
+            Auth.updateWalletBalance(res.new_wallet_balance, walletTutor, res.wallet_details || null);
+            if (session && session.tutor_id && Auth.selectWalletEntity) {
+              Auth.selectWalletEntity(`tutor_${session.tutor_id}`, { tutorId: session.tutor_id, name: session.tutor_name });
+            }
           } else if (typeof Auth !== 'undefined' && Auth.refreshWallet) {
             await Auth.refreshWallet();
           }

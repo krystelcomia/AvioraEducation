@@ -2128,8 +2128,13 @@ const Auth = {
         }
       }
     } else {
-      // Default theme is ALWAYS light mode when no user is logged in
+      // Default theme is ALWAYS light mode, default currency is USD, and default language is English when no user is logged in
       document.documentElement.removeAttribute('data-theme');
+      localStorage.removeItem('aviora_country');
+      localStorage.removeItem('aviora_language');
+      if (typeof I18n !== 'undefined' && typeof I18n.applyLanguage === 'function') {
+        I18n.applyLanguage('en-US');
+      }
       if (guestActions) guestActions.style.display = 'flex';
       if (userActions) {
         userActions.style.display = 'none';
@@ -2145,6 +2150,10 @@ const Auth = {
           <li><a href="#how-it-works" class="nav-link" id="nav-link-how">How It Works</a></li>
         `;
       }
+    }
+
+    if (typeof AvioraCurrency !== 'undefined' && typeof AvioraCurrency.updateDOM === 'function') {
+      AvioraCurrency.updateDOM();
     }
 
     if (typeof Router !== 'undefined' && Router.updateActiveNav) {

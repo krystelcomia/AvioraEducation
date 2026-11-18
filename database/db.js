@@ -64,6 +64,7 @@ function initSchema() {
       subjects TEXT,
       grade_levels TEXT,
       hourly_rate REAL NOT NULL DEFAULT 40.0,
+      rate_currency TEXT DEFAULT 'USD',
       bio TEXT,
       teaching_philosophy TEXT,
       credentials_file TEXT,
@@ -96,6 +97,7 @@ function initSchema() {
       subjects TEXT,
       grade_levels TEXT,
       hourly_rate REAL NOT NULL,
+      rate_currency TEXT DEFAULT 'USD',
       rating REAL DEFAULT 5.0,
       reviews_count INTEGER DEFAULT 0,
       total_sessions INTEGER DEFAULT 0,
@@ -697,6 +699,22 @@ function initSchema() {
           email_subject = COALESCE(email_subject, '[Aviora Education] ' || title)
       WHERE email_recipient IS NULL OR email_sent IS NULL OR email_sent = 0
     `).run();
+
+    // Ensure rate_currency column on tutor_profiles and teacher_applications
+    const tpCols = db.prepare("PRAGMA table_info(tutor_profiles)").all();
+    if (tpCols && tpCols.length > 0 && !tpCols.some(c => c.name === 'rate_currency')) {
+      db.prepare("ALTER TABLE tutor_profiles ADD COLUMN rate_currency TEXT DEFAULT 'USD'").run();
+    }
+    const taCols = db.prepare("PRAGMA table_info(teacher_applications)").all();
+    if (taCols && taCols.length > 0 && !taCols.some(c => c.name === 'rate_currency')) {
+      db.prepare("ALTER TABLE teacher_applications ADD COLUMN rate_currency TEXT DEFAULT 'USD'").run();
+    }
+
+    // Set rate_currency = 'PHP' for tutors in the Philippines (preserving their original rate value unaltered)
+    db.prepare("UPDATE tutor_profiles SET rate_currency = 'PHP' WHERE LOWER(country) = 'philippines' AND (rate_currency IS NULL OR rate_currency = 'USD')").run();
+    db.prepare("UPDATE teacher_applications SET rate_currency = 'PHP' WHERE LOWER(country) = 'philippines' AND (rate_currency IS NULL OR rate_currency = 'USD')").run();
+    db.prepare("UPDATE tutor_profiles SET rate_currency = COALESCE(rate_currency, 'USD') WHERE rate_currency IS NULL").run();
+    db.prepare("UPDATE teacher_applications SET rate_currency = COALESCE(rate_currency, 'USD') WHERE rate_currency IS NULL").run();
   } catch (e) {
     console.warn('Gmail notification migration notice:', e.message);
   }

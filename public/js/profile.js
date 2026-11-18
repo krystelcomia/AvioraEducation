@@ -231,7 +231,14 @@ const Profile = {
 
     const key = this.getUserKey();
     if (key) localStorage.setItem(`aviora_country${key}`, activeCountry);
-    localStorage.setItem('aviora_country', activeCountry);
+    localStorage.removeItem('aviora_country');
+
+    if (typeof Auth !== 'undefined' && Auth.currentUser) {
+      Auth.currentUser.country = activeCountry;
+      if (typeof Storage !== 'undefined' && Storage.setUser) {
+        Storage.setUser(Auth.currentUser);
+      }
+    }
 
     // Automatically update website currency to match the selected country/region
     if (typeof AvioraCurrency !== 'undefined' && typeof AvioraCurrency.updateDOM === 'function') {

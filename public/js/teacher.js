@@ -1759,8 +1759,7 @@ const Teacher = {
 
     grid.innerHTML = subjectsList.map((subj, idx) => {
       const baseRate = ratesMap[subj] !== undefined ? Number(ratesMap[subj]) : defaultRate;
-      const convertedRate = (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.convert(baseRate) : baseRate;
-      const formattedRatePill = (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.format(baseRate, { perHour: true }) : `$${baseRate.toFixed(2)}/hr`;
+      const formattedRatePill = (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.format(baseRate, { from: curr.code, to: curr.code, perHour: true }) : `${curr.symbol}${baseRate.toFixed(2)}/hr`;
       const safeSubj = this.escapeSubjectAttr(subj);
       return `
         <div class="teacher-subject-rate-card" data-subject="${safeSubj}">
@@ -1785,7 +1784,7 @@ const Teacher = {
                 min="1"
                 max="1000000"
                 step="any"
-                value="${convertedRate}"
+                value="${baseRate}"
                 data-base-usd="${baseRate}"
                 ${!approved ? 'disabled' : ''}
                 aria-label="Hourly rate for ${safeSubj}"
@@ -1899,7 +1898,7 @@ const Teacher = {
     if (rateInput) {
       const baseUsd = Number(this.tutorProfile?.hourly_rate || this.application?.hourly_rate || 45);
       rateInput.setAttribute('data-base-usd', baseUsd);
-      rateInput.value = (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.convert(baseUsd) : baseUsd;
+      rateInput.value = baseUsd;
     }
     if (qualInput) qualInput.value = '';
 
@@ -1964,7 +1963,8 @@ const Teacher = {
 
     const subject = (nameInput?.value || '').trim();
     const rawRate = parseFloat(rateInput?.value);
-    const baseRate = (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.convertInputToBase(rawRate) : rawRate;
+    const curr = (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.getActiveCurrency() : { symbol: '$', code: 'USD' };
+    const baseRate = rawRate;
     const category = catSelect?.value || 'Mathematics';
     const level = levelSelect?.value || 'AP & College Prep';
     const qualification = (qualInput?.value || '').trim();
@@ -1975,11 +1975,8 @@ const Teacher = {
       return;
     }
 
-    if (isNaN(baseRate) || baseRate < 5 || baseRate > 1000) {
-      const curr = (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.getActiveCurrency() : { symbol: '$' };
-      const minDisp = (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.convert(5) : 5;
-      const maxDisp = (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.convert(1000) : 1000;
-      showToast(`Please enter a valid hourly rate between ${curr.symbol}${minDisp.toLocaleString('en-US')} and ${curr.symbol}${maxDisp.toLocaleString('en-US')}.`, 'warning');
+    if (isNaN(baseRate) || baseRate < 1 || baseRate > 1000000) {
+      showToast(`Please enter a valid hourly rate in ${curr.symbol} ${curr.code}.`, 'warning');
       if (rateInput) rateInput.focus();
       return;
     }
@@ -2003,6 +2000,7 @@ const Teacher = {
         action: 'add',
         subject,
         rate: baseRate,
+        rate_currency: curr.code,
         category,
         level,
         qualification
@@ -2012,7 +2010,7 @@ const Teacher = {
       this.closeAddSubjectModal();
       await this.refreshClassesList();
 
-      const formattedRate = (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.format(baseRate, { perHour: true }) : `$${baseRate.toFixed(2)}/hr`;
+      const formattedRate = (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.format(baseRate, { from: curr.code, to: curr.code, perHour: true }) : `${curr.symbol}${baseRate.toFixed(2)}/hr`;
       showToast(`"${subject}" (${formattedRate}) added to your teaching profile and is now bookable by students!`, 'success');
     } catch (err) {
       showToast(err.message || 'Failed to add qualified subject.', 'error');
@@ -2035,17 +2033,15 @@ const Teacher = {
 
     const subject = (nameInput?.value || '').trim();
     const rawRate = parseFloat(rateInput?.value);
-    const baseRate = (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.convertInputToBase(rawRate) : rawRate;
+    const curr = (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.getActiveCurrency() : { symbol: '$', code: 'USD' };
+    const baseRate = rawRate;
 
     if (!subject) {
       showToast('Please enter a subject or area of specialization name.', 'warning');
       return;
     }
-    if (isNaN(baseRate) || baseRate < 5 || baseRate > 1000) {
-      const curr = (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.getActiveCurrency() : { symbol: '$' };
-      const minDisp = (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.convert(5) : 5;
-      const maxDisp = (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.convert(1000) : 1000;
-      showToast(`Please enter a valid hourly rate between ${curr.symbol}${minDisp.toLocaleString('en-US')} and ${curr.symbol}${maxDisp.toLocaleString('en-US')}.`, 'warning');
+    if (isNaN(baseRate) || baseRate < 1 || baseRate > 1000000) {
+      showToast(`Please enter a valid hourly rate in ${curr.symbol} ${curr.code}.`, 'warning');
       return;
     }
 
@@ -2060,12 +2056,13 @@ const Teacher = {
       const res = await API.updateTeacherSubjects({
         action: 'add',
         subject,
-        rate: baseRate
+        rate: baseRate,
+        rate_currency: curr.code
       });
       this.syncUpdatedSubjectsAcrossApp(res);
       if (nameInput) nameInput.value = '';
       await this.refreshClassesList();
-      const formattedRate = (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.format(baseRate, { perHour: true }) : `$${baseRate.toFixed(2)}/hr`;
+      const formattedRate = (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.format(baseRate, { from: curr.code, to: curr.code, perHour: true }) : `${curr.symbol}${baseRate.toFixed(2)}/hr`;
       showToast(`"${subject}" (${formattedRate}) saved and synced to Student & Admin portals!`, 'success');
     } catch (err) {
       showToast(err.message || 'Failed to add subject.', 'error');
@@ -2088,12 +2085,10 @@ const Teacher = {
     const rawRate = parseFloat(rateInput?.value);
 
     if (!subject) return;
-    const baseRate = (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.convertInputToBase(rawRate) : rawRate;
-    if (isNaN(baseRate) || baseRate < 5 || baseRate > 1000) {
-      const curr = (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.getActiveCurrency() : { symbol: '$' };
-      const minDisp = (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.convert(5) : 5;
-      const maxDisp = (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.convert(1000) : 1000;
-      showToast(`Please enter a valid hourly rate between ${curr.symbol}${minDisp.toLocaleString('en-US')} and ${curr.symbol}${maxDisp.toLocaleString('en-US')}.`, 'warning');
+    const curr = (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.getActiveCurrency() : { symbol: '$', code: 'USD' };
+    const baseRate = rawRate;
+    if (isNaN(baseRate) || baseRate < 1 || baseRate > 1000000) {
+      showToast(`Please enter a valid hourly rate in ${curr.symbol} ${curr.code}.`, 'warning');
       if (rateInput) rateInput.focus();
       return;
     }
@@ -2106,11 +2101,12 @@ const Teacher = {
       const res = await API.updateTeacherSubjects({
         action: 'update',
         subject,
-        rate: baseRate
+        rate: baseRate,
+        rate_currency: curr.code
       });
       this.syncUpdatedSubjectsAcrossApp(res);
       await this.refreshClassesList();
-      const formattedRate = (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.format(baseRate, { perHour: true }) : `$${baseRate.toFixed(2)}/hr`;
+      const formattedRate = (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.format(baseRate, { from: curr.code, to: curr.code, perHour: true }) : `${curr.symbol}${baseRate.toFixed(2)}/hr`;
       showToast(`Updated "${subject}" rate to ${formattedRate} (synced to Student & Admin).`, 'success');
     } catch (err) {
       showToast(err.message || 'Failed to update subject rate.', 'error');
@@ -2348,7 +2344,7 @@ const Teacher = {
             <div class="class-meta-inline-row">
               <span class="class-meta-pill" title="Lesson Date">${Icons.calendar(12)} ${c.requested_date}</span>
               <span class="class-meta-pill" title="Lesson Time & Duration">${Icons.clock(12)} ${c.requested_time} (50m)</span>
-              <span class="class-meta-pill" title="Session Fee">${Icons.award(12)} ${(typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.format(c.total_amount || c.hourly_rate || 45) : `$${Number(c.total_amount || 0).toFixed(2)}`}</span>
+              <span class="class-meta-pill" title="Session Fee">${Icons.award(12)} ${(typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.format(c.total_amount || c.hourly_rate || 45, { from: AvioraCurrency.getActiveCurrency().code, to: AvioraCurrency.getActiveCurrency().code }) : `$${Number(c.total_amount || 0).toFixed(2)}`}</span>
             </div>
 
             ${!isDeclined ? `
@@ -2564,7 +2560,7 @@ const Teacher = {
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 0.5rem; margin-top: 0.75rem; padding-top: 0.65rem; border-top: 1px solid var(--border-color); font-size: 0.78rem; color: var(--text-secondary);">
           <div>📅 <strong>Date:</strong> ${record.requested_date}</div>
           <div>🕒 <strong>Time:</strong> ${record.requested_time} (50m)</div>
-          <div>💰 <strong>Fee:</strong> ${(typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.format(record.total_amount || record.hourly_rate || 0) : `$${Number(record.total_amount || 0).toFixed(2)}`}</div>
+          <div>💰 <strong>Fee:</strong> ${(typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.format(record.total_amount || record.hourly_rate || 0, { from: AvioraCurrency.getActiveCurrency().code, to: AvioraCurrency.getActiveCurrency().code }) : `$${Number(record.total_amount || 0).toFixed(2)}`}</div>
           <div>🎓 <strong>Status:</strong> ${isCompleted ? 'Concluded / Done' : 'Scheduled'}</div>
         </div>
 
@@ -5142,7 +5138,7 @@ const Teacher = {
     if (rate) {
       const baseUsd = Number(tutor.hourly_rate || 45);
       rate.setAttribute('data-base-usd', baseUsd);
-      rate.value = (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.convert(baseUsd) : baseUsd;
+      rate.value = baseUsd;
     }
     if (bio) bio.value = tutor.bio || '';
   },
@@ -5179,7 +5175,7 @@ const Teacher = {
     if (rate) {
       const baseUsd = Number(app.hourly_rate || 45);
       rate.setAttribute('data-base-usd', baseUsd);
-      rate.value = (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.convert(baseUsd) : baseUsd;
+      rate.value = baseUsd;
     }
     if (bio) bio.value = app.bio || '';
     if (phil) phil.value = app.teaching_philosophy || '';
@@ -5520,8 +5516,9 @@ const Teacher = {
       }
 
       const rateVal = tp.hourly_rate || app.hourly_rate || 45;
+      const tutorCurr = (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.getActiveCurrency() : { symbol: '$', code: 'USD' };
       if (rateBadge) {
-        rateBadge.textContent = (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.format(rateVal, { perHour: true }) : `$${rateVal} / hr`;
+        rateBadge.textContent = (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.format(rateVal, { from: tutorCurr.code, to: tutorCurr.code, perHour: true }) : `${tutorCurr.symbol}${rateVal} / hr`;
       }
 
       const degreeText = app.highest_degree || tp.highest_degree || 'Stanford Ph.D.';
@@ -5545,19 +5542,19 @@ const Teacher = {
       if (emailInp) emailInp.value = u.email || '';
       if (phoneInp) phoneInp.value = u.phone || '';
       if (rateLabel) {
-        const curr = (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.getActiveCurrency() : { symbol: '$', code: 'USD' };
-        rateLabel.textContent = `Hourly Rate (${curr.symbol} ${curr.code} / hr)`;
+        rateLabel.textContent = `Hourly Rate (${tutorCurr.symbol} ${tutorCurr.code} / hr)`;
       }
       if (rateInp) {
         rateInp.setAttribute('data-base-usd', rateVal);
-        rateInp.value = (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.convert(rateVal) : rateVal;
+        rateInp.value = rateVal;
         if (!rateInp._currencyBound) {
           rateInp._currencyBound = true;
           rateInp.addEventListener('input', () => {
             if (typeof AvioraCurrency !== 'undefined') {
-              const baseFromInput = AvioraCurrency.convertInputToBase(rateInp.value);
-              rateInp.setAttribute('data-base-usd', baseFromInput);
-              if (rateBadge) rateBadge.textContent = AvioraCurrency.format(baseFromInput, { perHour: true });
+              const activeC = AvioraCurrency.getActiveCurrency();
+              const valFromInput = parseFloat(rateInp.value) || 0;
+              rateInp.setAttribute('data-base-usd', valFromInput);
+              if (rateBadge) rateBadge.textContent = AvioraCurrency.format(valFromInput, { from: activeC.code, to: activeC.code, perHour: true });
             }
           });
         }
@@ -5619,9 +5616,11 @@ const Teacher = {
     const phone = document.getElementById('teacher-profile-phone')?.value.trim();
     const headline = document.getElementById('t-profile-headline')?.value.trim();
     const rawRateInput = parseFloat(document.getElementById('t-profile-rate')?.value || 45);
-    const hourly_rate = (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.convertInputToBase(rawRateInput) : rawRateInput;
+    const hourly_rate = rawRateInput;
     const bio = document.getElementById('t-profile-bio')?.value.trim();
     const country = document.getElementById('teacher-profile-country')?.value || document.getElementById('teacher-country-select')?.value || 'United States';
+    const rateCurrObj = (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.getCurrencyForCountry(country) : { code: 'USD' };
+    const rate_currency = rateCurrObj.code || 'USD';
     const timezone = document.getElementById('teacher-profile-timezone')?.value || document.getElementById('teacher-timezone-select')?.value || 'America/New_York';
     const institution = document.getElementById('teacher-profile-institution')?.value.trim();
     const subjects = document.getElementById('teacher-profile-subjects')?.value.trim();
@@ -5639,7 +5638,7 @@ const Teacher = {
         phone,
         country,
         avatar_url: currentAvatar,
-        tutorData: { headline, hourly_rate, bio, country, timezone, institution, subjects }
+        tutorData: { headline, hourly_rate, rate_currency, bio, country, timezone, institution, subjects }
       });
 
       if (res && res.user && typeof Auth !== 'undefined') {

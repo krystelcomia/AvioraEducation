@@ -1217,9 +1217,9 @@ function authenticateToken(req, res, next) {
       return res.status(403).json({ error: 'Session expired or invalid token. Please log in again.' });
     }
 
-    let user = db.prepare('SELECT id, name, email, role, phone, avatar_url, status, wallet_balance, wallet_tutor_id FROM users WHERE id = ?').get(decoded.id);
+    let user = db.prepare('SELECT id, name, email, role, phone, avatar_url, country, status, wallet_balance, wallet_tutor_id FROM users WHERE id = ?').get(decoded.id);
     if (!user && decoded.email) {
-      user = db.prepare('SELECT id, name, email, role, phone, avatar_url, status, wallet_balance, wallet_tutor_id FROM users WHERE LOWER(email) = LOWER(?)').get(decoded.email);
+      user = db.prepare('SELECT id, name, email, role, phone, avatar_url, country, status, wallet_balance, wallet_tutor_id FROM users WHERE LOWER(email) = LOWER(?)').get(decoded.email);
     }
     if (!user) {
       return res.status(404).json({ error: 'User account not found.' });
@@ -1470,6 +1470,7 @@ app.post('/api/auth/login', (req, res) => {
       role: user.role,
       phone: user.phone,
       avatar_url: user.avatar_url,
+      country: user.country || 'United States',
       status: user.status
     };
 
@@ -2820,16 +2821,19 @@ app.put('/api/auth/profile', authenticateToken, (req, res) => {
     }
 
     if ((req.user.role === 'teacher' || req.user.role === 'tutor') && tutorData) {
-      const existingProf = db.prepare('SELECT subjects, subject_rates, hourly_rate FROM tutor_profiles WHERE user_id = ?').get(userId);
+      const existingProf = db.prepare('SELECT subjects, subject_rates, hourly_rate, rate_currency, country FROM tutor_profiles WHERE user_id = ?').get(userId);
       const newBaseRate = parseFloat(tutorData.hourly_rate) || existingProf?.hourly_rate || 45;
+      const effectiveCountry = tutorData.country || req.body.country || existingProf?.country || 'United States';
+      const newRateCurr = tutorData.rate_currency || (String(effectiveCountry).toLowerCase() === 'philippines' ? 'PHP' : (existingProf?.rate_currency || 'USD'));
       db.prepare(`
         UPDATE tutor_profiles
-        SET headline = ?, bio = ?, hourly_rate = ?, availability_schedule = ?, updated_at = CURRENT_TIMESTAMP
+        SET headline = ?, bio = ?, hourly_rate = ?, rate_currency = ?, availability_schedule = ?, updated_at = CURRENT_TIMESTAMP
         WHERE user_id = ?
       `).run(
         tutorData.headline || null,
         tutorData.bio || null,
         newBaseRate,
+        newRateCurr,
         tutorData.availability_schedule || null,
         userId
       );
@@ -2863,12 +2867,13 @@ app.put('/api/auth/profile', authenticateToken, (req, res) => {
       }
       db.prepare(`
         UPDATE teacher_applications
-        SET headline = COALESCE(?, headline), bio = COALESCE(?, bio), hourly_rate = ?, updated_at = CURRENT_TIMESTAMP
+        SET headline = COALESCE(?, headline), bio = COALESCE(?, bio), hourly_rate = ?, rate_currency = ?, updated_at = CURRENT_TIMESTAMP
         WHERE user_id = ?
       `).run(
         tutorData.headline || null,
         tutorData.bio || null,
         newBaseRate,
+        newRateCurr,
         userId
       );
     }
@@ -3784,6 +3789,7 @@ app.get('/api/tutors', (req, res) => {
         tp.subject_rates,
         tp.grade_levels,
         tp.hourly_rate,
+        COALESCE(tp.rate_currency, ta.rate_currency, CASE WHEN LOWER(COALESCE(tp.country, u.country, '')) = 'philippines' THEN 'PHP' ELSE 'USD' END) as rate_currency,
         tp.rating,
         tp.reviews_count,
         tp.total_sessions,
@@ -3943,6 +3949,7 @@ app.get('/api/tutors/:id', (req, res) => {
     const normTutor = normalizeSubjectRates(tutor.subjects, tutor.subject_rates, tutor.hourly_rate);
     tutor.subjects = normTutor.subjects;
     tutor.subject_rates = normTutor.subject_rates;
+    tutor.rate_currency = tutor.rate_currency || (String(tutor.country || '').toLowerCase() === 'philippines' ? 'PHP' : 'USD');
     tutor.grade_levels = safeParseArray(tutor.grade_levels);
     const liveAvail = getTutorLiveAvailability(tutor.user_id, tutor.availability_schedule);
     tutor.availability_schedule = liveAvail.availability_schedule;
@@ -6660,7 +6667,8 @@ app.put('/api/teacher/subjects', authenticateToken, requireRole('teacher'), (req
       tutorProfile?.hourly_rate || appRecord.hourly_rate || 45
     );
 
-    const { action, subject, new_subject, rate, category, level, qualification, subjects: fullSubjects, subject_rates: fullSubjectRates } = req.body;
+    const { action, subject, new_subject, rate, rate_currency, category, level, qualification, subjects: fullSubjects, subject_rates: fullSubjectRates } = req.body;
+    const effectiveRateCurr = rate_currency || tutorProfile?.rate_currency || appRecord?.rate_currency || (String(tutorProfile?.country || appRecord?.country || '').toLowerCase() === 'philippines' ? 'PHP' : 'USD');
 
     let updatedSubjects = [...currentNorm.subjects];
     let updatedRates = { ...currentNorm.subject_rates };
@@ -6671,8 +6679,8 @@ app.put('/api/teacher/subjects', authenticateToken, requireRole('teacher'), (req
       if (!cleanSubj) {
         return res.status(400).json({ error: 'Please enter a subject or area of specialization name.' });
       }
-      if (isNaN(parsedRate) || parsedRate < 5 || parsedRate > 1000) {
-        return res.status(400).json({ error: 'Please enter a valid hourly rate between $5 and $1,000.' });
+      if (isNaN(parsedRate) || parsedRate < 1 || parsedRate > 1000000) {
+        return res.status(400).json({ error: 'Please enter a valid hourly rate.' });
       }
       const existingIdx = updatedSubjects.findIndex(s => s.toLowerCase() === cleanSubj.toLowerCase());
       const roundedRate = Math.round(parsedRate * 100) / 100;
@@ -6704,8 +6712,8 @@ app.put('/api/teacher/subjects', authenticateToken, requireRole('teacher'), (req
       if (!targetSubj || !renamedSubj) {
         return res.status(400).json({ error: 'Subject name cannot be empty.' });
       }
-      if (isNaN(parsedRate) || parsedRate < 5 || parsedRate > 1000) {
-        return res.status(400).json({ error: 'Please enter a valid hourly rate between $5 and $1,000.' });
+      if (isNaN(parsedRate) || parsedRate < 1 || parsedRate > 1000000) {
+        return res.status(400).json({ error: 'Please enter a valid hourly rate.' });
       }
       const roundedRate = Math.round(parsedRate * 100) / 100;
       const idx = updatedSubjects.findIndex(s => s.toLowerCase() === targetSubj.toLowerCase());
@@ -6752,9 +6760,9 @@ app.put('/api/teacher/subjects', authenticateToken, requireRole('teacher'), (req
     if (tutorProfile) {
       db.prepare(`
         UPDATE tutor_profiles
-        SET subjects = ?, subject_rates = ?, hourly_rate = ?, updated_at = CURRENT_TIMESTAMP
+        SET subjects = ?, subject_rates = ?, hourly_rate = ?, rate_currency = ?, updated_at = CURRENT_TIMESTAMP
         WHERE user_id = ?
-      `).run(subjectsJson, subjectRatesJson, primaryHourlyRate, teacherId);
+      `).run(subjectsJson, subjectRatesJson, primaryHourlyRate, effectiveRateCurr, teacherId);
     } else {
       try {
         db.prepare(`
@@ -6781,9 +6789,9 @@ app.put('/api/teacher/subjects', authenticateToken, requireRole('teacher'), (req
 
     db.prepare(`
       UPDATE teacher_applications
-      SET subjects = ?, subject_rates = ?, hourly_rate = ?, updated_at = CURRENT_TIMESTAMP
+      SET subjects = ?, subject_rates = ?, hourly_rate = ?, rate_currency = ?, updated_at = CURRENT_TIMESTAMP
       WHERE user_id = ?
-    `).run(subjectsJson, subjectRatesJson, primaryHourlyRate, teacherId);
+    `).run(subjectsJson, subjectRatesJson, primaryHourlyRate, effectiveRateCurr, teacherId);
 
     // Also update any pending tutoring requests for this tutor & subject so pending classes reflect updated subject rate
     for (const [subjName, subjRate] of Object.entries(finalNorm.subject_rates)) {
@@ -6801,7 +6809,8 @@ app.put('/api/teacher/subjects', authenticateToken, requireRole('teacher'), (req
       message: 'Subjects and individual rates updated and synced across Student and Admin portals.',
       subjects: finalNorm.subjects,
       subject_rates: finalNorm.subject_rates,
-      hourly_rate: primaryHourlyRate
+      hourly_rate: primaryHourlyRate,
+      rate_currency: effectiveRateCurr
     });
   } catch (error) {
     console.error('Update teacher subjects error:', error);

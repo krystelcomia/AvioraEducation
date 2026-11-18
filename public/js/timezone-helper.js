@@ -418,16 +418,53 @@
 
     getActiveCountry() {
       if (typeof window === 'undefined') return 'United States';
-      const user = (typeof Auth !== 'undefined' && Auth.currentUser) ? Auth.currentUser : null;
-      const uidKey = user ? `_${user.id}` : '';
-      return (uidKey ? localStorage.getItem(`aviora_country${uidKey}`) : null)
-        || user?.country
-        || localStorage.getItem('aviora_country')
+      const user = (typeof Auth !== 'undefined' && Auth.currentUser)
+        ? Auth.currentUser
+        : (typeof Storage !== 'undefined' && Storage.getUser ? Storage.getUser() : null);
+      if (!user || !user.id) {
+        return 'United States';
+      }
+      const uidKey = `_${user.id}`;
+      return localStorage.getItem(`aviora_country${uidKey}`)
+        || user.country
         || 'United States';
     },
 
     getActiveCurrency() {
       return this.getCurrencyForCountry(this.getActiveCountry());
+    },
+
+    getTutorCurrency(tutor) {
+      if (!tutor) return this.DEFAULT_CURRENCY;
+      if (tutor.rate_currency) {
+        return this.getCurrencyByCode(tutor.rate_currency);
+      }
+      if (tutor.country && String(tutor.country).trim().toLowerCase() === 'philippines') {
+        return this.getCurrencyForCountry('Philippines');
+      }
+      return this.DEFAULT_CURRENCY;
+    },
+
+    convertTutorRate(amount, tutor, toCurrencyCode = null) {
+      const tutorCurr = this.getTutorCurrency(tutor);
+      const targetCode = toCurrencyCode || this.getActiveCurrency().code;
+      return this.convert(amount, tutorCurr.code, targetCode);
+    },
+
+    formatTutorRate(amount, tutor, options = {}) {
+      const tutorCurr = this.getTutorCurrency(tutor);
+      return this.format(amount, {
+        ...options,
+        from: options.from || tutorCurr.code
+      });
+    },
+
+    formatTutorRange(minRate, maxRate, tutor, options = {}) {
+      const tutorCurr = this.getTutorCurrency(tutor);
+      return this.formatRange(minRate, maxRate, {
+        ...options,
+        from: options.from || tutorCurr.code
+      });
     },
 
     getAdminCurrency() {
@@ -546,47 +583,29 @@
         if (el) el.textContent = curr.symbol;
       });
 
-      // 2. Add Subject Modal Input
+      // 2. Add Subject Modal Input (preserve tutor's original rate unaltered)
       const modalRateInp = document.getElementById('formal-subject-rate');
-      if (modalRateInp) {
-        let baseUsd = parseFloat(modalRateInp.getAttribute('data-base-usd'));
-        if (isNaN(baseUsd) || baseUsd <= 0) {
-          baseUsd = (typeof Teacher !== 'undefined' && (Teacher.tutorProfile?.hourly_rate || Teacher.application?.hourly_rate)) || 45;
-          modalRateInp.setAttribute('data-base-usd', baseUsd);
-        }
-        modalRateInp.value = this.convert(baseUsd);
+      if (modalRateInp && !modalRateInp.value) {
+        const origRate = (typeof Teacher !== 'undefined' && (Teacher.tutorProfile?.hourly_rate || Teacher.application?.hourly_rate)) || 45;
+        modalRateInp.value = origRate;
       }
 
-      // 3. Application Form Rate Input
+      // 3. Application Form Rate Input (preserve tutor's original rate unaltered)
       const appRateInp = document.getElementById('app-hourly-rate');
-      if (appRateInp) {
-        let baseUsd = parseFloat(appRateInp.getAttribute('data-base-usd'));
-        if (isNaN(baseUsd) || baseUsd <= 0) {
-          baseUsd = 55;
-          appRateInp.setAttribute('data-base-usd', '55');
-        }
-        appRateInp.value = this.convert(baseUsd);
+      if (appRateInp && !appRateInp.value) {
+        appRateInp.value = 55;
       }
 
-      // 4. Tutor Profile Rate Input & Hero Badge
+      // 4. Tutor Profile Rate Input & Hero Badge (display in tutor's currency without altering original rate)
       const rateInp = document.getElementById('t-profile-rate');
-      if (rateInp) {
-        let baseUsd = parseFloat(rateInp.getAttribute('data-base-usd'));
-        if (isNaN(baseUsd) || baseUsd <= 0) {
-          baseUsd = 45;
-          rateInp.setAttribute('data-base-usd', '45');
-        }
-        rateInp.value = this.convert(baseUsd);
-      }
-
       const rateBadge = document.getElementById('teacher-profile-rate-badge');
       if (rateBadge) {
-        const baseUsd = parseFloat(rateInp?.getAttribute('data-base-usd')) || 45;
-        rateBadge.textContent = this.format(baseUsd, { perHour: true });
+        const origRate = parseFloat(rateInp?.value) || parseFloat(rateInp?.getAttribute('data-base-usd')) || 45;
+        rateBadge.textContent = this.format(origRate, { from: curr.code, to: curr.code, perHour: true });
       }
 
       // 5. Connected Teacher account pages (Classes, Subjects, Dashboard, Requests)
-      if (typeof Teacher !== 'undefined') {
+      if (typeof Teacher !== 'undefined' && typeof Auth !== 'undefined' && Auth.currentUser && (Auth.currentUser.role === 'teacher' || Auth.currentUser.role === 'tutor')) {
         if (typeof Teacher.renderTeacherSubjects === 'function') {
           Teacher.renderTeacherSubjects();
         }
@@ -598,6 +617,16 @@
         }
         if (typeof Teacher.renderTeacherRequests === 'function') {
           Teacher.renderTeacherRequests();
+        }
+      }
+
+      // 5b. Connected Student / Directory views (re-render tutor cards with student's country exchange rate)
+      if (typeof Tutors !== 'undefined' && Array.isArray(Tutors.allTutors) && Tutors.allTutors.length > 0) {
+        if (typeof Tutors.renderFeaturedTutors === 'function') {
+          Tutors.renderFeaturedTutors();
+        }
+        if (typeof Tutors.renderDirectoryTutors === 'function') {
+          Tutors.renderDirectoryTutors(Tutors.allTutors);
         }
       }
 

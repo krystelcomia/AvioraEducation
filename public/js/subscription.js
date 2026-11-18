@@ -46,7 +46,7 @@ const StudentSub = {
         sBanner.style.display = 'block';
         if (sAvatar) sAvatar.src = t.avatar_url || t.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80';
         if (sName) sName.textContent = t.name;
-        if (sHeadline) sHeadline.textContent = `${t.headline || t.subject || 'Faculty Educator'} • $${Number(t.hourly_rate || 58).toFixed(2)}/hr`;
+        if (sHeadline) sHeadline.textContent = `${t.headline || t.subject || 'Faculty Educator'} • ${(typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.formatTutorRate(t.hourly_rate || 58, t, { perHour: true }) : '$' + Number(t.hourly_rate || 58).toFixed(2) + '/hr'}`;
       }
 
       // Visitor banner
@@ -59,7 +59,7 @@ const StudentSub = {
         vBanner.style.display = 'block';
         if (vAvatar) vAvatar.src = t.avatar_url || t.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80';
         if (vName) vName.textContent = t.name;
-        if (vHeadline) vHeadline.textContent = `${t.headline || t.subject || 'Faculty Educator'} • $${Number(t.hourly_rate || 58).toFixed(2)}/hr`;
+        if (vHeadline) vHeadline.textContent = `${t.headline || t.subject || 'Faculty Educator'} • ${(typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.formatTutorRate(t.hourly_rate || 58, t, { perHour: true }) : '$' + Number(t.hourly_rate || 58).toFixed(2) + '/hr'}`;
       }
 
       // Update package buttons with tutor name
@@ -909,7 +909,7 @@ const StudentSub = {
       }
     }
     if (rateTagEl) {
-      rateTagEl.textContent = planConfig.isTrial ? 'Free Trial ($0.00)' : `$${Number(lesson.hourly_rate).toFixed(2)} / session`;
+      rateTagEl.textContent = planConfig.isTrial ? 'Free Trial ($0.00)' : `${(typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.formatTutorRate(lesson.hourly_rate, this.selectedTutor) : '$' + Number(lesson.hourly_rate).toFixed(2)} / session`;
     }
     if (durationBadgeEl) {
       durationBadgeEl.textContent = planConfig.isTrial ? '30-Min Trial' : '50-Min Class';
@@ -967,7 +967,7 @@ const StudentSub = {
 
             ${planConfig.isTrial 
               ? `<div class="lesson-card-rate-pill" style="background: rgba(16, 185, 129, 0.12); color: #047857; border-color: rgba(16, 185, 129, 0.3); font-weight: 700;">$0.00 / 30 min (Free Trial)</div>`
-              : `<div class="lesson-card-rate-pill">$${Number(l.hourly_rate).toFixed(2)} / 50 min</div>`}
+              : `<div class="lesson-card-rate-pill">${(typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.formatTutorRate(l.hourly_rate, this.selectedTutor) : '$' + Number(l.hourly_rate).toFixed(2)} / 50 min</div>`}
           </div>
 
           <div class="lesson-card-datetime ${isScheduled ? 'is-scheduled' : ''}">

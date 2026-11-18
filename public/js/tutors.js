@@ -345,14 +345,14 @@ const Tutors = {
     const vals = Object.values(ratesObj).map(v => Number(v)).filter(v => !isNaN(v) && v > 0);
     if (vals.length === 0) {
       const base = tutor.hourly_rate || 45;
-      return (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.format(base) : `$${base}`;
+      return (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.formatTutorRate(base, tutor) : `$${base}`;
     }
     const minRate = Math.min(...vals);
     const maxRate = Math.max(...vals);
     if (minRate === maxRate) {
-      return (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.format(minRate) : `$${minRate}`;
+      return (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.formatTutorRate(minRate, tutor) : `$${minRate}`;
     }
-    return (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.formatRange(minRate, maxRate) : `$${minRate}–$${maxRate}`;
+    return (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.formatTutorRange(minRate, maxRate, tutor) : `$${minRate}–$${maxRate}`;
   },
 
   createTutorCardHtml(t) {
@@ -362,7 +362,7 @@ const Tutors = {
 
     const subjectsHtml = (t.subjects || []).slice(0, 3).map(s => {
       const sRate = this.getTutorSubjectRate(t, s);
-      const formattedRate = (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.format(sRate, { perHour: true }) : `$${sRate}/hr`;
+      const formattedRate = (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.formatTutorRate(sRate, t, { perHour: true }) : `$${sRate}/hr`;
       return `<span class="subject-tag">${s}${hasVaryingRates ? ` • ${formattedRate}` : ''}</span>`;
     }).join('');
 
@@ -487,7 +487,7 @@ const Tutors = {
 
       const subjectsTags = (tutor.subjects || []).map(s => {
         const sRate = this.getTutorSubjectRate(tutor, s);
-        const formattedRate = (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.format(sRate, { perHour: true }) : `$${sRate}/hr`;
+        const formattedRate = (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.formatTutorRate(sRate, tutor, { perHour: true }) : `$${sRate}/hr`;
         return `<span class="subject-tag">${s} <strong style="color: var(--gold-700); margin-left: 0.25rem;">(${formattedRate})</strong></span>`;
       }).join(' ');
       const gradeLevelsTags = (tutor.grade_levels || []).map(g => `<span class="badge-gold">${g}</span>`).join(' ');
@@ -1477,7 +1477,7 @@ const Tutors = {
             <div>
               <div class="booking-sub-title">No Active Subscription Plan</div>
               <div class="booking-sub-desc">
-                0 lesson credits available. Sessions are billed at $${tutor.hourly_rate.toFixed(2)}/50 min standard rate.
+                0 lesson credits available. Sessions are billed at ${(typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.formatTutorRate(tutor.hourly_rate, tutor) : `$${tutor.hourly_rate.toFixed(2)}`}/50 min standard rate.
               </div>
             </div>
           </div>
@@ -1501,13 +1501,13 @@ const Tutors = {
                   ${(tutor.subjects || []).map(s => `<span class="badge-gold" style="font-size: 0.68rem; padding: 0.12rem 0.4rem; font-weight: 600;">${s}</span>`).join('')}
                 </div>
               </div>
-              <p style="color: var(--gold-800); font-size: 0.85rem; font-weight: 600; margin: 0.2rem 0 0 0;">${tutor.headline || tutor.institution || 'Verified Educator'} • $${tutor.hourly_rate}/hour</p>
+              <p style="color: var(--gold-800); font-size: 0.85rem; font-weight: 600; margin: 0.2rem 0 0 0;">${tutor.headline || tutor.institution || 'Verified Educator'} • ${(typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.formatTutorRate(tutor.hourly_rate, tutor, { perHour: true }) : `$${tutor.hourly_rate}/hour`}</p>
             </div>
           </div>
           <div style="display: flex; align-items: center; gap: 0.5rem;">
             <label style="font-size: 0.8rem; font-weight: 600; color: var(--charcoal-600);">Switch Tutor:</label>
             <select id="booking-tutor-switcher" class="form-control" style="width: auto; padding: 0.35rem 0.65rem; font-size: 0.82rem;">
-              ${this.allTutors.map(t => `<option value="${t.id}" ${t.id === tutor.id ? 'selected' : ''}>${t.name} ($${t.hourly_rate}/hr)</option>`).join('')}
+              ${this.allTutors.map(t => `<option value="${t.id}" ${t.id === tutor.id ? 'selected' : ''}>${t.name} (${(typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.formatTutorRate(t.hourly_rate, t, { perHour: true }) : `$${t.hourly_rate}/hr`})</option>`).join('')}
             </select>
           </div>
         </div>
@@ -1525,14 +1525,16 @@ const Tutors = {
     if (subjectSelect) {
       subjectSelect.innerHTML = (tutor.subjects || []).map(s => {
         const sRate = this.getTutorSubjectRate(tutor, s);
-        return `<option value="${s}">${s} ($${sRate.toFixed(2)}/hr)</option>`;
+        const fRate = (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.formatTutorRate(sRate, tutor, { perHour: true }) : `$${sRate.toFixed(2)}/hr`;
+        return `<option value="${s}">${s} (${fRate})</option>`;
       }).join('');
       subjectSelect.onchange = () => {
         const chosenSubj = subjectSelect.value;
         const chosenRate = this.getTutorSubjectRate(tutor, chosenSubj);
         const rateHeadlineEl = document.getElementById('booking-tutor-rate-display');
         if (rateHeadlineEl) {
-          rateHeadlineEl.textContent = `$${chosenRate.toFixed(2)}/hour (${chosenSubj})`;
+          const fRate = (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.formatTutorRate(chosenRate, tutor, { perHour: true }) : `$${chosenRate.toFixed(2)}/hour`;
+          rateHeadlineEl.textContent = `${fRate} (${chosenSubj})`;
         }
       };
     }

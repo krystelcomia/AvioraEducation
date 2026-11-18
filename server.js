@@ -853,6 +853,8 @@ function buildNotificationEmailHtml({ userName, recipientEmail, title, message, 
     schedule: 'Schedule Notification',
     calendar: 'Calendar Sync Alert',
     refund: 'Wallet & Refund Notice',
+    wallet: 'Wallet Validity & Credit Notice',
+    wallet_support: 'Wallet Support Chat',
     approval: 'Account & Credential Update'
   };
   const badgeLabel = categoryMap[type] || 'Aviora Account Notification';
@@ -1145,17 +1147,63 @@ setInterval(() => {
   }
 }, 10000);
 
-// Auto-reconcile student wallet balance against unspent refunded payments, categorized by Tutor & Aviora Buddy
+const WALLET_VALIDITY_DAYS = 60;
+const WALLET_WARNING_DAYS_BEFORE_EXPIRY = 7;
+const WALLET_MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+function parseSqlUtcMs(dateStr) {
+  if (!dateStr) return null;
+  const s = String(dateStr).trim();
+  if (!s) return null;
+  if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/.test(s)) {
+    const ms = Date.parse(s.replace(' ', 'T') + 'Z');
+    return Number.isNaN(ms) ? null : ms;
+  }
+  const ms = Date.parse(s);
+  return Number.isNaN(ms) ? null : ms;
+}
+
+function formatWalletDateLabel(ms) {
+  if (!ms) return '';
+  return new Date(ms).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
+}
+
+function getWalletExpiryMeta(refundedAtStr, nowMs = Date.now()) {
+  const refundedMs = parseSqlUtcMs(refundedAtStr) || nowMs;
+  const expiresMs = refundedMs + (WALLET_VALIDITY_DAYS * WALLET_MS_PER_DAY);
+  const warningStartsMs = expiresMs - (WALLET_WARNING_DAYS_BEFORE_EXPIRY * WALLET_MS_PER_DAY);
+  const msRemaining = expiresMs - nowMs;
+  const isExpired = msRemaining <= 0;
+  const isExpiringSoon = !isExpired && nowMs >= warningStartsMs;
+  const daysRemaining = isExpired ? 0 : Math.max(1, Math.ceil(msRemaining / WALLET_MS_PER_DAY));
+  return {
+    refunded_at: new Date(refundedMs).toISOString(),
+    refunded_ms: refundedMs,
+    expires_at: new Date(expiresMs).toISOString(),
+    expires_ms: expiresMs,
+    expires_label: formatWalletDateLabel(expiresMs),
+    warning_starts_at: new Date(warningStartsMs).toISOString(),
+    is_expired: isExpired,
+    is_expiring_soon: isExpiringSoon,
+    days_remaining: daysRemaining
+  };
+}
+
+// Auto-reconcile student wallet balance against unspent refunded payments,
+// enforcing 60-day validity, 1-week-prior expiration warnings, and company forfeiture
 function reconcileStudentWallet(studentId) {
   try {
+    const nowMs = Date.now();
+    const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
+
     try {
       db.prepare("ALTER TABLE buddy_sessions ADD COLUMN payment_method TEXT DEFAULT 'card'").run();
     } catch (e) {}
 
-    const student = db.prepare('SELECT wallet_balance, wallet_tutor_id FROM users WHERE id = ?').get(studentId);
+    const student = db.prepare('SELECT wallet_balance, wallet_tutor_id, wallet_credited_at, wallet_expiry_warned_at, wallet_forfeited_at, created_at FROM users WHERE id = ?').get(studentId);
     let storedBalance = student ? (parseFloat(student.wallet_balance) || 0) : 0;
 
-    // 1. Cancelled paid tutor lessons (refunded to wallet per tutor)
+    // 1. Cancelled paid tutor lessons (refunded to wallet per tutor, chronological FIFO)
     const cancelledTutorRows = db.prepare(`
       SELECT 
         tr.id,
@@ -1164,6 +1212,10 @@ function reconcileStudentWallet(studentId) {
         tr.requested_date,
         tr.requested_time,
         COALESCE(tr.total_amount, tr.hourly_rate * COALESCE(tr.duration_hours, 1.0)) as amount,
+        tr.wallet_refunded_at,
+        tr.wallet_expiry_warned_at,
+        tr.wallet_forfeited_at,
+        tr.wallet_forfeited_amount,
         tr.updated_at,
         tr.created_at,
         u.name as tutor_name,
@@ -1176,77 +1228,236 @@ function reconcileStudentWallet(studentId) {
       WHERE tr.student_id = ?
         AND tr.status = 'cancelled'
         AND (tr.payment_method != 'subscription' OR (tr.total_amount IS NOT NULL AND tr.total_amount > 0))
-      ORDER BY tr.updated_at DESC, tr.id DESC
+      ORDER BY COALESCE(tr.wallet_refunded_at, tr.updated_at, tr.created_at) ASC, tr.id ASC
     `).all(studentId);
 
-    // Wallet credits spent per tutor
+    // Wallet credits spent per tutor (with timestamps for FIFO before expiry)
     const spentTutorRows = db.prepare(`
       SELECT 
+        id,
         tutor_id,
-        SUM(COALESCE(total_amount, hourly_rate * COALESCE(duration_hours, 1.0))) as total_spent
+        COALESCE(total_amount, hourly_rate * COALESCE(duration_hours, 1.0)) as amount,
+        created_at
       FROM tutoring_requests
       WHERE student_id = ?
         AND payment_method = 'wallet'
         AND status != 'cancelled'
-      GROUP BY tutor_id
+      ORDER BY created_at ASC, id ASC
     `).all(studentId);
 
-    const spentByTutor = {};
-    for (const r of spentTutorRows) {
-      spentByTutor[r.tutor_id] = parseFloat(r.total_spent) || 0;
+    const cancelledByTutor = new Map();
+    for (const row of cancelledTutorRows) {
+      const amt = round2(parseFloat(row.amount) || 0);
+      if (amt <= 0) continue;
+      if (!cancelledByTutor.has(row.tutor_id)) cancelledByTutor.set(row.tutor_id, []);
+      cancelledByTutor.get(row.tutor_id).push(row);
+    }
+
+    const spentEventsByTutor = new Map();
+    for (const sr of spentTutorRows) {
+      const amt = round2(parseFloat(sr.amount) || 0);
+      if (amt <= 0) continue;
+      if (!spentEventsByTutor.has(sr.tutor_id)) spentEventsByTutor.set(sr.tutor_id, []);
+      spentEventsByTutor.get(sr.tutor_id).push({
+        kind: 'spend',
+        id: sr.id,
+        amount: amt,
+        ts: parseSqlUtcMs(sr.created_at) || nowMs
+      });
     }
 
     const tutorCreditsMap = new Map();
     const allCancellations = [];
+    const pendingWarnings = [];
+    const pendingForfeitures = [];
+    let freshlyForfeitedTotal = 0;
 
-    for (const row of cancelledTutorRows) {
-      const amt = Math.round((parseFloat(row.amount) || 0) * 100) / 100;
-      if (amt <= 0) continue;
-      const tId = row.tutor_id;
-      if (!tutorCreditsMap.has(tId)) {
-        tutorCreditsMap.set(tId, {
-          key: `tutor_${tId}`,
-          type: 'tutor',
-          tutor_id: tId,
-          tutor_profile_id: row.tutor_profile_id || tId,
-          name: row.tutor_name || 'Educator',
-          avatar_url: row.tutor_avatar || '',
-          headline: row.tutor_headline || 'Verified Educator',
-          refunded_total: 0,
-          spent_total: spentByTutor[tId] || 0,
-          balance: 0,
-          cancellations_count: 0,
-          cancellations: []
+    for (const [tId, rows] of cancelledByTutor.entries()) {
+      const events = [];
+      for (const row of rows) {
+        const refundedAtStr = row.wallet_refunded_at || row.updated_at || row.created_at;
+        const meta = getWalletExpiryMeta(refundedAtStr, nowMs);
+        events.push({
+          kind: 'credit',
+          id: row.id,
+          amount: round2(parseFloat(row.amount) || 0),
+          ts: meta.refunded_ms,
+          row,
+          meta
         });
       }
-      const entry = tutorCreditsMap.get(tId);
-      entry.refunded_total = Math.round((entry.refunded_total + amt) * 100) / 100;
-      entry.cancellations_count += 1;
+      for (const sp of (spentEventsByTutor.get(tId) || [])) {
+        events.push(sp);
+      }
 
-      const cancelItem = {
-        id: `tutor_cancel_${row.id}`,
-        request_id: row.id,
-        category: 'tutor',
-        category_label: 'Tutor Lesson Credit',
-        entity_key: `tutor_${tId}`,
-        tutor_id: tId,
-        tutor_name: row.tutor_name || 'Educator',
-        title: `${row.subject || 'Tutoring Session'} — ${row.tutor_name || 'Educator'}`,
-        subtitle: `Scheduled: ${row.requested_date || 'N/A'} at ${row.requested_time || 'N/A'}`,
-        date: row.requested_date || (row.updated_at ? String(row.updated_at).split(' ')[0] : 'Recent'),
-        amount: amt,
-        reason: 'Cancelled Lesson (≥3h Notice) • Credited to Tutor Balance',
-        withdrawable: false
+      events.sort((a, b) => {
+        if (a.ts !== b.ts) return a.ts - b.ts;
+        if (a.kind !== b.kind) return a.kind === 'credit' ? -1 : 1;
+        return a.id - b.id;
+      });
+
+      const tutorBatches = [];
+      const expireTutorBatchesAt = (cutoffMs) => {
+        for (const b of tutorBatches) {
+          if (b.remaining > 0 && cutoffMs >= b.meta.expires_ms) {
+            b.forfeitedAmount = b.remaining;
+            b.remaining = 0;
+            b.isForfeited = true;
+          }
+        }
       };
-      entry.cancellations.push(cancelItem);
-      allCancellations.push(cancelItem);
+
+      for (const ev of events) {
+        if (ev.kind === 'credit') {
+          expireTutorBatchesAt(ev.ts);
+          tutorBatches.push({
+            row: ev.row,
+            meta: ev.meta,
+            original: ev.amount,
+            spent: 0,
+            remaining: ev.amount,
+            forfeitedAmount: 0,
+            isForfeited: Boolean(ev.row.wallet_forfeited_at)
+          });
+        } else {
+          expireTutorBatchesAt(ev.ts);
+          let toConsume = ev.amount;
+          for (const b of tutorBatches) {
+            if (toConsume <= 0) break;
+            if (b.remaining <= 0) continue;
+            const used = Math.min(b.remaining, toConsume);
+            b.remaining = round2(b.remaining - used);
+            b.spent = round2(b.spent + used);
+            toConsume = round2(toConsume - used);
+          }
+        }
+      }
+      expireTutorBatchesAt(nowMs);
+
+      const firstRow = rows[0];
+      const entry = {
+        key: `tutor_${tId}`,
+        type: 'tutor',
+        tutor_id: tId,
+        tutor_profile_id: firstRow.tutor_profile_id || tId,
+        name: firstRow.tutor_name || 'Educator',
+        avatar_url: firstRow.tutor_avatar || '',
+        headline: firstRow.tutor_headline || 'Verified Educator',
+        refunded_total: 0,
+        spent_total: 0,
+        forfeited_total: 0,
+        balance: 0,
+        expires_at: null,
+        expires_label: null,
+        days_remaining: null,
+        expiring_soon: false,
+        cancellations_count: 0,
+        cancellations: []
+      };
+
+      for (const b of tutorBatches) {
+        const row = b.row;
+        const meta = b.meta;
+        const forfeitedAmt = round2(b.row.wallet_forfeited_at ? (parseFloat(b.row.wallet_forfeited_amount) || b.forfeitedAmount || b.original) : b.forfeitedAmount);
+        const isForfeited = Boolean(b.row.wallet_forfeited_at || b.isForfeited || forfeitedAmt > 0);
+        const activeRem = isForfeited ? 0 : b.remaining;
+
+        if (isForfeited && forfeitedAmt > 0 && !row.wallet_forfeited_at) {
+          const upd = db.prepare(`
+            UPDATE tutoring_requests
+            SET wallet_forfeited_at = CURRENT_TIMESTAMP,
+                wallet_forfeited_amount = ?
+            WHERE id = ? AND wallet_forfeited_at IS NULL
+          `).run(forfeitedAmt, row.id);
+
+          if (upd.changes > 0) {
+            db.prepare(`
+              INSERT OR IGNORE INTO wallet_forfeitures (student_id, source_type, source_id, tutor_id, amount, refunded_at, expired_at, reason)
+              VALUES (?, 'tutor', ?, ?, ?, ?, ?, ?)
+            `).run(
+              studentId,
+              row.id,
+              tId,
+              forfeitedAmt,
+              meta.refunded_at,
+              meta.expires_at,
+              `Unused ${row.subject || 'lesson'} refund with ${row.tutor_name || 'tutor'} expired after 60 days — forfeited to Aviora Education`
+            );
+            freshlyForfeitedTotal = round2(freshlyForfeitedTotal + forfeitedAmt);
+            pendingForfeitures.push({
+              amount: forfeitedAmt,
+              label: `${row.subject || 'Tutoring Lesson'} credit with ${row.tutor_name || 'your tutor'}`,
+              expiresLabel: meta.expires_label
+            });
+          }
+        } else if (!isForfeited && activeRem > 0 && meta.is_expiring_soon && !row.wallet_expiry_warned_at) {
+          const warnUpd = db.prepare(`
+            UPDATE tutoring_requests
+            SET wallet_expiry_warned_at = CURRENT_TIMESTAMP
+            WHERE id = ? AND wallet_expiry_warned_at IS NULL
+          `).run(row.id);
+          if (warnUpd.changes > 0) {
+            pendingWarnings.push({
+              amount: activeRem,
+              daysRemaining: meta.days_remaining,
+              expiresLabel: meta.expires_label,
+              label: `${row.subject || 'Tutoring Lesson'} credit with ${row.tutor_name || 'your tutor'}`
+            });
+          }
+        }
+
+        entry.refunded_total = round2(entry.refunded_total + b.original);
+        entry.spent_total = round2(entry.spent_total + b.spent);
+        entry.forfeited_total = round2(entry.forfeited_total + (isForfeited ? forfeitedAmt : 0));
+        entry.balance = round2(entry.balance + activeRem);
+        entry.cancellations_count += 1;
+
+        if (activeRem > 0 && (!entry.earliest_expires_ms || meta.expires_ms < entry.earliest_expires_ms)) {
+          entry.earliest_expires_ms = meta.expires_ms;
+          entry.expires_at = meta.expires_at;
+          entry.expires_label = meta.expires_label;
+          entry.days_remaining = meta.days_remaining;
+          entry.expiring_soon = meta.is_expiring_soon;
+        }
+
+        const cancelItem = {
+          id: `tutor_cancel_${row.id}`,
+          request_id: row.id,
+          category: 'tutor',
+          category_label: 'Tutor Lesson Credit',
+          entity_key: `tutor_${tId}`,
+          tutor_id: tId,
+          tutor_name: row.tutor_name || 'Educator',
+          title: `${row.subject || 'Tutoring Session'} — ${row.tutor_name || 'Educator'}`,
+          subtitle: `Scheduled: ${row.requested_date || 'N/A'} at ${row.requested_time || 'N/A'}`,
+          date: row.requested_date || (row.updated_at ? String(row.updated_at).split(' ')[0] : 'Recent'),
+          amount: b.original,
+          remaining_amount: activeRem,
+          refunded_at: meta.refunded_at,
+          refunded_ms: meta.refunded_ms,
+          expires_at: meta.expires_at,
+          expires_label: meta.expires_label,
+          days_remaining: isForfeited ? 0 : meta.days_remaining,
+          is_expiring_soon: !isForfeited && activeRem > 0 && meta.is_expiring_soon,
+          is_forfeited: isForfeited,
+          forfeited_amount: isForfeited ? forfeitedAmt : 0,
+          forfeited_at: row.wallet_forfeited_at || (isForfeited ? meta.expires_at : null),
+          reason: isForfeited
+            ? `Unused for 60 days — Forfeited to company (${meta.expires_label})`
+            : activeRem <= 0
+              ? 'Rebooked using wallet balance'
+              : `Cancelled Lesson (≥3h Notice) • Valid ${meta.days_remaining}d (expires ${meta.expires_label})`,
+          withdrawable: false
+        };
+        entry.cancellations.push(cancelItem);
+        allCancellations.push(cancelItem);
+      }
+
+      entry.cancellations.sort((a, b) => (b.refunded_ms || 0) - (a.refunded_ms || 0));
+      tutorCreditsMap.set(tId, entry);
     }
 
-    for (const [tId, entry] of tutorCreditsMap.entries()) {
-      entry.balance = Math.max(0, Math.round((entry.refunded_total - entry.spent_total) * 100) / 100);
-    }
-
-    // 2. Aviora Buddy refunds & cancellations
+    // 2. Aviora Buddy refunds & cancellations (with 60-day validity & FIFO usage)
     const buddyRefundRows = db.prepare(`
       SELECT 
         bs.*,
@@ -1257,35 +1468,163 @@ function reconcileStudentWallet(studentId) {
       LEFT JOIN users s2 ON bs.student2_id = s2.id
       WHERE (bs.student1_id = ? AND bs.student1_refunded = 1)
          OR (bs.student2_id = ? AND bs.student2_refunded = 1)
-      ORDER BY bs.updated_at DESC, bs.id DESC
+      ORDER BY COALESCE(bs.cancelled_at, bs.updated_at, bs.created_at) ASC, bs.id ASC
     `).all(studentId, studentId);
 
-    const spentBuddyRow = db.prepare(`
-      SELECT COALESCE(SUM(fee_per_student), 0) as total_buddy_spent
+    const spentBuddyRows = db.prepare(`
+      SELECT id, fee_per_student, created_at
       FROM buddy_sessions
       WHERE (student1_id = ? OR student2_id = ?)
         AND payment_method = 'wallet'
         AND status != 'cancelled'
-    `).get(studentId, studentId);
+      ORDER BY created_at ASC, id ASC
+    `).all(studentId, studentId);
 
-    let remainingBuddySpentToDeduct = parseFloat(spentBuddyRow?.total_buddy_spent) || 0;
+    const buddyEvents = [];
+    for (const bs of buddyRefundRows) {
+      const isS1 = bs.student1_id === studentId;
+      const refundedStr = (isS1 ? bs.student1_refunded_at : bs.student2_refunded_at) || bs.cancelled_at || bs.updated_at || bs.created_at;
+      const meta = getWalletExpiryMeta(refundedStr, nowMs);
+      buddyEvents.push({
+        kind: 'credit',
+        id: bs.id,
+        amount: round2(parseFloat(bs.fee_per_student) || 6.00),
+        ts: meta.refunded_ms,
+        bs,
+        isS1,
+        meta
+      });
+    }
+    for (const sp of spentBuddyRows) {
+      const amt = round2(parseFloat(sp.fee_per_student) || 6.00);
+      if (amt > 0) {
+        buddyEvents.push({
+          kind: 'spend',
+          id: sp.id,
+          amount: amt,
+          ts: parseSqlUtcMs(sp.created_at) || nowMs
+        });
+      }
+    }
+    buddyEvents.sort((a, b) => {
+      if (a.ts !== b.ts) return a.ts - b.ts;
+      if (a.kind !== b.kind) return a.kind === 'credit' ? -1 : 1;
+      return a.id - b.id;
+    });
+
+    const buddyBatches = [];
+    const expireBuddyBatchesAt = (cutoffMs) => {
+      for (const b of buddyBatches) {
+        if (b.remaining > 0 && cutoffMs >= b.meta.expires_ms) {
+          b.forfeitedAmount = b.remaining;
+          b.remaining = 0;
+          b.isForfeited = true;
+        }
+      }
+    };
+    for (const ev of buddyEvents) {
+      if (ev.kind === 'credit') {
+        expireBuddyBatchesAt(ev.ts);
+        const existingForfeitedAt = ev.isS1 ? ev.bs.student1_wallet_forfeited_at : ev.bs.student2_wallet_forfeited_at;
+        buddyBatches.push({
+          bs: ev.bs,
+          isS1: ev.isS1,
+          meta: ev.meta,
+          original: ev.amount,
+          spent: 0,
+          remaining: ev.amount,
+          forfeitedAmount: 0,
+          isForfeited: Boolean(existingForfeitedAt)
+        });
+      } else {
+        expireBuddyBatchesAt(ev.ts);
+        let toConsume = ev.amount;
+        for (const b of buddyBatches) {
+          if (toConsume <= 0) break;
+          if (b.remaining <= 0) continue;
+          const used = Math.min(b.remaining, toConsume);
+          b.remaining = round2(b.remaining - used);
+          b.spent = round2(b.spent + used);
+          toConsume = round2(toConsume - used);
+        }
+      }
+    }
+    expireBuddyBatchesAt(nowMs);
+
     const buddyCreditsList = [];
     let buddyTotalBalance = 0;
 
-    for (const bs of buddyRefundRows) {
-      const fee = Math.round((parseFloat(bs.fee_per_student) || 6.00) * 100) / 100;
-      const isS1 = bs.student1_id === studentId;
-      const partnerName = isS1 ? (bs.student2_name || 'Assigned Study Peer') : (bs.student1_name || 'Assigned Study Peer');
-      const deducted = Math.min(fee, remainingBuddySpentToDeduct);
-      remainingBuddySpentToDeduct = Math.max(0, Math.round((remainingBuddySpentToDeduct - deducted) * 100) / 100);
-      const itemBalance = Math.max(0, Math.round((fee - deducted) * 100) / 100);
-      buddyTotalBalance = Math.round((buddyTotalBalance + itemBalance) * 100) / 100;
+    for (const b of buddyBatches) {
+      const bs = b.bs;
+      const meta = b.meta;
+      const partnerName = b.isS1 ? (bs.student2_name || 'Assigned Study Peer') : (bs.student1_name || 'Assigned Study Peer');
+      const existingForfeitedAt = b.isS1 ? bs.student1_wallet_forfeited_at : bs.student2_wallet_forfeited_at;
+      const existingForfeitedAmt = b.isS1 ? bs.student1_wallet_forfeited_amount : bs.student2_wallet_forfeited_amount;
+      const existingWarnedAt = b.isS1 ? bs.student1_wallet_expiry_warned_at : bs.student2_wallet_expiry_warned_at;
 
-      const reasonText = bs.status === 'cancelled'
-        ? 'Cancelled Aviora Buddy (≥3h Notice) • Non-Withdrawable Credit'
-        : 'Partner No-Show Refund (30-Min Call) • Non-Withdrawable Credit';
+      const forfeitedCol = b.isS1 ? 'student1_wallet_forfeited_at' : 'student2_wallet_forfeited_at';
+      const forfeitedAmtCol = b.isS1 ? 'student1_wallet_forfeited_amount' : 'student2_wallet_forfeited_amount';
+      const warnedCol = b.isS1 ? 'student1_wallet_expiry_warned_at' : 'student2_wallet_expiry_warned_at';
 
-      const buddyCreditItem = {
+      const forfeitedAmt = round2(existingForfeitedAt ? (parseFloat(existingForfeitedAmt) || b.forfeitedAmount || b.original) : b.forfeitedAmount);
+      const isForfeited = Boolean(existingForfeitedAt || b.isForfeited || forfeitedAmt > 0);
+      const itemBalance = isForfeited ? 0 : b.remaining;
+
+      if (isForfeited && forfeitedAmt > 0 && !existingForfeitedAt) {
+        const upd = db.prepare(`
+          UPDATE buddy_sessions
+          SET ${forfeitedCol} = CURRENT_TIMESTAMP,
+              ${forfeitedAmtCol} = ?
+          WHERE id = ? AND ${forfeitedCol} IS NULL
+        `).run(forfeitedAmt, bs.id);
+
+        if (upd.changes > 0) {
+          db.prepare(`
+            INSERT OR IGNORE INTO wallet_forfeitures (student_id, source_type, source_id, tutor_id, amount, refunded_at, expired_at, reason)
+            VALUES (?, 'buddy', ?, NULL, ?, ?, ?, ?)
+          `).run(
+            studentId,
+            bs.id,
+            forfeitedAmt,
+            meta.refunded_at,
+            meta.expires_at,
+            `Unused Aviora Buddy (${bs.session_code || bs.id}) refund expired after 60 days — forfeited to Aviora Education`
+          );
+          freshlyForfeitedTotal = round2(freshlyForfeitedTotal + forfeitedAmt);
+          pendingForfeitures.push({
+            amount: forfeitedAmt,
+            label: `Aviora Buddy (${bs.session_code || `BUDDY-${bs.id}`}) credit`,
+            expiresLabel: meta.expires_label
+          });
+        }
+      } else if (!isForfeited && itemBalance > 0 && meta.is_expiring_soon && !existingWarnedAt) {
+        const warnUpd = db.prepare(`
+          UPDATE buddy_sessions
+          SET ${warnedCol} = CURRENT_TIMESTAMP
+          WHERE id = ? AND ${warnedCol} IS NULL
+        `).run(bs.id);
+        if (warnUpd.changes > 0) {
+          pendingWarnings.push({
+            amount: itemBalance,
+            daysRemaining: meta.days_remaining,
+            expiresLabel: meta.expires_label,
+            label: `Aviora Buddy (${bs.session_code || `BUDDY-${bs.id}`}) credit`
+          });
+        }
+      }
+
+      buddyTotalBalance = round2(buddyTotalBalance + itemBalance);
+
+      const baseReason = bs.status === 'cancelled'
+        ? 'Cancelled Aviora Buddy (≥3h Notice)'
+        : 'Partner No-Show Refund (30-Min Call)';
+      const reasonText = isForfeited
+        ? `${baseReason} • Unused for 60 days — Forfeited to company (${meta.expires_label})`
+        : itemBalance <= 0
+          ? `${baseReason} • Rebooked using wallet balance`
+          : `${baseReason} • Valid ${meta.days_remaining}d (expires ${meta.expires_label})`;
+
+      buddyCreditsList.push({
         key: `buddy_${bs.id}`,
         type: 'buddy',
         session_id: bs.id,
@@ -1294,12 +1633,17 @@ function reconcileStudentWallet(studentId) {
         partner_name: partnerName,
         scheduled_date: bs.scheduled_date || 'Scheduled',
         scheduled_time: bs.scheduled_time || '30-Min Call',
-        original_amount: fee,
+        original_amount: b.original,
         balance: itemBalance,
+        forfeited_amount: isForfeited ? forfeitedAmt : 0,
+        expires_at: itemBalance > 0 ? meta.expires_at : null,
+        expires_label: itemBalance > 0 ? meta.expires_label : null,
+        days_remaining: itemBalance > 0 ? meta.days_remaining : 0,
+        expiring_soon: !isForfeited && itemBalance > 0 && meta.is_expiring_soon,
+        is_forfeited: isForfeited,
         reason: reasonText,
         withdrawable: false
-      };
-      buddyCreditsList.push(buddyCreditItem);
+      });
 
       allCancellations.push({
         id: `buddy_cancel_${bs.id}`,
@@ -1312,7 +1656,17 @@ function reconcileStudentWallet(studentId) {
         title: `Aviora Buddy (${bs.session_code || 'Duo'}) — ${bs.subject || 'Co-Learning'}`,
         subtitle: `Partner: ${partnerName} • ${bs.scheduled_date || ''} ${bs.scheduled_time || ''}`.trim(),
         date: bs.scheduled_date && !String(bs.scheduled_date).includes('Pending') ? bs.scheduled_date : (bs.updated_at ? String(bs.updated_at).split(' ')[0] : 'Recent'),
-        amount: fee,
+        amount: b.original,
+        remaining_amount: itemBalance,
+        refunded_at: meta.refunded_at,
+        refunded_ms: meta.refunded_ms,
+        expires_at: meta.expires_at,
+        expires_label: meta.expires_label,
+        days_remaining: isForfeited ? 0 : meta.days_remaining,
+        is_expiring_soon: !isForfeited && itemBalance > 0 && meta.is_expiring_soon,
+        is_forfeited: isForfeited,
+        forfeited_amount: isForfeited ? forfeitedAmt : 0,
+        forfeited_at: existingForfeitedAt || (isForfeited ? meta.expires_at : null),
         reason: reasonText,
         withdrawable: false
       });
@@ -1320,20 +1674,58 @@ function reconcileStudentWallet(studentId) {
 
     let tutorTotalBalance = 0;
     for (const entry of tutorCreditsMap.values()) {
-      tutorTotalBalance = Math.round((tutorTotalBalance + entry.balance) * 100) / 100;
+      tutorTotalBalance = round2(tutorTotalBalance + entry.balance);
     }
 
-    let computedTotal = Math.round((tutorTotalBalance + buddyTotalBalance) * 100) / 100;
+    let computedTotal = round2(tutorTotalBalance + buddyTotalBalance);
+    const effectiveStoredBalance = Math.max(0, round2(storedBalance - freshlyForfeitedTotal));
 
-    // If stored wallet_balance exceeds computed sum (e.g., seeded/manual tutor credit), attribute difference to wallet_tutor_id
-    if (storedBalance > computedTotal) {
-      const diff = Math.round((storedBalance - computedTotal) * 100) / 100;
+    // If stored wallet_balance exceeds computed sum (seeded/manual credit not tied to a request/buddy row),
+    // enforce 60-day validity on that remaining balance too
+    const hasManualSeedSource = Boolean(student?.wallet_credited_at) || (cancelledTutorRows.length === 0 && buddyRefundRows.length === 0 && spentTutorRows.length === 0 && spentBuddyRows.length === 0);
+    if (hasManualSeedSource && effectiveStoredBalance > computedTotal) {
+      const diff = round2(effectiveStoredBalance - computedTotal);
+      let creditedAtStr = student?.wallet_credited_at;
+      if (!creditedAtStr && !student?.wallet_forfeited_at) {
+        db.prepare("UPDATE users SET wallet_credited_at = CURRENT_TIMESTAMP WHERE id = ? AND wallet_credited_at IS NULL").run(studentId);
+        creditedAtStr = new Date(nowMs).toISOString();
+      }
+      const seedMeta = getWalletExpiryMeta(creditedAtStr || student?.created_at || nowMs, nowMs);
+
       let fallbackTutorId = student?.wallet_tutor_id || cancelledTutorRows[0]?.tutor_id;
       if (!fallbackTutorId) {
         const defaultTutor = db.prepare("SELECT u.id FROM users u JOIN tutor_profiles tp ON tp.user_id = u.id WHERE tp.is_active = 1 ORDER BY tp.id ASC LIMIT 1").get();
         fallbackTutorId = defaultTutor ? defaultTutor.id : null;
       }
-      if (fallbackTutorId) {
+
+      if (seedMeta.is_expired) {
+        if (!student?.wallet_forfeited_at) {
+          const seedForf = db.prepare(`
+            UPDATE users
+            SET wallet_forfeited_at = CURRENT_TIMESTAMP
+            WHERE id = ? AND wallet_forfeited_at IS NULL
+          `).run(studentId);
+          if (seedForf.changes > 0) {
+            db.prepare(`
+              INSERT OR IGNORE INTO wallet_forfeitures (student_id, source_type, source_id, tutor_id, amount, refunded_at, expired_at, reason)
+              VALUES (?, 'seed', ?, ?, ?, ?, ?, ?)
+            `).run(
+              studentId,
+              studentId,
+              fallbackTutorId || null,
+              diff,
+              seedMeta.refunded_at,
+              seedMeta.expires_at,
+              'Unused wallet credit expired after 60 days — forfeited to Aviora Education'
+            );
+            pendingForfeitures.push({
+              amount: diff,
+              label: 'Lesson wallet credit',
+              expiresLabel: seedMeta.expires_label
+            });
+          }
+        }
+      } else if (fallbackTutorId) {
         const tUser = db.prepare(`
           SELECT u.id, u.name, u.avatar_url, tp.id as tutor_profile_id, tp.headline
           FROM users u
@@ -1341,6 +1733,22 @@ function reconcileStudentWallet(studentId) {
           WHERE u.id = ?
         `).get(fallbackTutorId);
         if (tUser) {
+          if (seedMeta.is_expiring_soon && !student?.wallet_expiry_warned_at) {
+            const seedWarn = db.prepare(`
+              UPDATE users
+              SET wallet_expiry_warned_at = CURRENT_TIMESTAMP
+              WHERE id = ? AND wallet_expiry_warned_at IS NULL
+            `).run(studentId);
+            if (seedWarn.changes > 0) {
+              pendingWarnings.push({
+                amount: diff,
+                daysRemaining: seedMeta.days_remaining,
+                expiresLabel: seedMeta.expires_label,
+                label: `Lesson credit with ${tUser.name}`
+              });
+            }
+          }
+
           if (!tutorCreditsMap.has(tUser.id)) {
             tutorCreditsMap.set(tUser.id, {
               key: `tutor_${tUser.id}`,
@@ -1352,14 +1760,27 @@ function reconcileStudentWallet(studentId) {
               headline: tUser.headline || 'Verified Educator',
               refunded_total: diff,
               spent_total: 0,
+              forfeited_total: 0,
               balance: diff,
+              earliest_expires_ms: seedMeta.expires_ms,
+              expires_at: seedMeta.expires_at,
+              expires_label: seedMeta.expires_label,
+              days_remaining: seedMeta.days_remaining,
+              expiring_soon: seedMeta.is_expiring_soon,
               cancellations_count: 1,
               cancellations: []
             });
           } else {
             const existing = tutorCreditsMap.get(tUser.id);
-            existing.balance = Math.round((existing.balance + diff) * 100) / 100;
-            existing.refunded_total = Math.round((existing.refunded_total + diff) * 100) / 100;
+            existing.balance = round2(existing.balance + diff);
+            existing.refunded_total = round2(existing.refunded_total + diff);
+            if (!existing.earliest_expires_ms || seedMeta.expires_ms < existing.earliest_expires_ms) {
+              existing.earliest_expires_ms = seedMeta.expires_ms;
+              existing.expires_at = seedMeta.expires_at;
+              existing.expires_label = seedMeta.expires_label;
+              existing.days_remaining = seedMeta.days_remaining;
+              existing.expiring_soon = seedMeta.is_expiring_soon;
+            }
           }
           const tEntry = tutorCreditsMap.get(tUser.id);
           if (tEntry.cancellations.length === 0) {
@@ -1374,14 +1795,23 @@ function reconcileStudentWallet(studentId) {
               subtitle: 'Refunded lesson credit (Available for rebooking)',
               date: 'Credited',
               amount: diff,
-              reason: 'Cancelled Lesson (≥3h Notice) • Credited to Tutor Balance',
+              remaining_amount: diff,
+              refunded_at: seedMeta.refunded_at,
+              refunded_ms: seedMeta.refunded_ms,
+              expires_at: seedMeta.expires_at,
+              expires_label: seedMeta.expires_label,
+              days_remaining: seedMeta.days_remaining,
+              is_expiring_soon: seedMeta.is_expiring_soon,
+              is_forfeited: false,
+              forfeited_amount: 0,
+              reason: `Cancelled Lesson (≥3h Notice) • Valid ${seedMeta.days_remaining}d (expires ${seedMeta.expires_label})`,
               withdrawable: false
             };
             tEntry.cancellations.push(seededCancel);
             allCancellations.push(seededCancel);
           }
-          tutorTotalBalance = Math.round((tutorTotalBalance + diff) * 100) / 100;
-          computedTotal = Math.round((tutorTotalBalance + buddyTotalBalance) * 100) / 100;
+          tutorTotalBalance = round2(tutorTotalBalance + diff);
+          computedTotal = round2(tutorTotalBalance + buddyTotalBalance);
         }
       }
     }
@@ -1389,12 +1819,34 @@ function reconcileStudentWallet(studentId) {
     const tutorCreditsList = Array.from(tutorCreditsMap.values());
     const activeTutorCredits = tutorCreditsList.filter(t => t.balance > 0);
     let primaryTutorId = student?.wallet_tutor_id || (activeTutorCredits[0]?.tutor_id) || (tutorCreditsList[0]?.tutor_id) || null;
-    if (primaryTutorId && !tutorCreditsMap.get(primaryTutorId)?.balance && activeTutorCredits.length > 0) {
+    if (computedTotal <= 0) {
+      primaryTutorId = null;
+    } else if (primaryTutorId && !tutorCreditsMap.get(primaryTutorId)?.balance && activeTutorCredits.length > 0) {
       primaryTutorId = activeTutorCredits[0].tutor_id;
     }
 
     if (computedTotal !== storedBalance || primaryTutorId !== (student?.wallet_tutor_id || null)) {
       db.prepare('UPDATE users SET wallet_balance = ?, wallet_tutor_id = ? WHERE id = ?').run(computedTotal, primaryTutorId, studentId);
+    }
+
+    // Dispatch one-week-prior expiration warnings & 60-day forfeiture notices (in-app + Gmail)
+    for (const w of pendingWarnings) {
+      sendNotification(
+        studentId,
+        `Wallet Expiring in ${w.daysRemaining} Day${w.daysRemaining === 1 ? '' : 's'} — Rebook Now`,
+        `Heads up: Your remaining Aviora wallet balance of $${w.amount.toFixed(2)} (${w.label}) will expire on ${w.expiresLabel} (${w.daysRemaining} day${w.daysRemaining === 1 ? '' : 's'} left). Any refunded balance left unused for 60 days is forfeited to the company. Please rebook before ${w.expiresLabel} to avoid forfeiture.`,
+        'wallet',
+        '#student-portal?action=wallet'
+      );
+    }
+    for (const f of pendingForfeitures) {
+      sendNotification(
+        studentId,
+        `Wallet Credit Expired & Forfeited ($${f.amount.toFixed(2)})`,
+        `Your unused wallet refund of $${f.amount.toFixed(2)} (${f.label}) remained unused for 60 days (expired ${f.expiresLabel}) and has been forfeited to Aviora Education. Remaining active wallet balance: $${computedTotal.toFixed(2)}.`,
+        'wallet',
+        '#student-portal?action=wallet'
+      );
     }
 
     let tutorInfo = null;
@@ -1435,6 +1887,10 @@ function reconcileStudentWallet(studentId) {
         avatar_url: t.avatar_url,
         headline: t.headline,
         balance: cEntry ? cEntry.balance : 0,
+        expires_at: cEntry ? cEntry.expires_at : null,
+        expires_label: cEntry ? cEntry.expires_label : null,
+        days_remaining: cEntry ? cEntry.days_remaining : null,
+        expiring_soon: cEntry ? Boolean(cEntry.expiring_soon) : false,
         cancellations_count: cEntry ? cEntry.cancellations_count : 0
       };
     });
@@ -1449,6 +1905,10 @@ function reconcileStudentWallet(studentId) {
           avatar_url: tc.avatar_url,
           headline: tc.headline,
           balance: tc.balance,
+          expires_at: tc.expires_at,
+          expires_label: tc.expires_label,
+          days_remaining: tc.days_remaining,
+          expiring_soon: Boolean(tc.expiring_soon),
           cancellations_count: tc.cancellations_count
         });
       }
@@ -1472,9 +1932,45 @@ function reconcileStudentWallet(studentId) {
         subject: bs.subject,
         partner_name: partnerName,
         status: bs.status,
-        balance: bCredit ? bCredit.balance : 0
+        balance: bCredit ? bCredit.balance : 0,
+        expires_at: bCredit ? bCredit.expires_at : null,
+        expires_label: bCredit ? bCredit.expires_label : null,
+        days_remaining: bCredit ? bCredit.days_remaining : null,
+        expiring_soon: bCredit ? Boolean(bCredit.expiring_soon) : false
       };
     });
+
+    allCancellations.sort((a, b) => (b.refunded_ms || 0) - (a.refunded_ms || 0));
+
+    // Summarize soonest expiring active wallet balance & recorded forfeitures
+    let soonestExpiresMs = null;
+    let soonestExpiresAt = null;
+    let soonestExpiresLabel = null;
+    let soonestDaysRemaining = null;
+    let expiringSoonAmount = 0;
+
+    for (const c of allCancellations) {
+      if (!c.is_forfeited && (c.remaining_amount || 0) > 0 && c.expires_at) {
+        const expMs = parseSqlUtcMs(c.expires_at);
+        if (expMs && (!soonestExpiresMs || expMs < soonestExpiresMs)) {
+          soonestExpiresMs = expMs;
+          soonestExpiresAt = c.expires_at;
+          soonestExpiresLabel = c.expires_label;
+          soonestDaysRemaining = c.days_remaining;
+        }
+        if (c.is_expiring_soon) {
+          expiringSoonAmount = round2(expiringSoonAmount + c.remaining_amount);
+        }
+      }
+    }
+
+    const forfeitures = db.prepare(`
+      SELECT id, source_type, source_id, tutor_id, amount, refunded_at, expired_at, forfeited_at, reason
+      FROM wallet_forfeitures
+      WHERE student_id = ?
+      ORDER BY forfeited_at DESC, id DESC
+    `).all(studentId);
+    const forfeitedTotal = round2(forfeitures.reduce((s, f) => s + (parseFloat(f.amount) || 0), 0));
 
     return {
       balance: computedTotal,
@@ -1487,6 +1983,14 @@ function reconcileStudentWallet(studentId) {
       cancellations: allCancellations,
       booked_tutors: bookedTutors,
       all_buddy_sessions: studentBuddySessions,
+      validity_days: WALLET_VALIDITY_DAYS,
+      warning_days_before_expiry: WALLET_WARNING_DAYS_BEFORE_EXPIRY,
+      soonest_expires_at: soonestExpiresAt,
+      soonest_expires_label: soonestExpiresLabel,
+      soonest_days_remaining: soonestDaysRemaining,
+      expiring_soon_amount: expiringSoonAmount,
+      forfeited_total: forfeitedTotal,
+      forfeitures,
       withdrawable: false
     };
   } catch (err) {
@@ -1502,6 +2006,14 @@ function reconcileStudentWallet(studentId) {
       cancellations: [],
       booked_tutors: [],
       all_buddy_sessions: [],
+      validity_days: WALLET_VALIDITY_DAYS,
+      warning_days_before_expiry: WALLET_WARNING_DAYS_BEFORE_EXPIRY,
+      soonest_expires_at: null,
+      soonest_expires_label: null,
+      soonest_days_remaining: null,
+      expiring_soon_amount: 0,
+      forfeited_total: 0,
+      forfeitures: [],
       withdrawable: false
     };
   }
@@ -4675,6 +5187,14 @@ app.get('/api/student/wallet', authenticateToken, requireRole('student'), (req, 
       cancellations: walletData.cancellations,
       booked_tutors: walletData.booked_tutors,
       all_buddy_sessions: walletData.all_buddy_sessions,
+      validity_days: walletData.validity_days,
+      warning_days_before_expiry: walletData.warning_days_before_expiry,
+      soonest_expires_at: walletData.soonest_expires_at,
+      soonest_expires_label: walletData.soonest_expires_label,
+      soonest_days_remaining: walletData.soonest_days_remaining,
+      expiring_soon_amount: walletData.expiring_soon_amount,
+      forfeited_total: walletData.forfeited_total,
+      forfeitures: walletData.forfeitures,
       unreadWalletChatCount,
       currency: 'USD'
     });
@@ -5696,6 +6216,11 @@ app.post('/api/student/requests/:id/cancel', authenticateToken, requireRole('stu
       }
       if (refundAmount > 0) {
         db.prepare(`
+          UPDATE tutoring_requests
+          SET wallet_refunded_at = CURRENT_TIMESTAMP
+          WHERE id = ?
+        `).run(requestId);
+        db.prepare(`
           UPDATE users 
           SET wallet_balance = ROUND(COALESCE(wallet_balance, 0) + ?, 2),
               wallet_tutor_id = ?
@@ -5716,14 +6241,14 @@ app.post('/api/student/requests/:id/cancel', authenticateToken, requireRole('stu
       '#teacher-requests'
     );
 
-    // Notify student of refund
+    // Notify student of refund (including 60-day validity policy)
     if (refundAmount > 0) {
       sendNotification(
         studentId,
         'Lesson Cancelled & Credit Refunded',
-        `Your ${request.subject} session was cancelled. ${refundAmount.toFixed(2)} was credited to your Aviora wallet as lesson credit (non-withdrawable) for booking another lesson. New balance: ${newBalance.toFixed(2)}.`,
+        `Your ${request.subject} session was cancelled. ${refundAmount.toFixed(2)} was credited to your Aviora wallet as lesson credit (non-withdrawable). Any remaining refunded balance unused for 60 days will be forfeited to the company. New balance: ${newBalance.toFixed(2)}.`,
         'booking',
-        '#student-portal'
+        '#student-portal?action=wallet'
       );
     } else if (request.payment_method === 'subscription') {
       sendNotification(
@@ -9265,9 +9790,9 @@ app.post('/api/buddy/session/:id/partner-noshow-refund', authenticateToken, (req
     }
 
     const refundAmount = parseFloat(session.fee_per_student) || 6.00;
-    const refundCol = isStudent1 ? 'student1_refunded = 1' : 'student2_refunded = 1';
+    const refundCol = isStudent1 ? 'student1_refunded = 1, student1_refunded_at = CURRENT_TIMESTAMP' : 'student2_refunded = 1, student2_refunded_at = CURRENT_TIMESTAMP';
 
-    // Credit refund to calling student's in-app wallet (strictly non-withdrawable)
+    // Credit refund to calling student's in-app wallet (strictly non-withdrawable, 60-day validity)
     db.prepare('UPDATE users SET wallet_balance = ROUND(COALESCE(wallet_balance, 0) + ?, 2) WHERE id = ?').run(refundAmount, userId);
     db.prepare(`UPDATE buddy_sessions SET ${refundCol}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`).run(sessionId);
 
@@ -9278,9 +9803,9 @@ app.post('/api/buddy/session/:id/partner-noshow-refund', authenticateToken, (req
     sendNotification(
       userId,
       'Aviora Buddy Wallet Refund ($6.00)',
-      `Your peer partner did not attend the scheduled 30-minute Aviora Buddy session (${session.session_code}). A full refund of $${refundAmount.toFixed(2)} has been credited to your in-app wallet (non-withdrawable).`,
+      `Your peer partner did not attend the scheduled 30-minute Aviora Buddy session (${session.session_code}). A full refund of $${refundAmount.toFixed(2)} has been credited to your in-app wallet (non-withdrawable). Valid for 60 days — any remaining unused balance will be forfeited to the company after 60 days.`,
       'wallet',
-      '#aviora-buddy'
+      '#student-portal?action=wallet'
     );
 
     // Chat broadcast
@@ -9339,9 +9864,9 @@ app.post('/api/buddy/session/:id/cancel', authenticateToken, (req, res) => {
     let message = '';
 
     if (isEligibleForRefund) {
-      // Eligible: Credit to non-withdrawable in-app wallet
+      // Eligible: Credit to non-withdrawable in-app wallet (60-day validity)
       db.prepare('UPDATE users SET wallet_balance = ROUND(COALESCE(wallet_balance, 0) + ?, 2) WHERE id = ?').run(refundAmount, userId);
-      const refundCol = isStudent1 ? 'student1_refunded = 1' : 'student2_refunded = 1';
+      const refundCol = isStudent1 ? 'student1_refunded = 1, student1_refunded_at = CURRENT_TIMESTAMP' : 'student2_refunded = 1, student2_refunded_at = CURRENT_TIMESTAMP';
       db.prepare(`
         UPDATE buddy_sessions
         SET 
@@ -9357,14 +9882,14 @@ app.post('/api/buddy/session/:id/cancel', authenticateToken, (req, res) => {
 
       const userRow = db.prepare('SELECT wallet_balance FROM users WHERE id = ?').get(userId);
       newBalance = userRow ? (parseFloat(userRow.wallet_balance) || 0) : 0;
-      message = `Session cancelled with at least 3 hours notice. Full refund of $${refundAmount.toFixed(2)} has been credited to your in-app wallet (non-withdrawable).`;
+      message = `Session cancelled with at least 3 hours notice. Full refund of $${refundAmount.toFixed(2)} has been credited to your in-app wallet (non-withdrawable, valid for 60 days).`;
 
       sendNotification(
         userId,
         'Aviora Buddy Session Cancelled (Refunded)',
-        `You provided notice at least 3 hours before scheduled time for session ${session.session_code}. $${refundAmount.toFixed(2)} has been credited to your in-app wallet (non-withdrawable).`,
+        `You provided notice at least 3 hours before scheduled time for session ${session.session_code}. $${refundAmount.toFixed(2)} has been credited to your in-app wallet (non-withdrawable). Any remaining balance unused for 60 days will be forfeited to the company.`,
         'wallet',
-        '#aviora-buddy'
+        '#student-portal?action=wallet'
       );
     } else {
       // Ineligible: Cancellation with < 3 hours notice or absent without notice. Fee retained by company!
@@ -10963,9 +11488,35 @@ function dispatch3HourLessonReminders() {
   }
 }
 
+// Check all students for 7-day pre-expiration wallet warnings and 60-day unused balance forfeiture
+function processAllStudentWalletValidities() {
+  try {
+    const candidateRows = db.prepare(`
+      SELECT DISTINCT id as student_id FROM users WHERE role = 'student' AND COALESCE(wallet_balance, 0) > 0
+      UNION
+      SELECT DISTINCT student_id FROM tutoring_requests
+      WHERE status = 'cancelled' AND wallet_forfeited_at IS NULL
+        AND (payment_method != 'subscription' OR (total_amount IS NOT NULL AND total_amount > 0))
+      UNION
+      SELECT DISTINCT student1_id as student_id FROM buddy_sessions WHERE student1_refunded = 1 AND student1_wallet_forfeited_at IS NULL AND student1_id IS NOT NULL
+      UNION
+      SELECT DISTINCT student2_id as student_id FROM buddy_sessions WHERE student2_refunded = 1 AND student2_wallet_forfeited_at IS NULL AND student2_id IS NOT NULL
+    `).all();
+
+    for (const row of candidateRows) {
+      if (row && row.student_id) {
+        reconcileStudentWallet(row.student_id);
+      }
+    }
+  } catch (e) {
+    console.warn('Wallet validity sweep notice:', e.message);
+  }
+}
+
 // Run dispatch checks periodically (every 5 minutes) and on startup so users receive Gmail alerts even when offline
 setInterval(() => {
   dispatch3HourLessonReminders();
+  processAllStudentWalletValidities();
 }, 5 * 60 * 1000);
 
 // Run class about-to-begin checks every 30 seconds in background so offline users receive instant Gmail notifications
@@ -10977,6 +11528,7 @@ setTimeout(() => {
   try {
     dispatchClassAboutToBeginReminders();
     dispatch3HourLessonReminders();
+    processAllStudentWalletValidities();
   } catch (e) {}
 }, 1500);
 

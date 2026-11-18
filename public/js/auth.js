@@ -2090,6 +2090,14 @@ const Auth = {
 
     if (dropBal) dropBal.textContent = fmt(displayedBalance);
 
+    const formatValidityHtml = (daysRem, expLabel, isSoon) => {
+      if (!daysRem || !expLabel) return '';
+      if (isSoon) {
+        return `<span style="display: block; margin-top: 0.3rem; color: #B45309; font-weight: 800;">Expiring in ${daysRem} day${daysRem === 1 ? '' : 's'} (${expLabel}) — Rebook now before unused balance is forfeited to the company.</span>`;
+      }
+      return `<span style="display: block; margin-top: 0.25rem; color: var(--charcoal-600); font-weight: 600;">Valid for ${daysRem} day${daysRem === 1 ? '' : 's'} (expires ${expLabel}). Unused balance is forfeited after 60 days.</span>`;
+    };
+
     // Update Banner
     if (tutorBanner && tutorNameEl) {
       if (activeTargetType === 'tutor' && activeTutorObj) {
@@ -2098,8 +2106,8 @@ const Auth = {
         tutorNameEl.textContent = activeTutorObj.name;
         if (bannerAmountEl) bannerAmountEl.textContent = fmt(activeTutorObj.balance);
         if (bannerSubtextEl) {
-          bannerSubtextEl.textContent = activeTutorObj.balance > 0
-            ? `You have ${fmt(activeTutorObj.balance)} in lesson credit associated with ${activeTutorObj.name}. This credit can only be used to book with this tutor.`
+          bannerSubtextEl.innerHTML = activeTutorObj.balance > 0
+            ? `You have ${fmt(activeTutorObj.balance)} in lesson credit associated with ${activeTutorObj.name}. This credit can only be used to book with this tutor.${formatValidityHtml(activeTutorObj.days_remaining || d.soonest_days_remaining, activeTutorObj.expires_label || d.soonest_expires_label, activeTutorObj.expiring_soon)}`
             : `You currently have ${fmt(0)} in lesson credit associated with ${activeTutorObj.name}.`;
         }
       } else if (activeTargetType === 'buddy') {
@@ -2108,8 +2116,11 @@ const Auth = {
         tutorNameEl.textContent = activeBuddyObj ? `Aviora Buddy (${activeBuddyObj.session_code})` : 'Aviora Buddy Co-Learning';
         if (bannerAmountEl) bannerAmountEl.textContent = fmt(displayedBalance);
         if (bannerSubtextEl) {
-          bannerSubtextEl.textContent = displayedBalance > 0
-            ? `You have ${fmt(displayedBalance)} in Aviora Buddy credit from a cancelled session or partner no-show. Use it to book an Aviora Buddy duo session.`
+          const bDays = activeBuddyObj?.days_remaining || (displayedBalance > 0 ? d.soonest_days_remaining : null);
+          const bExp = activeBuddyObj?.expires_label || (displayedBalance > 0 ? d.soonest_expires_label : null);
+          const bSoon = activeBuddyObj ? activeBuddyObj.expiring_soon : (d.expiring_soon_amount > 0);
+          bannerSubtextEl.innerHTML = displayedBalance > 0
+            ? `You have ${fmt(displayedBalance)} in Aviora Buddy credit from a cancelled session or partner no-show. Use it to book an Aviora Buddy duo session.${formatValidityHtml(bDays, bExp, bSoon)}`
             : `You currently have ${fmt(0)} in Aviora Buddy credit.`;
         }
       } else if (activeTutorObj && activeTutorObj.balance > 0) {
@@ -2118,7 +2129,7 @@ const Auth = {
         tutorNameEl.textContent = activeTutorObj.name;
         if (bannerAmountEl) bannerAmountEl.textContent = fmt(activeTutorObj.balance);
         if (bannerSubtextEl) {
-          bannerSubtextEl.textContent = 'This credited amount can only be used to book a new lesson with this same tutor.';
+          bannerSubtextEl.innerHTML = `This credited amount can only be used to book a new lesson with this same tutor.${formatValidityHtml(activeTutorObj.days_remaining || d.soonest_days_remaining, activeTutorObj.expires_label || d.soonest_expires_label, activeTutorObj.expiring_soon || (d.expiring_soon_amount > 0))}`;
         }
       } else if (buddyTotalBal > 0) {
         tutorBanner.style.display = 'block';
@@ -2126,7 +2137,7 @@ const Auth = {
         tutorNameEl.textContent = 'Aviora Buddy Duo Session';
         if (bannerAmountEl) bannerAmountEl.textContent = fmt(buddyTotalBal);
         if (bannerSubtextEl) {
-          bannerSubtextEl.textContent = 'This credited amount can be used to book a new 30-minute Aviora Buddy session.';
+          bannerSubtextEl.innerHTML = `This credited amount can be used to book a new 30-minute Aviora Buddy session.${formatValidityHtml(d.soonest_days_remaining, d.soonest_expires_label, d.expiring_soon_amount > 0)}`;
         }
       } else {
         tutorBanner.style.display = 'none';
@@ -2166,9 +2177,15 @@ const Auth = {
                 <div style="max-height: 115px; overflow-y: auto;">
                   ${tutorItemsToRender.map(tc => {
                     const isSel = this.selectedWalletEntity === tc.key;
+                    const validityNote = (tc.balance > 0 && tc.days_remaining > 0)
+                      ? `<div style="font-size: 0.65rem; font-weight: 700; color: ${tc.expiring_soon ? '#B45309' : 'var(--charcoal-500)'};">${tc.expiring_soon ? `Expiring in ${tc.days_remaining}d` : `Expires in ${tc.days_remaining}d`} • ${tc.expires_label || ''}</div>`
+                      : '';
                     return `
                       <div onclick="Auth.selectWalletEntity('${tc.key}')" style="display: flex; justify-content: space-between; align-items: center; padding: 0.35rem 0.5rem; border-radius: 6px; margin-bottom: 0.2rem; cursor: pointer; background: ${isSel ? 'rgba(198, 138, 40, 0.16)' : '#FFFFFF'}; border: 1px solid ${isSel ? 'var(--gold-500)' : 'rgba(0,0,0,0.07)'};">
-                        <span style="font-size: 0.76rem; font-weight: 700; color: var(--charcoal-900);">${tc.name}</span>
+                        <div>
+                          <div style="font-size: 0.76rem; font-weight: 700; color: var(--charcoal-900);">${tc.name}</div>
+                          ${validityNote}
+                        </div>
                         <strong style="font-size: 0.78rem; color: ${(tc.balance || 0) > 0 ? 'var(--gold-700)' : 'var(--charcoal-500)'};">${fmt(tc.balance || 0)}</strong>
                       </div>
                     `;
@@ -2186,9 +2203,15 @@ const Auth = {
               <div style="font-size: 0.7rem; font-weight: 700; color: #065F46; margin-bottom: 0.25rem;">Aviora Buddy Credits (${fmt(buddyTotalBal)})</div>
               ${buddyItemsToRender.map(bc => {
                 const isSel = this.selectedWalletEntity === bc.key || (this.selectedWalletEntity === 'buddy_all' && bc.key === 'buddy_all');
+                const buddyValidityNote = (bc.balance > 0 && bc.days_remaining > 0)
+                  ? `<div style="font-size: 0.65rem; font-weight: 700; color: ${bc.expiring_soon ? '#B45309' : 'var(--charcoal-500)'};">${bc.expiring_soon ? `Expiring in ${bc.days_remaining}d` : `Expires in ${bc.days_remaining}d`} • ${bc.expires_label || ''}</div>`
+                  : '';
                 return `
-                  <div onclick="Auth.selectWalletEntity('${bc.key}')" style="display: flex; justify-content: space-between; align-items: center; padding: 0.35rem 0.5rem; border-radius: 6px; cursor: pointer; background: ${isSel ? 'rgba(16, 185, 129, 0.14)' : '#FFFFFF'}; border: 1px solid ${isSel ? '#10B981' : 'rgba(0,0,0,0.07)'};">
-                    <span style="font-size: 0.76rem; font-weight: 700; color: var(--charcoal-900);">${bc.session_code} (${bc.partner_name || bc.subject})</span>
+                  <div onclick="Auth.selectWalletEntity('${bc.key}')" style="display: flex; justify-content: space-between; align-items: center; padding: 0.35rem 0.5rem; border-radius: 6px; margin-bottom: 0.2rem; cursor: pointer; background: ${isSel ? 'rgba(16, 185, 129, 0.14)' : '#FFFFFF'}; border: 1px solid ${isSel ? '#10B981' : 'rgba(0,0,0,0.07)'};">
+                    <div>
+                      <div style="font-size: 0.76rem; font-weight: 700; color: var(--charcoal-900);">${bc.session_code} (${bc.partner_name || bc.subject})</div>
+                      ${buddyValidityNote}
+                    </div>
                     <strong style="font-size: 0.78rem; color: ${(bc.balance || 0) > 0 ? '#059669' : 'var(--charcoal-500)'};">${fmt(bc.balance || 0)}</strong>
                   </div>
                 `;
@@ -2221,15 +2244,24 @@ const Auth = {
               <span style="font-size: 0.64rem; font-weight: 800; color: #B45309; background: rgba(245, 158, 11, 0.14); padding: 0.15rem 0.45rem; border-radius: 999px; white-space: nowrap; flex-shrink: 0;">Cannot Be Withdrawn</span>
             </div>
             <div style="display: flex; flex-direction: column; gap: 0.35rem; max-height: 120px; overflow-y: auto;">
-              ${filteredCancels.map(c => `
-                <div style="padding: 0.35rem 0.45rem; border-radius: 6px; background: rgba(250, 247, 242, 0.7); border-left: 3px solid ${c.category === 'buddy' ? '#10B981' : 'var(--gold-500)'}; font-size: 0.72rem;">
-                  <div style="display: flex; justify-content: space-between; align-items: center; font-weight: 700; color: var(--charcoal-900);">
-                    <span>${c.title}</span>
-                    <span style="color: ${c.category === 'buddy' ? '#059669' : 'var(--gold-700)'}; font-weight: 800; white-space: nowrap; flex-shrink: 0; margin-left: 0.35rem;">+${fmt(c.amount)}</span>
+              ${filteredCancels.map(c => {
+                const isForfeited = Boolean(c.is_forfeited);
+                const amountText = isForfeited ? `-${fmt(c.forfeited_amount || c.amount)}` : `+${fmt(c.amount)}`;
+                const amountColor = isForfeited ? '#DC2626' : (c.category === 'buddy' ? '#059669' : 'var(--gold-700)');
+                const borderColor = isForfeited ? '#DC2626' : (c.category === 'buddy' ? '#10B981' : 'var(--gold-500)');
+                const statusBadge = isForfeited
+                  ? `<span style="font-size: 0.62rem; font-weight: 800; color: #991B1B; background: rgba(220, 38, 38, 0.12); padding: 0.08rem 0.38rem; border-radius: 999px; margin-left: 0.35rem;">Forfeited</span>`
+                  : (c.is_expiring_soon ? `<span style="font-size: 0.62rem; font-weight: 800; color: #92400E; background: rgba(245, 158, 11, 0.18); padding: 0.08rem 0.38rem; border-radius: 999px; margin-left: 0.35rem;">Expiring in ${c.days_remaining}d</span>` : '');
+                return `
+                  <div style="padding: 0.35rem 0.45rem; border-radius: 6px; background: ${isForfeited ? 'rgba(254, 242, 242, 0.7)' : 'rgba(250, 247, 242, 0.7)'}; border-left: 3px solid ${borderColor}; font-size: 0.72rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; font-weight: 700; color: var(--charcoal-900);">
+                      <span>${c.title}${statusBadge}</span>
+                      <span style="color: ${amountColor}; font-weight: 800; white-space: nowrap; flex-shrink: 0; margin-left: 0.35rem;">${amountText}</span>
+                    </div>
+                    <div style="font-size: 0.67rem; color: var(--charcoal-600); margin-top: 0.1rem;">${c.reason}</div>
                   </div>
-                  <div style="font-size: 0.67rem; color: var(--charcoal-600); margin-top: 0.1rem;">${c.reason}</div>
-                </div>
-              `).join('')}
+                `;
+              }).join('')}
             </div>
           </div>
         `;

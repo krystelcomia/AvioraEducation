@@ -404,10 +404,25 @@ function initSchema() {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
+    CREATE TABLE IF NOT EXISTS wallet_forfeitures (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      student_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      source_type TEXT NOT NULL CHECK(source_type IN ('tutor', 'buddy', 'seed')),
+      source_id INTEGER,
+      tutor_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      amount REAL NOT NULL,
+      refunded_at DATETIME,
+      expired_at DATETIME NOT NULL,
+      forfeited_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      reason TEXT DEFAULT 'Unused wallet refund expired after 60 days — forfeited to Aviora Education',
+      UNIQUE(student_id, source_type, source_id)
+    );
+
     -- Enforce case-insensitive uniqueness and relational indexes across the entire system
     CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email_nocase ON users(email COLLATE NOCASE);
     CREATE INDEX IF NOT EXISTS idx_tutor_payout_requests_tutor ON tutor_payout_requests(tutor_id);
     CREATE INDEX IF NOT EXISTS idx_wallet_support_student ON wallet_support_messages(student_id);
+    CREATE INDEX IF NOT EXISTS idx_wallet_forfeitures_student ON wallet_forfeitures(student_id);
     CREATE INDEX IF NOT EXISTS idx_student_profiles_user_id ON student_profiles(user_id);
     CREATE INDEX IF NOT EXISTS idx_tutor_profiles_user_id ON tutor_profiles(user_id);
     CREATE INDEX IF NOT EXISTS idx_teacher_applications_user_id ON teacher_applications(user_id);
@@ -730,6 +745,75 @@ function initSchema() {
     db.prepare("UPDATE teacher_applications SET rate_currency = COALESCE(rate_currency, 'USD') WHERE rate_currency IS NULL").run();
   } catch (e) {
     console.warn('Gmail notification migration notice:', e.message);
+  }
+
+  // Ensure 60-day wallet validity, 7-day pre-expiration warning, and forfeiture columns
+  try {
+    const uCols = db.prepare("PRAGMA table_info(users)").all();
+    if (!uCols.some(c => c.name === 'wallet_credited_at')) {
+      db.prepare("ALTER TABLE users ADD COLUMN wallet_credited_at DATETIME").run();
+    }
+    if (!uCols.some(c => c.name === 'wallet_expiry_warned_at')) {
+      db.prepare("ALTER TABLE users ADD COLUMN wallet_expiry_warned_at DATETIME").run();
+    }
+    if (!uCols.some(c => c.name === 'wallet_forfeited_at')) {
+      db.prepare("ALTER TABLE users ADD COLUMN wallet_forfeited_at DATETIME").run();
+    }
+    db.prepare(`
+      UPDATE users
+      SET wallet_credited_at = CURRENT_TIMESTAMP
+      WHERE COALESCE(wallet_balance, 0) > 0 AND wallet_credited_at IS NULL AND wallet_forfeited_at IS NULL
+    `).run();
+
+    const trCols = db.prepare("PRAGMA table_info(tutoring_requests)").all();
+    if (!trCols.some(c => c.name === 'wallet_refunded_at')) {
+      db.prepare("ALTER TABLE tutoring_requests ADD COLUMN wallet_refunded_at DATETIME").run();
+    }
+    if (!trCols.some(c => c.name === 'wallet_expiry_warned_at')) {
+      db.prepare("ALTER TABLE tutoring_requests ADD COLUMN wallet_expiry_warned_at DATETIME").run();
+    }
+    if (!trCols.some(c => c.name === 'wallet_forfeited_at')) {
+      db.prepare("ALTER TABLE tutoring_requests ADD COLUMN wallet_forfeited_at DATETIME").run();
+    }
+    if (!trCols.some(c => c.name === 'wallet_forfeited_amount')) {
+      db.prepare("ALTER TABLE tutoring_requests ADD COLUMN wallet_forfeited_amount REAL DEFAULT 0").run();
+    }
+    db.prepare(`
+      UPDATE tutoring_requests
+      SET wallet_refunded_at = COALESCE(updated_at, created_at)
+      WHERE status = 'cancelled'
+        AND wallet_refunded_at IS NULL
+        AND (payment_method != 'subscription' OR (total_amount IS NOT NULL AND total_amount > 0))
+    `).run();
+
+    const bsCols = db.prepare("PRAGMA table_info(buddy_sessions)").all();
+    const buddyValidityCols = [
+      ['student1_refunded_at', 'DATETIME'],
+      ['student2_refunded_at', 'DATETIME'],
+      ['student1_wallet_expiry_warned_at', 'DATETIME'],
+      ['student2_wallet_expiry_warned_at', 'DATETIME'],
+      ['student1_wallet_forfeited_at', 'DATETIME'],
+      ['student2_wallet_forfeited_at', 'DATETIME'],
+      ['student1_wallet_forfeited_amount', 'REAL DEFAULT 0'],
+      ['student2_wallet_forfeited_amount', 'REAL DEFAULT 0']
+    ];
+    for (const [colName, colType] of buddyValidityCols) {
+      if (!bsCols.some(c => c.name === colName)) {
+        db.prepare(`ALTER TABLE buddy_sessions ADD COLUMN ${colName} ${colType}`).run();
+      }
+    }
+    db.prepare(`
+      UPDATE buddy_sessions
+      SET student1_refunded_at = COALESCE(cancelled_at, updated_at, created_at)
+      WHERE student1_refunded = 1 AND student1_refunded_at IS NULL
+    `).run();
+    db.prepare(`
+      UPDATE buddy_sessions
+      SET student2_refunded_at = COALESCE(cancelled_at, updated_at, created_at)
+      WHERE student2_refunded = 1 AND student2_refunded_at IS NULL
+    `).run();
+  } catch (e) {
+    console.warn('Wallet validity migration notice:', e.message);
   }
 
     // Backfill subject_rates for any existing tutor_profiles and teacher_applications that don't have it set yet

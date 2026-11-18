@@ -418,8 +418,8 @@ const NotificationsUI = {
       }
     }
 
-    // 1. Refund / Wallet credit notification
-    if (title.includes('refund') || title.includes('cancelled & credit') || msg.includes('credited to your aviora wallet') || msg.includes('wallet credit')) {
+    // 1. Refund / Wallet validity & credit notification
+    if (notif?.type === 'wallet' || link.includes('action=wallet') || title.includes('refund') || title.includes('cancelled & credit') || title.includes('wallet expiring') || title.includes('wallet credit expired') || msg.includes('credited to your aviora wallet') || msg.includes('wallet credit')) {
       const targetHash = '#student-portal?action=wallet';
       if (window.location.hash.startsWith('#student-portal')) {
         if (typeof Student !== 'undefined' && Student.handleNotificationNavigation) {

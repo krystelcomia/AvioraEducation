@@ -2135,6 +2135,13 @@ const Admin = {
           <strong>Latest Cancellation Credit:</strong> ${this.escapeWalletHtml(cancellations[0].title)} (+$${parseFloat(cancellations[0].amount || 0).toFixed(2)} • ${this.escapeWalletHtml(cancellations[0].reason || '')})
         </div>
       ` : ''}
+      ${(w.soonest_expires_label || (w.forfeited_total > 0)) ? `
+        <div style="font-size: 0.73rem; color: var(--charcoal-700); margin-top: 0.25rem;">
+          ${w.soonest_expires_label ? `<strong>60-Day Validity:</strong> Next expiration ${this.escapeWalletHtml(w.soonest_expires_label)} (${w.soonest_days_remaining}d left)` : ''}
+          ${(w.soonest_expires_label && w.forfeited_total > 0) ? ' • ' : ''}
+          ${w.forfeited_total > 0 ? `<strong style="color: #B91C1C;">Forfeited to Company (60d Unused):</strong> $${parseFloat(w.forfeited_total || 0).toFixed(2)}` : ''}
+        </div>
+      ` : ''}
     `;
 
     const signature = `${student.id}:${msgs.map(m => `${m.id}:${m.is_read}`).join(',')}`;

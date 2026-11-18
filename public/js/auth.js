@@ -1963,7 +1963,7 @@ const Auth = {
                   </div>
                 </div>
                 <p class="wallet-dropdown-note">
-                  If you cancel a lesson (at least 3 hours before start time), the cost is refunded to your wallet. While the refunded amount is visible here, it cannot be withdrawn; instead, it can be used to book another lesson with the same tutor.
+                  If you cancel a lesson or Aviora Buddy session (at least 3 hours before start time), or if your peer partner does not attend an Aviora Buddy session, the cost is refunded to your wallet. While the refunded amount is visible here, it cannot be withdrawn; instead, it can be used to book another lesson or Aviora Buddy session.
                 </p>
               </div>
               <div class="wallet-dropdown-footer">

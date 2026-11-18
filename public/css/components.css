@@ -5451,3 +5451,40 @@
 }
 
 
+
+/* =========================================
+   BUDDY CANCEL / DANGER OUTLINE BUTTON
+   ========================================= */
+.btn-outline-danger {
+  background: transparent;
+  border: 1.5px solid rgba(239, 68, 68, 0.4);
+  color: #EF4444;
+  border-radius: var(--radius-sm, 8px);
+  padding: 0.4rem 0.9rem;
+  font-size: 0.82rem;
+  font-family: var(--font-body);
+  cursor: pointer;
+  transition: background 0.18s, color 0.18s, border-color 0.18s;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+.btn-outline-danger:hover {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: #EF4444;
+  color: #DC2626;
+}
+.btn-outline-danger:active {
+  background: rgba(239, 68, 68, 0.18);
+}
+.btn.btn-outline-danger {
+  background: transparent;
+  border: 1.5px solid rgba(239, 68, 68, 0.4);
+  color: #EF4444;
+  transition: background 0.18s, color 0.18s, border-color 0.18s;
+}
+.btn.btn-outline-danger:hover {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: #EF4444;
+  color: #DC2626;
+}

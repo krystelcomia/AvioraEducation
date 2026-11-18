@@ -34,7 +34,7 @@ const AvioraBuddy = {
   // Poll intervals
   chatPollTimer: null,
   classTimerInterval: null,
-  classSecondsLeft: 50 * 60,
+  classSecondsLeft: 30 * 60, // 30-Minute Aviora Buddy Call
 
   // Question Banks
   quizBank: [
@@ -819,54 +819,62 @@ const AvioraBuddy = {
     }
 
     listContainer.innerHTML = data.sessions.map(s => {
+      const isCancelled = s.status === 'cancelled';
       const isPending = s.status === 'pending';
       const hasSlot2 = !!s.student2_name;
       const isSelected = this.activeSession && this.activeSession.id === s.id;
 
       return `
         <div class="buddy-card ${isSelected ? 'active' : ''}">
-          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem;">
-            ${isPending 
-              ? '<span class="badge" style="background: rgba(198, 138, 40, 0.15); color: var(--gold-800); border: 1px solid rgba(198, 138, 40, 0.4); font-size: 0.7rem; font-weight: 800; padding: 0.2rem 0.55rem; border-radius: 999px;">⏳ Pending Admin Setup</span>'
-              : '<span class="badge-gold" style="font-size: 0.7rem; font-weight: 800;">✓ Confirmed &amp; Scheduled</span>'
-            }
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 0.4rem;">
+            <div style="display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap;">
+              ${isCancelled 
+                ? '<span class="badge" style="background: rgba(239, 68, 68, 0.15); color: #EF4444; border: 1px solid rgba(239, 68, 68, 0.35); font-size: 0.7rem; font-weight: 800; padding: 0.2rem 0.55rem; border-radius: 999px;">✕ Cancelled</span>'
+                : (isPending 
+                    ? '<span class="badge" style="background: rgba(198, 138, 40, 0.15); color: var(--gold-800); border: 1px solid rgba(198, 138, 40, 0.4); font-size: 0.7rem; font-weight: 800; padding: 0.2rem 0.55rem; border-radius: 999px;">⏳ Pending Admin Setup</span>'
+                    : '<span class="badge-gold" style="font-size: 0.7rem; font-weight: 800;">✓ Confirmed &amp; Scheduled</span>')
+              }
+              <span style="font-size: 0.68rem; font-weight: 800; background: rgba(198, 138, 40, 0.15); color: var(--gold-800); border: 1px solid rgba(198, 138, 40, 0.35); padding: 0.15rem 0.45rem; border-radius: 4px;">⏱️ 30m Call</span>
+            </div>
             <span style="font-family: monospace; font-size: 0.76rem; background: rgba(0,0,0,0.06); padding: 0.2rem 0.5rem; border-radius: 4px; font-weight: 700;">
-              Code: ${s.session_code} (Max 2)
+              Code: ${this.escapeHtml(s.session_code)}
             </span>
           </div>
 
           <h4 style="font-family: var(--font-heading); font-size: 1.15rem; font-weight: 800; color: var(--charcoal-900); margin-bottom: 0.35rem;">
-            ${s.subject}
+            ${this.escapeHtml(s.subject)}
           </h4>
           <p style="color: var(--text-secondary); font-size: 0.82rem; margin-bottom: 0.75rem; line-height: 1.45;">
-            ${s.topic || 'Quiz Bee, Speed Equations & Conversational Questions'}
+            ${this.escapeHtml(s.topic || 'Quiz Bee, Speed Equations & Conversational Questions')}
           </p>
 
-          ${isPending ? `
+          ${isCancelled ? `
+            <div style="background: rgba(239, 68, 68, 0.06); border-left: 3px solid #EF4444; border-radius: 6px; padding: 0.75rem 0.9rem; font-size: 0.78rem; color: #991B1B; margin-bottom: 0.85rem; line-height: 1.5;">
+              <strong>Session Cancelled:</strong> ${this.escapeHtml(s.cancellation_reason || 'This session has been cancelled.')}
+            </div>
+          ` : (isPending ? `
             <div style="background: rgba(198, 138, 40, 0.08); border-left: 3px solid var(--gold-600); border-radius: 6px; padding: 0.75rem 0.9rem; font-size: 0.78rem; color: var(--charcoal-800); margin-bottom: 0.85rem; line-height: 1.5;">
-              <strong>Awaiting Admin Setup:</strong> Once the admin has set up the students in Aviora Buddy, a date and time for the session will be provided, along with a code to be used for accessing the Aviora Buddy class.
-
+              <strong>Awaiting Admin Setup:</strong> Once the admin has set up the students in Aviora Buddy, a date and time for the 30-minute session will be provided, along with a code to be used for accessing the Aviora Buddy class.
             </div>
           ` : `
             <div style="background: rgba(16, 185, 129, 0.06); border-left: 3px solid #10B981; border-radius: 6px; padding: 0.75rem 0.9rem; font-size: 0.78rem; color: #065F46; margin-bottom: 0.85rem; line-height: 1.5;">
-              <div style="font-weight: 800; color: #065F46; margin-bottom: 0.2rem;">✓ Admin Setup Confirmed</div>
-              <div><strong>Confirmed Date &amp; Time:</strong> ${s.scheduled_date} (${s.scheduled_time})</div>
+              <div style="font-weight: 800; color: #065F46; margin-bottom: 0.2rem;">✓ Admin Setup Confirmed (30-Min Call)</div>
+              <div><strong>Confirmed Date &amp; Time:</strong> ${this.escapeHtml(s.scheduled_date)} (${this.escapeHtml(s.scheduled_time)})</div>
               <div style="font-family: monospace; font-size: 0.85rem; font-weight: 800; color: var(--gold-800); margin-top: 0.3rem;">
-                Class Access Code: ${s.session_code}
+                Class Access Code: ${this.escapeHtml(s.session_code)}
               </div>
-
             </div>
-          `}
+          `)}
 
           <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 0; border-top: 1px dashed var(--border-light); border-bottom: 1px dashed var(--border-light); margin-bottom: 1rem;">
             <div style="display: flex; align-items: center; gap: 0.5rem;">
               <div style="display: flex; align-items: center;">
-                <img src="${s.student1_avatar || '/assets/favicon.png'}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 2px solid var(--gold-400);" title="${s.student1_name || 'Student 1'}" />
-                <img src="${s.student2_avatar || '/assets/favicon.png'}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 2px solid ${hasSlot2 ? '#10B981' : 'rgba(0,0,0,0.2)'}; margin-left: -10px;" title="${s.student2_name || 'Awaiting Partner'}" />
+                <img src="${s.student1_avatar || '/assets/favicon.png'}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 2px solid var(--gold-400);" title="${this.escapeHtml(s.student1_name || 'Student 1')}" />
+                <img src="${s.student2_avatar || '/assets/favicon.png'}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 2px solid ${hasSlot2 ? '#10B981' : 'rgba(0,0,0,0.2)'}; margin-left: -10px;" title="${this.escapeHtml(s.student2_name || 'Awaiting Partner')}" />
               </div>
               <div style="font-size: 0.78rem;">
-                <div style="font-weight: 700; color: var(--charcoal-900);">${s.student1_name} &amp; ${s.student2_name || 'Open Slot'}</div>
-                <div style="color: var(--text-secondary); font-size: 0.72rem;">2-Student Peer Co-Learning</div>
+                <div style="font-weight: 700; color: var(--charcoal-900);">${this.escapeHtml(s.student1_name || 'Student 1')} &amp; ${this.escapeHtml(s.student2_name || 'Open Slot')}</div>
+                <div style="color: var(--text-secondary); font-size: 0.72rem;">2-Student 30-Min Co-Learning</div>
               </div>
             </div>
             <div style="text-align: right;">
@@ -875,17 +883,27 @@ const AvioraBuddy = {
             </div>
           </div>
 
-          <div style="display: flex; gap: 0.65rem; align-items: center;">
-            ${isPending ? `
+          <div style="display: flex; gap: 0.65rem; align-items: center; flex-wrap: wrap;">
+            ${isCancelled ? `
+              <button class="btn btn-secondary btn-sm" disabled style="flex: 1; opacity: 0.7; cursor: not-allowed; font-size: 0.8rem; justify-content: center;">
+                ✕ Session Cancelled
+              </button>
+            ` : (isPending ? `
               <button class="btn btn-secondary btn-sm" disabled style="flex: 1; opacity: 0.75; cursor: not-allowed; font-size: 0.8rem; justify-content: center;">
                 ⏳ Awaiting Admin Setup
               </button>
+              <button type="button" class="btn btn-outline-danger btn-sm" onclick="AvioraBuddy.promptCancelSession(${s.id}, '${this.escapeHtml(s.scheduled_date)}', '${this.escapeHtml(s.scheduled_time)}')" title="Cancel Session" style="padding: 0.35rem 0.65rem; font-size: 0.78rem; border-color: rgba(239, 68, 68, 0.4); color: #EF4444; font-weight: 700;">
+                Cancel
+              </button>
             ` : `
               <button class="btn btn-primary btn-sm" onclick="AvioraBuddy.selectSession(${s.id})" style="flex: 1; font-weight: 700; font-size: 0.8rem; justify-content: center;">
-                🎮 Access Aviora Buddy Class
+                🎮 Access 30-Min Class
               </button>
-            `}
-            <button class="btn btn-outline-gold btn-sm" onclick="navigator.clipboard.writeText('${s.session_code}'); showToast('Buddy code ${s.session_code} copied to clipboard!', 'success');" title="Copy Specific Admin Code" style="padding: 0.35rem 0.6rem;">
+              <button type="button" class="btn btn-outline-danger btn-sm" onclick="AvioraBuddy.promptCancelSession(${s.id}, '${this.escapeHtml(s.scheduled_date)}', '${this.escapeHtml(s.scheduled_time)}')" title="Cancel Session" style="padding: 0.35rem 0.65rem; font-size: 0.78rem; border-color: rgba(239, 68, 68, 0.4); color: #EF4444; font-weight: 700;">
+                Cancel
+              </button>
+            `)}
+            <button class="btn btn-outline-gold btn-sm" onclick="navigator.clipboard.writeText('${this.escapeHtml(s.session_code)}'); showToast('Buddy code ${this.escapeHtml(s.session_code)} copied to clipboard!', 'success');" title="Copy Specific Admin Code" style="padding: 0.35rem 0.6rem;">
               📋 Copy Code
             </button>
           </div>
@@ -985,24 +1003,236 @@ const AvioraBuddy = {
     `;
   },
 
+  escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  },
+
   renderSandboxDemo() {
     const defaultSession = {
       id: 9999,
       session_code: 'DEMO-PLAY',
       session_type: 'peer_study',
       subject: 'AP Calculus & Physics Battle Arena ($6)',
-      topic: 'Live Quiz Bee, Equation Duel & Collaborative Whiteboard',
+      topic: 'Live Quiz Bee, Equation Duel & Collaborative Whiteboard (30m Call)',
+      scheduled_date: '2026-10-30',
+      scheduled_time: '15:00 - 15:30 (30m)',
+      duration_minutes: 30,
       student1_name: (Auth.currentUser ? Auth.currentUser.name : 'Student 1'),
       student1_avatar: (Auth.currentUser ? Auth.currentUser.avatar_url : '/assets/favicon.png'),
+      student1_attended: 1,
       student2_name: 'Buddy Peer (Sophia)',
       student2_avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
+      student2_attended: 1,
       tutor_name: null,
       room_status: 'open'
     };
     this.activeSession = defaultSession;
     this.renderArena(defaultSession, [
-      { sender_name: 'Aviora AI Buddy Bot', message: 'Welcome to Aviora Buddy ($6)! Switch tabs above to challenge your buddy in Quiz Bees, Math Duels, Word Scrambles, or draw on the Whiteboard!' }
+      { sender_name: 'Aviora AI Buddy Bot', message: 'Welcome to Aviora Buddy ($6 • 30-Minute Live Call)! Switch tabs above to challenge your buddy in Quiz Bees, Math Duels, Word Scrambles, or draw on the Whiteboard!' }
     ]);
+  },
+
+  startClassTimer() {
+    if (this.classTimerInterval) clearInterval(this.classTimerInterval);
+    this.classSecondsLeft = 30 * 60; // 30-minute call
+    this.updateTimerDisplay();
+    this.classTimerInterval = setInterval(() => {
+      if (this.classSecondsLeft > 0) {
+        this.classSecondsLeft--;
+        this.updateTimerDisplay();
+      } else {
+        clearInterval(this.classTimerInterval);
+        this.classTimerInterval = null;
+        showToast('30-Minute Aviora Buddy call duration concluded.', 'info');
+      }
+    }, 1000);
+  },
+
+  updateTimerDisplay() {
+    const mins = Math.floor(this.classSecondsLeft / 60);
+    const secs = this.classSecondsLeft % 60;
+    const formatted = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+    const timerBadge = document.getElementById('buddy-arena-call-timer');
+    if (timerBadge) {
+      timerBadge.innerHTML = `⏱️ ${formatted} (30m Call)`;
+    }
+    const videoTimer = document.getElementById('buddy-video-call-timer');
+    if (videoTimer) {
+      videoTimer.textContent = formatted;
+    }
+  },
+
+  renderAttendanceBanner(session) {
+    const bannerContainer = document.getElementById('buddy-arena-attendance-banner');
+    if (!bannerContainer) return;
+
+    const currentUserId = Auth.currentUser ? Auth.currentUser.id : null;
+    const isStudent1 = session.student1_id === currentUserId;
+    const isStudent2 = session.student2_id === currentUserId;
+
+    const s1Attended = !!session.student1_attended;
+    const s2Attended = !!session.student2_attended;
+
+    // Current user's attendance status & partner's attendance status
+    const partnerAttended = isStudent1 ? s2Attended : (isStudent2 ? s1Attended : false);
+    const userRefunded = isStudent1 ? !!session.student1_refunded : (isStudent2 ? !!session.student2_refunded : false);
+    const partnerName = isStudent1 ? (session.student2_name || 'Study Partner') : (session.student1_name || 'Study Partner');
+
+    let html = `
+      <div style="background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 10px; padding: 0.65rem 0.95rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.65rem;">
+        <div style="display: flex; align-items: center; gap: 0.85rem; flex-wrap: wrap;">
+          <div style="display: flex; align-items: center; gap: 0.4rem;">
+            <span style="font-size: 0.73rem; color: #9CA3AF; text-transform: uppercase; font-weight: 700;">${this.escapeHtml(session.student1_name || 'Student 1')}:</span>
+            ${s1Attended 
+              ? '<span class="badge" style="background: rgba(16, 185, 129, 0.2); color: #34D399; border: 1px solid rgba(16, 185, 129, 0.4); font-size: 0.7rem; font-weight: 700; padding: 0.12rem 0.45rem; border-radius: 4px;">✓ Present</span>'
+              : '<span class="badge" style="background: rgba(239, 68, 68, 0.15); color: #F87171; border: 1px solid rgba(239, 68, 68, 0.3); font-size: 0.7rem; font-weight: 700; padding: 0.12rem 0.45rem; border-radius: 4px;">⏳ Awaiting</span>'
+            }
+          </div>
+          <div style="display: flex; align-items: center; gap: 0.4rem;">
+            <span style="font-size: 0.73rem; color: #9CA3AF; text-transform: uppercase; font-weight: 700;">${this.escapeHtml(session.student2_name || 'Student 2')}:</span>
+            ${s2Attended 
+              ? '<span class="badge" style="background: rgba(16, 185, 129, 0.2); color: #34D399; border: 1px solid rgba(16, 185, 129, 0.4); font-size: 0.7rem; font-weight: 700; padding: 0.12rem 0.45rem; border-radius: 4px;">✓ Present</span>'
+              : '<span class="badge" style="background: rgba(239, 68, 68, 0.15); color: #F87171; border: 1px solid rgba(239, 68, 68, 0.3); font-size: 0.7rem; font-weight: 700; padding: 0.12rem 0.45rem; border-radius: 4px;">⏳ Awaiting</span>'
+            }
+          </div>
+        </div>
+
+        <div style="font-size: 0.74rem; color: #D1D5DB; display: flex; align-items: center; gap: 0.45rem;">
+          <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #10B981;"></span>
+          <span>30-Minute Live Call Active</span>
+        </div>
+      </div>
+    `;
+
+    // If current student attended while partner has not attended
+    if ((isStudent1 || isStudent2) && !partnerAttended) {
+      if (userRefunded) {
+        html += `
+          <div style="margin-top: 0.55rem; background: rgba(16, 185, 129, 0.14); border: 1.5px solid #10B981; border-radius: 8px; padding: 0.65rem 0.95rem; color: #34D399; font-size: 0.8rem; display: flex; align-items: center; gap: 0.65rem;">
+            <span style="font-size: 1.15rem;">💰</span>
+            <div>
+              <strong>Partner No-Show Refund Claimed ($6.00):</strong> This amount has been credited to your in-app wallet balance (non-withdrawable).
+            </div>
+          </div>
+        `;
+      } else {
+        html += `
+          <div style="margin-top: 0.55rem; background: rgba(198, 138, 40, 0.15); border: 1.5px solid var(--gold-400); border-radius: 8px; padding: 0.75rem 0.95rem; color: #FAF7F2; display: flex; align-items: center; justify-content: space-between; gap: 0.85rem; flex-wrap: wrap;">
+            <div style="display: flex; align-items: center; gap: 0.65rem;">
+              <span style="font-size: 1.25rem;">⏱️</span>
+              <div style="font-size: 0.8rem; line-height: 1.45;">
+                <div style="font-weight: 800; color: #F59E0B; margin-bottom: 0.15rem;">Partner Attendance Notice: ${this.escapeHtml(partnerName)} has not joined</div>
+                <div style="color: #D1D5DB;">Under Aviora policy, since you attended while your partner did not, you are eligible for a <strong>$6.00 refund</strong> credited to your in-app wallet (non-withdrawable).</div>
+              </div>
+            </div>
+            <button type="button" class="btn btn-primary btn-sm" onclick="AvioraBuddy.claimPartnerNoShowRefund(${session.id})" style="font-weight: 800; white-space: nowrap; font-size: 0.78rem; padding: 0.4rem 0.85rem;">
+              💰 Claim $6 Wallet Refund
+            </button>
+          </div>
+        `;
+      }
+    }
+
+    bannerContainer.innerHTML = html;
+  },
+
+  async claimPartnerNoShowRefund(sessionId) {
+    try {
+      const token = Storage.getToken();
+      const res = await fetch(`/api/buddy/session/${sessionId}/partner-noshow-refund`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to claim partner no-show refund.');
+
+      // Update wallet balance across student UI
+      if (typeof Auth !== 'undefined' && data.wallet_balance !== undefined) {
+        Auth.updateWalletBalance(data.wallet_balance);
+      }
+
+      showToast(data.message || 'Partner no-show refund credited! $6.00 added to your in-app wallet.', 'success');
+
+      if (this.activeSession && this.activeSession.id === sessionId) {
+        const currentUserId = Auth.currentUser ? Auth.currentUser.id : null;
+        if (this.activeSession.student1_id === currentUserId) {
+          this.activeSession.student1_refunded = 1;
+        } else {
+          this.activeSession.student2_refunded = 1;
+        }
+        this.renderAttendanceBanner(this.activeSession);
+      }
+    } catch (err) {
+      console.error('Claim partner no-show refund error:', err);
+      showToast(err.message || 'Could not claim refund.', 'error');
+    }
+  },
+
+  async promptCancelSession(sessionId, scheduledDate, scheduledTime) {
+    try {
+      // Calculate hours remaining until scheduled session
+      let hoursUntil = Infinity;
+      if (scheduledDate && !scheduledDate.includes('Pending')) {
+        const timePart = scheduledTime ? scheduledTime.split('-')[0].trim() : '00:00';
+        const timeMatch = timePart.match(/(\d{1,2}):(\d{2})/);
+        if (timeMatch) {
+          const hours = parseInt(timeMatch[1], 10);
+          const minutes = parseInt(timeMatch[2], 10);
+          const dateParts = scheduledDate.split('-');
+          if (dateParts.length === 3) {
+            const sessionDateTime = new Date(
+              parseInt(dateParts[0], 10),
+              parseInt(dateParts[1], 10) - 1,
+              parseInt(dateParts[2], 10),
+              hours,
+              minutes,
+              0
+            );
+            const now = new Date();
+            hoursUntil = (sessionDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
+          }
+        }
+      }
+
+      let confirmPrompt = '';
+      if (hoursUntil >= 3 || !scheduledDate || scheduledDate.includes('Pending')) {
+        confirmPrompt = 'Cancellation Notice:\n\nYou are providing at least 3 hours notice before the scheduled Aviora Buddy session.\n\nUpon cancellation, a full $6.00 refund will be credited to your in-app wallet (non-withdrawable).\n\nDo you wish to proceed?';
+      } else {
+        confirmPrompt = '⚠️ Attendance & Refund Policy Warning:\n\nYou are cancelling with LESS than 3 hours notice before the scheduled session (or start time has passed).\n\nUnder Aviora Buddy policy, you are NOT eligible for a refund, and the fee already paid will be retained by the company.\n\nDo you still wish to cancel this session?';
+      }
+
+      if (!confirm(confirmPrompt)) return;
+
+      const token = Storage.getToken();
+      const res = await fetch(`/api/buddy/session/${sessionId}/cancel`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to cancel session.');
+
+      if (data.refund_credited && typeof Auth !== 'undefined' && data.wallet_balance !== undefined) {
+        Auth.updateWalletBalance(data.wallet_balance);
+      }
+
+      showToast(data.message, data.refund_credited ? 'success' : 'warning');
+      await this.loadBuddyHub();
+    } catch (err) {
+      console.error('Cancel session error:', err);
+      showToast(err.message || 'Failed to cancel buddy session.', 'error');
+    }
   },
 
   renderArena(session, messages) {
@@ -1030,13 +1260,19 @@ const AvioraBuddy = {
       if (session.scheduled_date && session.scheduled_date !== 'Pending Admin Scheduling') {
         schedEl.textContent = `📅 ${session.scheduled_date} • ⏰ ${session.scheduled_time}`;
       } else {
-        schedEl.textContent = '📅 Admin Confirmed Schedule';
+        schedEl.textContent = '📅 Admin Confirmed Schedule (30m)';
       }
     }
     if (s1NameEl) s1NameEl.textContent = session.student1_name || 'Student 1';
     if (s1AvatarEl && session.student1_avatar) s1AvatarEl.src = session.student1_avatar;
     if (s2NameEl) s2NameEl.textContent = session.student2_name || 'Student 2';
     if (s2AvatarEl && session.student2_avatar) s2AvatarEl.src = session.student2_avatar;
+
+    // Start 30-Minute Live Call Countdown Timer
+    this.startClassTimer();
+
+    // Render Attendance Status & Partner No-Show Refund Banner
+    this.renderAttendanceBanner(session);
 
     // Render Chat
     this.renderChatMessages(messages);
@@ -1673,26 +1909,40 @@ const AvioraBuddy = {
   },
 
   // ==========================================
-  // VIDEO / AUDIO CALL INTERFACE
+  // VIDEO / AUDIO CALL INTERFACE (30-Minute Call)
   // ==========================================
   renderVideoCall(stage) {
+    const mins = Math.floor(this.classSecondsLeft / 60);
+    const secs = this.classSecondsLeft % 60;
+    const formatted = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+
     stage.innerHTML = `
       <div style="width: 100%; max-width: 680px; text-align: center;">
+        <div style="margin-bottom: 1.25rem; background: rgba(0,0,0,0.35); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 0.85rem 1.25rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem;">
+          <div style="text-align: left;">
+            <div style="font-weight: 800; color: #FFFFFF; font-size: 0.95rem;">Live 30-Minute Duo Call</div>
+            <div style="font-size: 0.74rem; color: #9CA3AF;">Audio &amp; HD Video Co-Learning Room</div>
+          </div>
+          <div style="background: rgba(16, 185, 129, 0.18); border: 1px solid rgba(16, 185, 129, 0.4); color: #34D399; font-weight: 800; font-size: 0.9rem; padding: 0.35rem 0.85rem; border-radius: 8px;">
+            ⏱️ <span id="buddy-video-call-timer">${formatted}</span> (30m Call)
+          </div>
+        </div>
+
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
           <div style="background: #1A1F26; border: 2px solid var(--gold-400); border-radius: 14px; padding: 2rem 1rem; position: relative;">
             <img src="${this.activeSession?.student1_avatar || '/assets/favicon.png'}" style="width: 72px; height: 72px; border-radius: 50%; object-fit: cover; margin-bottom: 0.75rem; border: 2px solid var(--gold-400);" />
-            <div style="font-weight: 800; color: #fff;">${this.activeSession?.student1_name || 'Student 1'}</div>
+            <div style="font-weight: 800; color: #fff;">${this.escapeHtml(this.activeSession?.student1_name || 'Student 1')}</div>
             <div style="font-size: 0.74rem; color: #10B981; margin-top: 0.25rem;">● Audio/Video Active</div>
           </div>
 
           <div style="background: #1A1F26; border: 2px solid #10B981; border-radius: 14px; padding: 2rem 1rem; position: relative;">
             <img src="${this.activeSession?.student2_avatar || '/assets/favicon.png'}" style="width: 72px; height: 72px; border-radius: 50%; object-fit: cover; margin-bottom: 0.75rem; border: 2px solid #10B981;" />
-            <div style="font-weight: 800; color: #fff;">${this.activeSession?.student2_name || 'Buddy Peer'}</div>
+            <div style="font-weight: 800; color: #fff;">${this.escapeHtml(this.activeSession?.student2_name || 'Buddy Peer')}</div>
             <div style="font-size: 0.74rem; color: #10B981; margin-top: 0.25rem;">● Audio/Video Active</div>
           </div>
         </div>
 
-        <div style="display: flex; gap: 0.75rem; justify-content: center; align-items: center;">
+        <div style="display: flex; gap: 0.75rem; justify-content: center; align-items: center; flex-wrap: wrap;">
           <button type="button" class="btn btn-secondary btn-sm" onclick="showToast('Microphone toggled', 'info')">🎙️ Mute / Unmute</button>
           <button type="button" class="btn btn-secondary btn-sm" onclick="showToast('Camera toggled', 'info')">📹 Camera</button>
           <button type="button" class="btn btn-secondary btn-sm" onclick="showToast('Screen sharing initialized', 'info')">🖥️ Share Screen</button>
@@ -1786,8 +2036,14 @@ const AvioraBuddy = {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await res.json();
-        if (res.ok && data.messages) {
-          this.renderChatMessages(data.messages);
+        if (res.ok) {
+          if (data.messages) {
+            this.renderChatMessages(data.messages);
+          }
+          if (data.session) {
+            this.activeSession = data.session;
+            this.renderAttendanceBanner(data.session);
+          }
         }
       } catch (e) {}
     }, 4000);

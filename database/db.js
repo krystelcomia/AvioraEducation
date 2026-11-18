@@ -235,9 +235,17 @@ function initSchema() {
       topic TEXT,
       scheduled_date TEXT NOT NULL,
       scheduled_time TEXT NOT NULL,
+      duration_minutes INTEGER DEFAULT 30,
       fee_per_student REAL DEFAULT 6.00,
       total_fee REAL DEFAULT 12.00,
       game_state TEXT,
+      student1_attended INTEGER DEFAULT 0,
+      student2_attended INTEGER DEFAULT 0,
+      student1_refunded INTEGER DEFAULT 0,
+      student2_refunded INTEGER DEFAULT 0,
+      cancelled_by INTEGER REFERENCES users(id),
+      cancellation_reason TEXT,
+      cancelled_at DATETIME,
       status TEXT DEFAULT 'active' CHECK(status IN ('pending', 'active', 'completed', 'cancelled')),
       room_status TEXT DEFAULT 'open' CHECK(room_status IN ('closed', 'open', 'ended')),
       room_started_at DATETIME,
@@ -579,6 +587,44 @@ function initSchema() {
       }
     }
   } catch (e) {}
+
+  try {
+    const buddyCols = db.prepare("PRAGMA table_info(buddy_sessions)").all();
+    if (buddyCols && buddyCols.length > 0) {
+      if (!buddyCols.some(c => c.name === 'student1_attended')) {
+        db.prepare("ALTER TABLE buddy_sessions ADD COLUMN student1_attended INTEGER DEFAULT 0").run();
+      }
+      if (!buddyCols.some(c => c.name === 'student2_attended')) {
+        db.prepare("ALTER TABLE buddy_sessions ADD COLUMN student2_attended INTEGER DEFAULT 0").run();
+      }
+      if (!buddyCols.some(c => c.name === 'student1_refunded')) {
+        db.prepare("ALTER TABLE buddy_sessions ADD COLUMN student1_refunded INTEGER DEFAULT 0").run();
+      }
+      if (!buddyCols.some(c => c.name === 'student2_refunded')) {
+        db.prepare("ALTER TABLE buddy_sessions ADD COLUMN student2_refunded INTEGER DEFAULT 0").run();
+      }
+      if (!buddyCols.some(c => c.name === 'duration_minutes')) {
+        db.prepare("ALTER TABLE buddy_sessions ADD COLUMN duration_minutes INTEGER DEFAULT 30").run();
+      }
+      if (!buddyCols.some(c => c.name === 'cancelled_by')) {
+        db.prepare("ALTER TABLE buddy_sessions ADD COLUMN cancelled_by INTEGER REFERENCES users(id)").run();
+      }
+      if (!buddyCols.some(c => c.name === 'cancellation_reason')) {
+        db.prepare("ALTER TABLE buddy_sessions ADD COLUMN cancellation_reason TEXT").run();
+      }
+      if (!buddyCols.some(c => c.name === 'cancelled_at')) {
+        db.prepare("ALTER TABLE buddy_sessions ADD COLUMN cancelled_at DATETIME").run();
+      }
+    }
+    // Update any existing seeded buddy sessions that had 50-minute ranges to 30m call ranges
+    db.prepare("UPDATE buddy_sessions SET scheduled_time = '16:00 - 16:30 (30m)' WHERE scheduled_time LIKE '%16:50%'").run();
+    db.prepare("UPDATE buddy_sessions SET scheduled_time = '17:00 - 17:30 (30m)' WHERE scheduled_time LIKE '%17:50%'").run();
+    db.prepare("UPDATE buddy_sessions SET scheduled_time = '15:00 - 15:30 (30m)' WHERE scheduled_time LIKE '%15:50%'").run();
+    db.prepare("UPDATE buddy_sessions SET scheduled_time = REPLACE(scheduled_time, ':50', ':30 (30m)') WHERE scheduled_time LIKE '%:50%'").run();
+    db.prepare("UPDATE buddy_sessions SET duration_minutes = 30 WHERE duration_minutes IS NULL OR duration_minutes = 50").run();
+  } catch (e) {
+    console.warn('Buddy session migration notice:', e.message);
+  }
 
     // Backfill subject_rates for any existing tutor_profiles and teacher_applications that don't have it set yet
     const profiles = db.prepare("SELECT id, subjects, hourly_rate, subject_rates FROM tutor_profiles WHERE subject_rates IS NULL OR subject_rates = ''").all();
@@ -1757,22 +1803,22 @@ function ensureBuddySeedData() {
     const adminUser = db.prepare('SELECT id FROM users WHERE role = ?').get('admin');
 
     if (lucas && sophia) {
-      // 1. Scheduled Peer Aviora Buddy Session (Admin assigned & scheduled)
+      // 1. Scheduled Peer Aviora Buddy Session (Admin assigned & scheduled - 30-Minute Call)
       const sess1 = db.prepare(`
         INSERT INTO buddy_sessions (
           session_code, session_type, tutor_id, student1_id, student2_id,
-          subject, topic, scheduled_date, scheduled_time, fee_per_student, total_fee,
+          subject, topic, scheduled_date, scheduled_time, duration_minutes, fee_per_student, total_fee,
           status, room_status, room_started_at
         ) VALUES (
           'BUDDY-7482', 'peer_study', NULL, ?, ?,
-          'AP Calculus BC & Quiz Bee Duel', 'Derivatives, Limits & Math Speed Battle', '2026-10-30', '16:00 - 16:50',
+          'AP Calculus BC & Quiz Bee Duel', 'Derivatives, Limits & Math Speed Battle', '2026-10-30', '16:00 - 16:30 (30m)', 30,
           6.00, 12.00, 'active', 'open', CURRENT_TIMESTAMP
         )
       `).run(lucas.id, sophia.id);
 
       db.prepare(`
         INSERT INTO buddy_messages (session_id, sender_id, sender_name, sender_role, message)
-        VALUES (?, ?, 'Aviora Administration', 'admin', 'Schedule Confirmed by Admin: Date: 2026-10-30 • Time: 16:00 - 16:50. Lucas and Sophia are paired for AP Calculus BC Duo Co-Learning.')
+        VALUES (?, ?, 'Aviora Administration', 'admin', 'Schedule Confirmed by Admin: Date: 2026-10-30 • Time: 16:00 - 16:30 (30m call). Lucas and Sophia are paired for AP Calculus BC Duo Co-Learning.')
       `).run(sess1.lastInsertRowid, adminUser ? adminUser.id : lucas.id);
 
       db.prepare(`
@@ -1787,15 +1833,15 @@ function ensureBuddySeedData() {
     }
 
     if (lucas && maya) {
-      // 2. Peer Study Aviora Buddy Session (Scheduled)
+      // 2. Peer Study Aviora Buddy Session (Scheduled - 30-Minute Call)
       const sess2 = db.prepare(`
         INSERT INTO buddy_sessions (
           session_code, session_type, tutor_id, student1_id, student2_id,
-          subject, topic, scheduled_date, scheduled_time, fee_per_student, total_fee,
+          subject, topic, scheduled_date, scheduled_time, duration_minutes, fee_per_student, total_fee,
           status, room_status, room_started_at
         ) VALUES (
           'BUDDY-9134', 'peer_study', NULL, ?, ?,
-          'Physics Mechanics & Vocab Sprint', 'Kinematics Equations & Concept Matching', '2026-10-31', '17:00 - 17:50',
+          'Physics Mechanics & Vocab Sprint', 'Kinematics Equations & Concept Matching', '2026-10-31', '17:00 - 17:30 (30m)', 30,
           6.00, 12.00, 'active', 'open', CURRENT_TIMESTAMP
         )
       `).run(lucas.id, maya.id);

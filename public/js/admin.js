@@ -1785,7 +1785,7 @@ const Admin = {
     }
 
     if (timeInput) {
-      timeInput.value = (session.scheduled_time && session.scheduled_time !== 'Pending Admin Scheduling') ? session.scheduled_time : '16:00 - 16:50';
+      timeInput.value = (session.scheduled_time && session.scheduled_time !== 'Pending Admin Scheduling') ? session.scheduled_time : '16:00 - 16:30 (30m)';
     }
 
     if (notesInput) {

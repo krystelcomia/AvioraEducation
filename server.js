@@ -890,6 +890,13 @@ function reconcileStudentWallet(studentId) {
         AND (payment_method != 'subscription' OR (total_amount IS NOT NULL AND total_amount > 0))
     `).get(studentId);
 
+    const buddyRefundData = db.prepare(`
+      SELECT COALESCE(SUM(fee_per_student), 0) as total_buddy_refunded
+      FROM buddy_sessions
+      WHERE (student1_id = ? AND student1_refunded = 1)
+         OR (student2_id = ? AND student2_refunded = 1)
+    `).get(studentId, studentId);
+
     const spentData = db.prepare(`
       SELECT SUM(COALESCE(total_amount, hourly_rate * COALESCE(duration_hours, 1.0))) as total_spent
       FROM tutoring_requests
@@ -898,7 +905,7 @@ function reconcileStudentWallet(studentId) {
         AND status != 'cancelled'
     `).get(studentId);
 
-    const netRefundCredits = Math.max(0, Math.round(((refundData?.total_refunded || 0) - (spentData?.total_spent || 0)) * 100) / 100);
+    const netRefundCredits = Math.max(0, Math.round(((refundData?.total_refunded || 0) + (buddyRefundData?.total_buddy_refunded || 0) - (spentData?.total_spent || 0)) * 100) / 100);
 
     let tutorId = student ? student.wallet_tutor_id : null;
     if (netRefundCredits > balance) {
@@ -8157,6 +8164,11 @@ app.post('/api/buddy/join', authenticateToken, (req, res) => {
 
     // Check if user is already one of the 2 enrolled participants
     if (session.student1_id === userId || session.student2_id === userId || (session.tutor_id && session.tutor_id === userId)) {
+      if (session.student1_id === userId) {
+        db.prepare('UPDATE buddy_sessions SET student1_attended = 1, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(session.id);
+      } else if (session.student2_id === userId) {
+        db.prepare('UPDATE buddy_sessions SET student2_attended = 1, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(session.id);
+      }
       return res.json({
         success: true,
         message: 'Access granted! Welcome to your scheduled Aviora Buddy class.',
@@ -8171,7 +8183,7 @@ app.post('/api/buddy/join', authenticateToken, (req, res) => {
     if (!session.student2_id) {
       db.prepare(`
         UPDATE buddy_sessions 
-        SET student2_id = ?, updated_at = CURRENT_TIMESTAMP
+        SET student2_id = ?, student2_attended = 1, updated_at = CURRENT_TIMESTAMP
         WHERE id = ?
       `).run(userId, session.id);
 
@@ -8231,7 +8243,16 @@ app.get('/api/buddy/session/:id', authenticateToken, (req, res) => {
       return res.status(404).json({ error: 'Buddy session not found.' });
     }
 
-
+    // Auto-mark attendance for calling student if session is active or open
+    if (session.status === 'active' || session.room_status === 'open') {
+      if (session.student1_id === req.user.id && !session.student1_attended) {
+        db.prepare('UPDATE buddy_sessions SET student1_attended = 1, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(sessionId);
+        session.student1_attended = 1;
+      } else if (session.student2_id === req.user.id && !session.student2_attended) {
+        db.prepare('UPDATE buddy_sessions SET student2_attended = 1, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(sessionId);
+        session.student2_attended = 1;
+      }
+    }
 
     const messages = db.prepare(`
       SELECT * FROM buddy_messages 
@@ -8316,6 +8337,227 @@ app.post('/api/buddy/session/:id/game-score', authenticateToken, (req, res) => {
   } catch (error) {
     console.error('Update buddy game score error:', error);
     res.status(500).json({ error: 'Failed to update game score.' });
+  }
+});
+
+// Helper: Calculate hours remaining until scheduled Aviora Buddy session
+function getHoursUntilBuddySession(scheduledDate, scheduledTime) {
+  try {
+    if (!scheduledDate || scheduledDate.includes('Pending')) return Infinity;
+    const timePart = scheduledTime ? scheduledTime.split('-')[0].trim() : '00:00';
+    const timeMatch = timePart.match(/(\d{1,2}):(\d{2})/);
+    if (!timeMatch) return Infinity;
+    const hours = parseInt(timeMatch[1], 10);
+    const minutes = parseInt(timeMatch[2], 10);
+    const dateParts = scheduledDate.split('-');
+    if (dateParts.length !== 3) return Infinity;
+    const sessionDateTime = new Date(
+      parseInt(dateParts[0], 10),
+      parseInt(dateParts[1], 10) - 1,
+      parseInt(dateParts[2], 10),
+      hours,
+      minutes,
+      0
+    );
+    const now = new Date();
+    const diffMs = sessionDateTime.getTime() - now.getTime();
+    return diffMs / (1000 * 60 * 60);
+  } catch (e) {
+    return Infinity;
+  }
+}
+
+// Claim Partner No-Show Refund (Credited to In-App Wallet, Non-Withdrawable)
+app.post('/api/buddy/session/:id/partner-noshow-refund', authenticateToken, (req, res) => {
+  try {
+    const sessionId = req.params.id;
+    const userId = req.user.id;
+    const session = db.prepare('SELECT * FROM buddy_sessions WHERE id = ?').get(sessionId);
+    if (!session) {
+      return res.status(404).json({ error: 'Aviora Buddy session not found.' });
+    }
+
+    const isStudent1 = session.student1_id === userId;
+    const isStudent2 = session.student2_id === userId;
+    if (!isStudent1 && !isStudent2) {
+      return res.status(403).json({ error: 'You are not an enrolled student in this Aviora Buddy session.' });
+    }
+
+    const userAttended = isStudent1 ? session.student1_attended : session.student2_attended;
+    const partnerAttended = isStudent1 ? session.student2_attended : session.student1_attended;
+    const userRefunded = isStudent1 ? session.student1_refunded : session.student2_refunded;
+
+    // Student must attend the session to be eligible
+    if (!userAttended) {
+      const attendCol = isStudent1 ? 'student1_attended = 1' : 'student2_attended = 1';
+      db.prepare(`UPDATE buddy_sessions SET ${attendCol}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`).run(sessionId);
+    }
+
+    // Partner must NOT have attended
+    if (partnerAttended) {
+      return res.status(400).json({
+        error: 'Your partner attended this session. A partner no-show refund cannot be claimed.'
+      });
+    }
+
+    // Cannot be refunded twice
+    if (userRefunded) {
+      return res.status(400).json({
+        error: 'A partner no-show refund has already been credited to your in-app wallet for this session.'
+      });
+    }
+
+    const refundAmount = parseFloat(session.fee_per_student) || 6.00;
+    const refundCol = isStudent1 ? 'student1_refunded = 1' : 'student2_refunded = 1';
+
+    // Credit refund to calling student's in-app wallet (strictly non-withdrawable)
+    db.prepare('UPDATE users SET wallet_balance = ROUND(COALESCE(wallet_balance, 0) + ?, 2) WHERE id = ?').run(refundAmount, userId);
+    db.prepare(`UPDATE buddy_sessions SET ${refundCol}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`).run(sessionId);
+
+    const updatedUser = db.prepare('SELECT wallet_balance FROM users WHERE id = ?').get(userId);
+    const newBalance = updatedUser ? (parseFloat(updatedUser.wallet_balance) || 0) : 0;
+
+    // Send in-app notification
+    sendNotification(
+      userId,
+      'Aviora Buddy Wallet Refund ($6.00)',
+      `Your peer partner did not attend the scheduled 30-minute Aviora Buddy session (${session.session_code}). A full refund of $${refundAmount.toFixed(2)} has been credited to your in-app wallet (non-withdrawable).`,
+      'wallet',
+      '#aviora-buddy'
+    );
+
+    // Chat broadcast
+    db.prepare(`
+      INSERT INTO buddy_messages (session_id, sender_id, sender_name, sender_role, message)
+      VALUES (?, ?, 'Aviora System', 'system', ?)
+    `).run(sessionId, userId, `Partner no-show verified: A full refund of $${refundAmount.toFixed(2)} has been credited to ${req.user.name}'s non-withdrawable in-app wallet.`);
+
+    return res.json({
+      success: true,
+      refund_amount: refundAmount,
+      wallet_balance: newBalance,
+      withdrawable: false,
+      message: `Partner no-show verified. $${refundAmount.toFixed(2)} has been credited to your in-app wallet (non-withdrawable balance).`
+    });
+  } catch (error) {
+    console.error('Partner no-show refund error:', error);
+    res.status(500).json({ error: 'Failed to process partner no-show refund.' });
+  }
+});
+
+// Cancel Aviora Buddy Session with 3-Hour Notice Refund Policy Check
+app.post('/api/buddy/session/:id/cancel', authenticateToken, (req, res) => {
+  try {
+    const sessionId = req.params.id;
+    const userId = req.user.id;
+    const session = db.prepare('SELECT * FROM buddy_sessions WHERE id = ?').get(sessionId);
+    if (!session) {
+      return res.status(404).json({ error: 'Aviora Buddy session not found.' });
+    }
+
+    const isStudent1 = session.student1_id === userId;
+    const isStudent2 = session.student2_id === userId;
+    const isAdmin = req.user.role === 'admin';
+
+    if (!isStudent1 && !isStudent2 && !isAdmin) {
+      return res.status(403).json({ error: 'You are not authorized to cancel this session.' });
+    }
+
+    if (session.status === 'cancelled') {
+      return res.status(400).json({ error: 'This session has already been cancelled.' });
+    }
+
+    const userRefunded = isStudent1 ? session.student1_refunded : session.student2_refunded;
+    const hoursUntil = getHoursUntilBuddySession(session.scheduled_date, session.scheduled_time);
+
+    // Eligible for wallet refund if notice is given at least 3 hours before start time, OR session is still pending setup
+    const isTimelyNotice = (hoursUntil >= 3 || session.status === 'pending' || !session.scheduled_date || session.scheduled_date === 'Pending Admin Scheduling');
+    const isEligibleForRefund = !userRefunded && isTimelyNotice;
+    const refundAmount = parseFloat(session.fee_per_student) || 6.00;
+
+    let newBalance = null;
+    let message = '';
+
+    if (isEligibleForRefund) {
+      // Eligible: Credit to non-withdrawable in-app wallet
+      db.prepare('UPDATE users SET wallet_balance = ROUND(COALESCE(wallet_balance, 0) + ?, 2) WHERE id = ?').run(refundAmount, userId);
+      const refundCol = isStudent1 ? 'student1_refunded = 1' : 'student2_refunded = 1';
+      db.prepare(`
+        UPDATE buddy_sessions
+        SET 
+          status = 'cancelled',
+          room_status = 'closed',
+          cancelled_by = ?,
+          cancellation_reason = 'Cancelled with >= 3h notice. Full wallet refund issued.',
+          cancelled_at = CURRENT_TIMESTAMP,
+          ${refundCol},
+          updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+      `).run(userId, sessionId);
+
+      const userRow = db.prepare('SELECT wallet_balance FROM users WHERE id = ?').get(userId);
+      newBalance = userRow ? (parseFloat(userRow.wallet_balance) || 0) : 0;
+      message = `Session cancelled with at least 3 hours notice. Full refund of $${refundAmount.toFixed(2)} has been credited to your in-app wallet (non-withdrawable).`;
+
+      sendNotification(
+        userId,
+        'Aviora Buddy Session Cancelled (Refunded)',
+        `You provided notice at least 3 hours before scheduled time for session ${session.session_code}. $${refundAmount.toFixed(2)} has been credited to your in-app wallet (non-withdrawable).`,
+        'wallet',
+        '#aviora-buddy'
+      );
+    } else {
+      // Ineligible: Cancellation with < 3 hours notice or absent without notice. Fee retained by company!
+      db.prepare(`
+        UPDATE buddy_sessions
+        SET 
+          status = 'cancelled',
+          room_status = 'closed',
+          cancelled_by = ?,
+          cancellation_reason = 'Cancelled with < 3 hours notice or absent. Fee retained by company.',
+          cancelled_at = CURRENT_TIMESTAMP,
+          updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+      `).run(userId, sessionId);
+
+      const userRow = db.prepare('SELECT wallet_balance FROM users WHERE id = ?').get(userId);
+      newBalance = userRow ? (parseFloat(userRow.wallet_balance) || 0) : 0;
+      message = `Notice was provided with less than 3 hours remaining before the scheduled time. Under Aviora Buddy policy, you are not eligible for a refund, and the fee already paid has been retained by the company.`;
+
+      sendNotification(
+        userId,
+        'Aviora Buddy Cancellation Notice (No Refund)',
+        `Your cancellation for session ${session.session_code} occurred with less than 3 hours notice. Under Aviora policy, this session is not eligible for a refund, and the fee has been retained by the company.`,
+        'alert',
+        '#aviora-buddy'
+      );
+    }
+
+    // Notify the other student if present
+    const partnerId = isStudent1 ? session.student2_id : session.student1_id;
+    if (partnerId) {
+      sendNotification(
+        partnerId,
+        'Aviora Buddy Session Cancelled',
+        `Your partner cancelled the scheduled Aviora Buddy session (${session.session_code}). You may rebook or contact administration for re-pairing.`,
+        'booking',
+        '#aviora-buddy'
+      );
+    }
+
+    return res.json({
+      success: true,
+      eligible_for_refund: isEligibleForRefund,
+      refund_credited: isEligibleForRefund,
+      refund_amount: isEligibleForRefund ? refundAmount : 0,
+      retained_by_company: !isEligibleForRefund,
+      wallet_balance: newBalance,
+      withdrawable: false,
+      message
+    });
+  } catch (error) {
+    console.error('Cancel buddy session error:', error);
+    res.status(500).json({ error: 'Failed to cancel Aviora Buddy session.' });
   }
 });
 

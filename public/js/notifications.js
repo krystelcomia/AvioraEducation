@@ -396,6 +396,28 @@ const NotificationsUI = {
     const msg = (notif?.message || '').toLowerCase();
     const link = rawLink || notif?.link || '';
 
+    // 0. Wallet Support Chat (Student <-> Admin real-time support)
+    if (link.includes('wallet-chat') || link.includes('section=wallet-chats') || notif?.type === 'wallet_support') {
+      if (typeof Auth !== 'undefined' && Auth.currentUser?.role === 'admin') {
+        const studentMatch = link.match(/student=(\d+)/);
+        if (typeof Admin !== 'undefined') {
+          Admin.pendingWalletChatStudentId = studentMatch ? Number(studentMatch[1]) : null;
+          if (window.location.hash.startsWith('#admin-portal') && Admin.switchSection) {
+            Admin.switchSection('wallet-chats');
+          } else {
+            window.location.hash = '#admin-portal';
+            setTimeout(() => Admin.switchSection && Admin.switchSection('wallet-chats'), 320);
+          }
+          return;
+        }
+      } else if (typeof Auth !== 'undefined' && Auth.currentUser?.role === 'student') {
+        if (Auth.openWalletChatModal) {
+          Auth.openWalletChatModal();
+        }
+        return;
+      }
+    }
+
     // 1. Refund / Wallet credit notification
     if (title.includes('refund') || title.includes('cancelled & credit') || msg.includes('credited to your aviora wallet') || msg.includes('wallet credit')) {
       const targetHash = '#student-portal?action=wallet';

@@ -4659,6 +4659,10 @@ app.get('/api/student/dashboard', authenticateToken, requireRole('student'), (re
 app.get('/api/student/wallet', authenticateToken, requireRole('student'), (req, res) => {
   try {
     const walletData = reconcileStudentWallet(req.user.id);
+    const unreadWalletChatCount = db.prepare(
+      "SELECT COUNT(*) as count FROM wallet_support_messages WHERE student_id = ? AND sender_role = 'admin' AND is_read = 0"
+    ).get(req.user.id).count;
+
     res.json({
       wallet_balance: walletData.balance,
       tutor_balance: walletData.tutor_balance,
@@ -4671,11 +4675,95 @@ app.get('/api/student/wallet', authenticateToken, requireRole('student'), (req, 
       cancellations: walletData.cancellations,
       booked_tutors: walletData.booked_tutors,
       all_buddy_sessions: walletData.all_buddy_sessions,
+      unreadWalletChatCount,
       currency: 'USD'
     });
   } catch (error) {
     console.error('Wallet error:', error);
     res.status(500).json({ error: 'Failed to retrieve wallet balance.' });
+  }
+});
+
+// Student Wallet Support Chat: Get thread with live wallet balance & genuine admin replies only
+app.get('/api/student/wallet/chat', authenticateToken, requireRole('student'), (req, res) => {
+  try {
+    const studentId = req.user.id;
+    const shouldMarkRead = req.query.mark_read !== '0';
+
+    if (shouldMarkRead) {
+      db.prepare(
+        "UPDATE wallet_support_messages SET is_read = 1 WHERE student_id = ? AND sender_role = 'admin' AND is_read = 0"
+      ).run(studentId);
+    }
+
+    const walletData = reconcileStudentWallet(studentId);
+    const messages = db.prepare(
+      'SELECT * FROM wallet_support_messages WHERE student_id = ? ORDER BY created_at ASC, id ASC'
+    ).all(studentId);
+
+    const lastMsg = messages.length > 0 ? messages[messages.length - 1] : null;
+    const awaitingAdminReply = Boolean(lastMsg && lastMsg.sender_role === 'student');
+    const unreadCount = messages.filter(m => m.sender_role === 'admin' && Number(m.is_read) === 0).length;
+
+    res.json({
+      wallet: walletData,
+      messages,
+      awaitingAdminReply,
+      unreadCount
+    });
+  } catch (error) {
+    console.error('Get student wallet chat error:', error);
+    res.status(500).json({ error: 'Failed to load wallet support chat.' });
+  }
+});
+
+// Student Wallet Support Chat: Send message to Admin (no fabricated reply; awaits genuine admin response)
+app.post('/api/student/wallet/chat', authenticateToken, requireRole('student'), (req, res) => {
+  try {
+    const studentId = req.user.id;
+    const cleanReason = String(req.body?.reason || '').trim();
+    const cleanMessage = String(req.body?.message || '').trim();
+
+    if (!cleanReason) {
+      return res.status(400).json({ error: 'Please select a reason for your wallet inquiry.' });
+    }
+    if (!cleanMessage) {
+      return res.status(400).json({ error: 'Please enter a message describing your wallet concern.' });
+    }
+
+    const studentUser = db.prepare('SELECT id, name, email FROM users WHERE id = ?').get(studentId);
+    const senderName = studentUser?.name || req.user.name || 'Student';
+
+    const info = db.prepare(`
+      INSERT INTO wallet_support_messages (student_id, sender_id, sender_role, sender_name, reason, message, is_read)
+      VALUES (?, ?, 'student', ?, ?, ?, 0)
+    `).run(studentId, studentId, senderName, cleanReason, cleanMessage);
+
+    const insertedMsg = db.prepare('SELECT * FROM wallet_support_messages WHERE id = ?').get(info.lastInsertRowid);
+    const walletData = reconcileStudentWallet(studentId);
+
+    // Notify all Administrators in real-time (and via Gmail) so an actual Admin can respond accurately
+    const admins = db.prepare("SELECT id FROM users WHERE role = 'admin'").all();
+    const preview = cleanMessage.length > 120 ? cleanMessage.substring(0, 117) + '...' : cleanMessage;
+    for (const adm of admins) {
+      sendNotification(
+        adm.id,
+        `Wallet Support: ${cleanReason}`,
+        `${senderName} (${studentUser?.email || 'student'}) sent a wallet inquiry regarding "${cleanReason}" (Live Balance: $${walletData.balance.toFixed(2)}): "${preview}"`,
+        'wallet_support',
+        `#admin-portal?section=wallet-chats&student=${studentId}`
+      );
+    }
+
+    res.status(201).json({
+      success: true,
+      message: insertedMsg,
+      awaitingAdminReply: true,
+      wallet: walletData
+    });
+  } catch (error) {
+    console.error('Send student wallet chat error:', error);
+    res.status(500).json({ error: 'Failed to send wallet inquiry to administrator.' });
   }
 });
 
@@ -9408,6 +9496,7 @@ app.get('/api/admin/dashboard', authenticateToken, requireRole('admin'), (req, r
     const totalInquiries = db.prepare("SELECT COUNT(*) as count FROM inquiries").get().count;
     const pendingInquiries = db.prepare("SELECT COUNT(*) as count FROM inquiries WHERE status = 'pending'").get().count;
     const respondedInquiries = db.prepare("SELECT COUNT(*) as count FROM inquiries WHERE status = 'responded'").get().count;
+    const unreadWalletChats = db.prepare("SELECT COUNT(*) as count FROM wallet_support_messages WHERE sender_role = 'student' AND is_read = 0").get().count;
 
     // Recent platform activity (Accounts, Applications, Requests, Inquiries)
     const recentActivity = db.prepare(`
@@ -9441,7 +9530,8 @@ app.get('/api/admin/dashboard', authenticateToken, requireRole('admin'), (req, r
         platformVolume,
         totalInquiries,
         pendingInquiries,
-        respondedInquiries
+        respondedInquiries,
+        unreadWalletChats
       },
       charts: {
         analytics: analyticsTimeSeries,
@@ -10090,6 +10180,164 @@ app.post('/api/admin/inquiries/:id/respond', authenticateToken, requireRole('adm
   } catch (error) {
     console.error('Admin respond inquiry error:', error);
     res.status(500).json({ error: 'Failed to save response to inquiry.' });
+  }
+});
+
+// ==========================================
+// ADMIN: STUDENT WALLET SUPPORT LIVE CHAT
+// ==========================================
+
+// List all student wallet support threads with verified live wallet balances
+app.get('/api/admin/wallet-chats', authenticateToken, requireRole('admin'), (req, res) => {
+  try {
+    const studentRows = db.prepare(`
+      SELECT DISTINCT u.id, u.name, u.email, u.avatar_url, u.country, u.phone
+      FROM wallet_support_messages wsm
+      JOIN users u ON wsm.student_id = u.id
+      ORDER BY u.name ASC
+    `).all();
+
+    const threads = studentRows.map(s => {
+      const msgs = db.prepare(
+        'SELECT * FROM wallet_support_messages WHERE student_id = ? ORDER BY created_at ASC, id ASC'
+      ).all(s.id);
+      const lastMsg = msgs.length > 0 ? msgs[msgs.length - 1] : null;
+      const lastStudentMsg = [...msgs].reverse().find(m => m.sender_role === 'student') || lastMsg;
+      const unreadCount = msgs.filter(m => m.sender_role === 'student' && Number(m.is_read) === 0).length;
+      const awaitingReply = Boolean(lastMsg && lastMsg.sender_role === 'student');
+      const wallet = reconcileStudentWallet(s.id);
+
+      return {
+        student_id: s.id,
+        student_name: s.name,
+        student_email: s.email,
+        student_avatar: s.avatar_url,
+        country: s.country || 'United States',
+        phone: s.phone || '',
+        total_messages: msgs.length,
+        unread_count: unreadCount,
+        awaiting_reply: awaitingReply,
+        latest_reason: lastStudentMsg?.reason || 'General Wallet Question',
+        last_message: lastMsg?.message || '',
+        last_sender_role: lastMsg?.sender_role || 'student',
+        last_sender_name: lastMsg?.sender_name || s.name,
+        last_message_at: lastMsg?.created_at || null,
+        wallet
+      };
+    });
+
+    // Prioritize awaiting_reply & unread threads, then newest activity
+    threads.sort((a, b) => {
+      if (a.awaiting_reply !== b.awaiting_reply) return a.awaiting_reply ? -1 : 1;
+      if (a.unread_count !== b.unread_count) return b.unread_count - a.unread_count;
+      return String(b.last_message_at || '').localeCompare(String(a.last_message_at || ''));
+    });
+
+    const totalUnread = threads.reduce((sum, t) => sum + t.unread_count, 0);
+    const awaitingCount = threads.filter(t => t.awaiting_reply).length;
+
+    res.json({ threads, totalUnread, awaitingCount });
+  } catch (error) {
+    console.error('Admin get wallet chats error:', error);
+    res.status(500).json({ error: 'Failed to load student wallet support threads.' });
+  }
+});
+
+// Get full message history & exact reconciled wallet ledger for a specific student
+app.get('/api/admin/wallet-chats/:studentId', authenticateToken, requireRole('admin'), (req, res) => {
+  try {
+    const studentId = Number(req.params.studentId);
+    const student = db.prepare(
+      "SELECT id, name, email, avatar_url, country, phone FROM users WHERE id = ? AND role = 'student'"
+    ).get(studentId);
+
+    if (!student) {
+      return res.status(404).json({ error: 'Student account not found.' });
+    }
+
+    if (req.query.mark_read !== '0') {
+      db.prepare(
+        "UPDATE wallet_support_messages SET is_read = 1 WHERE student_id = ? AND sender_role = 'student' AND is_read = 0"
+      ).run(studentId);
+    }
+
+    const messages = db.prepare(
+      'SELECT * FROM wallet_support_messages WHERE student_id = ? ORDER BY created_at ASC, id ASC'
+    ).all(studentId);
+
+    const wallet = reconcileStudentWallet(studentId);
+    const lastMsg = messages.length > 0 ? messages[messages.length - 1] : null;
+    const awaitingReply = Boolean(lastMsg && lastMsg.sender_role === 'student');
+
+    res.json({
+      student,
+      wallet,
+      messages,
+      awaitingReply
+    });
+  } catch (error) {
+    console.error('Admin get wallet chat thread error:', error);
+    res.status(500).json({ error: 'Failed to load wallet support conversation.' });
+  }
+});
+
+// Admin submits a genuine, real-time, accurate reply to a student's wallet concern
+app.post('/api/admin/wallet-chats/:studentId/reply', authenticateToken, requireRole('admin'), (req, res) => {
+  try {
+    const studentId = Number(req.params.studentId);
+    const cleanMessage = String(req.body?.message || '').trim();
+    const explicitReason = String(req.body?.reason || '').trim();
+
+    if (!cleanMessage) {
+      return res.status(400).json({ error: 'Reply message cannot be empty.' });
+    }
+
+    const student = db.prepare(
+      "SELECT id, name, email FROM users WHERE id = ? AND role = 'student'"
+    ).get(studentId);
+
+    if (!student) {
+      return res.status(404).json({ error: 'Student account not found.' });
+    }
+
+    const latestStudentMsg = db.prepare(
+      "SELECT reason FROM wallet_support_messages WHERE student_id = ? AND sender_role = 'student' ORDER BY created_at DESC, id DESC LIMIT 1"
+    ).get(studentId);
+
+    const replyReason = explicitReason || latestStudentMsg?.reason || 'Administrator Response';
+    const adminName = req.user.name || 'Administrator';
+
+    // Mark prior student inquiries read once admin replies
+    db.prepare(
+      "UPDATE wallet_support_messages SET is_read = 1 WHERE student_id = ? AND sender_role = 'student' AND is_read = 0"
+    ).run(studentId);
+
+    const info = db.prepare(`
+      INSERT INTO wallet_support_messages (student_id, sender_id, sender_role, sender_name, reason, message, is_read)
+      VALUES (?, ?, 'admin', ?, ?, ?, 0)
+    `).run(studentId, req.user.id, adminName, replyReason, cleanMessage);
+
+    const reply = db.prepare('SELECT * FROM wallet_support_messages WHERE id = ?').get(info.lastInsertRowid);
+    const wallet = reconcileStudentWallet(studentId);
+
+    // Notify student in real-time & via Gmail
+    const preview = cleanMessage.length > 140 ? cleanMessage.substring(0, 137) + '...' : cleanMessage;
+    sendNotification(
+      studentId,
+      'Administrator Reply: Wallet Support',
+      `Administrator ${adminName} replied regarding "${replyReason}": "${preview}"`,
+      'wallet_support',
+      '#wallet-chat'
+    );
+
+    res.status(201).json({
+      success: true,
+      reply,
+      wallet
+    });
+  } catch (error) {
+    console.error('Admin reply wallet chat error:', error);
+    res.status(500).json({ error: 'Failed to send administrator reply.' });
   }
 });
 

@@ -139,6 +139,8 @@ const API = {
   // Student
   getStudentDashboard: () => apiRequest('/student/dashboard'),
   getStudentWallet: () => apiRequest('/student/wallet'),
+  getStudentWalletChat: (markRead = true) => apiRequest(`/student/wallet/chat?mark_read=${markRead ? '1' : '0'}`),
+  sendStudentWalletChat: (body) => apiRequest('/student/wallet/chat', { method: 'POST', body }),
   getStudentSubscription: () => apiRequest('/student/subscription'),
   purchaseSubscription: (payload) => apiRequest('/student/subscription/purchase', { method: 'POST', body: typeof payload === 'string' ? { package_key: payload } : payload }),
   createRequest: (body) => apiRequest('/student/requests', { method: 'POST', body }),
@@ -205,6 +207,9 @@ const API = {
   respondToInquiry: (id, body) => apiRequest(`/admin/inquiries/${id}/respond`, { method: 'POST', body }),
   getAdminBuddySessions: (status = 'all') => apiRequest(`/admin/buddy-sessions?status=${status}`),
   scheduleBuddySession: (id, body) => apiRequest(`/admin/buddy-sessions/${id}/schedule`, { method: 'POST', body }),
+  getAdminWalletChats: () => apiRequest('/admin/wallet-chats'),
+  getAdminWalletChatThread: (studentId, markRead = true) => apiRequest(`/admin/wallet-chats/${studentId}?mark_read=${markRead ? '1' : '0'}`),
+  replyAdminWalletChat: (studentId, body) => apiRequest(`/admin/wallet-chats/${studentId}/reply`, { method: 'POST', body }),
 
   // Inquiries (Public / Student / Guest Submission)
   submitInquiry: (body) => apiRequest('/inquiries', { method: 'POST', body }),

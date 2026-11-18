@@ -21,10 +21,16 @@ const Admin = {
   buddyStudents: [],
   currentBuddyFilter: 'all',
   selectedBuddySession: null,
+  walletChats: [],
+  selectedWalletChatStudentId: null,
+  pendingWalletChatStudentId: null,
+  walletChatPollTimer: null,
+  _walletChatLastMsgSignature: '',
 
   async init() {
     this.setupEventListeners();
     await this.loadDashboardMetrics();
+    this.startWalletChatPolling();
   },
 
   setupEventListeners() {
@@ -99,6 +105,12 @@ const Admin = {
     const inqForm = document.getElementById('admin-inquiry-response-form');
     if (inqForm) {
       inqForm.addEventListener('submit', (e) => this.handleInquiryResponseSubmit(e));
+    }
+
+    const walletChatReplyForm = document.getElementById('admin-wallet-chat-reply-form');
+    if (walletChatReplyForm && !walletChatReplyForm.dataset.bound) {
+      walletChatReplyForm.dataset.bound = 'true';
+      walletChatReplyForm.addEventListener('submit', (e) => this.sendWalletChatReply(e));
     }
 
     // Admin profile settings form submission
@@ -197,6 +209,8 @@ const Admin = {
       this.loadRequests();
     } else if (section === 'inquiries') {
       this.loadInquiries(this.currentInquiryFilter || 'all');
+    } else if (section === 'wallet-chats') {
+      this.loadWalletChats(true);
     }
   },
 
@@ -261,6 +275,16 @@ const Admin = {
           inqBadge.style.display = 'inline-block';
         } else {
           inqBadge.style.display = 'none';
+        }
+      }
+
+      const walletChatBadge = document.getElementById('admin-wallet-chat-badge');
+      if (walletChatBadge) {
+        if (m.unreadWalletChats > 0) {
+          walletChatBadge.textContent = m.unreadWalletChats;
+          walletChatBadge.style.display = 'inline-block';
+        } else {
+          walletChatBadge.style.display = 'none';
         }
       }
 
@@ -1889,6 +1913,304 @@ const Admin = {
       if (submitBtn) {
         submitBtn.disabled = false;
         submitBtn.textContent = 'Save Profile Changes';
+      }
+    }
+  },
+
+  // ==========================================
+  // STUDENT WALLET SUPPORT LIVE CHAT
+  // ==========================================
+
+  startWalletChatPolling() {
+    this.stopWalletChatPolling();
+    this.walletChatPollTimer = setInterval(async () => {
+      if (typeof Auth === 'undefined' || !Auth.currentUser || Auth.currentUser.role !== 'admin') {
+        this.stopWalletChatPolling();
+        return;
+      }
+      const adminView = document.getElementById('view-admin-portal');
+      const isAdminPortalActive = adminView && !adminView.classList.contains('hidden') && adminView.style.display !== 'none';
+      if (!isAdminPortalActive) return;
+
+      if (this.currentSection === 'wallet-chats') {
+        await this.loadWalletChats(false, true);
+      } else {
+        try {
+          const res = await API.getAdminWalletChats();
+          this.updateWalletChatBadge(res.totalUnread || 0);
+        } catch (e) {}
+      }
+    }, 3500);
+  },
+
+  stopWalletChatPolling() {
+    if (this.walletChatPollTimer) {
+      clearInterval(this.walletChatPollTimer);
+      this.walletChatPollTimer = null;
+    }
+  },
+
+  updateWalletChatBadge(unreadCount) {
+    const badge = document.getElementById('admin-wallet-chat-badge');
+    if (!badge) return;
+    const n = Number(unreadCount) || 0;
+    if (n > 0) {
+      badge.textContent = n;
+      badge.style.display = 'inline-block';
+    } else {
+      badge.style.display = 'none';
+    }
+  },
+
+  escapeWalletHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str == null ? '' : String(str);
+    return div.innerHTML;
+  },
+
+  async loadWalletChats(forceShowLoading = false, isBackgroundPoll = false) {
+    const threadsEl = document.getElementById('admin-wallet-chat-threads');
+    const summaryPill = document.getElementById('admin-wallet-chat-summary-pill');
+
+    if (forceShowLoading && threadsEl && !this.walletChats.length) {
+      threadsEl.innerHTML = `<div style="padding: 1.5rem 0.75rem; text-align: center; color: var(--charcoal-500); font-size: 0.85rem;">Loading student wallet inquiries...</div>`;
+    }
+
+    try {
+      const res = await API.getAdminWalletChats();
+      const threads = Array.isArray(res.threads) ? res.threads : [];
+      this.walletChats = threads;
+      this.updateWalletChatBadge(res.totalUnread || 0);
+
+      if (summaryPill) {
+        const aw = Number(res.awaitingCount) || 0;
+        summaryPill.textContent = `${threads.length} thread${threads.length === 1 ? '' : 's'}${aw > 0 ? ` • ${aw} awaiting` : ''}`;
+      }
+
+      if (this.pendingWalletChatStudentId && threads.some(t => Number(t.student_id) === Number(this.pendingWalletChatStudentId))) {
+        this.selectedWalletChatStudentId = Number(this.pendingWalletChatStudentId);
+        this.pendingWalletChatStudentId = null;
+      }
+
+      this.renderWalletChatThreadsList();
+
+      if (this.selectedWalletChatStudentId && threads.some(t => Number(t.student_id) === Number(this.selectedWalletChatStudentId))) {
+        await this.loadWalletChatDetail(this.selectedWalletChatStudentId, true, isBackgroundPoll);
+      } else if (!this.selectedWalletChatStudentId && threads.length > 0 && !isBackgroundPoll) {
+        await this.openWalletChatThread(threads[0].student_id);
+      }
+    } catch (err) {
+      if (!isBackgroundPoll && threadsEl) {
+        threadsEl.innerHTML = `<div style="padding: 1.25rem; text-align: center; color: #DC2626; font-size: 0.85rem;">Failed to load wallet support threads.</div>`;
+      }
+    }
+  },
+
+  renderWalletChatThreadsList() {
+    const threadsEl = document.getElementById('admin-wallet-chat-threads');
+    if (!threadsEl) return;
+
+    const threads = Array.isArray(this.walletChats) ? this.walletChats : [];
+    if (threads.length === 0) {
+      threadsEl.innerHTML = `
+        <div style="padding: 1.75rem 0.75rem; text-align: center; color: var(--charcoal-500); font-size: 0.84rem;">
+          No student wallet support messages yet.
+        </div>
+      `;
+      return;
+    }
+
+    threadsEl.innerHTML = threads.map(t => {
+      const isSelected = Number(this.selectedWalletChatStudentId) === Number(t.student_id);
+      const bal = parseFloat(t.wallet?.balance || 0).toFixed(2);
+      const ts = t.last_message_at
+        ? new Date(t.last_message_at + (t.last_message_at.includes('Z') ? '' : 'Z')).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+        : '';
+
+      return `
+        <div onclick="Admin.openWalletChatThread(${Number(t.student_id)})"
+             style="padding: 0.75rem; border-radius: 9px; cursor: pointer; transition: all 0.15s ease; border: 1.5px solid ${isSelected ? 'var(--gold-500)' : 'rgba(0,0,0,0.08)'}; background: ${isSelected ? 'rgba(198, 138, 40, 0.11)' : '#FFFFFF'};">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.45rem; margin-bottom: 0.25rem;">
+            <strong style="font-size: 0.88rem; color: var(--charcoal-900);">${this.escapeWalletHtml(t.student_name)}</strong>
+            <div style="display: flex; align-items: center; gap: 0.3rem; flex-shrink: 0;">
+              ${t.awaiting_reply ? `<span style="font-size: 0.64rem; font-weight: 800; padding: 0.12rem 0.42rem; border-radius: 999px; background: rgba(245, 158, 11, 0.16); color: #B45309;">Needs Reply</span>` : `<span style="font-size: 0.64rem; font-weight: 700; padding: 0.12rem 0.42rem; border-radius: 999px; background: rgba(16, 185, 129, 0.14); color: #065F46;">Replied</span>`}
+              ${t.unread_count > 0 ? `<span style="font-size: 0.64rem; font-weight: 800; padding: 0.12rem 0.4rem; border-radius: 999px; background: #DC2626; color: #FFFFFF;">${t.unread_count}</span>` : ''}
+            </div>
+          </div>
+          <div style="font-size: 0.73rem; font-weight: 700; color: var(--gold-800); margin-bottom: 0.25rem;">
+            ${this.escapeWalletHtml(t.latest_reason || 'Wallet Inquiry')} • Live Wallet: $${bal}
+          </div>
+          <div style="font-size: 0.76rem; color: var(--charcoal-600); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 0.2rem;">
+            ${this.escapeWalletHtml(t.last_message || '')}
+          </div>
+          <div style="font-size: 0.67rem; color: var(--charcoal-500);">${this.escapeWalletHtml(ts)}</div>
+        </div>
+      `;
+    }).join('');
+  },
+
+  async openWalletChatThread(studentId) {
+    this.selectedWalletChatStudentId = Number(studentId);
+    this._walletChatLastMsgSignature = '';
+    this.renderWalletChatThreadsList();
+    await this.loadWalletChatDetail(studentId, true, false);
+    // Refresh thread badge counts silently after marking read
+    try {
+      const res = await API.getAdminWalletChats();
+      this.walletChats = Array.isArray(res.threads) ? res.threads : this.walletChats;
+      this.updateWalletChatBadge(res.totalUnread || 0);
+      this.renderWalletChatThreadsList();
+    } catch (e) {}
+  },
+
+  async loadWalletChatDetail(studentId, markRead = true, isBackgroundPoll = false) {
+    try {
+      const data = await API.getAdminWalletChatThread(studentId, markRead);
+      this.renderWalletChatDetail(data, isBackgroundPoll);
+    } catch (err) {
+      if (!isBackgroundPoll) {
+        showToast(err.message || 'Failed to load student wallet thread.', 'error');
+      }
+    }
+  },
+
+  renderWalletChatDetail(data, isBackgroundPoll = false) {
+    const emptyEl = document.getElementById('admin-wallet-chat-empty-state');
+    const detailEl = document.getElementById('admin-wallet-chat-detail');
+    const ledgerEl = document.getElementById('admin-wallet-chat-ledger');
+    const msgsEl = document.getElementById('admin-wallet-chat-messages');
+    const activeReasonEl = document.getElementById('admin-wallet-chat-active-reason');
+    if (!detailEl || !ledgerEl || !msgsEl) return;
+
+    if (emptyEl) emptyEl.style.display = 'none';
+    detailEl.style.display = 'flex';
+
+    const student = data.student || {};
+    const w = data.wallet || {};
+    const msgs = Array.isArray(data.messages) ? data.messages : [];
+    const tutorCredits = Array.isArray(w.tutor_credits) ? w.tutor_credits : [];
+    const cancellations = Array.isArray(w.cancellations) ? w.cancellations : [];
+
+    const latestStudentMsg = [...msgs].reverse().find(m => m.sender_role === 'student');
+    if (activeReasonEl) {
+      activeReasonEl.textContent = latestStudentMsg?.reason ? `Reason: ${latestStudentMsg.reason}` : 'Wallet Inquiry';
+    }
+
+    ledgerEl.innerHTML = `
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 0.65rem;">
+        <div>
+          <div style="font-size: 1rem; font-weight: 800; color: var(--charcoal-900);">${this.escapeWalletHtml(student.name || 'Student')}</div>
+          <div style="font-size: 0.78rem; color: var(--charcoal-600);">${this.escapeWalletHtml(student.email || '')} • ${this.escapeWalletHtml(student.country || 'United States')}</div>
+        </div>
+        <span style="font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; color: var(--gold-800); background: rgba(198, 138, 40, 0.18); padding: 0.22rem 0.6rem; border-radius: 999px;">
+          Verified Reconciled Wallet (USD)
+        </span>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0.5rem; margin-bottom: 0.6rem;">
+        <div style="background: #FFFFFF; border: 1px solid rgba(0,0,0,0.08); border-radius: 7px; padding: 0.45rem 0.65rem;">
+          <div style="font-size: 0.67rem; font-weight: 700; text-transform: uppercase; color: var(--charcoal-500);">Total Balance</div>
+          <strong style="font-size: 0.96rem; color: var(--gold-700);">$${parseFloat(w.balance || 0).toFixed(2)}</strong>
+        </div>
+        <div style="background: #FFFFFF; border: 1px solid rgba(0,0,0,0.08); border-radius: 7px; padding: 0.45rem 0.65rem;">
+          <div style="font-size: 0.67rem; font-weight: 700; text-transform: uppercase; color: var(--charcoal-500);">Tutor Credits</div>
+          <strong style="font-size: 0.96rem; color: var(--charcoal-900);">$${parseFloat(w.tutor_balance || 0).toFixed(2)}</strong>
+        </div>
+        <div style="background: #FFFFFF; border: 1px solid rgba(0,0,0,0.08); border-radius: 7px; padding: 0.45rem 0.65rem;">
+          <div style="font-size: 0.67rem; font-weight: 700; text-transform: uppercase; color: var(--charcoal-500);">Aviora Buddy Credits</div>
+          <strong style="font-size: 0.96rem; color: #059669;">$${parseFloat(w.buddy_balance || 0).toFixed(2)}</strong>
+        </div>
+        <div style="background: #FFFFFF; border: 1px solid rgba(0,0,0,0.08); border-radius: 7px; padding: 0.45rem 0.65rem;">
+          <div style="font-size: 0.67rem; font-weight: 700; text-transform: uppercase; color: var(--charcoal-500);">Logged Refunds</div>
+          <strong style="font-size: 0.96rem; color: var(--charcoal-800);">${cancellations.length} record${cancellations.length === 1 ? '' : 's'}</strong>
+        </div>
+      </div>
+      ${tutorCredits.length > 0 ? `
+        <div style="font-size: 0.74rem; color: var(--charcoal-700); margin-bottom: 0.25rem;">
+          <strong>Tutor Breakdown:</strong>
+          ${tutorCredits.map(tc => `${this.escapeWalletHtml(tc.name)}: $${parseFloat(tc.balance || 0).toFixed(2)}`).join(' • ')}
+        </div>
+      ` : ''}
+      ${cancellations.length > 0 ? `
+        <div style="font-size: 0.73rem; color: var(--charcoal-600);">
+          <strong>Latest Cancellation Credit:</strong> ${this.escapeWalletHtml(cancellations[0].title)} (+$${parseFloat(cancellations[0].amount || 0).toFixed(2)} • ${this.escapeWalletHtml(cancellations[0].reason || '')})
+        </div>
+      ` : ''}
+    `;
+
+    const signature = `${student.id}:${msgs.map(m => `${m.id}:${m.is_read}`).join(',')}`;
+    if (isBackgroundPoll && signature === this._walletChatLastMsgSignature) {
+      return;
+    }
+    this._walletChatLastMsgSignature = signature;
+
+    if (msgs.length === 0) {
+      msgsEl.innerHTML = `<div style="text-align: center; padding: 1.25rem; color: var(--charcoal-500); font-size: 0.84rem;">No messages in this thread yet.</div>`;
+      return;
+    }
+
+    msgsEl.innerHTML = msgs.map(m => {
+      const isAdmin = m.sender_role === 'admin';
+      const ts = m.created_at ? new Date(m.created_at + (m.created_at.includes('Z') ? '' : 'Z')).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
+      return `
+        <div style="display: flex; flex-direction: column; align-items: ${isAdmin ? 'flex-end' : 'flex-start'};">
+          <div style="max-width: 84%; padding: 0.65rem 0.85rem; border-radius: 10px; background: ${isAdmin ? 'rgba(198, 138, 40, 0.14)' : '#FFFFFF'}; border: 1px solid ${isAdmin ? 'rgba(198, 138, 40, 0.35)' : 'rgba(0,0,0,0.09)'};">
+            <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.6rem; margin-bottom: 0.25rem;">
+              <span style="font-size: 0.72rem; font-weight: 800; color: ${isAdmin ? 'var(--gold-800)' : 'var(--charcoal-900)'};">
+                ${isAdmin ? `${this.escapeWalletHtml(m.sender_name || 'Administrator')} (Admin)` : this.escapeWalletHtml(m.sender_name || student.name || 'Student')}
+              </span>
+              <span style="font-size: 0.66rem; color: var(--charcoal-500);">${this.escapeWalletHtml(ts)}</span>
+            </div>
+            ${m.reason ? `
+              <div style="margin-bottom: 0.28rem;">
+                <span style="display: inline-block; font-size: 0.67rem; font-weight: 700; padding: 0.12rem 0.45rem; border-radius: 999px; background: rgba(198, 138, 40, 0.15); color: var(--gold-900);">
+                  Reason: ${this.escapeWalletHtml(m.reason)}
+                </span>
+              </div>
+            ` : ''}
+            <div style="font-size: 0.85rem; color: var(--charcoal-900); line-height: 1.45; white-space: pre-wrap;">${this.escapeWalletHtml(m.message)}</div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    msgsEl.scrollTop = msgsEl.scrollHeight;
+  },
+
+  async sendWalletChatReply(e) {
+    if (e && e.preventDefault) e.preventDefault();
+    const studentId = this.selectedWalletChatStudentId;
+    if (!studentId) {
+      showToast('Please select a student wallet thread first.', 'warning');
+      return;
+    }
+
+    const inputEl = document.getElementById('admin-wallet-chat-reply-input');
+    const submitBtn = document.getElementById('admin-wallet-chat-reply-submit');
+    const message = inputEl ? inputEl.value.trim() : '';
+
+    if (!message) {
+      showToast('Please enter your administrator reply message.', 'warning');
+      if (inputEl) inputEl.focus();
+      return;
+    }
+
+    try {
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Sending Reply...';
+      }
+
+      await API.replyAdminWalletChat(studentId, { message });
+      if (inputEl) inputEl.value = '';
+      showToast('Accurate administrator reply sent in real time!', 'success');
+      await this.loadWalletChatDetail(studentId, true, false);
+      await this.loadWalletChats(false, false);
+    } catch (err) {
+      showToast(err.message || 'Failed to send reply.', 'error');
+    } finally {
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Send Accurate Reply';
       }
     }
   }

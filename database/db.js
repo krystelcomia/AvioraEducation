@@ -392,9 +392,22 @@ function initSchema() {
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
+    CREATE TABLE IF NOT EXISTS wallet_support_messages (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      student_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      sender_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      sender_role TEXT NOT NULL CHECK(sender_role IN ('student', 'admin')),
+      sender_name TEXT NOT NULL,
+      reason TEXT NOT NULL DEFAULT 'General Wallet Question',
+      message TEXT NOT NULL,
+      is_read INTEGER DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
     -- Enforce case-insensitive uniqueness and relational indexes across the entire system
     CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email_nocase ON users(email COLLATE NOCASE);
     CREATE INDEX IF NOT EXISTS idx_tutor_payout_requests_tutor ON tutor_payout_requests(tutor_id);
+    CREATE INDEX IF NOT EXISTS idx_wallet_support_student ON wallet_support_messages(student_id);
     CREATE INDEX IF NOT EXISTS idx_student_profiles_user_id ON student_profiles(user_id);
     CREATE INDEX IF NOT EXISTS idx_tutor_profiles_user_id ON tutor_profiles(user_id);
     CREATE INDEX IF NOT EXISTS idx_teacher_applications_user_id ON teacher_applications(user_id);

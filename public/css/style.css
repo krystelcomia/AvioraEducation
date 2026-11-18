@@ -1790,13 +1790,34 @@ a { text-decoration: none; color: inherit; transition: color var(--transition-fa
   box-shadow: 0 6px 16px rgba(198, 138, 40, 0.18);
 }
 
-.footer-social-link .footer-ig-icon {
-  color: #E1306C;
+.footer-social-link .footer-ig-icon,
+.footer-social-link .footer-fb-icon,
+.footer-social-link .footer-x-icon,
+.footer-social-link .footer-email-icon {
   flex-shrink: 0;
   transition: transform var(--transition-fast);
 }
 
-.footer-social-link:hover .footer-ig-icon {
+.footer-social-link .footer-ig-icon {
+  color: #E1306C;
+}
+
+.footer-social-link .footer-fb-icon {
+  color: #1877F2;
+}
+
+.footer-social-link .footer-x-icon {
+  color: #0F1419;
+}
+
+.footer-social-link .footer-email-icon {
+  color: #EA4335;
+}
+
+.footer-social-link:hover .footer-ig-icon,
+.footer-social-link:hover .footer-fb-icon,
+.footer-social-link:hover .footer-x-icon,
+.footer-social-link:hover .footer-email-icon {
   transform: scale(1.12);
 }
 

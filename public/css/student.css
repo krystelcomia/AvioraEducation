@@ -953,9 +953,8 @@
 .pkg-features li,
 .sub-package-card ul li {
   min-height: 22px;
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
+  display: block;
+  line-height: 1.5;
   word-break: break-word;
 }
 

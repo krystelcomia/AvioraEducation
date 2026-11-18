@@ -4644,7 +4644,7 @@ app.get('/api/student/subscription', authenticateToken, requireRole('student'), 
       upfront_payment: 'Upfront Payment Required: All lesson packages must be paid in full upfront before tutoring session slots can be confirmed on the calendar.',
       validity: '1-Month Validity Window: All 4, 8, 12, 16, and 20-lesson packages are valid for exactly 30 calendar days from the date of purchase. Sessions not scheduled within this 30-day period expire automatically.',
       flexible_dates: 'Student-Determined Schedule: All lesson dates, times, and tutor selections are freely scheduled by the student through the tutor live availability calendar.',
-      one_time_trial: '1-Time Trial Lesson (25-Min or 50-Min): Students can choose between a 25-minute or 50-minute class duration when setting up their trial session. For trial sessions, the company commission is 50% of the tutor rate.',
+      one_time_trial: '1-Time Trial Lesson (25-Min or 50-Min): Students can choose between a 25-minute or 50-minute class duration when setting up their trial session.',
       reschedule: '3-Hour Rescheduling Notice: Students may reschedule any booked session with at least 3 hours advance notice before the class without forfeiting the lesson credit.',
       class_duration: 'Class Duration: Trial lessons can be set to 25 minutes or 50 minutes in length. All standard subscription subjects are 50 minutes per class.'
     };
@@ -4826,8 +4826,8 @@ app.post('/api/student/subscription/purchase', authenticateToken, requireRole('s
 
       for (const vl of validatedLessons) {
         const sessionNotes = notes
-          ? `${notes} (${selectedPkg.name}: Lesson ${vl.index} of ${selectedPkg.lessons} with ${vl.tutor_name} - ${vl.subject}${selectedPkg.is_trial ? ` | ${selectedPkg.duration_minutes}-Min Trial | 50% Company Commission` : ''})`
-          : `${selectedPkg.name}: Lesson ${vl.index} of ${selectedPkg.lessons} with ${vl.tutor_name} (${vl.subject}${selectedPkg.is_trial ? ` | ${selectedPkg.duration_minutes}-Min Trial | 50% Company Commission` : ''})`;
+          ? `${notes} (${selectedPkg.name}: Lesson ${vl.index} of ${selectedPkg.lessons} with ${vl.tutor_name} - ${vl.subject})`
+          : `${selectedPkg.name}: Lesson ${vl.index} of ${selectedPkg.lessons} with ${vl.tutor_name} (${vl.subject})`;
 
         insertSession.run(
           studentId,
@@ -4847,7 +4847,7 @@ app.post('/api/student/subscription/purchase', authenticateToken, requireRole('s
         sendNotification(
           vl.tutor_id,
           'New Session Scheduled',
-          `${req.user.name} scheduled Lesson ${vl.index} of ${selectedPkg.lessons} (${vl.subject}, ${selectedPkg.duration_minutes} min) for ${vl.scheduled_date} (${item_time_label(vl.scheduled_time)}) at $${vl.rate.toFixed(2)}${selectedPkg.is_trial ? ' (Trial Session: 50% company commission)' : ''}.`,
+          `${req.user.name} scheduled Lesson ${vl.index} of ${selectedPkg.lessons} (${vl.subject}, ${selectedPkg.duration_minutes} min) for ${vl.scheduled_date} (${item_time_label(vl.scheduled_time)}) at $${vl.rate.toFixed(2)}.`,
           'booking',
           '/#teacher-requests'
         );
@@ -4881,7 +4881,7 @@ app.post('/api/student/subscription/purchase', authenticateToken, requireRole('s
       sendNotification(
         studentId,
         `${selectedPkg.name} Confirmed`,
-        `Your ${selectedPkg.name} enrollment has been confirmed! Total cost paid: $${totalCalculatedPrice.toFixed(2)} based on your instructor's rate${selectedPkg.is_trial ? ` (${selectedPkg.duration_minutes}-minute trial, 50% company commission)` : ''}. All ${selectedPkg.lessons} lesson${selectedPkg.lessons > 1 ? 's have' : ' has'} been scheduled.`,
+        `Your ${selectedPkg.name} enrollment has been confirmed! Total cost paid: $${totalCalculatedPrice.toFixed(2)} based on your instructor's rate. All ${selectedPkg.lessons} lesson${selectedPkg.lessons > 1 ? 's have' : ' has'} been scheduled.`,
         'subscription',
         '#subscriptions'
       );
@@ -4890,14 +4890,13 @@ app.post('/api/student/subscription/purchase', authenticateToken, requireRole('s
 
       return res.status(201).json({
         success: true,
-        message: `Successfully enrolled in ${selectedPkg.name}! All ${selectedPkg.lessons} lesson${selectedPkg.lessons > 1 ? 's have' : ' has'} been scheduled for a total of $${totalCalculatedPrice.toFixed(2)}${selectedPkg.is_trial ? ` (${selectedPkg.duration_minutes}-min trial, 50% company commission)` : ' based on teacher rates'}.`,
+        message: `Successfully enrolled in ${selectedPkg.name}! All ${selectedPkg.lessons} lesson${selectedPkg.lessons > 1 ? 's have' : ' has'} been scheduled for a total of $${totalCalculatedPrice.toFixed(2)} based on teacher rates.`,
         plan: selectedPkg.name,
         lessons_total: selectedPkg.lessons,
         total_paid: totalCalculatedPrice,
         remainingLessons: 0,
         isTrial: !!selectedPkg.is_trial,
         trialDuration: selectedPkg.is_trial ? selectedPkg.duration_minutes : null,
-        commissionRate: selectedPkg.is_trial ? 0.50 : 0.30,
         popularityStats: updatedPopularity,
         hasScheduledLesson: true
       });

@@ -185,7 +185,7 @@ const StudentSub = {
     const durationText = document.getElementById('sub-summary-duration-text');
     const slotDurationBadge = document.getElementById('sub-enroll-slot-duration-badge');
     if (planConfig.isTrial) {
-      if (durationText) durationText.textContent = `${this.trialDuration} Minutes (Trial Session • 50% Company Commission)`;
+      if (durationText) durationText.textContent = `${this.trialDuration} Minutes (1-on-1 Trial Session)`;
       if (slotDurationBadge) slotDurationBadge.textContent = `${this.trialDuration}-Min Trial`;
       if (this.selectedLessons && this.selectedLessons[0] && this.selectedLessons[0].scheduled_time) {
         const startPart = this.selectedLessons[0].scheduled_time.split(' - ')[0]?.trim();
@@ -351,7 +351,7 @@ const StudentSub = {
     }
     if (step2Subtitle) {
       step2Subtitle.innerHTML = planConfig.isTrial
-        ? `Choose your trial topic using the dropdown below and select a <strong>25-minute or 50-minute</strong> duration above. Click on the lesson card marked <strong>"Needs Schedule"</strong> to open its date &amp; time setup. (Company commission is 50% of the tutor's rate.)`
+        ? `Choose your trial topic using the dropdown below and select a <strong>25-minute or 50-minute</strong> duration above. Click on the lesson card marked <strong>"Needs Schedule"</strong> to open its date &amp; time setup.`
         : `Choose a different topic for each lesson using the dropdown on each card (e.g., <strong>Algebra for Lesson 1</strong>, <strong>Calculus for Lesson 2</strong>). Click on any lesson marked <strong>"Needs Schedule"</strong> to open its date &amp; time setup.`;
     }
     if (notesLabel) {
@@ -360,7 +360,7 @@ const StudentSub = {
         : `Learning Objectives or Specific Topics for the ${newCount} Lessons (Optional)`;
     }
     if (durationText) {
-      durationText.textContent = planConfig.isTrial ? `${this.trialDuration} Minutes (Trial Session • 50% Company Commission)` : '50 Minutes per lesson';
+      durationText.textContent = planConfig.isTrial ? `${this.trialDuration} Minutes (1-on-1 Trial Session)` : '50 Minutes per lesson';
     }
     if (slotDurationBadge) {
       slotDurationBadge.textContent = planConfig.isTrial ? `${this.trialDuration}-Min Trial` : '50-Min Class';
@@ -624,7 +624,7 @@ const StudentSub = {
       if (visitorGrid) visitorGrid.classList.remove('no-trial');
       if (subPackagesHeading) subPackagesHeading.textContent = 'Aviora Subscription Packages & Trial Session';
       if (subPackagesDesc) {
-        subPackagesDesc.textContent = 'Choose from Aviora’s curated lesson packages for 4, 8, 12, 16, or 20 lessons (scroll sideways to explore all bundles). Students setting up a Trial Lesson can choose between a 25-minute or 50-minute class duration (company commission is 50% of the tutor’s rate).';
+        subPackagesDesc.textContent = 'Choose from Aviora’s curated lesson packages for 4, 8, 12, 16, or 20 lessons (scroll sideways to explore all bundles). Students setting up a Trial Lesson can choose between a 25-minute or 50-minute class duration.';
       }
     }
   },
@@ -893,7 +893,7 @@ const StudentSub = {
     }
     if (step2Subtitle) {
       step2Subtitle.innerHTML = planConfig.isTrial
-        ? `Choose your trial topic using the dropdown below and select a <strong>25-minute or 50-minute</strong> duration above. Click on the lesson card marked <strong>"Needs Schedule"</strong> to open its date &amp; time setup. (Company commission is 50% of the tutor's rate.)`
+        ? `Choose your trial topic using the dropdown below and select a <strong>25-minute or 50-minute</strong> duration above. Click on the lesson card marked <strong>"Needs Schedule"</strong> to open its date &amp; time setup.`
         : `Choose a different topic for each lesson using the dropdown on each card (e.g., <strong>Algebra for Lesson 1</strong>, <strong>Calculus for Lesson 2</strong>). Click on any lesson marked <strong>"Needs Schedule"</strong> to open its date &amp; time setup.`;
     }
     if (notesLabel) {
@@ -902,7 +902,7 @@ const StudentSub = {
         : `Learning Objectives or Specific Topics for the ${lessonCount} Lessons (Optional)`;
     }
     if (durationText) {
-      durationText.textContent = planConfig.isTrial ? `${this.trialDuration} Minutes (Trial Session • 50% Company Commission)` : '50 Minutes per lesson';
+      durationText.textContent = planConfig.isTrial ? `${this.trialDuration} Minutes (1-on-1 Trial Session)` : '50 Minutes per lesson';
     }
     if (slotDurationBadge) {
       slotDurationBadge.textContent = planConfig.isTrial ? `${this.trialDuration}-Min Trial` : '50-Min Class';
@@ -1083,7 +1083,7 @@ const StudentSub = {
     }
     const fmtRate = (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.formatTutorRate(lesson.hourly_rate, this.selectedTutor) : '$' + Number(lesson.hourly_rate).toFixed(2);
     if (rateTagEl) {
-      rateTagEl.textContent = planConfig.isTrial ? `${fmtRate} (${this.trialDuration}-Min Trial • 50% Commission)` : `${fmtRate} / session`;
+      rateTagEl.textContent = planConfig.isTrial ? `${fmtRate} (${this.trialDuration}-Min Trial)` : `${fmtRate} / session`;
     }
     if (durationBadgeEl) {
       durationBadgeEl.textContent = planConfig.isTrial ? `${this.trialDuration}-Min Trial` : '50-Min Class';
@@ -1140,7 +1140,7 @@ const StudentSub = {
             </div>
 
             ${planConfig.isTrial 
-              ? `<div class="lesson-card-rate-pill" style="background: rgba(198, 138, 40, 0.12); color: var(--gold-800); border-color: rgba(198, 138, 40, 0.35); font-weight: 700;">${(typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.formatTutorRate(l.hourly_rate, this.selectedTutor) : '$' + Number(l.hourly_rate).toFixed(2)} / ${this.trialDuration} min (50% Comm.)</div>`
+              ? `<div class="lesson-card-rate-pill" style="background: rgba(198, 138, 40, 0.12); color: var(--gold-800); border-color: rgba(198, 138, 40, 0.35); font-weight: 700;">${(typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.formatTutorRate(l.hourly_rate, this.selectedTutor) : '$' + Number(l.hourly_rate).toFixed(2)} / ${this.trialDuration} min (Trial)</div>`
               : `<div class="lesson-card-rate-pill">${(typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.formatTutorRate(l.hourly_rate, this.selectedTutor) : '$' + Number(l.hourly_rate).toFixed(2)} / 50 min</div>`}
           </div>
 
@@ -1619,9 +1619,7 @@ const StudentSub = {
     if (calcFormulaEl) {
       if (isComplete) {
         if (planConfig.isTrial) {
-          const companyComm = fmtAmount(totalCost * 0.50);
-          const tutorShare = fmtAmount(totalCost * 0.50);
-          calcFormulaEl.textContent = `${this.trialDuration}-Min Trial Session • Company Commission (50%): ${companyComm} • Tutor Share (50%): ${tutorShare}`;
+          calcFormulaEl.textContent = `1-on-1 ${this.trialDuration}-Minute Trial Session with ${this.selectedTutor?.name || 'Educator'} (${fmtAmount(totalCost)})`;
         } else {
           calcFormulaEl.textContent = `Sum of ${totalCount} lessons: ${this.selectedLessons.map((l, idx) => `Lesson ${idx + 1} (${fmtAmount(l.hourly_rate)})`).join(' + ')}`;
         }

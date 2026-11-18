@@ -4364,6 +4364,76 @@ app.get('/api/student/wallet', authenticateToken, requireRole('student'), (req, 
   }
 });
 
+// Helper: Calculate real-time package booking counts & determine Most Popular package
+function getPackageBookingCounts() {
+  const counts = {
+    'trial': 0,
+    '4_lessons': 0,
+    '8_lessons': 0,
+    '12_lessons': 0,
+    '16_lessons': 0,
+    '20_lessons': 0
+  };
+  try {
+    const rows = db.prepare(`
+      SELECT lessons_total, is_trial, COUNT(*) as booking_count
+      FROM student_subscriptions
+      GROUP BY lessons_total, is_trial
+    `).all();
+    for (const r of rows) {
+      if (r.is_trial === 1 || r.lessons_total === 1) {
+        counts['trial'] += Number(r.booking_count) || 0;
+      } else if (r.lessons_total === 4) {
+        counts['4_lessons'] += Number(r.booking_count) || 0;
+      } else if (r.lessons_total === 8) {
+        counts['8_lessons'] += Number(r.booking_count) || 0;
+      } else if (r.lessons_total === 12) {
+        counts['12_lessons'] += Number(r.booking_count) || 0;
+      } else if (r.lessons_total === 16) {
+        counts['16_lessons'] += Number(r.booking_count) || 0;
+      } else if (r.lessons_total === 20) {
+        counts['20_lessons'] += Number(r.booking_count) || 0;
+      }
+    }
+  } catch (e) {
+    console.error('Error computing package booking counts:', e);
+  }
+
+  const bundleKeys = ['4_lessons', '8_lessons', '12_lessons', '16_lessons', '20_lessons'];
+  let mostPopularKey = '8_lessons';
+  let maxCount = -1;
+  for (const key of bundleKeys) {
+    const c = counts[key] || 0;
+    if (c > maxCount) {
+      maxCount = c;
+      mostPopularKey = key;
+    } else if (c === maxCount && key === '8_lessons') {
+      mostPopularKey = '8_lessons';
+    }
+  }
+
+  return {
+    counts,
+    mostPopularKey,
+    maxCount: Math.max(0, maxCount),
+    suggestedKey: '20_lessons'
+  };
+}
+
+// Public Real-Time Subscription Popularity & Suggested Package Stats
+app.get('/api/public/subscription-stats', (req, res) => {
+  try {
+    const stats = getPackageBookingCounts();
+    res.json({
+      success: true,
+      ...stats
+    });
+  } catch (error) {
+    console.error('Public subscription stats error:', error);
+    res.status(500).json({ error: 'Failed to retrieve subscription stats.' });
+  }
+});
+
 // Student Subscription & Spending Analytics
 app.get('/api/student/subscription', authenticateToken, requireRole('student'), (req, res) => {
   try {
@@ -4479,17 +4549,21 @@ app.get('/api/student/subscription', authenticateToken, requireRole('student'), 
       }));
     }
 
+    const popularityStats = getPackageBookingCounts();
+    const mostPopularKey = popularityStats.mostPopularKey;
+
     const packages = [
       {
         key: 'trial',
-        name: 'One-Time Free Trial Lesson',
+        name: 'Trial Lesson',
         lessons: 1,
-        price: 0.00,
-        unitPrice: 0.00,
+        priceDisplay: 'Calculated upon setup',
         validity: '14 Days',
-        badge: 'Free (1-Time Offer)',
-        duration_minutes: 30,
-        description: 'Complimentary 30-minute diagnostic session with an accredited tutor to evaluate fit and establish your roadmap.',
+        badge: 'Available (1-Time Use)',
+        duration_minutes: 25,
+        duration_options: [25, 50],
+        commission_rate: 0.50,
+        description: 'Diagnostic trial session (25-min or 50-min option) with an accredited tutor to evaluate fit and establish your roadmap.',
         is_trial: true,
         trial_used: trialUsed
       },
@@ -4499,10 +4573,13 @@ app.get('/api/student/subscription', authenticateToken, requireRole('student'), 
         lessons: 4,
         priceDisplay: 'Calculated upon setup',
         validity: '1 Month (30 Days)',
-        badge: 'Starter Package',
+        badge: mostPopularKey === '4_lessons' ? 'Most Popular' : 'Starter Package',
         duration_minutes: 50,
+        commission_rate: 0.30,
         description: 'Ideal for weekly check-ins, targeted exam revision, and coursework clarification across 4 lessons.',
-        is_popular: false
+        is_popular: mostPopularKey === '4_lessons',
+        is_suggested: false,
+        booking_count: popularityStats.counts['4_lessons'] || 0
       },
       {
         key: '8_lessons',
@@ -4510,10 +4587,13 @@ app.get('/api/student/subscription', authenticateToken, requireRole('student'), 
         lessons: 8,
         priceDisplay: 'Calculated upon setup',
         validity: '1 Month (30 Days)',
-        badge: 'Most Popular',
-        is_popular: true,
+        badge: mostPopularKey === '8_lessons' ? 'Most Popular' : 'Mastery Package',
+        is_popular: mostPopularKey === '8_lessons',
+        is_suggested: false,
         duration_minutes: 50,
-        description: 'Our premier bi-weekly intensive mentorship package across 8 lessons.'
+        commission_rate: 0.30,
+        description: 'Our premier bi-weekly intensive mentorship package across 8 lessons.',
+        booking_count: popularityStats.counts['8_lessons'] || 0
       },
       {
         key: '12_lessons',
@@ -4521,21 +4601,52 @@ app.get('/api/student/subscription', authenticateToken, requireRole('student'), 
         lessons: 12,
         priceDisplay: 'Calculated upon setup',
         validity: '1 Month (30 Days)',
-        badge: 'Best Value',
+        badge: mostPopularKey === '12_lessons' ? 'Most Popular' : 'Honors Intensive',
         duration_minutes: 50,
+        commission_rate: 0.30,
         description: 'Comprehensive immersion for Olympiad, MCAT, AP/IB diploma, or Ivy League admissions across 12 lessons.',
-        is_popular: false
+        is_popular: mostPopularKey === '12_lessons',
+        is_suggested: false,
+        booking_count: popularityStats.counts['12_lessons'] || 0
+      },
+      {
+        key: '16_lessons',
+        name: '16 Lessons Package',
+        lessons: 16,
+        priceDisplay: 'Calculated upon setup',
+        validity: '1 Month (30 Days)',
+        badge: mostPopularKey === '16_lessons' ? 'Most Popular' : 'Elite Scholar',
+        duration_minutes: 50,
+        commission_rate: 0.30,
+        description: 'sustained four-times-weekly mentorship for accelerated mastery, advanced coursework, and rigorous exam readiness across 16 sessions.',
+        is_popular: mostPopularKey === '16_lessons',
+        is_suggested: false,
+        booking_count: popularityStats.counts['16_lessons'] || 0
+      },
+      {
+        key: '20_lessons',
+        name: '20 Lessons Package',
+        lessons: 20,
+        priceDisplay: 'Calculated upon setup',
+        validity: '1 Month (30 Days)',
+        badge: 'Suggested',
+        duration_minutes: 50,
+        commission_rate: 0.30,
+        description: 'Our comprehensive daily-pace academic accelerator designed for complete subject mastery and top-tier test preparation across 20 sessions.',
+        is_popular: mostPopularKey === '20_lessons',
+        is_suggested: true,
+        booking_count: popularityStats.counts['20_lessons'] || 0
       }
     ];
 
     const termsAndConditions = {
       no_refund: 'Strict No-Refund Policy: Subscriptions and lesson package purchases are final and non-refundable once activated. Unused lessons cannot be converted to cash or credited past the validity period.',
       upfront_payment: 'Upfront Payment Required: All lesson packages must be paid in full upfront before tutoring session slots can be confirmed on the calendar.',
-      validity: '1-Month Validity Window: All 4, 8, and 12-lesson packages are valid for exactly 30 calendar days from the date of purchase. Sessions not scheduled within this 30-day period expire automatically.',
+      validity: '1-Month Validity Window: All 4, 8, 12, 16, and 20-lesson packages are valid for exactly 30 calendar days from the date of purchase. Sessions not scheduled within this 30-day period expire automatically.',
       flexible_dates: 'Student-Determined Schedule: All lesson dates, times, and tutor selections are freely scheduled by the student through the tutor live availability calendar.',
-      one_time_trial: 'Free 1-Time Trial Lesson ($0): The trial is a one-time offer for $0 covering a single 30-minute lesson. Once a student has used it, this option is no longer available.',
+      one_time_trial: '1-Time Trial Lesson (25-Min or 50-Min): Students can choose between a 25-minute or 50-minute class duration when setting up their trial session. For trial sessions, the company commission is 50% of the tutor rate.',
       reschedule: '3-Hour Rescheduling Notice: Students may reschedule any booked session with at least 3 hours advance notice before the class without forfeiting the lesson credit.',
-      class_duration: 'Class Duration: Trial lessons are 30 minutes in length. All standard subscription subjects are a maximum of 50 minutes of class.'
+      class_duration: 'Class Duration: Trial lessons can be set to 25 minutes or 50 minutes in length. All standard subscription subjects are 50 minutes per class.'
     };
 
     res.json({
@@ -4546,6 +4657,7 @@ app.get('/api/student/subscription', authenticateToken, requireRole('student'), 
       mostStudiedSubjects,
       preferredTutors,
       packages,
+      popularityStats,
       termsAndConditions
     });
   } catch (error) {
@@ -4558,17 +4670,20 @@ app.get('/api/student/subscription', authenticateToken, requireRole('student'), 
 app.post('/api/student/subscription/purchase', authenticateToken, requireRole('student'), (req, res) => {
   try {
     const studentId = req.user.id;
-    const { package_key, tutor_id, lessons_with_tutor, subject, scheduled_date, scheduled_time, notes, lessons } = req.body;
+    const { package_key, tutor_id, lessons_with_tutor, subject, scheduled_date, scheduled_time, notes, lessons, trial_duration } = req.body;
+    const resolvedTrialDuration = Number(trial_duration) === 50 ? 50 : 25;
 
     const packageMap = {
-      'trial': { key: 'trial', name: 'One-Time Free Trial Lesson', lessons: 1, price: 0.00, days: 14, is_trial: 1, duration_minutes: 30 },
-      'free_trial': { key: 'trial', name: 'One-Time Free Trial Lesson', lessons: 1, price: 0.00, days: 14, is_trial: 1, duration_minutes: 30 },
-      '4_lessons': { key: '4_lessons', name: 'Starter Tier: 4 Lessons', lessons: 4, price: 220.00, days: 30, is_trial: 0, duration_minutes: 50 },
-      'scholar': { key: '4_lessons', name: 'Starter Tier: 4 Lessons', lessons: 4, price: 220.00, days: 30, is_trial: 0, duration_minutes: 50 },
-      '8_lessons': { key: '8_lessons', name: 'Mastery Tier: 8 Lessons', lessons: 8, price: 399.00, days: 30, is_trial: 0, duration_minutes: 50 },
-      'mastery': { key: '8_lessons', name: 'Mastery Tier: 8 Lessons', lessons: 8, price: 399.00, days: 30, is_trial: 0, duration_minutes: 50 },
-      'honors': { key: '8_lessons', name: 'Mastery Tier: 8 Lessons', lessons: 8, price: 399.00, days: 30, is_trial: 0, duration_minutes: 50 },
-      '12_lessons': { key: '12_lessons', name: 'Honors Tier: 12 Lessons', lessons: 12, price: 540.00, days: 30, is_trial: 0, duration_minutes: 50 }
+      'trial': { key: 'trial', name: `Trial Lesson (${resolvedTrialDuration}-Min)`, lessons: 1, price: 0.00, days: 14, is_trial: 1, duration_minutes: resolvedTrialDuration, commission_rate: 0.50 },
+      'free_trial': { key: 'trial', name: `Trial Lesson (${resolvedTrialDuration}-Min)`, lessons: 1, price: 0.00, days: 14, is_trial: 1, duration_minutes: resolvedTrialDuration, commission_rate: 0.50 },
+      '4_lessons': { key: '4_lessons', name: 'Starter Tier: 4 Lessons', lessons: 4, price: 220.00, days: 30, is_trial: 0, duration_minutes: 50, commission_rate: 0.30 },
+      'scholar': { key: '4_lessons', name: 'Starter Tier: 4 Lessons', lessons: 4, price: 220.00, days: 30, is_trial: 0, duration_minutes: 50, commission_rate: 0.30 },
+      '8_lessons': { key: '8_lessons', name: 'Mastery Tier: 8 Lessons', lessons: 8, price: 399.00, days: 30, is_trial: 0, duration_minutes: 50, commission_rate: 0.30 },
+      'mastery': { key: '8_lessons', name: 'Mastery Tier: 8 Lessons', lessons: 8, price: 399.00, days: 30, is_trial: 0, duration_minutes: 50, commission_rate: 0.30 },
+      'honors': { key: '8_lessons', name: 'Mastery Tier: 8 Lessons', lessons: 8, price: 399.00, days: 30, is_trial: 0, duration_minutes: 50, commission_rate: 0.30 },
+      '12_lessons': { key: '12_lessons', name: 'Honors Tier: 12 Lessons', lessons: 12, price: 540.00, days: 30, is_trial: 0, duration_minutes: 50, commission_rate: 0.30 },
+      '16_lessons': { key: '16_lessons', name: 'Elite Scholar: 16 Lessons', lessons: 16, price: 720.00, days: 30, is_trial: 0, duration_minutes: 50, commission_rate: 0.30 },
+      '20_lessons': { key: '20_lessons', name: 'Capstone Accelerator: 20 Lessons', lessons: 20, price: 900.00, days: 30, is_trial: 0, duration_minutes: 50, commission_rate: 0.30 }
     };
 
     let selectedPkg = packageMap[package_key];
@@ -4583,7 +4698,8 @@ app.post('/api/student/subscription/purchase', authenticateToken, requireRole('s
           price: 0.00,
           days: 30,
           is_trial: 0,
-          duration_minutes: 50
+          duration_minutes: 50,
+          commission_rate: 0.30
         };
       } else {
         selectedPkg = packageMap['4_lessons'];
@@ -4601,7 +4717,7 @@ app.post('/api/student/subscription/purchase', authenticateToken, requireRole('s
       if (selectedPkg.is_trial) {
         const trialCheck = db.prepare('SELECT id FROM student_subscriptions WHERE user_id = ? AND is_trial = 1').get(studentId);
         if (trialCheck) {
-          return res.status(400).json({ error: 'The trial is a one-time offer for $0 and has already been used by this account.' });
+          return res.status(400).json({ error: 'The trial session is limited to one use per account and has already been used.' });
         }
       }
 
@@ -4680,7 +4796,8 @@ app.post('/api/student/subscription/purchase', authenticateToken, requireRole('s
         }
 
         const resolvedSubjectRate = getRateForTutorSubject(tProf, lessonSubject);
-        const lessonRate = selectedPkg.is_trial ? 0.00 : (Number(resolvedSubjectRate) || Number(tProf.hourly_rate) || 58.00);
+        const baseTutorRate = Number(resolvedSubjectRate) || Number(tProf.hourly_rate) || 58.00;
+        const lessonRate = baseTutorRate;
         totalCalculatedPrice += lessonRate;
 
         validatedLessons.push({
@@ -4690,12 +4807,15 @@ app.post('/api/student/subscription/purchase', authenticateToken, requireRole('s
           subject: lessonSubject,
           scheduled_date: item.scheduled_date,
           scheduled_time: item.scheduled_time,
-          rate: lessonRate
+          rate: lessonRate,
+          commission_rate: selectedPkg.is_trial ? 0.50 : 0.30,
+          company_commission: Math.round(lessonRate * (selectedPkg.is_trial ? 0.50 : 0.30) * 100) / 100,
+          tutor_net: Math.round(lessonRate * (selectedPkg.is_trial ? 0.50 : 0.70) * 100) / 100
         });
       }
 
-      const durationHours = selectedPkg.is_trial ? 0.5 : (50 / 60);
-      const paymentMethod = selectedPkg.is_trial ? 'free_trial' : 'subscription';
+      const durationHours = selectedPkg.is_trial ? (selectedPkg.duration_minutes / 60) : (50 / 60);
+      const paymentMethod = selectedPkg.is_trial ? 'trial' : 'subscription';
 
       const insertSession = db.prepare(`
         INSERT INTO tutoring_requests (
@@ -4706,8 +4826,8 @@ app.post('/api/student/subscription/purchase', authenticateToken, requireRole('s
 
       for (const vl of validatedLessons) {
         const sessionNotes = notes
-          ? `${notes} (${selectedPkg.name}: Lesson ${vl.index} of ${selectedPkg.lessons} with ${vl.tutor_name} - ${vl.subject})`
-          : `${selectedPkg.name}: Lesson ${vl.index} of ${selectedPkg.lessons} with ${vl.tutor_name} (${vl.subject})`;
+          ? `${notes} (${selectedPkg.name}: Lesson ${vl.index} of ${selectedPkg.lessons} with ${vl.tutor_name} - ${vl.subject}${selectedPkg.is_trial ? ` | ${selectedPkg.duration_minutes}-Min Trial | 50% Company Commission` : ''})`
+          : `${selectedPkg.name}: Lesson ${vl.index} of ${selectedPkg.lessons} with ${vl.tutor_name} (${vl.subject}${selectedPkg.is_trial ? ` | ${selectedPkg.duration_minutes}-Min Trial | 50% Company Commission` : ''})`;
 
         insertSession.run(
           studentId,
@@ -4727,11 +4847,13 @@ app.post('/api/student/subscription/purchase', authenticateToken, requireRole('s
         sendNotification(
           vl.tutor_id,
           'New Session Scheduled',
-          `${req.user.name} scheduled Lesson ${vl.index} of ${selectedPkg.lessons} (${vl.subject}, ${selectedPkg.duration_minutes} min) for ${vl.scheduled_date} (${vl.scheduled_time})${selectedPkg.is_trial ? ' (Free Trial)' : ` at $${vl.rate.toFixed(2)}`}.`,
+          `${req.user.name} scheduled Lesson ${vl.index} of ${selectedPkg.lessons} (${vl.subject}, ${selectedPkg.duration_minutes} min) for ${vl.scheduled_date} (${item_time_label(vl.scheduled_time)}) at $${vl.rate.toFixed(2)}${selectedPkg.is_trial ? ' (Trial Session: 50% company commission)' : ''}.`,
           'booking',
           '/#teacher-requests'
         );
       }
+
+      function item_time_label(t) { return t || ''; }
 
       // Multi-Plan Support: Active subscriptions remain concurrent and active! Previous plans are NOT deactivated.
 
@@ -4759,19 +4881,24 @@ app.post('/api/student/subscription/purchase', authenticateToken, requireRole('s
       sendNotification(
         studentId,
         `${selectedPkg.name} Confirmed`,
-        `Your ${selectedPkg.name} enrollment has been confirmed! Total cost paid: $${totalCalculatedPrice.toFixed(2)}${selectedPkg.is_trial ? ' (Free Trial)' : " based on your instructors' rates"}. All ${selectedPkg.lessons} lesson${selectedPkg.lessons > 1 ? 's have' : ' has'} been scheduled.`,
+        `Your ${selectedPkg.name} enrollment has been confirmed! Total cost paid: $${totalCalculatedPrice.toFixed(2)} based on your instructor's rate${selectedPkg.is_trial ? ` (${selectedPkg.duration_minutes}-minute trial, 50% company commission)` : ''}. All ${selectedPkg.lessons} lesson${selectedPkg.lessons > 1 ? 's have' : ' has'} been scheduled.`,
         'subscription',
         '#subscriptions'
       );
 
+      const updatedPopularity = getPackageBookingCounts();
+
       return res.status(201).json({
         success: true,
-        message: `Successfully enrolled in ${selectedPkg.name}! All ${selectedPkg.lessons} lesson${selectedPkg.lessons > 1 ? 's have' : ' has'} been scheduled${selectedPkg.is_trial ? ' for Free ($0.00)' : ` for a total of $${totalCalculatedPrice.toFixed(2)} based on teacher rates`}.`,
+        message: `Successfully enrolled in ${selectedPkg.name}! All ${selectedPkg.lessons} lesson${selectedPkg.lessons > 1 ? 's have' : ' has'} been scheduled for a total of $${totalCalculatedPrice.toFixed(2)}${selectedPkg.is_trial ? ` (${selectedPkg.duration_minutes}-min trial, 50% company commission)` : ' based on teacher rates'}.`,
         plan: selectedPkg.name,
         lessons_total: selectedPkg.lessons,
         total_paid: totalCalculatedPrice,
         remainingLessons: 0,
         isTrial: !!selectedPkg.is_trial,
+        trialDuration: selectedPkg.is_trial ? selectedPkg.duration_minutes : null,
+        commissionRate: selectedPkg.is_trial ? 0.50 : 0.30,
+        popularityStats: updatedPopularity,
         hasScheduledLesson: true
       });
     }
@@ -6037,9 +6164,10 @@ app.get('/api/teacher/dashboard', authenticateToken, requireRole('teacher'), (re
     `).all(teacherId);
 
     const completed = requests.filter(r => r.status === 'completed');
+    const getSessionCommissionRate = (r) => (r.payment_method === 'trial' || r.payment_method === 'free_trial') ? 0.50 : 0.30;
     const grossRevenue = completed.reduce((sum, r) => sum + r.total_amount, 0);
-    const platformCommissionRate = 0.30; // 30% platform cut for company
-    const platformCommissionAmount = Math.round(grossRevenue * platformCommissionRate * 100) / 100;
+    const platformCommissionRate = 0.30; // 30% standard platform cut for company (50% for trial sessions)
+    const platformCommissionAmount = Math.round(completed.reduce((sum, r) => sum + (r.total_amount * getSessionCommissionRate(r)), 0) * 100) / 100;
     const netEarnings = Math.round((grossRevenue - platformCommissionAmount) * 100) / 100;
 
     // Check existing payout request status
@@ -6061,7 +6189,7 @@ app.get('/api/teacher/dashboard', authenticateToken, requireRole('teacher'), (re
     const currentMonthPrefix = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
     const currentMonthCompleted = completed.filter(r => (r.requested_date || '').startsWith(currentMonthPrefix));
     const currentMonthGross = currentMonthCompleted.reduce((sum, r) => sum + r.total_amount, 0);
-    const currentMonthCommission = Math.round(currentMonthGross * platformCommissionRate * 100) / 100;
+    const currentMonthCommission = Math.round(currentMonthCompleted.reduce((sum, r) => sum + (r.total_amount * getSessionCommissionRate(r)), 0) * 100) / 100;
     const currentMonthNet = Math.round((currentMonthGross - currentMonthCommission) * 100) / 100;
 
     // Monthly breakdown (grouped by month YYYY-MM)
@@ -6072,18 +6200,20 @@ app.get('/api/teacher/dashboard', authenticateToken, requireRole('teacher'), (re
         monthlyGroups[monthKey] = {
           month: monthKey,
           gross: 0,
+          commission_sum: 0,
           sessions_count: 0,
           students_set: new Set()
         };
       }
       monthlyGroups[monthKey].gross += r.total_amount;
+      monthlyGroups[monthKey].commission_sum += (r.total_amount * getSessionCommissionRate(r));
       monthlyGroups[monthKey].sessions_count += 1;
       monthlyGroups[monthKey].students_set.add(r.student_id);
     }
 
     const monthlyFinancials = Object.values(monthlyGroups).map(m => {
       const gross = Math.round(m.gross * 100) / 100;
-      const commission = Math.round(gross * platformCommissionRate * 100) / 100;
+      const commission = Math.round(m.commission_sum * 100) / 100;
       const net = Math.round((gross - commission) * 100) / 100;
       const isPastMonth = m.month < currentMonthPrefix;
       return {
@@ -6092,7 +6222,7 @@ app.get('/api/teacher/dashboard', authenticateToken, requireRole('teacher'), (re
         students_count: m.students_set.size,
         sessions_count: m.sessions_count,
         gross_amount: gross,
-        commission_rate: 30,
+        commission_rate: gross > 0 ? Math.round((commission / gross) * 100) : 30,
         commission_cut: commission,
         net_payout: net,
         status: hasPendingPayout ? 'Payout Requested' : (isPastMonth ? 'Disbursed' : 'Pending Settlement')
@@ -6111,16 +6241,18 @@ app.get('/api/teacher/dashboard', authenticateToken, requireRole('teacher'), (re
           student_grade: r.student_grade,
           subject: r.subject,
           sessions_count: 0,
-          gross_amount: 0
+          gross_amount: 0,
+          commission_sum: 0
         };
       }
       studentGroups[r.student_id].sessions_count += 1;
       studentGroups[r.student_id].gross_amount += r.total_amount;
+      studentGroups[r.student_id].commission_sum += (r.total_amount * getSessionCommissionRate(r));
     }
 
     const studentRevenueBreakdown = Object.values(studentGroups).map(s => {
       const gross = Math.round(s.gross_amount * 100) / 100;
-      const commission = Math.round(gross * platformCommissionRate * 100) / 100;
+      const commission = Math.round(s.commission_sum * 100) / 100;
       const net = Math.round((gross - commission) * 100) / 100;
       return {
         ...s,
@@ -6148,6 +6280,7 @@ app.get('/api/teacher/dashboard', authenticateToken, requireRole('teacher'), (re
       total_hours: totalHours,
       gross_revenue_students: grossRevenue,
       platform_commission_rate: 30,
+      trial_commission_rate: 50,
       platform_commission_amount: platformCommissionAmount,
       net_earnings_tutor: netEarnings,
       current_month_gross: currentMonthGross,
@@ -6175,14 +6308,16 @@ app.post('/api/teacher/payout/request', authenticateToken, requireRole('teacher'
 
     // Check tutor's completed tutoring sessions
     const completed = db.prepare(`
-      SELECT total_amount, duration_hours 
+      SELECT total_amount, duration_hours, payment_method 
       FROM tutoring_requests 
       WHERE tutor_id = ? AND status = 'completed'
     `).all(teacherId);
 
     const grossRevenue = completed.reduce((sum, r) => sum + r.total_amount, 0);
-    const platformCommissionRate = 0.30; // 30% company commission cut
-    const platformCommissionAmount = Math.round(grossRevenue * platformCommissionRate * 100) / 100;
+    const platformCommissionAmount = Math.round(completed.reduce((sum, r) => {
+      const rate = (r.payment_method === 'trial' || r.payment_method === 'free_trial') ? 0.50 : 0.30;
+      return sum + (r.total_amount * rate);
+    }, 0) * 100) / 100;
     const netEarnings = Math.round((grossRevenue - platformCommissionAmount) * 100) / 100;
 
     if (netEarnings <= 0) {

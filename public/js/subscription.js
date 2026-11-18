@@ -12,6 +12,8 @@ const StudentSub = {
   selectedDate: null,
   selectedTime: null,
   studentScheduleData: null,
+  trialDuration: 25,
+  popularityStats: null,
 
 
   highlightBookingWithTutor(tutorId) {
@@ -64,7 +66,9 @@ const StudentSub = {
 
       // Update package buttons with tutor name
       const btnTrial = document.getElementById('btn-buy-trial');
-      if (btnTrial) btnTrial.textContent = `Book Free Trial with ${t.name} ($0)`;
+      if (btnTrial) btnTrial.textContent = `Book Trial Lesson with ${t.name}`;
+      const vBtnTrial = document.getElementById('btn-visitor-buy-trial');
+      if (vBtnTrial) vBtnTrial.textContent = `Book Trial Lesson with ${t.name}`;
 
       const b4 = document.getElementById('btn-buy-4');
       if (b4) b4.textContent = `Enroll in 4 Lessons with ${t.name}`;
@@ -72,6 +76,10 @@ const StudentSub = {
       if (b8) b8.textContent = `Enroll in 8 Lessons with ${t.name}`;
       const b12 = document.getElementById('btn-buy-12');
       if (b12) b12.textContent = `Enroll in 12 Lessons with ${t.name}`;
+      const b16 = document.getElementById('btn-buy-16');
+      if (b16) b16.textContent = `Enroll in 16 Lessons with ${t.name}`;
+      const b20 = document.getElementById('btn-buy-20');
+      if (b20) b20.textContent = `Enroll in 20 Lessons with ${t.name}`;
 
       const vb4 = document.getElementById('btn-visitor-buy-4');
       if (vb4) vb4.textContent = `Enroll in 4 Lessons with ${t.name}`;
@@ -79,6 +87,10 @@ const StudentSub = {
       if (vb8) vb8.textContent = `Enroll in 8 Lessons with ${t.name}`;
       const vb12 = document.getElementById('btn-visitor-buy-12');
       if (vb12) vb12.textContent = `Enroll in 12 Lessons with ${t.name}`;
+      const vb16 = document.getElementById('btn-visitor-buy-16');
+      if (vb16) vb16.textContent = `Enroll in 16 Lessons with ${t.name}`;
+      const vb20 = document.getElementById('btn-visitor-buy-20');
+      if (vb20) vb20.textContent = `Enroll in 20 Lessons with ${t.name}`;
 
       // Scroll smoothly to tutor banner
       const targetBanner = sBanner && sBanner.style.display !== 'none' ? sBanner : vBanner;
@@ -120,7 +132,9 @@ const StudentSub = {
     if (vBanner) vBanner.style.display = 'none';
 
     const btnTrial = document.getElementById('btn-buy-trial');
-    if (btnTrial) btnTrial.textContent = 'Book Free Trial ($0)';
+    if (btnTrial) btnTrial.textContent = 'Book Trial Lesson';
+    const vBtnTrial = document.getElementById('btn-visitor-buy-trial');
+    if (vBtnTrial) vBtnTrial.textContent = 'Book Trial Lesson';
 
     const b4 = document.getElementById('btn-buy-4');
     if (b4) b4.textContent = 'Enroll in 4 Lessons';
@@ -128,6 +142,10 @@ const StudentSub = {
     if (b8) b8.textContent = 'Enroll in 8 Lessons';
     const b12 = document.getElementById('btn-buy-12');
     if (b12) b12.textContent = 'Enroll in 12 Lessons';
+    const b16 = document.getElementById('btn-buy-16');
+    if (b16) b16.textContent = 'Enroll in 16 Lessons';
+    const b20 = document.getElementById('btn-buy-20');
+    if (b20) b20.textContent = 'Enroll in 20 Lessons (Suggested)';
 
     const vb4 = document.getElementById('btn-visitor-buy-4');
     if (vb4) vb4.textContent = 'Enroll in 4 Lessons';
@@ -135,12 +153,136 @@ const StudentSub = {
     if (vb8) vb8.textContent = 'Enroll in 8 Lessons';
     const vb12 = document.getElementById('btn-visitor-buy-12');
     if (vb12) vb12.textContent = 'Enroll in 12 Lessons';
+    const vb16 = document.getElementById('btn-visitor-buy-16');
+    if (vb16) vb16.textContent = 'Enroll in 16 Lessons';
+    const vb20 = document.getElementById('btn-visitor-buy-20');
+    if (vb20) vb20.textContent = 'Enroll in 20 Lessons (Suggested)';
     showToast('Educator filter cleared. You may select any faculty specialist.', 'info');
+  },
+
+  setTrialDuration(mins) {
+    this.trialDuration = (Number(mins) === 50) ? 50 : 25;
+    const btn25 = document.getElementById('btn-trial-dur-25');
+    const btn50 = document.getElementById('btn-trial-dur-50');
+    const styleBtn = (btn, active) => {
+      if (!btn) return;
+      if (active) {
+        btn.style.background = 'var(--gold-600)';
+        btn.style.color = '#FFFFFF';
+        btn.style.borderColor = 'var(--gold-600)';
+        btn.style.fontWeight = '700';
+      } else {
+        btn.style.background = '#FFFFFF';
+        btn.style.color = 'var(--charcoal-800)';
+        btn.style.borderColor = 'rgba(198, 138, 40, 0.35)';
+        btn.style.fontWeight = '600';
+      }
+    };
+    styleBtn(btn25, this.trialDuration === 25);
+    styleBtn(btn50, this.trialDuration === 50);
+
+    const planConfig = this.getPlanConfig(this.activePackageKey);
+    const durationText = document.getElementById('sub-summary-duration-text');
+    const slotDurationBadge = document.getElementById('sub-enroll-slot-duration-badge');
+    if (planConfig.isTrial) {
+      if (durationText) durationText.textContent = `${this.trialDuration} Minutes (Trial Session • 50% Company Commission)`;
+      if (slotDurationBadge) slotDurationBadge.textContent = `${this.trialDuration}-Min Trial`;
+      if (this.selectedLessons && this.selectedLessons[0] && this.selectedLessons[0].scheduled_time) {
+        const startPart = this.selectedLessons[0].scheduled_time.split(' - ')[0]?.trim();
+        if (startPart && startPart.includes(':')) {
+          const hh = startPart.split(':')[0];
+          const updatedSlot = `${hh}:${String(this.trialDuration).padStart(2, '0')}`;
+          this.selectedLessons[0].scheduled_time = `${startPart} - ${updatedSlot}`;
+          this.selectedTime = this.selectedLessons[0].scheduled_time;
+        }
+      }
+      if (this.isSchedulerOpen && this.selectedDate) {
+        this.selectCalendarDate(this.selectedDate);
+      }
+      this.updateActiveLessonBanner();
+      this.renderLessonTabs();
+      this.updateSummary();
+    }
+  },
+
+  applyPopularityStats(stats) {
+    if (!stats) return;
+    this.popularityStats = stats;
+    const mostPopularKey = stats.mostPopularKey || '8_lessons';
+    const bundleKeys = ['4_lessons', '8_lessons', '12_lessons', '16_lessons', '20_lessons'];
+
+    bundleKeys.forEach(key => {
+      const isMostPopular = (key === mostPopularKey);
+      const isSuggested = (key === '20_lessons');
+
+      // Visitor cards
+      const vCard = document.querySelector(`#visitor-pricing-grid [data-package-key="${key}"]`);
+      if (vCard) {
+        vCard.classList.toggle('featured', isMostPopular);
+        vCard.classList.toggle('suggested', isSuggested);
+        const popBadge = vCard.querySelector(`[data-popular-badge="${key}"]`);
+        if (popBadge) {
+          popBadge.style.display = (isMostPopular && !isSuggested) ? 'block' : 'none';
+        }
+        const sugBadge = vCard.querySelector(`[data-suggested-badge="${key}"]`);
+        if (sugBadge) {
+          sugBadge.style.display = 'block';
+          sugBadge.textContent = isMostPopular ? 'Most Popular • Suggested' : 'Suggested';
+        }
+      }
+
+      // Student cards
+      const sCard = document.querySelector(`#student-sub-packages-grid [data-package-key="${key}"]`);
+      if (sCard) {
+        sCard.classList.toggle('popular', isMostPopular);
+        sCard.classList.toggle('suggested', isSuggested);
+        const popBadge = sCard.querySelector(`[data-popular-badge="${key}"]`);
+        if (popBadge) {
+          popBadge.style.display = (isMostPopular && !isSuggested) ? 'block' : 'none';
+        }
+        const sugBadge = sCard.querySelector(`[data-suggested-badge="${key}"]`);
+        if (sugBadge) {
+          sugBadge.style.display = 'block';
+          sugBadge.textContent = isMostPopular ? 'Most Popular • Suggested' : 'Suggested';
+        }
+      }
+    });
+
+    // Update modal plan selector buttons labels with real-time Popular & Suggested tags
+    const btnMap = {
+      '4_lessons': { id: 'modal-plan-btn-4', base: '4 Lessons Package' },
+      '8_lessons': { id: 'modal-plan-btn-8', base: '8 Lessons Package' },
+      '12_lessons': { id: 'modal-plan-btn-12', base: '12 Lessons Package' },
+      '16_lessons': { id: 'modal-plan-btn-16', base: '16 Lessons Package' },
+      '20_lessons': { id: 'modal-plan-btn-20', base: '20 Lessons Package' }
+    };
+    Object.entries(btnMap).forEach(([k, info]) => {
+      const el = document.getElementById(info.id);
+      if (!el) return;
+      if (k === '20_lessons' && k === mostPopularKey) {
+        el.textContent = `${info.base} ★ Most Popular • Suggested`;
+      } else if (k === '20_lessons') {
+        el.textContent = `${info.base} ★ Suggested`;
+      } else if (k === mostPopularKey) {
+        el.textContent = `${info.base} ★ Most Popular`;
+      } else {
+        el.textContent = info.base;
+      }
+    });
+  },
+
+  async fetchPublicPopularityStats() {
+    try {
+      if (typeof API !== 'undefined' && API.getSubscriptionStats) {
+        const stats = await API.getSubscriptionStats();
+        if (stats) this.applyPopularityStats(stats);
+      }
+    } catch (e) {}
   },
 
   switchPlanInModal(packageKey) {
     if ((packageKey === 'trial' || packageKey === 'free_trial') && this.data && this.data.trialUsed) {
-      showToast('The free trial is limited to one use per account and has already been used.', 'warning');
+      showToast('The trial lesson is limited to one use per account and has already been used.', 'warning');
       return;
     }
     const planConfig = this.getPlanConfig(packageKey);
@@ -156,7 +298,7 @@ const StudentSub = {
     this.selectedLessons = Array.from({ length: newCount }, (_, i) => {
       if (oldLessons[i]) {
         const subj = oldLessons[i].subject || distributedTopics[i] || subjects[0] || 'General Tutoring';
-        const lessonRate = planConfig.isTrial ? 0.00 : this.getTutorSubjectRate(this.selectedTutor, subj);
+        const lessonRate = this.getTutorSubjectRate(this.selectedTutor, subj);
         return {
           ...oldLessons[i],
           index: i,
@@ -165,7 +307,7 @@ const StudentSub = {
         };
       }
       const subj = distributedTopics[i] || subjects[0] || 'General Tutoring';
-      const lessonRate = planConfig.isTrial ? 0.00 : this.getTutorSubjectRate(this.selectedTutor, subj);
+      const lessonRate = this.getTutorSubjectRate(this.selectedTutor, subj);
       return {
         index: i,
         label: planConfig.isTrial ? 'Trial Lesson' : `Lesson ${i + 1}`,
@@ -192,31 +334,36 @@ const StudentSub = {
     const durationText = document.getElementById('sub-summary-duration-text');
     const slotDurationBadge = document.getElementById('sub-enroll-slot-duration-badge');
     const tabsGrid = document.getElementById('sub-lesson-tabs-grid');
+    const trialDurBox = document.getElementById('sub-trial-duration-box');
 
-    if (modalBadge) modalBadge.textContent = planConfig.isTrial ? 'Free Trial' : 'Plan Enrollment';
-    if (stepTag) stepTag.textContent = planConfig.isTrial ? 'Step 1: Trial Educator & Schedule' : `Step 1: Educator & Schedule (${newCount} Lessons)`;
-    if (modalTitle) modalTitle.textContent = planConfig.isTrial ? 'Free Trial Lesson & Tutor Scheduling' : `${planConfig.name} & Tutor Scheduling`;
+    if (trialDurBox) {
+      trialDurBox.style.display = planConfig.isTrial ? 'block' : 'none';
+    }
+
+    if (modalBadge) modalBadge.textContent = planConfig.isTrial ? 'Trial Session' : 'Plan Enrollment';
+    if (stepTag) stepTag.textContent = planConfig.isTrial ? 'Step 1: Trial Educator, Duration & Schedule' : `Step 1: Educator & Schedule (${newCount} Lessons)`;
+    if (modalTitle) modalTitle.textContent = planConfig.isTrial ? 'Trial Lesson (25m / 50m) & Tutor Scheduling' : `${planConfig.name} & Tutor Scheduling`;
     
     if (step2Title) {
       step2Title.textContent = planConfig.isTrial 
-        ? '2. Select 1 Free Trial Lesson: Choose Topic & Respective Date & Time' 
+        ? `2. Select 1 Trial Lesson (${this.trialDuration}-Min): Choose Topic & Respective Date & Time` 
         : `2. Select ${newCount} Lessons: Choose Topics & Respective Dates & Times`;
     }
     if (step2Subtitle) {
       step2Subtitle.innerHTML = planConfig.isTrial
-        ? 'Choose your complimentary trial topic using the dropdown below. Click on the lesson card marked <strong>"Needs Schedule"</strong> to open its 30-minute date &amp; time setup.'
+        ? `Choose your trial topic using the dropdown below and select a <strong>25-minute or 50-minute</strong> duration above. Click on the lesson card marked <strong>"Needs Schedule"</strong> to open its date &amp; time setup. (Company commission is 50% of the tutor's rate.)`
         : `Choose a different topic for each lesson using the dropdown on each card (e.g., <strong>Algebra for Lesson 1</strong>, <strong>Calculus for Lesson 2</strong>). Click on any lesson marked <strong>"Needs Schedule"</strong> to open its date &amp; time setup.`;
     }
     if (notesLabel) {
       notesLabel.textContent = planConfig.isTrial
-        ? 'Learning Objectives or Goals for Your Free Trial Lesson (Optional)'
+        ? 'Learning Objectives or Goals for Your Trial Lesson (Optional)'
         : `Learning Objectives or Specific Topics for the ${newCount} Lessons (Optional)`;
     }
     if (durationText) {
-      durationText.textContent = planConfig.isTrial ? '30 Minutes (Complimentary Session)' : '50 Minutes per lesson';
+      durationText.textContent = planConfig.isTrial ? `${this.trialDuration} Minutes (Trial Session • 50% Company Commission)` : '50 Minutes per lesson';
     }
     if (slotDurationBadge) {
-      slotDurationBadge.textContent = planConfig.isTrial ? '30-Min Trial' : '50-Min Class';
+      slotDurationBadge.textContent = planConfig.isTrial ? `${this.trialDuration}-Min Trial` : '50-Min Class';
     }
 
     if (tabsGrid) {
@@ -227,12 +374,14 @@ const StudentSub = {
       }
     }
 
+    if (this.isSchedulerOpen && this.selectedDate) {
+      this.selectCalendarDate(this.selectedDate);
+    }
+
     this.updateModalPlanSelectorButtons();
     this.renderLessonTabs();
     this.updateSummary();
   },
-
-
 
   updateModalPlanSelectorButtons() {
     const key = this.activePackageKey;
@@ -240,12 +389,19 @@ const StudentSub = {
     const count = planConfig.lessons;
 
     const badge = document.getElementById('sub-modal-active-plan-badge');
-    if (badge) badge.textContent = planConfig.name;
+    if (badge) badge.textContent = planConfig.isTrial ? `Trial Lesson (${this.trialDuration}-Min)` : planConfig.name;
 
     const trialBtn = document.getElementById('modal-plan-btn-trial');
     const p4Btn = document.getElementById('modal-plan-btn-4');
     const p8Btn = document.getElementById('modal-plan-btn-8');
     const p12Btn = document.getElementById('modal-plan-btn-12');
+    const p16Btn = document.getElementById('modal-plan-btn-16');
+    const p20Btn = document.getElementById('modal-plan-btn-20');
+    const trialDurBox = document.getElementById('sub-trial-duration-box');
+
+    if (trialDurBox) {
+      trialDurBox.style.display = planConfig.isTrial ? 'block' : 'none';
+    }
 
     if (trialBtn) {
       if (this.data && this.data.trialUsed) {
@@ -255,18 +411,18 @@ const StudentSub = {
       }
     }
 
-    const setActive = (btn, active) => {
+    const setActive = (btn, active, isSuggestedBtn = false) => {
       if (!btn) return;
       if (active) {
-        btn.style.background = 'var(--gold-600)';
+        btn.style.background = isSuggestedBtn ? '#059669' : 'var(--gold-600)';
         btn.style.color = '#FFFFFF';
-        btn.style.borderColor = 'var(--gold-600)';
+        btn.style.borderColor = isSuggestedBtn ? '#059669' : 'var(--gold-600)';
         btn.style.fontWeight = '700';
       } else {
-        btn.style.background = '#FFFFFF';
-        btn.style.color = 'var(--charcoal-800)';
-        btn.style.borderColor = 'rgba(198, 138, 40, 0.35)';
-        btn.style.fontWeight = '600';
+        btn.style.background = isSuggestedBtn ? 'rgba(5, 150, 105, 0.08)' : '#FFFFFF';
+        btn.style.color = isSuggestedBtn ? '#047857' : 'var(--charcoal-800)';
+        btn.style.borderColor = isSuggestedBtn ? 'rgba(5, 150, 105, 0.4)' : 'rgba(198, 138, 40, 0.35)';
+        btn.style.fontWeight = isSuggestedBtn ? '700' : '600';
       }
     };
 
@@ -274,12 +430,13 @@ const StudentSub = {
     setActive(p4Btn, !planConfig.isTrial && count === 4);
     setActive(p8Btn, !planConfig.isTrial && count === 8);
     setActive(p12Btn, !planConfig.isTrial && count === 12);
-
+    setActive(p16Btn, !planConfig.isTrial && count === 16);
+    setActive(p20Btn, !planConfig.isTrial && count === 20, true);
   },
-
 
   async init() {
     this.setupEventListeners();
+    this.fetchPublicPopularityStats();
   },
 
   setupEventListeners() {
@@ -439,6 +596,12 @@ const StudentSub = {
     const subPackagesHeading = document.getElementById('sub-packages-heading');
     const subPackagesDesc = document.getElementById('sub-packages-desc');
 
+    if (data.popularityStats) {
+      this.applyPopularityStats(data.popularityStats);
+    } else {
+      this.fetchPublicPopularityStats();
+    }
+
     if (isTrialUsed) {
       if (studentTrialCard) studentTrialCard.style.display = 'none';
       if (visitorTrialCard) visitorTrialCard.style.display = 'none';
@@ -447,7 +610,7 @@ const StudentSub = {
       if (visitorGrid) visitorGrid.classList.add('no-trial');
       if (subPackagesHeading) subPackagesHeading.textContent = 'Aviora Subscription Packages';
       if (subPackagesDesc) {
-        subPackagesDesc.textContent = 'Choose from Aviora’s curated lesson packages for 4, 8, or 12 lessons. All subscriptions are valid for one month, with dates and times fully determined by the student.';
+        subPackagesDesc.textContent = 'Choose from Aviora’s curated lesson packages for 4, 8, 12, 16, or 20 lessons (scroll sideways to explore all bundles). The 20-lesson package is highlighted as our Suggested option, and the package with the highest real-time bookings is labeled Most Popular.';
       }
       if (this.activePackageKey === 'trial' || this.activePackageKey === 'free_trial') {
         this.activePackageKey = '4_lessons';
@@ -459,23 +622,26 @@ const StudentSub = {
       if (modalTrialBtn) modalTrialBtn.style.display = 'inline-flex';
       if (studentGrid) studentGrid.classList.remove('no-trial');
       if (visitorGrid) visitorGrid.classList.remove('no-trial');
-      if (subPackagesHeading) subPackagesHeading.textContent = 'Aviora Subscription Packages & Free Trial';
+      if (subPackagesHeading) subPackagesHeading.textContent = 'Aviora Subscription Packages & Trial Session';
       if (subPackagesDesc) {
-        subPackagesDesc.textContent = 'Choose from Aviora’s curated lesson packages for 4, 8, or 12 lessons. All subscriptions are valid for one month, with dates and times fully determined by the student. Free 30-minute trial lessons are also available for first-time evaluation ($0, strictly 1-time use).';
+        subPackagesDesc.textContent = 'Choose from Aviora’s curated lesson packages for 4, 8, 12, 16, or 20 lessons (scroll sideways to explore all bundles). Students setting up a Trial Lesson can choose between a 25-minute or 50-minute class duration (company commission is 50% of the tutor’s rate).';
       }
     }
   },
 
   getPlanConfig(packageKey) {
+    const tDur = this.trialDuration || 25;
     const plans = {
-      'trial': { key: 'trial', name: 'Free Trial Lesson', lessons: 1, duration: 30, durationLabel: '30-Min Free Trial', isTrial: true },
-      'free_trial': { key: 'trial', name: 'Free Trial Lesson', lessons: 1, duration: 30, durationLabel: '30-Min Free Trial', isTrial: true },
-      '4_lessons': { key: '4_lessons', name: '4 Lessons Package', lessons: 4, duration: 50, durationLabel: '50-Min Class', isTrial: false },
-      'scholar': { key: '4_lessons', name: '4 Lessons Package', lessons: 4, duration: 50, durationLabel: '50-Min Class', isTrial: false },
-      '8_lessons': { key: '8_lessons', name: '8 Lessons Package', lessons: 8, duration: 50, durationLabel: '50-Min Class', isTrial: false },
-      'honors': { key: '8_lessons', name: '8 Lessons Package', lessons: 8, duration: 50, durationLabel: '50-Min Class', isTrial: false },
-      'mastery': { key: '8_lessons', name: '8 Lessons Package', lessons: 8, duration: 50, durationLabel: '50-Min Class', isTrial: false },
-      '12_lessons': { key: '12_lessons', name: '12 Lessons Package', lessons: 12, duration: 50, durationLabel: '50-Min Class', isTrial: false }
+      'trial': { key: 'trial', name: 'Trial Lesson', lessons: 1, duration: tDur, durationLabel: `${tDur}-Min Trial`, isTrial: true, commissionRate: 0.50 },
+      'free_trial': { key: 'trial', name: 'Trial Lesson', lessons: 1, duration: tDur, durationLabel: `${tDur}-Min Trial`, isTrial: true, commissionRate: 0.50 },
+      '4_lessons': { key: '4_lessons', name: '4 Lessons Package', lessons: 4, duration: 50, durationLabel: '50-Min Class', isTrial: false, commissionRate: 0.30 },
+      'scholar': { key: '4_lessons', name: '4 Lessons Package', lessons: 4, duration: 50, durationLabel: '50-Min Class', isTrial: false, commissionRate: 0.30 },
+      '8_lessons': { key: '8_lessons', name: '8 Lessons Package', lessons: 8, duration: 50, durationLabel: '50-Min Class', isTrial: false, commissionRate: 0.30 },
+      'honors': { key: '8_lessons', name: '8 Lessons Package', lessons: 8, duration: 50, durationLabel: '50-Min Class', isTrial: false, commissionRate: 0.30 },
+      'mastery': { key: '8_lessons', name: '8 Lessons Package', lessons: 8, duration: 50, durationLabel: '50-Min Class', isTrial: false, commissionRate: 0.30 },
+      '12_lessons': { key: '12_lessons', name: '12 Lessons Package', lessons: 12, duration: 50, durationLabel: '50-Min Class', isTrial: false, commissionRate: 0.30 },
+      '16_lessons': { key: '16_lessons', name: '16 Lessons Package', lessons: 16, duration: 50, durationLabel: '50-Min Class', isTrial: false, commissionRate: 0.30 },
+      '20_lessons': { key: '20_lessons', name: '20 Lessons Package', lessons: 20, duration: 50, durationLabel: '50-Min Class', isTrial: false, isSuggested: true, commissionRate: 0.30 }
     };
     if (plans[packageKey]) return plans[packageKey];
 
@@ -488,7 +654,9 @@ const StudentSub = {
         lessons: count,
         duration: 50,
         durationLabel: '50-Min Class',
-        isTrial: false
+        isTrial: false,
+        isSuggested: count === 20,
+        commissionRate: 0.30
       };
     }
     return plans['4_lessons'];
@@ -501,6 +669,8 @@ const StudentSub = {
       '4_lessons': '4_lessons',
       '8_lessons': '8_lessons',
       '12_lessons': '12_lessons',
+      '16_lessons': '16_lessons',
+      '20_lessons': '20_lessons',
       'scholar': '4_lessons',
       'honors': '8_lessons',
       'mastery': '8_lessons'
@@ -706,31 +876,36 @@ const StudentSub = {
     const durationText = document.getElementById('sub-summary-duration-text');
     const slotDurationBadge = document.getElementById('sub-enroll-slot-duration-badge');
     const tabsGrid = document.getElementById('sub-lesson-tabs-grid');
+    const trialDurBox = document.getElementById('sub-trial-duration-box');
 
-    if (modalBadge) modalBadge.textContent = planConfig.isTrial ? 'Free Trial' : 'Plan Enrollment';
-    if (stepTag) stepTag.textContent = planConfig.isTrial ? 'Step 1: Trial Educator & Schedule' : `Step 1: Educator & Schedule (${lessonCount} Lessons)`;
-    if (modalTitle) modalTitle.textContent = planConfig.isTrial ? 'Free Trial Lesson & Tutor Scheduling' : `${planConfig.name} & Tutor Scheduling`;
+    if (trialDurBox) {
+      trialDurBox.style.display = planConfig.isTrial ? 'block' : 'none';
+    }
+
+    if (modalBadge) modalBadge.textContent = planConfig.isTrial ? 'Trial Session' : 'Plan Enrollment';
+    if (stepTag) stepTag.textContent = planConfig.isTrial ? 'Step 1: Trial Educator, Duration & Schedule' : `Step 1: Educator & Schedule (${lessonCount} Lessons)`;
+    if (modalTitle) modalTitle.textContent = planConfig.isTrial ? 'Trial Lesson (25m / 50m) & Tutor Scheduling' : `${planConfig.name} & Tutor Scheduling`;
     
     if (step2Title) {
       step2Title.textContent = planConfig.isTrial 
-        ? '2. Select 1 Free Trial Lesson: Choose Topic & Respective Date & Time' 
+        ? `2. Select 1 Trial Lesson (${this.trialDuration}-Min): Choose Topic & Respective Date & Time` 
         : `2. Select ${lessonCount} Lessons: Choose Topics & Respective Dates & Times`;
     }
     if (step2Subtitle) {
       step2Subtitle.innerHTML = planConfig.isTrial
-        ? 'Choose your complimentary trial topic using the dropdown below. Click on the lesson card marked <strong>"Needs Schedule"</strong> to open its 30-minute date &amp; time setup.'
+        ? `Choose your trial topic using the dropdown below and select a <strong>25-minute or 50-minute</strong> duration above. Click on the lesson card marked <strong>"Needs Schedule"</strong> to open its date &amp; time setup. (Company commission is 50% of the tutor's rate.)`
         : `Choose a different topic for each lesson using the dropdown on each card (e.g., <strong>Algebra for Lesson 1</strong>, <strong>Calculus for Lesson 2</strong>). Click on any lesson marked <strong>"Needs Schedule"</strong> to open its date &amp; time setup.`;
     }
     if (notesLabel) {
       notesLabel.textContent = planConfig.isTrial
-        ? 'Learning Objectives or Goals for Your Free Trial Lesson (Optional)'
+        ? 'Learning Objectives or Goals for Your Trial Lesson (Optional)'
         : `Learning Objectives or Specific Topics for the ${lessonCount} Lessons (Optional)`;
     }
     if (durationText) {
-      durationText.textContent = planConfig.isTrial ? '30 Minutes (Complimentary Session)' : '50 Minutes per lesson';
+      durationText.textContent = planConfig.isTrial ? `${this.trialDuration} Minutes (Trial Session • 50% Company Commission)` : '50 Minutes per lesson';
     }
     if (slotDurationBadge) {
-      slotDurationBadge.textContent = planConfig.isTrial ? '30-Min Trial' : '50-Min Class';
+      slotDurationBadge.textContent = planConfig.isTrial ? `${this.trialDuration}-Min Trial` : '50-Min Class';
     }
 
     if (tabsGrid) {
@@ -744,7 +919,7 @@ const StudentSub = {
     // Initialize lesson setup (using subject-specific rates)
     this.selectedLessons = Array.from({ length: lessonCount }, (_, i) => {
       const subj = distributedTopics[i] || subjects[0] || 'General Tutoring';
-      const lessonRate = planConfig.isTrial ? 0.00 : this.getTutorSubjectRate(this.selectedTutor, subj);
+      const lessonRate = this.getTutorSubjectRate(this.selectedTutor, subj);
       return {
         index: i,
         label: planConfig.isTrial ? 'Trial Lesson' : `Lesson ${i + 1}`,
@@ -827,7 +1002,7 @@ const StudentSub = {
       l.tutor_name = tutor.name;
       l.tutor_avatar = tutor.avatar_url || tutor.avatar;
       l.subject = subj;
-      l.hourly_rate = planConfig.isTrial ? 0.00 : this.getTutorSubjectRate(tutor, subj);
+      l.hourly_rate = this.getTutorSubjectRate(tutor, subj);
     });
 
     if (this.isSchedulerOpen && this.activeLessonIndex >= 0) {
@@ -840,8 +1015,7 @@ const StudentSub = {
 
   onApplySubjectToAll(subj) {
     if (!subj) return;
-    const planConfig = this.getPlanConfig(this.activePackageKey);
-    const newRate = planConfig.isTrial ? 0.00 : this.getTutorSubjectRate(this.selectedTutor, subj);
+    const newRate = this.getTutorSubjectRate(this.selectedTutor, subj);
     this.selectedLessons.forEach(l => {
       l.subject = subj;
       l.hourly_rate = newRate;
@@ -870,9 +1044,8 @@ const StudentSub = {
       subject = customTopic.trim();
     }
 
-    const planConfig = this.getPlanConfig(this.activePackageKey);
     this.selectedLessons[lessonIdx].subject = subject;
-    this.selectedLessons[lessonIdx].hourly_rate = planConfig.isTrial ? 0.00 : this.getTutorSubjectRate(this.selectedTutor, subject);
+    this.selectedLessons[lessonIdx].hourly_rate = this.getTutorSubjectRate(this.selectedTutor, subject);
     if (this.isSchedulerOpen && this.activeLessonIndex === lessonIdx) {
       this.updateActiveLessonBanner();
     }
@@ -899,7 +1072,7 @@ const StudentSub = {
     const durationBadgeEl = document.getElementById('sub-enroll-slot-duration-badge');
 
     if (badgeEl) {
-      badgeEl.textContent = totalCount === 1 ? 'Free Trial Lesson' : `Lesson ${this.activeLessonIndex + 1} of ${totalCount}`;
+      badgeEl.textContent = totalCount === 1 ? `Trial Lesson (${this.trialDuration}-Min)` : `Lesson ${this.activeLessonIndex + 1} of ${totalCount}`;
     }
     if (titleEl) {
       if (lesson.scheduled_date && lesson.scheduled_time) {
@@ -908,11 +1081,12 @@ const StudentSub = {
         titleEl.textContent = `Select Date & Time for ${lesson.subject} with ${lesson.tutor_name}`;
       }
     }
+    const fmtRate = (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.formatTutorRate(lesson.hourly_rate, this.selectedTutor) : '$' + Number(lesson.hourly_rate).toFixed(2);
     if (rateTagEl) {
-      rateTagEl.textContent = planConfig.isTrial ? 'Free Trial ($0.00)' : `${(typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.formatTutorRate(lesson.hourly_rate, this.selectedTutor) : '$' + Number(lesson.hourly_rate).toFixed(2)} / session`;
+      rateTagEl.textContent = planConfig.isTrial ? `${fmtRate} (${this.trialDuration}-Min Trial • 50% Commission)` : `${fmtRate} / session`;
     }
     if (durationBadgeEl) {
-      durationBadgeEl.textContent = planConfig.isTrial ? '30-Min Trial' : '50-Min Class';
+      durationBadgeEl.textContent = planConfig.isTrial ? `${this.trialDuration}-Min Trial` : '50-Min Class';
     }
 
     if (subjectSelectEl) {
@@ -938,7 +1112,7 @@ const StudentSub = {
       const isActive = this.isSchedulerOpen && idx === this.activeLessonIndex;
       const isScheduled = !!(l.scheduled_date && l.scheduled_time);
       const allOptions = subjects.includes(l.subject) ? subjects : [l.subject, ...subjects];
-      const lessonLabel = totalCount === 1 ? 'Free Trial Lesson' : `Lesson ${idx + 1}`;
+      const lessonLabel = totalCount === 1 ? `Trial Lesson (${this.trialDuration}-Min)` : `Lesson ${idx + 1}`;
 
       return `
         <div class="sub-lesson-card ${isActive ? 'active' : ''}" onclick="StudentSub.openLessonScheduler(${idx})" title="${isScheduled ? 'Click to change schedule for ' + lessonLabel : 'Click to schedule ' + lessonLabel}">
@@ -966,7 +1140,7 @@ const StudentSub = {
             </div>
 
             ${planConfig.isTrial 
-              ? `<div class="lesson-card-rate-pill" style="background: rgba(16, 185, 129, 0.12); color: #047857; border-color: rgba(16, 185, 129, 0.3); font-weight: 700;">$0.00 / 30 min (Free Trial)</div>`
+              ? `<div class="lesson-card-rate-pill" style="background: rgba(198, 138, 40, 0.12); color: var(--gold-800); border-color: rgba(198, 138, 40, 0.35); font-weight: 700;">${(typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.formatTutorRate(l.hourly_rate, this.selectedTutor) : '$' + Number(l.hourly_rate).toFixed(2)} / ${this.trialDuration} min (50% Comm.)</div>`
               : `<div class="lesson-card-rate-pill">${(typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.formatTutorRate(l.hourly_rate, this.selectedTutor) : '$' + Number(l.hourly_rate).toFixed(2)} / 50 min</div>`}
           </div>
 
@@ -1186,7 +1360,7 @@ const StudentSub = {
     }
 
     const planConfig = this.getPlanConfig(this.activePackageKey);
-    const durationMins = planConfig.isTrial ? 30 : 50;
+    const durationMins = planConfig.isTrial ? (this.trialDuration || 25) : 50;
     const blocks = typeof Tutors !== 'undefined'
       ? Tutors.getTutorDateBlocks(this.selectedTutor, dateStr, dayName)
       : ((this.selectedTutor?.availability_schedule || {})[dayName] || ['09:00 - 12:00', '14:00 - 17:00']);
@@ -1381,10 +1555,11 @@ const StudentSub = {
   updateSummary() {
     const planConfig = this.getPlanConfig(this.activePackageKey);
     const totalCount = this.selectedLessons.length;
-    const totalCost = planConfig.isTrial ? 0.00 : this.selectedLessons.reduce((sum, l) => sum + (Number(l.hourly_rate) || 0), 0);
+    const totalCost = this.selectedLessons.reduce((sum, l) => sum + (Number(l.hourly_rate) || 0), 0);
     const scheduledLessons = this.selectedLessons.filter(l => l.scheduled_date && l.scheduled_time);
     const scheduledCount = scheduledLessons.length;
     const isComplete = scheduledCount === totalCount;
+    const fmtAmount = (amt) => (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.formatTutorRate(amt, this.selectedTutor) : '$' + Number(amt || 0).toFixed(2);
 
     // Progress badge
     const progressTag = document.getElementById('sub-enroll-lessons-progress-tag');
@@ -1404,7 +1579,7 @@ const StudentSub = {
     if (breakdownList) {
       breakdownList.innerHTML = this.selectedLessons.map((l, i) => {
         const isSet = !!(l.scheduled_date && l.scheduled_time);
-        const lessonTitle = totalCount === 1 ? `Trial Lesson: ${l.subject}` : `Lesson ${i + 1}: ${l.subject}`;
+        const lessonTitle = totalCount === 1 ? `Trial Lesson (${this.trialDuration}-Min): ${l.subject}` : `Lesson ${i + 1}: ${l.subject}`;
         return `
           <div class="sub-lesson-breakdown-row">
             <div>
@@ -1419,11 +1594,9 @@ const StudentSub = {
               </div>
             </div>
             <div style="text-align: right;">
-              ${planConfig.isTrial 
-                ? `<span style="font-size: 0.95rem; font-weight: 800; color: #059669; font-family: var(--font-heading);">$0.00 (Trial)</span>`
-                : (isSet 
-                  ? `<span style="font-size: 0.95rem; font-weight: 800; color: var(--gold-700); font-family: var(--font-heading);">$${Number(l.hourly_rate).toFixed(2)}</span>` 
-                  : `<span style="font-size: 0.78rem; font-weight: 600; color: var(--text-secondary);">Rate: $${Number(l.hourly_rate).toFixed(0)}/hr</span>`)}
+              ${isSet 
+                ? `<span style="font-size: 0.95rem; font-weight: 800; color: var(--gold-700); font-family: var(--font-heading);">${fmtAmount(l.hourly_rate)}</span>` 
+                : `<span style="font-size: 0.78rem; font-weight: 600; color: var(--text-secondary);">Rate: ${fmtAmount(l.hourly_rate)}/hr</span>`}
             </div>
           </div>
         `;
@@ -1434,9 +1607,9 @@ const StudentSub = {
     const summaryAmountEl = document.getElementById('sub-summary-amount-text');
     if (summaryAmountEl) {
       if (isComplete) {
-        summaryAmountEl.textContent = `$${totalCost.toFixed(2)}`;
+        summaryAmountEl.textContent = fmtAmount(totalCost);
         summaryAmountEl.style.fontSize = '1.4rem';
-        summaryAmountEl.style.color = planConfig.isTrial ? '#059669' : 'var(--gold-700)';
+        summaryAmountEl.style.color = 'var(--gold-700)';
       } else {
         summaryAmountEl.innerHTML = `<span style="font-size: 0.98rem; color: #D97706; font-weight: 700;">Pending Setup (${scheduledCount}/${totalCount})</span>`;
       }
@@ -1446,9 +1619,11 @@ const StudentSub = {
     if (calcFormulaEl) {
       if (isComplete) {
         if (planConfig.isTrial) {
-          calcFormulaEl.textContent = 'Complimentary 30-minute diagnostic session ($0.00 total)';
+          const companyComm = fmtAmount(totalCost * 0.50);
+          const tutorShare = fmtAmount(totalCost * 0.50);
+          calcFormulaEl.textContent = `${this.trialDuration}-Min Trial Session • Company Commission (50%): ${companyComm} • Tutor Share (50%): ${tutorShare}`;
         } else {
-          calcFormulaEl.textContent = `Sum of ${totalCount} lessons: ${this.selectedLessons.map((l, idx) => `Lesson ${idx + 1} ($${Number(l.hourly_rate).toFixed(0)})`).join(' + ')}`;
+          calcFormulaEl.textContent = `Sum of ${totalCount} lessons: ${this.selectedLessons.map((l, idx) => `Lesson ${idx + 1} (${fmtAmount(l.hourly_rate)})`).join(' + ')}`;
         }
       } else {
         calcFormulaEl.textContent = `The total amount to be paid will be visible once all ${totalCount} lesson${totalCount > 1 ? 's are' : ' is'} scheduled.`;
@@ -1463,8 +1638,8 @@ const StudentSub = {
         submitBtn.disabled = false;
         if (btnLabel) {
           btnLabel.textContent = planConfig.isTrial 
-            ? 'Confirm 1-Lesson Free Trial ($0.00)' 
-            : `Confirm ${totalCount} Lessons & Pay $${totalCost.toFixed(2)}`;
+            ? `Confirm ${this.trialDuration}-Min Trial Lesson & Pay ${fmtAmount(totalCost)}` 
+            : `Confirm ${totalCount} Lessons & Pay ${fmtAmount(totalCost)}`;
         }
       } else {
         submitBtn.disabled = true;
@@ -1488,7 +1663,7 @@ const StudentSub = {
     const planConfig = this.getPlanConfig(this.activePackageKey);
     const notesInput = document.getElementById('sub-enroll-notes');
     const notes = notesInput ? notesInput.value.trim() : '';
-    const totalCost = planConfig.isTrial ? 0.00 : this.selectedLessons.reduce((sum, l) => sum + (Number(l.hourly_rate) || 0), 0);
+    const totalCost = this.selectedLessons.reduce((sum, l) => sum + (Number(l.hourly_rate) || 0), 0);
 
     const submitBtn = document.getElementById('btn-sub-enroll-submit');
     const originalText = submitBtn ? submitBtn.innerHTML : '';
@@ -1500,6 +1675,7 @@ const StudentSub = {
     try {
       const payload = {
         package_key: this.activePackageKey,
+        trial_duration: planConfig.isTrial ? (this.trialDuration || 25) : 50,
         total_amount: totalCost,
         lessons: this.selectedLessons.map(l => ({
           lesson_number: l.index + 1,
@@ -1514,6 +1690,9 @@ const StudentSub = {
       };
 
       const res = await API.purchaseSubscription(payload);
+      if (res && res.popularityStats) {
+        this.applyPopularityStats(res.popularityStats);
+      }
       showToast(res.message, 'success');
 
       this.closeEnrollmentModal();

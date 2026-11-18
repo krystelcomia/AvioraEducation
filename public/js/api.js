@@ -128,6 +128,7 @@ const API = {
 
   // Public
   getStats: () => apiRequest('/public/stats'),
+  getSubscriptionStats: () => apiRequest('/public/subscription-stats'),
   getAnalytics: () => apiRequest('/public/analytics'),
   getStudentWork: () => apiRequest('/public/student-work'),
   getTutors: (params = '') => apiRequest(`/tutors?${params}`),

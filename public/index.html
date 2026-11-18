@@ -1549,29 +1549,29 @@
         </div>
 
         <div class="pricing-grid" id="visitor-pricing-grid">
-          <!-- Plan 1: Free Trial Lesson -->
-          <div class="pricing-card" id="card-trial-visitor">
+          <!-- Plan 1: Trial Lesson -->
+          <div class="pricing-card" id="card-trial-visitor" data-package-key="trial">
             <div class="pricing-card-header">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+              <div class="pkg-tier-row">
                 <span class="badge-gold" style="font-size: 0.72rem;">Available (1-Time Use)</span>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--gold-600);"><path d="M9 3h6"></path><path d="M10 9V3"></path><path d="M14 9V3"></path><path d="M8.5 13h7"></path><path d="M14 9a2 2 0 0 1 2 2v6.5a4.5 4.5 0 0 1-9 0V11a2 2 0 0 1 2-2z"></path></svg>
               </div>
-              <h3 class="pricing-plan-name">Free Trial Lesson</h3>
-              <div class="pricing-price-wrap" style="min-height: 52px; display: flex; align-items: baseline; gap: 0.35rem;">
-                <span class="pricing-amount">$0</span>
-                <span class="pricing-period">/ one-time</span>
+              <h3 class="pricing-plan-name pkg-title">Trial Lesson</h3>
+              <div class="pricing-price-wrap pkg-price-box">
+                <span class="pkg-calc-title">Calculated Upon Setup</span>
+                <span class="pricing-period pkg-calc-sub">25-min or 50-min trial &amp; teacher rate</span>
               </div>
-              <p class="pricing-desc">Complimentary 30-minute diagnostic session with an accredited tutor to evaluate fit and establish your roadmap.</p>
+              <p class="pricing-desc pkg-desc">Diagnostic 1-on-1 trial session with an accredited tutor to evaluate fit and establish your personalized academic roadmap.</p>
             </div>
 
-            <ul class="pricing-features">
+            <ul class="pricing-features pkg-features">
               <li class="pricing-feature-item">
                 <span class="pricing-feature-icon">✓</span>
-                <span><strong>1 Single 30-Min Lesson</strong></span>
+                <span><strong>1 Single Trial Lesson</strong> (1-time use)</span>
               </li>
               <li class="pricing-feature-item">
                 <span class="pricing-feature-icon">✓</span>
-                <span><strong>Free Trial</strong> (Strictly 1-time offer for $0)</span>
+                <span><strong>Choose 25-Min or 50-Min</strong> duration</span>
               </li>
               <li class="pricing-feature-item">
                 <span class="pricing-feature-icon">✓</span>
@@ -1579,36 +1579,41 @@
               </li>
               <li class="pricing-feature-item">
                 <span class="pricing-feature-icon">✓</span>
+                <span><strong>50% company commission</strong> on tutor rate</span>
+              </li>
+              <li class="pricing-feature-item">
+                <span class="pricing-feature-icon">✓</span>
                 <span>Academic diagnostic assessment</span>
               </li>
               <li class="pricing-feature-item">
                 <span class="pricing-feature-icon">✓</span>
-                <span>No payment or obligation</span>
+                <span>Personalized study roadmap</span>
               </li>
             </ul>
 
-            <button type="button" class="btn btn-outline-gold pricing-card-btn" onclick="StudentSub.purchasePlan('trial')">Book Free Trial ($0)</button>
+            <button type="button" class="btn btn-outline-gold pricing-card-btn" id="btn-visitor-buy-trial" onclick="StudentSub.purchasePlan('trial')">Book Trial Lesson</button>
           </div>
 
           <!-- Plan 2: 4 Lessons Package -->
-          <div class="pricing-card">
+          <div class="pricing-card" id="card-4-visitor" data-package-key="4_lessons">
+            <span class="pricing-badge-popular" data-popular-badge="4_lessons" style="display: none;">Most Popular</span>
             <div class="pricing-card-header">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+              <div class="pkg-tier-row">
                 <span class="badge-gold" style="font-size: 0.72rem;">Starter</span>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--gold-600);"><path d="M7 20h10"></path><path d="M12 20v-8"></path><path d="M12 12a5 5 0 0 1 5-5c0 3-2 5-5 5Z"></path><path d="M12 12a5 5 0 0 0-5-5c0 3 2 5 5 5Z"></path></svg>
               </div>
-              <h3 class="pricing-plan-name">4 Lessons Package</h3>
-              <div class="pricing-price-wrap" style="min-height: 52px; display: flex; flex-direction: column; justify-content: center;">
-                <span style="font-size: 1.35rem; font-weight: 800; color: var(--gold-700); font-family: var(--font-heading); line-height: 1.2;">Calculated Upon Setup</span>
-                <span class="pricing-period" style="margin-top: 0.2rem;">Determined by 4 lessons &amp; teacher rates</span>
+              <h3 class="pricing-plan-name pkg-title">4 Lessons Package</h3>
+              <div class="pricing-price-wrap pkg-price-box">
+                <span class="pkg-calc-title">Calculated Upon Setup</span>
+                <span class="pricing-period pkg-calc-sub">Determined by 4 lessons &amp; teacher rates</span>
               </div>
-              <p class="pricing-desc">Ideal for targeted subject support, tackling specific modules, or homework assistance across 4 bespoke sessions.</p>
+              <p class="pricing-desc pkg-desc">Ideal for targeted subject support, tackling specific modules, or homework assistance across 4 bespoke sessions.</p>
             </div>
 
-            <ul class="pricing-features">
+            <ul class="pricing-features pkg-features">
               <li class="pricing-feature-item">
                 <span class="pricing-feature-icon">✓</span>
-                <span><strong>4 Bespoke 1-on-1 Lessons</strong></span>
+                <span><strong>4 Bespoke 1-on-1 Lessons</strong> (50m each)</span>
               </li>
               <li class="pricing-feature-item">
                 <span class="pricing-feature-icon">✓</span>
@@ -1626,31 +1631,35 @@
                 <span class="pricing-feature-icon">✓</span>
                 <span>Progress feedback &amp; lesson logs</span>
               </li>
+              <li class="pricing-feature-item">
+                <span class="pricing-feature-icon">✓</span>
+                <span>Direct educator study messaging</span>
+              </li>
             </ul>
 
             <button type="button" class="btn btn-outline-gold pricing-card-btn" id="btn-visitor-buy-4" onclick="StudentSub.purchasePlan('4_lessons')">Enroll in 4 Lessons</button>
           </div>
 
-          <!-- Plan 3: 8 Lessons Package (Featured) -->
-          <div class="pricing-card featured">
-            <span class="pricing-badge-popular">Most Popular</span>
+          <!-- Plan 3: 8 Lessons Package -->
+          <div class="pricing-card featured" id="card-8-visitor" data-package-key="8_lessons">
+            <span class="pricing-badge-popular" data-popular-badge="8_lessons">Most Popular</span>
             <div class="pricing-card-header">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+              <div class="pkg-tier-row">
                 <span class="badge-gold" style="font-size: 0.72rem;">Mastery</span>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--gold-600);"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path><path d="M4 22h16"></path><path d="M10 14.66V17c0 .55-.45 1-1 1H7v4h10v-4h-2c-.55 0-1-.45-1-1v-2.34"></path><path d="M6 4h12a2 2 0 0 1 2 2v4a6 6 0 0 1-12 0V6a2 2 0 0 1 2-2Z"></path></svg>
               </div>
-              <h3 class="pricing-plan-name">8 Lessons Package</h3>
-              <div class="pricing-price-wrap" style="min-height: 52px; display: flex; flex-direction: column; justify-content: center;">
-                <span style="font-size: 1.35rem; font-weight: 800; color: var(--gold-700); font-family: var(--font-heading); line-height: 1.2;">Calculated Upon Setup</span>
-                <span class="pricing-period" style="margin-top: 0.2rem;">Determined by 8 lessons &amp; teacher rates</span>
+              <h3 class="pricing-plan-name pkg-title">8 Lessons Package</h3>
+              <div class="pricing-price-wrap pkg-price-box">
+                <span class="pkg-calc-title">Calculated Upon Setup</span>
+                <span class="pricing-period pkg-calc-sub">Determined by 8 lessons &amp; teacher rates</span>
               </div>
-              <p class="pricing-desc">Consistent twice-weekly sessions for academic grade elevation and deep subject fluency across 8 bespoke sessions.</p>
+              <p class="pricing-desc pkg-desc">Consistent twice-weekly sessions for academic grade elevation and deep subject fluency across 8 bespoke sessions.</p>
             </div>
 
-            <ul class="pricing-features">
+            <ul class="pricing-features pkg-features">
               <li class="pricing-feature-item">
                 <span class="pricing-feature-icon">✓</span>
-                <span><strong>8 Bespoke 1-on-1 Lessons</strong></span>
+                <span><strong>8 Bespoke 1-on-1 Lessons</strong> (50m each)</span>
               </li>
               <li class="pricing-feature-item">
                 <span class="pricing-feature-icon">✓</span>
@@ -1678,24 +1687,25 @@
           </div>
 
           <!-- Plan 4: 12 Lessons Package -->
-          <div class="pricing-card">
+          <div class="pricing-card" id="card-12-visitor" data-package-key="12_lessons">
+            <span class="pricing-badge-popular" data-popular-badge="12_lessons" style="display: none;">Most Popular</span>
             <div class="pricing-card-header">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+              <div class="pkg-tier-row">
                 <span class="badge-gold" style="font-size: 0.72rem;">Honors Intensive</span>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--gold-600);"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"></path><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"></path><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"></path><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"></path></svg>
               </div>
-              <h3 class="pricing-plan-name">12 Lessons Package</h3>
-              <div class="pricing-price-wrap" style="min-height: 52px; display: flex; flex-direction: column; justify-content: center;">
-                <span style="font-size: 1.35rem; font-weight: 800; color: var(--gold-700); font-family: var(--font-heading); line-height: 1.2;">Calculated Upon Setup</span>
-                <span class="pricing-period" style="margin-top: 0.2rem;">Determined by 12 lessons &amp; teacher rates</span>
+              <h3 class="pricing-plan-name pkg-title">12 Lessons Package</h3>
+              <div class="pricing-price-wrap pkg-price-box">
+                <span class="pkg-calc-title">Calculated Upon Setup</span>
+                <span class="pricing-period pkg-calc-sub">Determined by 12 lessons &amp; teacher rates</span>
               </div>
-              <p class="pricing-desc">Intensive preparation for AP/IB exams, SAT/ACT, and collegiate admissions across 12 bespoke sessions.</p>
+              <p class="pricing-desc pkg-desc">Intensive preparation for AP/IB exams, SAT/ACT, and collegiate admissions across 12 bespoke sessions.</p>
             </div>
 
-            <ul class="pricing-features">
+            <ul class="pricing-features pkg-features">
               <li class="pricing-feature-item">
                 <span class="pricing-feature-icon">✓</span>
-                <span><strong>12 Bespoke 1-on-1 Lessons</strong></span>
+                <span><strong>12 Bespoke 1-on-1 Lessons</strong> (50m each)</span>
               </li>
               <li class="pricing-feature-item">
                 <span class="pricing-feature-icon">✓</span>
@@ -1722,8 +1732,97 @@
             <button type="button" class="btn btn-outline-gold pricing-card-btn" id="btn-visitor-buy-12" onclick="StudentSub.purchasePlan('12_lessons')">Enroll in 12 Lessons</button>
           </div>
 
-          
+          <!-- Plan 5: 16 Lessons Package -->
+          <div class="pricing-card" id="card-16-visitor" data-package-key="16_lessons">
+            <span class="pricing-badge-popular" data-popular-badge="16_lessons" style="display: none;">Most Popular</span>
+            <div class="pricing-card-header">
+              <div class="pkg-tier-row">
+                <span class="badge-gold" style="font-size: 0.72rem;">Scholar Elite</span>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--gold-600);"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+              </div>
+              <h3 class="pricing-plan-name pkg-title">16 Lessons Package</h3>
+              <div class="pricing-price-wrap pkg-price-box">
+                <span class="pkg-calc-title">Calculated Upon Setup</span>
+                <span class="pricing-period pkg-calc-sub">Determined by 16 lessons &amp; teacher rates</span>
+              </div>
+              <p class="pricing-desc pkg-desc">Accelerated four-times-weekly mentorship for competitive STEM, languages, and honors coursework across 16 sessions.</p>
+            </div>
 
+            <ul class="pricing-features pkg-features">
+              <li class="pricing-feature-item">
+                <span class="pricing-feature-icon">✓</span>
+                <span><strong>16 Bespoke 1-on-1 Lessons</strong> (50m each)</span>
+              </li>
+              <li class="pricing-feature-item">
+                <span class="pricing-feature-icon">✓</span>
+                <span><strong>Valid for 1 Month</strong> from purchase</span>
+              </li>
+              <li class="pricing-feature-item">
+                <span class="pricing-feature-icon">✓</span>
+                <span>Student chooses dates &amp; times</span>
+              </li>
+              <li class="pricing-feature-item">
+                <span class="pricing-feature-icon">✓</span>
+                <span>Upfront payment requirement</span>
+              </li>
+              <li class="pricing-feature-item">
+                <span class="pricing-feature-icon">✓</span>
+                <span>Multi-subject flexibility &amp; VIP priority</span>
+              </li>
+              <li class="pricing-feature-item">
+                <span class="pricing-feature-icon">✓</span>
+                <span>Dedicated academic mastery roadmap</span>
+              </li>
+            </ul>
+
+            <button type="button" class="btn btn-outline-gold pricing-card-btn" id="btn-visitor-buy-16" onclick="StudentSub.purchasePlan('16_lessons')">Enroll in 16 Lessons</button>
+          </div>
+
+          <!-- Plan 6: 20 Lessons Package (Suggested) -->
+          <div class="pricing-card suggested" id="card-20-visitor" data-package-key="20_lessons">
+            <span class="pricing-badge-suggested" data-suggested-badge="20_lessons">Suggested</span>
+            <div class="pricing-card-header">
+              <div class="pkg-tier-row">
+                <span class="badge-gold" style="font-size: 0.72rem;">Premier Fellowship</span>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--gold-600);"><path d="M6 3h12l4 6-10 13L2 9Z"></path><path d="M11 3 8 9l4 13 4-13-3-6"></path><path d="M2 9h20"></path></svg>
+              </div>
+              <h3 class="pricing-plan-name pkg-title">20 Lessons Package</h3>
+              <div class="pricing-price-wrap pkg-price-box">
+                <span class="pkg-calc-title">Calculated Upon Setup</span>
+                <span class="pricing-period pkg-calc-sub">Determined by 20 lessons &amp; teacher rates</span>
+              </div>
+              <p class="pricing-desc pkg-desc">Full-immersion daily mentorship for rapid grade transformation, Olympiad prep, and university readiness across 20 sessions.</p>
+            </div>
+
+            <ul class="pricing-features pkg-features">
+              <li class="pricing-feature-item">
+                <span class="pricing-feature-icon">✓</span>
+                <span><strong>20 Bespoke 1-on-1 Lessons</strong> (50m each)</span>
+              </li>
+              <li class="pricing-feature-item">
+                <span class="pricing-feature-icon">✓</span>
+                <span><strong>Valid for 1 Month</strong> from purchase</span>
+              </li>
+              <li class="pricing-feature-item">
+                <span class="pricing-feature-icon">✓</span>
+                <span>Student chooses dates &amp; times</span>
+              </li>
+              <li class="pricing-feature-item">
+                <span class="pricing-feature-icon">✓</span>
+                <span>Upfront payment requirement</span>
+              </li>
+              <li class="pricing-feature-item">
+                <span class="pricing-feature-icon">✓</span>
+                <span>Multi-subject flexibility &amp; VIP priority</span>
+              </li>
+              <li class="pricing-feature-item">
+                <span class="pricing-feature-icon">✓</span>
+                <span>Executive portfolio &amp; capstone mastery</span>
+              </li>
+            </ul>
+
+            <button type="button" class="btn btn-primary pricing-card-btn" id="btn-visitor-buy-20" onclick="StudentSub.purchasePlan('20_lessons')">Enroll in 20 Lessons</button>
+          </div>
         </div>
 
         <!-- Mandatory Academic Guidelines & Subscription Policies -->
@@ -3416,73 +3515,74 @@
         </div>
 
         <div class="sub-packages-grid" id="student-sub-packages-grid">
-          <!-- Package 0: Free Trial -->
-          <div class="sub-package-card" id="card-trial-student">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+          <!-- Package 0: Trial Lesson -->
+          <div class="sub-package-card" id="card-trial-student" data-package-key="trial">
+            <div class="pkg-tier-row">
               <span class="badge-gold" id="badge-trial-status">Available (1-Time Use)</span>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--gold-600);"><path d="M9 3h6"></path><path d="M10 9V3"></path><path d="M14 9V3"></path><path d="M8.5 13h7"></path><path d="M14 9a2 2 0 0 1 2 2v6.5a4.5 4.5 0 0 1-9 0V11a2 2 0 0 1 2-2z"></path></svg>
             </div>
-            <h3 style="font-family: var(--font-heading); font-size: 1.25rem; font-weight: 800; color: var(--charcoal-900); margin-bottom: 0.25rem;">Free Trial Lesson</h3>
-            <div style="margin: 0.75rem 0 1rem 0;">
-              <span style="font-size: 2.1rem; font-weight: 800; color: var(--charcoal-900); font-family: var(--font-heading);">$0</span>
-              <span style="font-size: 0.82rem; color: var(--text-secondary);"> / one-time</span>
+            <h3 class="pkg-title" style="font-family: var(--font-heading); font-size: 1.25rem; font-weight: 800; color: var(--charcoal-900);">Trial Lesson</h3>
+            <div class="pkg-price-box">
+              <span class="pkg-calc-title">Calculated Upon Setup</span>
+              <span class="pkg-calc-sub">25-min or 50-min trial &amp; teacher rate</span>
             </div>
-            <p style="font-size: 0.82rem; color: var(--text-secondary); margin-bottom: 1.25rem; line-height: 1.5;">
-              Complimentary 30-minute diagnostic session with an accredited tutor to evaluate fit and establish your roadmap.
+            <p class="pkg-desc">
+              Diagnostic 1-on-1 trial session with an accredited tutor to evaluate fit and establish your personalized academic roadmap.
             </p>
-            <ul style="list-style: none; padding: 0; margin: 0 0 1.5rem 0; font-size: 0.82rem; color: var(--charcoal-800); line-height: 1.7; flex: 1;">
-              <li>✓ <strong>1 Single 30-Min Lesson</strong></li>
-              <li>✓ <strong>Free Trial</strong> (Strictly 1-time offer for $0)</li>
+            <ul class="pkg-features">
+              <li>✓ <strong>1 Single Trial Lesson</strong> (1-time use)</li>
+              <li>✓ <strong>Choose 25-Min or 50-Min</strong> duration</li>
               <li>✓ Student determines date &amp; time</li>
+              <li>✓ <strong>50% company commission</strong> on tutor rate</li>
               <li>✓ Academic diagnostic assessment</li>
-              <li>✓ No payment or obligation</li>
+              <li>✓ Personalized study roadmap</li>
             </ul>
-            <button id="btn-buy-trial" class="btn btn-outline-gold btn-sm" onclick="StudentSub.openEnrollmentModal('trial')" style="width: 100%; font-weight: 700;">Book Free Trial ($0)</button>
+            <button id="btn-buy-trial" class="btn btn-outline-gold btn-sm" onclick="StudentSub.openEnrollmentModal('trial')" style="width: 100%; font-weight: 700;">Book Trial Lesson</button>
           </div>
 
           <!-- Package 1: 4 Lessons -->
-          <div class="sub-package-card">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+          <div class="sub-package-card" id="card-4-student" data-package-key="4_lessons">
+            <span class="sub-card-top-badge popular-badge" data-popular-badge="4_lessons" style="display: none;">Most Popular</span>
+            <div class="pkg-tier-row">
               <span class="badge-gold">Starter</span>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--gold-600);"><path d="M7 20h10"></path><path d="M12 20v-8"></path><path d="M12 12a5 5 0 0 1 5-5c0 3-2 5-5 5Z"></path><path d="M12 12a5 5 0 0 0-5-5c0 3 2 5 5 5Z"></path></svg>
             </div>
-            <h3 style="font-family: var(--font-heading); font-size: 1.25rem; font-weight: 800; color: var(--charcoal-900); margin-bottom: 0.25rem;">4 Lessons Package</h3>
-            <div style="margin: 0.75rem 0 1rem 0; min-height: 52px; display: flex; flex-direction: column; justify-content: center;">
-              <span style="font-size: 1.35rem; font-weight: 800; color: var(--gold-700); font-family: var(--font-heading); line-height: 1.2;">Calculated Upon Setup</span>
-              <span style="font-size: 0.78rem; color: var(--text-secondary); margin-top: 0.2rem;">Determined by 4 lessons &amp; teacher rates</span>
+            <h3 class="pkg-title" style="font-family: var(--font-heading); font-size: 1.25rem; font-weight: 800; color: var(--charcoal-900);">4 Lessons Package</h3>
+            <div class="pkg-price-box">
+              <span class="pkg-calc-title">Calculated Upon Setup</span>
+              <span class="pkg-calc-sub">Determined by 4 lessons &amp; teacher rates</span>
             </div>
-            <p style="font-size: 0.82rem; color: var(--text-secondary); margin-bottom: 1.25rem; line-height: 1.5;">
+            <p class="pkg-desc">
               Ideal for targeted subject support, tackling specific modules, or homework assistance across 4 bespoke sessions.
             </p>
-            <ul style="list-style: none; padding: 0; margin: 0 0 1.5rem 0; font-size: 0.82rem; color: var(--charcoal-800); line-height: 1.7; flex: 1;">
-              <li>✓ <strong>4 Bespoke 1-on-1 Lessons</strong></li>
+            <ul class="pkg-features">
+              <li>✓ <strong>4 Bespoke 1-on-1 Lessons</strong> (50m each)</li>
               <li>✓ <strong>Valid for 1 Month</strong> from purchase</li>
               <li>✓ Student chooses dates &amp; times</li>
               <li>✓ Upfront payment requirement</li>
               <li>✓ Progress feedback &amp; lesson logs</li>
+              <li>✓ Direct educator study messaging</li>
             </ul>
             <button class="btn btn-outline-gold btn-sm" id="btn-buy-4" onclick="StudentSub.openEnrollmentModal('4_lessons')" style="width: 100%; font-weight: 700;">Enroll in 4 Lessons</button>
           </div>
 
           <!-- Package 2: 8 Lessons (Popular) -->
-          <div class="sub-package-card popular">
-            <div style="position: absolute; top: -11px; right: 20px; background: var(--gradient-gold); color: #FFFFFF; font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; padding: 0.2rem 0.65rem; border-radius: 12px; box-shadow: 0 2px 8px rgba(198, 138, 40, 0.35);">
-              Most Popular
-            </div>
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+          <div class="sub-package-card popular" id="card-8-student" data-package-key="8_lessons">
+            <span class="sub-card-top-badge popular-badge" data-popular-badge="8_lessons">Most Popular</span>
+            <div class="pkg-tier-row">
               <span class="badge-gold">Mastery</span>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--gold-600);"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path><path d="M4 22h16"></path><path d="M10 14.66V17c0 .55-.45 1-1 1H7v4h10v-4h-2c-.55 0-1-.45-1-1v-2.34"></path><path d="M6 4h12a2 2 0 0 1 2 2v4a6 6 0 0 1-12 0V6a2 2 0 0 1 2-2Z"></path></svg>
             </div>
-            <h3 style="font-family: var(--font-heading); font-size: 1.25rem; font-weight: 800; color: var(--charcoal-900); margin-bottom: 0.25rem;">8 Lessons Package</h3>
-            <div style="margin: 0.75rem 0 1rem 0; min-height: 52px; display: flex; flex-direction: column; justify-content: center;">
-              <span style="font-size: 1.35rem; font-weight: 800; color: var(--gold-700); font-family: var(--font-heading); line-height: 1.2;">Calculated Upon Setup</span>
-              <span style="font-size: 0.78rem; color: var(--text-secondary); margin-top: 0.2rem;">Determined by 8 lessons &amp; teacher rates</span>
+            <h3 class="pkg-title" style="font-family: var(--font-heading); font-size: 1.25rem; font-weight: 800; color: var(--charcoal-900);">8 Lessons Package</h3>
+            <div class="pkg-price-box">
+              <span class="pkg-calc-title">Calculated Upon Setup</span>
+              <span class="pkg-calc-sub">Determined by 8 lessons &amp; teacher rates</span>
             </div>
-            <p style="font-size: 0.82rem; color: var(--text-secondary); margin-bottom: 1.25rem; line-height: 1.5;">
+            <p class="pkg-desc">
               Consistent twice-weekly sessions for academic grade elevation and deep subject fluency across 8 bespoke sessions.
             </p>
-            <ul style="list-style: none; padding: 0; margin: 0 0 1.5rem 0; font-size: 0.82rem; color: var(--charcoal-800); line-height: 1.7; flex: 1;">
-              <li>✓ <strong>8 Bespoke 1-on-1 Lessons</strong></li>
+            <ul class="pkg-features">
+              <li>✓ <strong>8 Bespoke 1-on-1 Lessons</strong> (50m each)</li>
               <li>✓ <strong>Valid for 1 Month</strong> from purchase</li>
               <li>✓ Student chooses dates &amp; times</li>
               <li>✓ Upfront payment requirement</li>
@@ -3493,21 +3593,22 @@
           </div>
 
           <!-- Package 3: 12 Lessons -->
-          <div class="sub-package-card">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+          <div class="sub-package-card" id="card-12-student" data-package-key="12_lessons">
+            <span class="sub-card-top-badge popular-badge" data-popular-badge="12_lessons" style="display: none;">Most Popular</span>
+            <div class="pkg-tier-row">
               <span class="badge-gold">Honors Intensive</span>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--gold-600);"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"></path><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"></path><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"></path><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"></path></svg>
             </div>
-            <h3 style="font-family: var(--font-heading); font-size: 1.25rem; font-weight: 800; color: var(--charcoal-900); margin-bottom: 0.25rem;">12 Lessons Package</h3>
-            <div style="margin: 0.75rem 0 1rem 0; min-height: 52px; display: flex; flex-direction: column; justify-content: center;">
-              <span style="font-size: 1.35rem; font-weight: 800; color: var(--gold-700); font-family: var(--font-heading); line-height: 1.2;">Calculated Upon Setup</span>
-              <span style="font-size: 0.78rem; color: var(--text-secondary); margin-top: 0.2rem;">Determined by 12 lessons &amp; teacher rates</span>
+            <h3 class="pkg-title" style="font-family: var(--font-heading); font-size: 1.25rem; font-weight: 800; color: var(--charcoal-900);">12 Lessons Package</h3>
+            <div class="pkg-price-box">
+              <span class="pkg-calc-title">Calculated Upon Setup</span>
+              <span class="pkg-calc-sub">Determined by 12 lessons &amp; teacher rates</span>
             </div>
-            <p style="font-size: 0.82rem; color: var(--text-secondary); margin-bottom: 1.25rem; line-height: 1.5;">
+            <p class="pkg-desc">
               Intensive preparation for AP/IB exams, SAT/ACT, and collegiate admissions across 12 bespoke sessions.
             </p>
-            <ul style="list-style: none; padding: 0; margin: 0 0 1.5rem 0; font-size: 0.82rem; color: var(--charcoal-800); line-height: 1.7; flex: 1;">
-              <li>✓ <strong>12 Bespoke 1-on-1 Lessons</strong></li>
+            <ul class="pkg-features">
+              <li>✓ <strong>12 Bespoke 1-on-1 Lessons</strong> (50m each)</li>
               <li>✓ <strong>Valid for 1 Month</strong> from purchase</li>
               <li>✓ Student chooses dates &amp; times</li>
               <li>✓ Upfront payment requirement</li>
@@ -3517,8 +3618,57 @@
             <button class="btn btn-outline-gold btn-sm" id="btn-buy-12" onclick="StudentSub.openEnrollmentModal('12_lessons')" style="width: 100%; font-weight: 700;">Enroll in 12 Lessons</button>
           </div>
 
-          
+          <!-- Package 4: 16 Lessons -->
+          <div class="sub-package-card" id="card-16-student" data-package-key="16_lessons">
+            <span class="sub-card-top-badge popular-badge" data-popular-badge="16_lessons" style="display: none;">Most Popular</span>
+            <div class="pkg-tier-row">
+              <span class="badge-gold">Scholar Elite</span>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--gold-600);"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+            </div>
+            <h3 class="pkg-title" style="font-family: var(--font-heading); font-size: 1.25rem; font-weight: 800; color: var(--charcoal-900);">16 Lessons Package</h3>
+            <div class="pkg-price-box">
+              <span class="pkg-calc-title">Calculated Upon Setup</span>
+              <span class="pkg-calc-sub">Determined by 16 lessons &amp; teacher rates</span>
+            </div>
+            <p class="pkg-desc">
+              Accelerated four-times-weekly mentorship for competitive STEM, languages, and honors coursework across 16 sessions.
+            </p>
+            <ul class="pkg-features">
+              <li>✓ <strong>16 Bespoke 1-on-1 Lessons</strong> (50m each)</li>
+              <li>✓ <strong>Valid for 1 Month</strong> from purchase</li>
+              <li>✓ Student chooses dates &amp; times</li>
+              <li>✓ Upfront payment requirement</li>
+              <li>✓ Multi-subject flexibility &amp; VIP priority</li>
+              <li>✓ Dedicated academic mastery roadmap</li>
+            </ul>
+            <button class="btn btn-outline-gold btn-sm" id="btn-buy-16" onclick="StudentSub.openEnrollmentModal('16_lessons')" style="width: 100%; font-weight: 700;">Enroll in 16 Lessons</button>
+          </div>
 
+          <!-- Package 5: 20 Lessons (Suggested) -->
+          <div class="sub-package-card suggested" id="card-20-student" data-package-key="20_lessons">
+            <span class="sub-card-top-badge suggested-badge" data-suggested-badge="20_lessons">Suggested</span>
+            <div class="pkg-tier-row">
+              <span class="badge-gold">Premier Fellowship</span>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--gold-600);"><path d="M6 3h12l4 6-10 13L2 9Z"></path><path d="M11 3 8 9l4 13 4-13-3-6"></path><path d="M2 9h20"></path></svg>
+            </div>
+            <h3 class="pkg-title" style="font-family: var(--font-heading); font-size: 1.25rem; font-weight: 800; color: var(--charcoal-900);">20 Lessons Package</h3>
+            <div class="pkg-price-box">
+              <span class="pkg-calc-title">Calculated Upon Setup</span>
+              <span class="pkg-calc-sub">Determined by 20 lessons &amp; teacher rates</span>
+            </div>
+            <p class="pkg-desc">
+              Full-immersion daily mentorship for rapid grade transformation, Olympiad prep, and university readiness across 20 sessions.
+            </p>
+            <ul class="pkg-features">
+              <li>✓ <strong>20 Bespoke 1-on-1 Lessons</strong> (50m each)</li>
+              <li>✓ <strong>Valid for 1 Month</strong> from purchase</li>
+              <li>✓ Student chooses dates &amp; times</li>
+              <li>✓ Upfront payment requirement</li>
+              <li>✓ Multi-subject flexibility &amp; VIP priority</li>
+              <li>✓ Executive portfolio &amp; capstone mastery</li>
+            </ul>
+            <button class="btn btn-primary btn-sm" id="btn-buy-20" onclick="StudentSub.openEnrollmentModal('20_lessons')" style="width: 100%; font-weight: 700;">Enroll in 20 Lessons</button>
+          </div>
         </div>
 
         <!-- 4. Terms and Conditions & Subscription Policies -->
@@ -6526,10 +6676,26 @@
             <span id="sub-modal-active-plan-badge" class="badge-gold" style="font-size: 0.74rem; font-weight: 800;">4 Lessons Package</span>
           </div>
           <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
-            <button type="button" class="btn btn-sm sub-modal-plan-btn" id="modal-plan-btn-trial" onclick="StudentSub.switchPlanInModal('trial')">Free Trial (1 Lesson - $0)</button>
+            <button type="button" class="btn btn-sm sub-modal-plan-btn" id="modal-plan-btn-trial" onclick="StudentSub.switchPlanInModal('trial')">Trial Lesson (25m / 50m)</button>
             <button type="button" class="btn btn-sm sub-modal-plan-btn" id="modal-plan-btn-4" onclick="StudentSub.switchPlanInModal('4_lessons')">4 Lessons Package</button>
             <button type="button" class="btn btn-sm sub-modal-plan-btn" id="modal-plan-btn-8" onclick="StudentSub.switchPlanInModal('8_lessons')">8 Lessons Package</button>
             <button type="button" class="btn btn-sm sub-modal-plan-btn" id="modal-plan-btn-12" onclick="StudentSub.switchPlanInModal('12_lessons')">12 Lessons Package</button>
+            <button type="button" class="btn btn-sm sub-modal-plan-btn" id="modal-plan-btn-16" onclick="StudentSub.switchPlanInModal('16_lessons')">16 Lessons Package</button>
+            <button type="button" class="btn btn-sm sub-modal-plan-btn" id="modal-plan-btn-20" onclick="StudentSub.switchPlanInModal('20_lessons')">20 Lessons Package ★ Suggested</button>
+          </div>
+
+          <!-- Trial Session Duration Selector (25-Minute vs 50-Minute) -->
+          <div id="sub-trial-duration-box" style="display: none; margin-top: 0.85rem; padding-top: 0.75rem; border-top: 1px dashed rgba(198, 138, 40, 0.35);">
+            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.65rem;">
+              <div>
+                <div style="font-size: 0.82rem; font-weight: 800; color: var(--charcoal-900);">Choose Trial Class Duration:</div>
+                <div style="font-size: 0.74rem; color: var(--text-secondary);">Company commission for trial sessions is <strong>50% of the tutor's rate</strong>.</div>
+              </div>
+              <div style="display: inline-flex; gap: 0.45rem; align-items: center;">
+                <button type="button" class="btn btn-sm" id="btn-trial-dur-25" onclick="StudentSub.setTrialDuration(25)" style="font-size: 0.78rem; padding: 0.35rem 0.8rem; border-radius: 999px; font-weight: 700;">⏱️ 25-Minute Trial</button>
+                <button type="button" class="btn btn-sm" id="btn-trial-dur-50" onclick="StudentSub.setTrialDuration(50)" style="font-size: 0.78rem; padding: 0.35rem 0.8rem; border-radius: 999px; font-weight: 700;">⏱️ 50-Minute Trial</button>
+              </div>
+            </div>
           </div>
         </div>
 

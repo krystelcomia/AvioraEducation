@@ -421,7 +421,7 @@ function initSchema() {
     CREATE TABLE IF NOT EXISTS vouchers (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       code TEXT UNIQUE NOT NULL,
-      discount_percent REAL NOT NULL DEFAULT 5.0,
+      discount_percent REAL NOT NULL DEFAULT 0,
       description TEXT,
       is_active INTEGER DEFAULT 1,
       max_uses INTEGER,
@@ -829,7 +829,7 @@ function initSchema() {
     console.warn('Wallet validity migration notice:', e.message);
   }
 
-  // Ensure voucher columns on student_subscriptions and seed official 5% voucher codes
+  // Ensure voucher columns on student_subscriptions and seed multi-tier voucher codes
   try {
     const subCols = db.prepare("PRAGMA table_info(student_subscriptions)").all();
     const subVoucherCols = [
@@ -843,14 +843,21 @@ function initSchema() {
         db.prepare(`ALTER TABLE student_subscriptions ADD COLUMN ${colName} ${colType}`).run();
       }
     }
-    db.prepare(`
+    const seedVouchers = [
+      ['AVIORA5', 5.0, 'Official Aviora 5% Discount Voucher'],
+      ['WELCOME5', 5.0, 'Welcome 5% Discount on Lesson Setup'],
+      ['AVIORA10', 10.0, 'Official Aviora 10% Discount Voucher'],
+      ['SCHOLAR10', 10.0, 'Scholar 10% Package Discount Voucher'],
+      ['AVIORA15', 15.0, 'Official Aviora 15% Discount Voucher'],
+      ['AVIORA20', 20.0, 'Official Aviora 20% Discount Voucher']
+    ];
+    const insertVoucher = db.prepare(`
       INSERT OR IGNORE INTO vouchers (code, discount_percent, description, is_active)
-      VALUES ('AVIORA5', 5.0, 'Official Aviora 5% Package Discount Voucher', 1)
-    `).run();
-    db.prepare(`
-      INSERT OR IGNORE INTO vouchers (code, discount_percent, description, is_active)
-      VALUES ('WELCOME5', 5.0, 'Welcome 5% Discount on Lesson Setup', 1)
-    `).run();
+      VALUES (?, ?, ?, 1)
+    `);
+    for (const [vCode, vPct, vDesc] of seedVouchers) {
+      insertVoucher.run(vCode, vPct, vDesc);
+    }
   } catch (e) {
     console.warn('Voucher migration notice:', e.message);
   }

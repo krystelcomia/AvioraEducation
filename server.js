@@ -5592,18 +5592,23 @@ app.get('/api/student/subscription', authenticateToken, requireRole('student'), 
 function lookupValidVoucher(rawCode) {
   const clean = String(rawCode || '').trim();
   if (!clean) return null;
-  return db.prepare(`
+  const row = db.prepare(`
     SELECT id, code, discount_percent, description
     FROM vouchers
     WHERE UPPER(code) = UPPER(?)
       AND is_active = 1
+      AND COALESCE(discount_percent, 0) > 0
       AND (expires_at IS NULL OR expires_at > CURRENT_TIMESTAMP)
       AND (max_uses IS NULL OR COALESCE(used_count, 0) < max_uses)
     LIMIT 1
-  `).get(clean) || null;
+  `).get(clean);
+  if (!row) return null;
+  const pct = Math.max(0, Math.min(100, Number(row.discount_percent) || 0));
+  if (pct <= 0) return null;
+  return { ...row, discount_percent: pct };
 }
 
-// Validate Voucher Code for 5% Discount on Subscription / Lesson Setup Total
+// Validate Voucher Code (discount rate determined dynamically from the entered code)
 app.post('/api/student/vouchers/validate', authenticateToken, requireRole('student'), (req, res) => {
   try {
     const cleanCode = String(req.body?.code || '').trim();
@@ -5614,11 +5619,12 @@ app.post('/api/student/vouchers/validate', authenticateToken, requireRole('stude
     if (!voucher) {
       return res.status(404).json({ valid: false, error: 'Incorrect or expired voucher code. No discount applied.' });
     }
+    const pct = Math.max(0, Math.min(100, Number(voucher.discount_percent) || 0));
     res.json({
       valid: true,
       code: voucher.code,
-      discount_percent: Number(voucher.discount_percent) || 5.0,
-      description: voucher.description || '5% Discount Voucher'
+      discount_percent: pct,
+      description: voucher.description || `${pct}% Discount Voucher`
     });
   } catch (error) {
     console.error('Validate voucher error:', error);
@@ -5786,7 +5792,7 @@ app.post('/api/student/subscription/purchase', authenticateToken, requireRole('s
       }
 
       const subtotalCalculatedPrice = Math.round(totalCalculatedPrice * 100) / 100;
-      const discountPercent = appliedVoucher ? (Number(appliedVoucher.discount_percent) || 5.0) : 0;
+      const discountPercent = appliedVoucher ? Math.max(0, Math.min(100, Number(appliedVoucher.discount_percent) || 0)) : 0;
       const discountAmount = appliedVoucher
         ? Math.round((subtotalCalculatedPrice * (discountPercent / 100)) * 100) / 100
         : 0;

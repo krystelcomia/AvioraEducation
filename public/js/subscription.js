@@ -1591,11 +1591,12 @@ const StudentSub = {
       }
 
       const res = await API.validateVoucher(rawCode);
-      if (res && res.valid) {
+      const pct = res && res.valid ? Math.max(0, Math.min(100, Number(res.discount_percent) || 0)) : 0;
+      if (res && res.valid && pct > 0) {
         this.appliedVoucher = {
           code: res.code,
-          discount_percent: Number(res.discount_percent) || 5.0,
-          description: res.description || '5% Discount Voucher'
+          discount_percent: pct,
+          description: res.description || `${pct}% Discount Voucher`
         };
         if (input) {
           input.value = res.code;
@@ -1682,7 +1683,7 @@ const StudentSub = {
     const planConfig = this.getPlanConfig(this.activePackageKey);
     const totalCount = this.selectedLessons.length;
     const subtotalCost = Math.round(this.selectedLessons.reduce((sum, l) => sum + (Number(l.hourly_rate) || 0), 0) * 100) / 100;
-    const discountPercent = this.appliedVoucher ? (Number(this.appliedVoucher.discount_percent) || 5.0) : 0;
+    const discountPercent = this.appliedVoucher ? Math.max(0, Math.min(100, Number(this.appliedVoucher.discount_percent) || 0)) : 0;
     const discountAmount = this.appliedVoucher
       ? Math.round((subtotalCost * (discountPercent / 100)) * 100) / 100
       : 0;
@@ -1828,7 +1829,7 @@ const StudentSub = {
     const notesInput = document.getElementById('sub-enroll-notes');
     const notes = notesInput ? notesInput.value.trim() : '';
     const subtotalCost = Math.round(this.selectedLessons.reduce((sum, l) => sum + (Number(l.hourly_rate) || 0), 0) * 100) / 100;
-    const discountPercent = this.appliedVoucher ? (Number(this.appliedVoucher.discount_percent) || 5.0) : 0;
+    const discountPercent = this.appliedVoucher ? Math.max(0, Math.min(100, Number(this.appliedVoucher.discount_percent) || 0)) : 0;
     const discountAmount = this.appliedVoucher
       ? Math.round((subtotalCost * (discountPercent / 100)) * 100) / 100
       : 0;

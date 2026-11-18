@@ -6924,22 +6924,6 @@
           <textarea id="sub-enroll-notes" class="form-control" rows="2" placeholder="e.g. Diagnostic assessment on kinematics, calculus, problem solving, or revision..."></textarea>
         </div>
 
-        <!-- Voucher Code (End of Setup Process — 5% Discount on Total) -->
-        <div class="sub-voucher-box" style="margin-bottom: 1.2rem; background: #FFFFFF; border: 1.5px dashed rgba(198, 138, 40, 0.4); border-radius: var(--radius-md); padding: 0.95rem 1.15rem;">
-          <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; margin-bottom: 0.45rem; flex-wrap: wrap;">
-            <label class="form-label" for="sub-voucher-code-input" style="font-weight: 700; color: var(--charcoal-900); margin: 0;">
-              Voucher Code <span style="font-size: 0.78rem; font-weight: 500; color: var(--charcoal-600);">(Optional — 5% discount on total)</span>
-            </label>
-            <span id="sub-voucher-badge" class="badge-gold" style="display: none; font-size: 0.72rem; background: rgba(16, 185, 129, 0.14); color: #065F46; border: 1px solid rgba(16, 185, 129, 0.35);">5% Discount Applied</span>
-          </div>
-          <div style="display: flex; gap: 0.5rem; align-items: stretch;">
-            <input type="text" id="sub-voucher-code-input" class="form-control" placeholder="Enter voucher code (e.g. AVIORA5)" style="flex: 1; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em;" oninput="StudentSub.onVoucherInputChanged()" onkeydown="if(event.key==='Enter'){event.preventDefault();StudentSub.applyVoucherCode();}" />
-            <button type="button" class="btn btn-outline-gold btn-sm" id="btn-apply-voucher" onclick="StudentSub.applyVoucherCode()" style="white-space: nowrap; font-weight: 700; padding: 0.45rem 1rem;">Apply Code</button>
-            <button type="button" class="btn btn-secondary btn-sm" id="btn-remove-voucher" onclick="StudentSub.removeVoucherCode()" style="display: none; white-space: nowrap; font-weight: 700; padding: 0.45rem 0.75rem;">Remove</button>
-          </div>
-          <div id="sub-voucher-status-msg" style="font-size: 0.78rem; margin-top: 0.45rem; display: none;"></div>
-        </div>
-
         <!-- Order Summary & Dynamic Rate Breakdown Box -->
         <div class="payment-summary-box" style="margin-bottom: 1.25rem; background: #FAF7F2; border: 1.5px solid rgba(198, 138, 40, 0.25); border-radius: var(--radius-md); padding: 1.15rem;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.65rem;">
@@ -6947,9 +6931,9 @@
             <span style="font-size: 0.75rem; color: var(--gold-700); font-weight: 600;">Based on Teacher Rates</span>
           </div>
 
-          <!-- Itemized 4-Lesson Breakdown -->
+          <!-- Itemized Lesson Breakdown -->
           <div id="sub-lessons-breakdown-list" style="margin-bottom: 0.75rem;">
-            <!-- Populated dynamically with 4 lesson line items -->
+            <!-- Populated dynamically with lesson line items -->
           </div>
 
           <div class="payment-summary-row" style="display: flex; justify-content: space-between; font-size: 0.84rem; margin-bottom: 0.35rem; padding-top: 0.5rem; border-top: 1px dashed rgba(0,0,0,0.1);">
@@ -6961,7 +6945,7 @@
             <strong id="sub-summary-subtotal-text">$0.00</strong>
           </div>
           <div id="sub-summary-discount-row" class="payment-summary-row" style="display: none; justify-content: space-between; font-size: 0.86rem; margin-bottom: 0.35rem; color: #059669;">
-            <span id="sub-summary-discount-label">Voucher Discount (5%):</span>
+            <span id="sub-summary-discount-label">Voucher Discount:</span>
             <strong id="sub-summary-discount-text">-$0.00</strong>
           </div>
           <div class="payment-summary-row" style="display: flex; justify-content: space-between; font-size: 1.05rem; padding-top: 0.65rem; margin-top: 0.45rem; border-top: 1.5px solid rgba(0,0,0,0.12); align-items: baseline;">
@@ -6970,6 +6954,22 @@
               <div id="sub-summary-calc-formula" style="font-size: 0.74rem; color: var(--charcoal-600); font-weight: 500; margin-top: 0.1rem;">Visible once all 4 lessons are scheduled</div>
             </div>
             <strong id="sub-summary-amount-text" style="color: #D97706; font-size: 0.98rem; font-family: var(--font-heading);">Pending Setup (0/4)</strong>
+          </div>
+
+          <!-- Voucher Code (Placed directly below Total Amount so it sits right beneath the total) -->
+          <div class="sub-voucher-box" style="margin-top: 0.95rem; background: #FFFFFF; border: 1.5px dashed rgba(198, 138, 40, 0.4); border-radius: var(--radius-md); padding: 0.85rem 1rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; margin-bottom: 0.45rem; flex-wrap: wrap;">
+              <label class="form-label" for="sub-voucher-code-input" style="font-weight: 700; color: var(--charcoal-900); margin: 0;">
+                Voucher Code <span style="font-size: 0.78rem; font-weight: 500; color: var(--charcoal-600);">(Optional — discount determined by code)</span>
+              </label>
+              <span id="sub-voucher-badge" class="badge-gold" style="display: none; font-size: 0.72rem; background: rgba(16, 185, 129, 0.14); color: #065F46; border: 1px solid rgba(16, 185, 129, 0.35);"></span>
+            </div>
+            <div style="display: flex; gap: 0.5rem; align-items: stretch;">
+              <input type="text" id="sub-voucher-code-input" class="form-control" placeholder="Enter voucher code" style="flex: 1; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em;" oninput="StudentSub.onVoucherInputChanged()" onkeydown="if(event.key==='Enter'){event.preventDefault();StudentSub.applyVoucherCode();}" />
+              <button type="button" class="btn btn-outline-gold btn-sm" id="btn-apply-voucher" onclick="StudentSub.applyVoucherCode()" style="white-space: nowrap; font-weight: 700; padding: 0.45rem 1rem;">Apply Code</button>
+              <button type="button" class="btn btn-secondary btn-sm" id="btn-remove-voucher" onclick="StudentSub.removeVoucherCode()" style="display: none; white-space: nowrap; font-weight: 700; padding: 0.45rem 0.75rem;">Remove</button>
+            </div>
+            <div id="sub-voucher-status-msg" style="font-size: 0.78rem; margin-top: 0.45rem; display: none;"></div>
           </div>
         </div>
 

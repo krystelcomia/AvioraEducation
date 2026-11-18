@@ -1533,7 +1533,7 @@ const Student = {
           if (typeof res.new_wallet_balance !== 'undefined' && typeof Auth !== 'undefined' && Auth.updateWalletBalance) {
             Auth.updateWalletBalance(res.new_wallet_balance, walletTutor, res.wallet_details || null);
             if (session && session.tutor_id && Auth.selectWalletEntity) {
-              Auth.selectWalletEntity(`tutor_${session.tutor_id}`, { tutorId: session.tutor_id, name: session.tutor_name });
+              Auth.selectWalletEntity(`tutor_${session.tutor_id}`);
             }
           } else if (typeof Auth !== 'undefined' && Auth.refreshWallet) {
             await Auth.refreshWallet();

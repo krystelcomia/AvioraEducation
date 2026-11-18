@@ -1411,19 +1411,26 @@ function reconcileStudentWallet(studentId) {
       }
     }
 
-    // Also include all active tutors and the student's buddy sessions so selecting ANY tutor or Aviora Buddy shows its associated balance
-    const allActiveTutors = db.prepare(`
-      SELECT u.id as user_id, tp.id as profile_id, u.name, u.avatar_url, tp.headline, tp.hourly_rate
-      FROM tutor_profiles tp
-      JOIN users u ON tp.user_id = u.id
-      WHERE tp.is_active = 1
+    // Include ONLY tutors who have already been booked by this student (never unbooked tutors)
+    const bookedTutors = db.prepare(`
+      SELECT DISTINCT
+        u.id as user_id,
+        tp.id as profile_id,
+        u.name,
+        u.avatar_url,
+        tp.headline,
+        tp.hourly_rate
+      FROM tutoring_requests tr
+      JOIN users u ON tr.tutor_id = u.id
+      LEFT JOIN tutor_profiles tp ON tp.user_id = u.id
+      WHERE tr.student_id = ?
       ORDER BY u.name ASC
-    `).all().map(t => {
+    `).all(studentId).map(t => {
       const cEntry = tutorCreditsMap.get(t.user_id);
       return {
         key: `tutor_${t.user_id}`,
         tutor_id: t.user_id,
-        tutor_profile_id: t.profile_id,
+        tutor_profile_id: t.profile_id || t.user_id,
         name: t.name,
         avatar_url: t.avatar_url,
         headline: t.headline,
@@ -1431,6 +1438,21 @@ function reconcileStudentWallet(studentId) {
         cancellations_count: cEntry ? cEntry.cancellations_count : 0
       };
     });
+
+    for (const tc of tutorCreditsList) {
+      if (!bookedTutors.some(bt => bt.tutor_id === tc.tutor_id)) {
+        bookedTutors.push({
+          key: tc.key,
+          tutor_id: tc.tutor_id,
+          tutor_profile_id: tc.tutor_profile_id || tc.tutor_id,
+          name: tc.name,
+          avatar_url: tc.avatar_url,
+          headline: tc.headline,
+          balance: tc.balance,
+          cancellations_count: tc.cancellations_count
+        });
+      }
+    }
 
     const studentBuddySessions = db.prepare(`
       SELECT bs.id, bs.session_code, bs.subject, bs.status, bs.scheduled_date, bs.scheduled_time,
@@ -1463,7 +1485,7 @@ function reconcileStudentWallet(studentId) {
       tutor_credits: tutorCreditsList,
       buddy_credits: buddyCreditsList,
       cancellations: allCancellations,
-      all_tutors: allActiveTutors,
+      booked_tutors: bookedTutors,
       all_buddy_sessions: studentBuddySessions,
       withdrawable: false
     };
@@ -1478,7 +1500,7 @@ function reconcileStudentWallet(studentId) {
       tutor_credits: [],
       buddy_credits: [],
       cancellations: [],
-      all_tutors: [],
+      booked_tutors: [],
       all_buddy_sessions: [],
       withdrawable: false
     };
@@ -4647,7 +4669,7 @@ app.get('/api/student/wallet', authenticateToken, requireRole('student'), (req, 
       tutor_credits: walletData.tutor_credits,
       buddy_credits: walletData.buddy_credits,
       cancellations: walletData.cancellations,
-      all_tutors: walletData.all_tutors,
+      booked_tutors: walletData.booked_tutors,
       all_buddy_sessions: walletData.all_buddy_sessions,
       currency: 'USD'
     });

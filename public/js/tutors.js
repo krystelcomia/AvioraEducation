@@ -1378,9 +1378,11 @@ const Tutors = {
       StudentSub.selectedTutor = tutor;
     }
 
-    if (tutor && typeof Auth !== 'undefined' && Auth.selectWalletEntity) {
+    if (tutor && typeof Auth !== 'undefined' && Auth.selectWalletEntity && Auth.isTutorBookedInWallet) {
       const uid = tutor.user_id || tutor.id;
-      Auth.selectWalletEntity(`tutor_${uid}`, { tutorId: uid, profileId: tutor.id, name: tutor.name });
+      if (Auth.isTutorBookedInWallet(uid)) {
+        Auth.selectWalletEntity(`tutor_${uid}`);
+      }
     }
 
     // 2. Lead to the subscription plan
@@ -1854,9 +1856,11 @@ const Tutors = {
       : ((Auth.currentUser && parseFloat(Auth.currentUser.wallet_balance)) || 0);
     const totalWalletBal = (Auth.currentUser && parseFloat(Auth.currentUser.wallet_balance)) || 0;
 
-    if (this.selectedTutor && typeof Auth !== 'undefined' && Auth.selectWalletEntity) {
+    if (this.selectedTutor && typeof Auth !== 'undefined' && Auth.selectWalletEntity && Auth.isTutorBookedInWallet) {
       const uid = this.selectedTutor.user_id || this.selectedTutor.id;
-      Auth.selectWalletEntity(`tutor_${uid}`, { tutorId: uid, profileId: this.selectedTutor.id, name: this.selectedTutor.name });
+      if (Auth.isTutorBookedInWallet(uid)) {
+        Auth.selectWalletEntity(`tutor_${uid}`);
+      }
     }
 
     if (walletBalLabel) walletBalLabel.textContent = `${tutorWalletBal.toFixed(2)}`;

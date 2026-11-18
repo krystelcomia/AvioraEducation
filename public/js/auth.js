@@ -185,6 +185,9 @@ const Auth = {
         }
       }
       if (data.user && data.user.role === 'student') {
+        if (data.wallet_details) {
+          this.walletDetails = data.wallet_details;
+        }
         const storedWallet = this.getStoredWallet(data.user.id);
         if (storedWallet && (parseFloat(data.user.wallet_balance) || 0) < storedWallet.balance) {
           data.user.wallet_balance = storedWallet.balance;
@@ -1849,10 +1852,22 @@ const Auth = {
     return parseFloat(d.buddy_balance) || 0;
   },
 
+  isTutorBookedInWallet(tutorIdOrProfileId) {
+    if (!tutorIdOrProfileId) return false;
+    const d = this.walletDetails;
+    if (!d) return false;
+    const booked = Array.isArray(d.booked_tutors) ? d.booked_tutors : [];
+    const credits = Array.isArray(d.tutor_credits) ? d.tutor_credits : [];
+    return booked.some(t => t.tutor_id == tutorIdOrProfileId || t.tutor_profile_id == tutorIdOrProfileId) ||
+           credits.some(tc => tc.tutor_id == tutorIdOrProfileId || tc.tutor_profile_id == tutorIdOrProfileId);
+  },
+
   setWalletCategoryFilter(cat) {
     this.selectedWalletCategory = cat || 'all';
     if (cat === 'tutor') {
-      const firstTutorCredit = (this.walletDetails?.tutor_credits || []).find(t => t.balance > 0) || (this.walletDetails?.tutor_credits || [])[0];
+      const firstTutorCredit = (this.walletDetails?.tutor_credits || []).find(t => t.balance > 0)
+        || (this.walletDetails?.booked_tutors || [])[0]
+        || (this.walletDetails?.tutor_credits || [])[0];
       this.selectedWalletEntity = firstTutorCredit ? firstTutorCredit.key : 'category_tutor';
     } else if (cat === 'buddy') {
       this.selectedWalletEntity = 'buddy_all';
@@ -1862,12 +1877,15 @@ const Auth = {
     this.renderCategorizedWalletUI();
   },
 
-  selectWalletEntity(entityKey, customTutorMeta = null) {
+  selectWalletEntity(entityKey) {
     this.selectedWalletEntity = entityKey || 'all';
     if (String(entityKey).startsWith('tutor_')) {
-      this.selectedWalletCategory = 'tutor';
-      if (customTutorMeta) {
-        this._customSelectedTutorMeta = customTutorMeta;
+      const tid = Number(String(entityKey).replace('tutor_', ''));
+      if (!this.isTutorBookedInWallet(tid)) {
+        this.selectedWalletEntity = 'all';
+        this.selectedWalletCategory = 'all';
+      } else {
+        this.selectedWalletCategory = 'tutor';
       }
     } else if (String(entityKey).startsWith('buddy')) {
       this.selectedWalletCategory = 'buddy';
@@ -1985,11 +2003,11 @@ const Auth = {
     styleTab(tabTutor, this.selectedWalletCategory === 'tutor');
     styleTab(tabBuddy, this.selectedWalletCategory === 'buddy');
 
-    // Build Entity Selector options (Tutors & Aviora Buddy)
+    // Build Entity Selector options (Only Booked Tutors & Aviora Buddy)
     const selector = document.getElementById('wallet-entity-selector');
-    const allTutorsMap = new Map();
+    const bookedTutorsMap = new Map();
     tutorCredits.forEach(tc => {
-      allTutorsMap.set(Number(tc.tutor_id), {
+      bookedTutorsMap.set(Number(tc.tutor_id), {
         key: `tutor_${tc.tutor_id}`,
         tutor_id: Number(tc.tutor_id),
         tutor_profile_id: tc.tutor_profile_id || tc.tutor_id,
@@ -1997,11 +2015,11 @@ const Auth = {
         balance: parseFloat(tc.balance) || 0
       });
     });
-    if (Array.isArray(d.all_tutors)) {
-      d.all_tutors.forEach(t => {
+    if (Array.isArray(d.booked_tutors)) {
+      d.booked_tutors.forEach(t => {
         const uid = Number(t.tutor_id || t.user_id || t.id);
-        if (!allTutorsMap.has(uid)) {
-          allTutorsMap.set(uid, {
+        if (!bookedTutorsMap.has(uid)) {
+          bookedTutorsMap.set(uid, {
             key: `tutor_${uid}`,
             tutor_id: uid,
             tutor_profile_id: t.tutor_profile_id || t.profile_id || uid,
@@ -2011,32 +2029,29 @@ const Auth = {
         }
       });
     }
-    if (this._customSelectedTutorMeta && this._customSelectedTutorMeta.tutorId) {
-      const uid = Number(this._customSelectedTutorMeta.tutorId);
-      if (!allTutorsMap.has(uid)) {
-        allTutorsMap.set(uid, {
-          key: `tutor_${uid}`,
-          tutor_id: uid,
-          tutor_profile_id: this._customSelectedTutorMeta.profileId || uid,
-          name: this._customSelectedTutorMeta.name || 'Selected Educator',
-          balance: 0
-        });
+
+    const tutorOptionsList = Array.from(bookedTutorsMap.values()).sort((a, b) => (b.balance - a.balance) || a.name.localeCompare(b.name));
+    const buddySessionsList = Array.isArray(d.all_buddy_sessions) ? d.all_buddy_sessions : [];
+
+    // Ensure selectedWalletEntity remains valid (revert unbooked tutor selection to 'all')
+    if (String(this.selectedWalletEntity).startsWith('tutor_')) {
+      const selTid = Number(String(this.selectedWalletEntity).replace('tutor_', ''));
+      if (!bookedTutorsMap.has(selTid)) {
+        this.selectedWalletEntity = 'all';
+        if (this.selectedWalletCategory === 'tutor') this.selectedWalletCategory = 'all';
       }
     }
-
-    const tutorOptionsList = Array.from(allTutorsMap.values()).sort((a, b) => (b.balance - a.balance) || a.name.localeCompare(b.name));
-    const buddySessionsList = Array.isArray(d.all_buddy_sessions) ? d.all_buddy_sessions : [];
 
     if (selector) {
       selector.innerHTML = `
         <option value="all" ${this.selectedWalletEntity === 'all' ? 'selected' : ''}>All Credits — ${fmt(totalBal)}</option>
-        <optgroup label="🧑‍🏫 Tutor Lesson Credits (${fmt(tutorTotalBal)})">
+        <optgroup label="Tutor Lesson Credits (${fmt(tutorTotalBal)})">
           <option value="category_tutor" ${this.selectedWalletEntity === 'category_tutor' ? 'selected' : ''}>All Tutor Lesson Credits — ${fmt(tutorTotalBal)}</option>
           ${tutorOptionsList.map(t => `
             <option value="${t.key}" ${this.selectedWalletEntity === t.key ? 'selected' : ''}>Tutor: ${t.name} — ${fmt(t.balance)}</option>
           `).join('')}
         </optgroup>
-        <optgroup label="🤝 Aviora Buddy Credits (${fmt(buddyTotalBal)})">
+        <optgroup label="Aviora Buddy Credits (${fmt(buddyTotalBal)})">
           <option value="buddy_all" ${this.selectedWalletEntity === 'buddy_all' ? 'selected' : ''}>Aviora Buddy (All Buddy Credits) — ${fmt(buddyTotalBal)}</option>
           ${buddyCredits.map(b => `
             <option value="${b.key}" ${this.selectedWalletEntity === b.key ? 'selected' : ''}>Aviora Buddy (${b.session_code} • ${b.partner_name}) — ${fmt(b.balance)}</option>
@@ -2067,7 +2082,7 @@ const Auth = {
     if (String(this.selectedWalletEntity).startsWith('tutor_')) {
       activeTargetType = 'tutor';
       const tid = Number(String(this.selectedWalletEntity).replace('tutor_', ''));
-      activeTutorObj = allTutorsMap.get(tid) || tutorCredits.find(tc => tc.tutor_id == tid) || { tutor_id: tid, name: 'Selected Tutor', balance: 0 };
+      activeTutorObj = bookedTutorsMap.get(tid) || tutorCredits.find(tc => tc.tutor_id == tid) || { tutor_id: tid, name: 'Selected Tutor', balance: 0 };
       displayedBalance = parseFloat(activeTutorObj.balance) || 0;
       if (rowLabel) rowLabel.textContent = `Tutor Credit (${activeTutorObj.name}):`;
     } else if (this.selectedWalletEntity === 'category_tutor') {
@@ -2138,7 +2153,7 @@ const Auth = {
       }
     }
 
-    // Render Categorized Credits List (Tutor Lesson Credits & Aviora Buddy Credits)
+    // Render Categorized Credits List (Booked Tutor Lesson Credits & Aviora Buddy Credits)
     const catContainer = document.getElementById('wallet-categorized-credits-container');
     if (catContainer) {
       const showTutorSection = this.selectedWalletCategory === 'all' || this.selectedWalletCategory === 'tutor';
@@ -2146,7 +2161,7 @@ const Auth = {
 
       const tutorItemsToRender = (String(this.selectedWalletEntity).startsWith('tutor_') && activeTutorObj)
         ? [activeTutorObj]
-        : (tutorCredits.length > 0 ? tutorCredits : tutorOptionsList.slice(0, 2));
+        : tutorOptionsList;
 
       const buddyItemsToRender = buddyCredits.length > 0
         ? buddyCredits
@@ -2166,21 +2181,29 @@ const Auth = {
           </div>
           ${showTutorSection ? `
             <div style="margin-bottom: ${showBuddySection ? '0.45rem' : '0'};">
-              <div style="font-size: 0.7rem; font-weight: 700; color: var(--gold-800); margin-bottom: 0.25rem;">🧑‍🏫 Tutor Lesson Credits (${fmt(tutorTotalBal)})</div>
-              ${tutorItemsToRender.map(tc => {
-                const isSel = this.selectedWalletEntity === tc.key;
-                return `
-                  <div onclick="Auth.selectWalletEntity('${tc.key}')" style="display: flex; justify-content: space-between; align-items: center; padding: 0.35rem 0.5rem; border-radius: 6px; margin-bottom: 0.2rem; cursor: pointer; background: ${isSel ? 'rgba(198, 138, 40, 0.16)' : '#FFFFFF'}; border: 1px solid ${isSel ? 'var(--gold-500)' : 'rgba(0,0,0,0.07)'};">
-                    <span style="font-size: 0.76rem; font-weight: 700; color: var(--charcoal-900);">${tc.name}</span>
-                    <strong style="font-size: 0.78rem; color: ${(tc.balance || 0) > 0 ? 'var(--gold-700)' : 'var(--charcoal-500)'};">${fmt(tc.balance || 0)}</strong>
-                  </div>
-                `;
-              }).join('')}
+              <div style="font-size: 0.7rem; font-weight: 700; color: var(--gold-800); margin-bottom: 0.25rem;">Tutor Lesson Credits (${fmt(tutorTotalBal)})</div>
+              ${tutorItemsToRender.length > 0 ? `
+                <div style="max-height: 115px; overflow-y: auto;">
+                  ${tutorItemsToRender.map(tc => {
+                    const isSel = this.selectedWalletEntity === tc.key;
+                    return `
+                      <div onclick="Auth.selectWalletEntity('${tc.key}')" style="display: flex; justify-content: space-between; align-items: center; padding: 0.35rem 0.5rem; border-radius: 6px; margin-bottom: 0.2rem; cursor: pointer; background: ${isSel ? 'rgba(198, 138, 40, 0.16)' : '#FFFFFF'}; border: 1px solid ${isSel ? 'var(--gold-500)' : 'rgba(0,0,0,0.07)'};">
+                        <span style="font-size: 0.76rem; font-weight: 700; color: var(--charcoal-900);">${tc.name}</span>
+                        <strong style="font-size: 0.78rem; color: ${(tc.balance || 0) > 0 ? 'var(--gold-700)' : 'var(--charcoal-500)'};">${fmt(tc.balance || 0)}</strong>
+                      </div>
+                    `;
+                  }).join('')}
+                </div>
+              ` : `
+                <div style="font-size: 0.73rem; color: var(--charcoal-500); padding: 0.35rem 0.5rem; background: #FFFFFF; border-radius: 6px; border: 1px dashed rgba(0,0,0,0.1);">
+                  No booked tutors yet.
+                </div>
+              `}
             </div>
           ` : ''}
           ${showBuddySection ? `
             <div>
-              <div style="font-size: 0.7rem; font-weight: 700; color: #065F46; margin-bottom: 0.25rem;">🤝 Aviora Buddy Credits (${fmt(buddyTotalBal)})</div>
+              <div style="font-size: 0.7rem; font-weight: 700; color: #065F46; margin-bottom: 0.25rem;">Aviora Buddy Credits (${fmt(buddyTotalBal)})</div>
               ${buddyItemsToRender.map(bc => {
                 const isSel = this.selectedWalletEntity === bc.key || (this.selectedWalletEntity === 'buddy_all' && bc.key === 'buddy_all');
                 return `
@@ -2213,16 +2236,16 @@ const Auth = {
       if (filteredCancels.length > 0) {
         cancelContainer.innerHTML = `
           <div style="border: 1px solid rgba(0,0,0,0.08); border-radius: 8px; padding: 0.55rem 0.65rem; background: #FFFFFF;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.4rem; margin-bottom: 0.35rem;">
               <span style="font-size: 0.68rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; color: var(--charcoal-700);">Cancellations &amp; Refund Ledger</span>
-              <span style="font-size: 0.64rem; font-weight: 800; color: #B45309; background: rgba(245, 158, 11, 0.14); padding: 0.1rem 0.4rem; border-radius: 999px;">Cannot Be Withdrawn</span>
+              <span style="font-size: 0.64rem; font-weight: 800; color: #B45309; background: rgba(245, 158, 11, 0.14); padding: 0.15rem 0.45rem; border-radius: 999px; white-space: nowrap; flex-shrink: 0;">Cannot Be Withdrawn</span>
             </div>
             <div style="display: flex; flex-direction: column; gap: 0.35rem; max-height: 120px; overflow-y: auto;">
               ${filteredCancels.map(c => `
                 <div style="padding: 0.35rem 0.45rem; border-radius: 6px; background: rgba(250, 247, 242, 0.7); border-left: 3px solid ${c.category === 'buddy' ? '#10B981' : 'var(--gold-500)'}; font-size: 0.72rem;">
                   <div style="display: flex; justify-content: space-between; align-items: center; font-weight: 700; color: var(--charcoal-900);">
                     <span>${c.title}</span>
-                    <span style="color: ${c.category === 'buddy' ? '#059669' : 'var(--gold-700)'}; font-weight: 800;">+${fmt(c.amount)}</span>
+                    <span style="color: ${c.category === 'buddy' ? '#059669' : 'var(--gold-700)'}; font-weight: 800; white-space: nowrap; flex-shrink: 0; margin-left: 0.35rem;">+${fmt(c.amount)}</span>
                   </div>
                   <div style="font-size: 0.67rem; color: var(--charcoal-600); margin-top: 0.1rem;">${c.reason}</div>
                 </div>
@@ -2484,11 +2507,7 @@ const Auth = {
                 <div id="wallet-categorized-credits-container" style="margin-bottom: 0.65rem;"></div>
 
                 <!-- Cancellations & Non-Withdrawable Refund History -->
-                <div id="wallet-cancellations-container" style="margin-bottom: 0.65rem;"></div>
-
-                <p class="wallet-dropdown-note" id="wallet-dropdown-note" style="font-size: 0.75rem; line-height: 1.45; margin: 0;">
-                  If you cancel a lesson or Aviora Buddy session (at least 3 hours before start time), or if your peer partner does not attend an Aviora Buddy session, the cost is refunded to your wallet by category. While cancellations and balances are reflected here, these funds <strong>cannot be withdrawn</strong>; they can only be used to book with the respective tutor or Aviora Buddy.
-                </p>
+                <div id="wallet-cancellations-container" style="margin-bottom: 0.25rem;"></div>
               </div>
               <div class="wallet-dropdown-footer">
                 <button type="button" class="btn btn-outline-gold btn-sm" id="wallet-book-btn" style="width: 100%; text-align: center; justify-content: center; font-weight: 700; opacity: 0.55; cursor: not-allowed;" disabled onclick="Auth.bookWithWalletTutor()">

@@ -5488,3 +5488,96 @@
   border-color: #EF4444;
   color: #DC2626;
 }
+
+/* =========================================
+   REAL-TIME GMAIL NOTIFICATION SYNC BAR & PILL
+   ========================================= */
+.notif-gmail-sync-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.45rem 1.1rem;
+  background: rgba(198, 138, 40, 0.07);
+  border-bottom: 1px solid rgba(198, 138, 40, 0.16);
+  font-size: 0.72rem;
+}
+
+.notif-gmail-sync-left {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+  color: var(--charcoal-700, #2D3748);
+  font-weight: 600;
+}
+
+.notif-gmail-icon {
+  color: #D93025;
+  flex-shrink: 0;
+}
+
+.notif-gmail-address {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.notif-gmail-live-pill {
+  flex-shrink: 0;
+  font-size: 0.64rem;
+  font-weight: 700;
+  color: #059669;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.28);
+  border-radius: 999px;
+  padding: 1px 7px;
+  letter-spacing: 0.2px;
+}
+
+.notif-item-meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-top: 5px;
+}
+
+.notif-item-meta-row .notif-item-time {
+  margin-top: 0;
+}
+
+.notif-item-gmail-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.64rem;
+  font-weight: 600;
+  color: var(--gold-800, #975A16);
+  background: rgba(198, 138, 40, 0.1);
+  border: 1px solid rgba(198, 138, 40, 0.22);
+  border-radius: 999px;
+  padding: 1px 6px;
+  white-space: nowrap;
+}
+
+[data-theme="dark"] .notif-gmail-sync-bar {
+  background: rgba(216, 170, 60, 0.1);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="dark"] .notif-gmail-sync-left {
+  color: #E2E8F0;
+}
+
+[data-theme="dark"] .notif-gmail-live-pill {
+  color: #34D399;
+  background: rgba(16, 185, 129, 0.18);
+  border-color: rgba(52, 211, 153, 0.35);
+}
+
+[data-theme="dark"] .notif-item-gmail-pill {
+  color: #FBBF24;
+  background: rgba(251, 191, 36, 0.14);
+  border-color: rgba(251, 191, 36, 0.3);
+}

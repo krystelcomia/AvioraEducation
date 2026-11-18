@@ -9,6 +9,7 @@ const NotificationsUI = {
   notifications: [],
   unreadCount: 0,
   preferences: null,
+  linkedGmail: '',
   realtimeTimer: null,
 
   getStoredReadIds(userId) {
@@ -29,6 +30,64 @@ const NotificationsUI = {
       set.add(Number(id));
       localStorage.setItem(`aviora_read_notifs_${user.id}`, JSON.stringify(Array.from(set)));
     } catch (e) {}
+  },
+
+  getStoredGmailDispatchedIds(userId) {
+    if (!userId) return new Set();
+    try {
+      const raw = localStorage.getItem(`aviora_gmail_dispatched_${userId}`);
+      return raw ? new Set(JSON.parse(raw)) : new Set();
+    } catch (e) {
+      return new Set();
+    }
+  },
+
+  saveGmailDispatchedId(userId, id) {
+    if (!userId || !id) return;
+    try {
+      const set = this.getStoredGmailDispatchedIds(userId);
+      set.add(Number(id));
+      localStorage.setItem(`aviora_gmail_dispatched_${userId}`, JSON.stringify(Array.from(set)));
+    } catch (e) {}
+  },
+
+  updateGmailBanner(email) {
+    const targetEmail = email || (typeof Auth !== 'undefined' && Auth.currentUser && Auth.currentUser.email) || '';
+    if (targetEmail) {
+      this.linkedGmail = targetEmail;
+    }
+    const addrEl = document.getElementById('notif-gmail-address');
+    if (addrEl && this.linkedGmail) {
+      addrEl.textContent = this.linkedGmail;
+    }
+  },
+
+  async syncNewNotificationsToGmail(notifications, linkedGmail, isInitialSeed = false) {
+    const user = (typeof Auth !== 'undefined' && Auth.currentUser) || null;
+    if (!user || !Array.isArray(notifications) || notifications.length === 0) return;
+
+    const dispatchedSet = this.getStoredGmailDispatchedIds(user.id);
+    const emailToUse = linkedGmail || user.email || '';
+
+    // On initial load, mark historical notifications (> 5 mins old) as already dispatched by server
+    const now = Date.now();
+    for (const notif of notifications) {
+      const nid = Number(notif.id);
+      if (!nid || dispatchedSet.has(nid)) continue;
+
+      let createdMs = now;
+      if (notif.created_at) {
+        const parsed = new Date(notif.created_at.endsWith('Z') ? notif.created_at : notif.created_at + 'Z').getTime();
+        if (!isNaN(parsed)) createdMs = parsed;
+      }
+      const isFresh = (now - createdMs) <= 5 * 60 * 1000;
+
+      this.saveGmailDispatchedId(user.id, nid);
+
+      if ((!isInitialSeed || isFresh) && typeof Auth !== 'undefined' && typeof Auth.sendEmailJSNotification === 'function') {
+        Auth.sendEmailJSNotification(notif, emailToUse).catch(() => {});
+      }
+    }
   },
 
   startRealtimePolling() {
@@ -68,6 +127,8 @@ const NotificationsUI = {
       const listChanged = prevIds !== newIds;
 
       this.notifications = newNotifs;
+      this.updateGmailBanner(res.linkedGmail);
+      this.syncNewNotificationsToGmail(newNotifs, res.linkedGmail, false);
       this.updateBadge(unreadCount);
 
       const dropdown = document.getElementById('nav-notif-dropdown');
@@ -184,6 +245,8 @@ const NotificationsUI = {
           return n;
         });
         this.preferences = res.preferences || null;
+        this.updateGmailBanner(res.linkedGmail);
+        this.syncNewNotificationsToGmail(this.notifications, res.linkedGmail, true);
         const unread = this.notifications.filter(n => Number(n.is_read) === 0).length;
         this.updateBadge(unread);
         this.renderList(this.notifications, res.preferences);
@@ -221,6 +284,7 @@ const NotificationsUI = {
       const isUnread = Number(notif.is_read) === 0;
       const timeStr = this.formatRelativeTime(notif.created_at);
       const safeLink = notif.link ? notif.link : '#';
+      const recipientEmail = notif.email_recipient || this.linkedGmail || ((typeof Auth !== 'undefined' && Auth.currentUser && Auth.currentUser.email) || '');
 
       return `
         <a href="${safeLink}" class="notif-item ${isUnread ? 'unread' : ''}" data-id="${notif.id}" onclick="NotificationsUI.handleItemClick(event, ${notif.id}, '${safeLink}')">
@@ -228,7 +292,15 @@ const NotificationsUI = {
           <div class="notif-item-details">
             <div class="notif-item-title">${this.escapeHtml(notif.title || 'Notification')}</div>
             <div class="notif-item-msg">${this.escapeHtml(notif.message || '')}</div>
-            <span class="notif-item-time">${timeStr}</span>
+            <div class="notif-item-meta-row">
+              <span class="notif-item-time">${timeStr}</span>
+              ${recipientEmail ? `
+                <span class="notif-item-gmail-pill" title="Delivered in real-time to ${this.escapeHtml(recipientEmail)}">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+                  Sent to Gmail
+                </span>
+              ` : ''}
+            </div>
           </div>
           ${isUnread ? `
             <button type="button" class="notif-item-read-btn" title="Mark as read" aria-label="Mark as read" onclick="event.preventDefault(); event.stopPropagation(); NotificationsUI.markSingleRead(${notif.id});">

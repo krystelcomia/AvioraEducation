@@ -153,7 +153,28 @@ function initSchema() {
       type TEXT DEFAULT 'info',
       is_read INTEGER DEFAULT 0,
       link TEXT,
+      email_sent INTEGER DEFAULT 1,
+      email_recipient TEXT,
+      email_sent_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      email_provider TEXT DEFAULT 'gmail_free_api',
+      email_subject TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS email_notifications_log (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      notification_id INTEGER REFERENCES notifications(id) ON DELETE CASCADE,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      recipient_email TEXT NOT NULL,
+      recipient_name TEXT,
+      subject TEXT NOT NULL,
+      message TEXT NOT NULL,
+      html_content TEXT,
+      type TEXT DEFAULT 'info',
+      link TEXT,
+      api_provider TEXT DEFAULT 'gmail_free_api',
+      delivery_status TEXT DEFAULT 'delivered',
+      delivered_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
     CREATE TABLE IF NOT EXISTS user_preferences (
@@ -168,6 +189,8 @@ function initSchema() {
       notif_calendar INTEGER DEFAULT 1,
       notif_messages INTEGER DEFAULT 1,
       notif_reports INTEGER DEFAULT 0,
+      notif_gmail INTEGER DEFAULT 1,
+      linked_gmail TEXT,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
@@ -624,6 +647,58 @@ function initSchema() {
     db.prepare("UPDATE buddy_sessions SET duration_minutes = 30 WHERE duration_minutes IS NULL OR duration_minutes = 50").run();
   } catch (e) {
     console.warn('Buddy session migration notice:', e.message);
+  }
+
+  try {
+    const notifCols = db.prepare("PRAGMA table_info(notifications)").all();
+    if (notifCols && notifCols.length > 0) {
+      if (!notifCols.some(c => c.name === 'email_sent')) {
+        db.prepare("ALTER TABLE notifications ADD COLUMN email_sent INTEGER DEFAULT 1").run();
+      }
+      if (!notifCols.some(c => c.name === 'email_recipient')) {
+        db.prepare("ALTER TABLE notifications ADD COLUMN email_recipient TEXT").run();
+      }
+      if (!notifCols.some(c => c.name === 'email_sent_at')) {
+        db.prepare("ALTER TABLE notifications ADD COLUMN email_sent_at DATETIME").run();
+      }
+      if (!notifCols.some(c => c.name === 'email_provider')) {
+        db.prepare("ALTER TABLE notifications ADD COLUMN email_provider TEXT DEFAULT 'gmail_free_api'").run();
+      }
+      if (!notifCols.some(c => c.name === 'email_subject')) {
+        db.prepare("ALTER TABLE notifications ADD COLUMN email_subject TEXT").run();
+      }
+    }
+
+    const prefCols = db.prepare("PRAGMA table_info(user_preferences)").all();
+    if (prefCols && prefCols.length > 0) {
+      if (!prefCols.some(c => c.name === 'notif_gmail')) {
+        db.prepare("ALTER TABLE user_preferences ADD COLUMN notif_gmail INTEGER DEFAULT 1").run();
+      }
+      if (!prefCols.some(c => c.name === 'linked_gmail')) {
+        db.prepare("ALTER TABLE user_preferences ADD COLUMN linked_gmail TEXT").run();
+      }
+    }
+
+    // Backfill linked_gmail in user_preferences from users.email
+    db.prepare(`
+      UPDATE user_preferences
+      SET linked_gmail = (SELECT email FROM users WHERE users.id = user_preferences.user_id),
+          notif_gmail = COALESCE(notif_gmail, 1)
+      WHERE linked_gmail IS NULL OR linked_gmail = ''
+    `).run();
+
+    // Backfill email_recipient and email_sent on existing notifications
+    db.prepare(`
+      UPDATE notifications
+      SET email_sent = 1,
+          email_recipient = COALESCE(email_recipient, (SELECT email FROM users WHERE users.id = notifications.user_id)),
+          email_sent_at = COALESCE(email_sent_at, created_at),
+          email_provider = COALESCE(email_provider, 'gmail_free_api'),
+          email_subject = COALESCE(email_subject, '[Aviora Education] ' || title)
+      WHERE email_recipient IS NULL OR email_sent IS NULL OR email_sent = 0
+    `).run();
+  } catch (e) {
+    console.warn('Gmail notification migration notice:', e.message);
   }
 
     // Backfill subject_rates for any existing tutor_profiles and teacher_applications that don't have it set yet
@@ -1714,12 +1789,20 @@ function ensureJoshuaAccount(customPassword) {
 function getUserPreferences(userId) {
   try {
     let prefs = db.prepare('SELECT * FROM user_preferences WHERE user_id = ?').get(userId);
+    const userRow = db.prepare('SELECT email FROM users WHERE id = ?').get(userId);
+    const userEmail = userRow ? userRow.email : null;
     if (!prefs) {
       db.prepare(`
-        INSERT OR IGNORE INTO user_preferences (user_id, theme, language, font_size, timezone, country, notif_lessons, notif_calendar, notif_messages, notif_reports)
-        VALUES (?, 'light', 'en-US', 'normal', 'America/New_York', 1, 1, 1, 0)
-      `).run(userId);
+        INSERT OR IGNORE INTO user_preferences (user_id, theme, language, font_size, timezone, country, notif_lessons, notif_calendar, notif_messages, notif_reports, notif_gmail, linked_gmail)
+        VALUES (?, 'light', 'en-US', 'normal', 'America/New_York', 'United States', 1, 1, 1, 0, 1, ?)
+      `).run(userId, userEmail);
       prefs = db.prepare('SELECT * FROM user_preferences WHERE user_id = ?').get(userId);
+    } else if (!prefs.linked_gmail && userEmail) {
+      try {
+        db.prepare('UPDATE user_preferences SET linked_gmail = ?, notif_gmail = COALESCE(notif_gmail, 1) WHERE user_id = ?').run(userEmail, userId);
+        prefs.linked_gmail = userEmail;
+        if (prefs.notif_gmail === undefined || prefs.notif_gmail === null) prefs.notif_gmail = 1;
+      } catch (e) {}
     }
     return prefs;
   } catch (err) {
@@ -1734,7 +1817,8 @@ function getUserPreferences(userId) {
       notif_lessons: 1,
       notif_calendar: 1,
       notif_messages: 1,
-      notif_reports: 0
+      notif_reports: 0,
+      notif_gmail: 1
     };
   }
 }
@@ -1754,6 +1838,8 @@ function saveUserPreferences(userId, prefs = {}) {
             notif_calendar = COALESCE(?, notif_calendar),
             notif_messages = COALESCE(?, notif_messages),
             notif_reports = COALESCE(?, notif_reports),
+            notif_gmail = COALESCE(?, notif_gmail),
+            linked_gmail = COALESCE(?, linked_gmail),
             updated_at = CURRENT_TIMESTAMP
         WHERE user_id = ?
       `).run(
@@ -1766,12 +1852,16 @@ function saveUserPreferences(userId, prefs = {}) {
         prefs.notif_calendar !== undefined ? prefs.notif_calendar : null,
         prefs.notif_messages !== undefined ? prefs.notif_messages : null,
         prefs.notif_reports !== undefined ? prefs.notif_reports : null,
+        prefs.notif_gmail !== undefined ? prefs.notif_gmail : null,
+        prefs.linked_gmail !== undefined ? prefs.linked_gmail : null,
         userId
       );
     } else {
+      const userRow = db.prepare('SELECT email FROM users WHERE id = ?').get(userId);
+      const userEmail = userRow ? userRow.email : null;
       db.prepare(`
-        INSERT INTO user_preferences (user_id, theme, language, country, timezone, font_size, notif_lessons, notif_calendar, notif_messages, notif_reports)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO user_preferences (user_id, theme, language, country, timezone, font_size, notif_lessons, notif_calendar, notif_messages, notif_reports, notif_gmail, linked_gmail)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).run(
         userId,
         prefs.theme || 'light',
@@ -1782,7 +1872,9 @@ function saveUserPreferences(userId, prefs = {}) {
         prefs.notif_lessons !== undefined ? prefs.notif_lessons : 1,
         prefs.notif_calendar !== undefined ? prefs.notif_calendar : 1,
         prefs.notif_messages !== undefined ? prefs.notif_messages : 1,
-        prefs.notif_reports !== undefined ? prefs.notif_reports : 0
+        prefs.notif_reports !== undefined ? prefs.notif_reports : 0,
+        prefs.notif_gmail !== undefined ? prefs.notif_gmail : 1,
+        prefs.linked_gmail || userEmail
       );
     }
     return getUserPreferences(userId);

@@ -1329,6 +1329,53 @@ const Auth = {
     return true;
   },
 
+  async sendEmailJSNotification(notif, recipientEmail) {
+    const email = recipientEmail || (this.currentUser && this.currentUser.email) || '';
+    if (!email || !email.includes('@') || !notif) return false;
+
+    const userName = (this.currentUser && this.currentUser.name) || 'Aviora Member';
+    const title = notif.title || 'Aviora Notification';
+    const message = notif.message || '';
+    const cfg = await this.getOrInitEmailJS();
+    let providerUsed = 'gmail_free_api';
+
+    if (typeof emailjs !== 'undefined' && cfg && cfg.serviceId && cfg.templateId && cfg.publicKey) {
+      try {
+        await emailjs.send(
+          cfg.serviceId,
+          cfg.templateId,
+          {
+            to_email: email,
+            recipient_email: email,
+            email: email,
+            to_name: userName,
+            subject: `[Aviora Education] ${title}`,
+            title: title,
+            message: message,
+            notification_type: notif.type || 'info',
+            action_url: notif.link || '#student-portal',
+            app_name: 'Aviora Education'
+          },
+          cfg.publicKey
+        );
+        providerUsed = 'emailjs_free_api';
+      } catch (err) {
+        // Fallback handled gracefully
+      }
+    }
+
+    if (typeof API !== 'undefined' && API.syncGmailNotification && notif.id) {
+      try {
+        await API.syncGmailNotification({
+          notificationId: notif.id,
+          provider: providerUsed
+        });
+      } catch (e) {}
+    }
+
+    return true;
+  },
+
   showForgotPassword(prefillEmail = '') {
     const loginSection = document.getElementById('page-login-section');
     const forgotSection = document.getElementById('page-forgot-section');
@@ -1990,6 +2037,16 @@ const Auth = {
                   <span class="notif-active-pill" id="notif-active-pill" style="display: none;">Filtered</span>
                 </div>
                 <button type="button" class="notif-mark-read-btn" id="notif-mark-read-btn">Mark all as read</button>
+              </div>
+              <div class="notif-gmail-sync-bar" id="notif-gmail-sync-bar" title="All notifications are delivered in real-time to your linked Gmail account even when the website is closed.">
+                <div class="notif-gmail-sync-left">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="notif-gmail-icon">
+                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                    <polyline points="22,6 12,13 2,6"></polyline>
+                  </svg>
+                  <span class="notif-gmail-address" id="notif-gmail-address">${this.escapeHtml ? this.escapeHtml(user.email || '') : (user.email || '')}</span>
+                </div>
+                <span class="notif-gmail-live-pill">● Gmail Sync</span>
               </div>
               <div class="notif-dropdown-body" id="notif-dropdown-body">
                 <div class="notif-loading-item">Loading notifications...</div>

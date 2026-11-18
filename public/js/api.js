@@ -212,6 +212,8 @@ const API = {
   getNotifications: () => apiRequest('/notifications'),
   markNotificationsRead: (id) => apiRequest('/notifications/mark-read', { method: 'POST', body: id ? { id } : {} }),
   markNotificationRead: (id) => apiRequest(`/notifications/${id}/read`, { method: 'POST' }),
+  syncGmailNotification: (body) => apiRequest('/notifications/sync-gmail', { method: 'POST', body }),
+  getGmailNotificationLogs: () => apiRequest('/notifications/email-logs'),
 
   // Virtual Room
   getRoomDetails: (id) => apiRequest(`/sessions/${id}/room`),

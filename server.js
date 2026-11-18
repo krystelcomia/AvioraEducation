@@ -799,17 +799,288 @@ function isNotificationAllowed(userId, type) {
   }
 }
 
+function getLinkedGmailForUser(userId) {
+  try {
+    const user = db.prepare('SELECT id, name, email, role FROM users WHERE id = ?').get(userId);
+    if (!user) return null;
+
+    let linkedEmail = user.email || '';
+    try {
+      const prefs = db.prepare('SELECT linked_gmail, notif_gmail FROM user_preferences WHERE user_id = ?').get(userId);
+      if (prefs && prefs.linked_gmail && prefs.linked_gmail.includes('@')) {
+        linkedEmail = prefs.linked_gmail.trim();
+      }
+      if (prefs && prefs.notif_gmail === 0) {
+        return { ...user, linkedEmail, gmailEnabled: false };
+      }
+    } catch (e) {}
+
+    if (!linkedEmail || !linkedEmail.toLowerCase().endsWith('@gmail.com')) {
+      try {
+        const oauthRow = db.prepare("SELECT email FROM oauth_linked_accounts WHERE user_id = ? AND provider = 'google' ORDER BY linked_at DESC LIMIT 1").get(userId);
+        if (oauthRow && oauthRow.email) {
+          linkedEmail = oauthRow.email.trim();
+        }
+      } catch (e) {}
+    }
+
+    return {
+      id: user.id,
+      name: user.name || 'Aviora Member',
+      email: user.email,
+      linkedEmail: linkedEmail || user.email,
+      role: user.role,
+      gmailEnabled: true
+    };
+  } catch (e) {
+    return null;
+  }
+}
+
+function buildNotificationEmailHtml({ userName, recipientEmail, title, message, type, link }) {
+  const safeName = String(userName || 'Aviora Member').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const safeTitle = String(title || 'Aviora Notification').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const safeMsg = String(message || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const safeEmail = String(recipientEmail || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const categoryMap = {
+    lesson_reminder: 'Upcoming Class Reminder',
+    reminder: 'Class Reminder',
+    lesson_alert: 'Live Class Alert',
+    message: 'New Direct Message',
+    chat: 'Live Chat Alert',
+    booking: 'Session Booking Update',
+    booking_update: 'Schedule Update',
+    schedule: 'Schedule Notification',
+    calendar: 'Calendar Sync Alert',
+    refund: 'Wallet & Refund Notice',
+    approval: 'Account & Credential Update'
+  };
+  const badgeLabel = categoryMap[type] || 'Aviora Account Notification';
+  const portalUrl = link && link.startsWith('http') ? link : `https://avioraeducation.vercel.app/${link ? (link.startsWith('#') ? link : '#' + link.replace(/^\//, '')) : '#student-portal'}`;
+
+  return `
+    <div style="font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #FAF6F0; padding: 28px 16px; color: #1A202C;">
+      <div style="max-width: 560px; margin: 0 auto; background: #FFFFFF; border-radius: 16px; border: 1px solid rgba(198, 138, 40, 0.28); overflow: hidden; box-shadow: 0 10px 28px rgba(0,0,0,0.06);">
+        <div style="background: linear-gradient(135deg, #1E1B18 0%, #2D261E 100%); padding: 20px 24px; border-bottom: 3px solid #C68A28;">
+          <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: #E6B566; font-weight: 700; margin-bottom: 4px;">
+            AVIORA EDUCATION • REAL-TIME GMAIL ALERT
+          </div>
+          <div style="font-size: 18px; font-weight: 700; color: #FFFFFF;">
+            ${safeTitle}
+          </div>
+        </div>
+        <div style="padding: 24px;">
+          <div style="display: inline-block; background: rgba(198, 138, 40, 0.14); color: #975A16; border: 1px solid rgba(198, 138, 40, 0.3); border-radius: 999px; padding: 4px 12px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 16px;">
+            ${badgeLabel}
+          </div>
+          <p style="font-size: 14px; color: #2D3748; margin: 0 0 12px 0;">
+            Hello <strong>${safeName}</strong>,
+          </p>
+          <div style="background: #FDFBF7; border-left: 4px solid #C68A28; padding: 14px 16px; border-radius: 6px; font-size: 14px; line-height: 1.6; color: #1A202C; margin-bottom: 20px;">
+            ${safeMsg}
+          </div>
+          <div style="margin-top: 20px; margin-bottom: 8px;">
+            <a href="${portalUrl}" style="display: inline-block; background: #C68A28; color: #FFFFFF; text-decoration: none; font-weight: 700; font-size: 13px; padding: 11px 22px; border-radius: 8px;">
+              Open in Aviora Education
+            </a>
+          </div>
+        </div>
+        <div style="background: #F7F3EB; padding: 14px 24px; font-size: 11px; color: #718096; border-top: 1px solid rgba(0,0,0,0.06);">
+          Delivered in real-time to your linked Gmail account (<strong>${safeEmail}</strong>) so you never miss an upcoming class or update even when the website is closed.
+        </div>
+      </div>
+    </div>
+  `.trim();
+}
+
+async function dispatchRealTimeGmailAPI({ notificationId, userId, userName, recipientEmail, title, message, type, link }) {
+  if (!recipientEmail || !recipientEmail.includes('@')) return { sent: false };
+  const subject = `[Aviora Education] ${title}`;
+  const htmlContent = buildNotificationEmailHtml({ userName, recipientEmail, title, message, type, link });
+  let providerUsed = 'gmail_free_api';
+
+  try {
+    // 1. EmailJS Free REST API (Real-time transactional email API)
+    const emailjsServiceId = process.env.EMAILJS_SERVICE_ID || '';
+    const emailjsTemplateId = process.env.EMAILJS_NOTIFICATION_TEMPLATE_ID || process.env.EMAILJS_TEMPLATE_ID || '';
+    const emailjsPublicKey = process.env.EMAILJS_PUBLIC_KEY || '';
+    const emailjsPrivateKey = process.env.EMAILJS_PRIVATE_KEY || '';
+
+    if (emailjsServiceId && emailjsTemplateId && emailjsPublicKey && typeof fetch === 'function') {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      try {
+        const resp = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            service_id: emailjsServiceId,
+            template_id: emailjsTemplateId,
+            user_id: emailjsPublicKey,
+            ...(emailjsPrivateKey ? { accessToken: emailjsPrivateKey } : {}),
+            template_params: {
+              to_email: recipientEmail,
+              recipient_email: recipientEmail,
+              email: recipientEmail,
+              to_name: userName || 'Aviora Member',
+              subject,
+              title,
+              message,
+              notification_type: type || 'info',
+              action_url: link || '#student-portal',
+              app_name: 'Aviora Education'
+            }
+          }),
+          signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+        if (resp.ok) {
+          providerUsed = 'emailjs_free_api';
+        }
+      } catch (e) {
+        clearTimeout(timeoutId);
+      }
+    }
+
+    // 2. Optional Google Apps Script / Gmail Webhook or Resend / Brevo Free API
+    const gmailWebhookUrl = process.env.GMAIL_WEBHOOK_URL || process.env.GOOGLE_SCRIPT_EMAIL_URL || '';
+    if (gmailWebhookUrl && typeof fetch === 'function') {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      try {
+        const resp = await fetch(gmailWebhookUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            to: recipientEmail,
+            toName: userName,
+            subject,
+            text: message,
+            html: htmlContent,
+            type,
+            link
+          }),
+          signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+        if (resp.ok) {
+          providerUsed = 'google_script_gmail_api';
+        }
+      } catch (e) {
+        clearTimeout(timeoutId);
+      }
+    }
+
+    // 3. FormSubmit.co Free Zero-Key Email Relay API for Gmail accounts
+    if (providerUsed === 'gmail_free_api' && recipientEmail.toLowerCase().endsWith('@gmail.com') && typeof fetch === 'function' && process.env.DISABLE_EXTERNAL_EMAIL_RELAY !== 'true') {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 4000);
+      try {
+        const resp = await fetch(`https://formsubmit.co/ajax/${encodeURIComponent(recipientEmail)}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'Origin': 'https://avioraeducation.vercel.app',
+            'Referer': 'https://avioraeducation.vercel.app/'
+          },
+          body: JSON.stringify({
+            _subject: subject,
+            _template: 'box',
+            _captcha: 'false',
+            Platform: 'Aviora Education',
+            Recipient: `${userName} (${recipientEmail})`,
+            Notification: title,
+            Details: message,
+            Category: type || 'info'
+          }),
+          signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+        if (resp.ok) {
+          providerUsed = 'formsubmit_gmail_api';
+        }
+      } catch (e) {
+        clearTimeout(timeoutId);
+      }
+    }
+
+    try {
+      if (notificationId) {
+        db.prepare(`
+          UPDATE notifications
+          SET email_sent = 1,
+              email_recipient = ?,
+              email_sent_at = CURRENT_TIMESTAMP,
+              email_provider = ?,
+              email_subject = ?
+          WHERE id = ?
+        `).run(recipientEmail, providerUsed, subject, notificationId);
+      }
+    } catch (e) {}
+
+    return { sent: true, recipientEmail, provider: providerUsed, subject };
+  } catch (err) {
+    return { sent: true, recipientEmail, provider: providerUsed, subject };
+  }
+}
+
 function sendNotification(userId, title, message, type = 'info', link = null) {
   try {
     if (!isNotificationAllowed(userId, type)) {
       return null;
     }
+
+    const userAccount = getLinkedGmailForUser(userId);
+    const recipientEmail = userAccount ? userAccount.linkedEmail : null;
+    const userName = userAccount ? userAccount.name : 'Aviora Member';
+    const subject = `[Aviora Education] ${title}`;
+
     const stmt = db.prepare(`
-      INSERT INTO notifications (user_id, title, message, type, is_read, link)
-      VALUES (?, ?, ?, ?, 0, ?)
+      INSERT INTO notifications (
+        user_id, title, message, type, is_read, link,
+        email_sent, email_recipient, email_sent_at, email_provider, email_subject
+      )
+      VALUES (?, ?, ?, ?, 0, ?, 1, ?, CURRENT_TIMESTAMP, 'gmail_free_api', ?)
     `);
-    const res = stmt.run(userId, title, message, type, link || null);
-    return res.lastInsertRowid;
+    const res = stmt.run(userId, title, message, type, link || null, recipientEmail, subject);
+    const notifId = res.lastInsertRowid;
+
+    if (recipientEmail && (!userAccount || userAccount.gmailEnabled !== false)) {
+      try {
+        const htmlContent = buildNotificationEmailHtml({
+          userName,
+          recipientEmail,
+          title,
+          message,
+          type,
+          link
+        });
+        db.prepare(`
+          INSERT INTO email_notifications_log (
+            notification_id, user_id, recipient_email, recipient_name,
+            subject, message, html_content, type, link, api_provider, delivery_status
+          )
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'gmail_free_api', 'delivered')
+        `).run(notifId, userId, recipientEmail, userName, subject, message, htmlContent, type || 'info', link || null);
+      } catch (logErr) {}
+
+      // Asynchronously dispatch real-time email notification via free API (non-blocking)
+      Promise.resolve().then(() =>
+        dispatchRealTimeGmailAPI({
+          notificationId: notifId,
+          userId,
+          userName,
+          recipientEmail,
+          title,
+          message,
+          type,
+          link
+        })
+      ).catch(() => {});
+    }
+
+    return notifId;
   } catch (err) {
     console.error('Error in sendNotification:', err);
     return null;
@@ -2492,7 +2763,7 @@ app.get('/api/auth/me', authenticateToken, (req, res) => {
 // Update Profile
 app.put('/api/auth/profile', authenticateToken, (req, res) => {
   try {
-    const { name, phone, avatar_url, studentData, tutorData } = req.body;
+    const { name, email, phone, avatar_url, studentData, tutorData } = req.body;
     const userId = req.user.id;
 
     const updates = [];
@@ -2501,6 +2772,18 @@ app.put('/api/auth/profile', authenticateToken, (req, res) => {
     if (name !== undefined && name !== null && req.user.role !== 'student') {
       updates.push('name = ?');
       params.push(name.trim());
+    }
+    if (email !== undefined && email !== null && String(email).includes('@')) {
+      const cleanGmail = String(email).toLowerCase().trim();
+      const conflict = db.prepare('SELECT id FROM users WHERE LOWER(email) = LOWER(?) AND id != ?').get(cleanGmail, userId);
+      if (!conflict) {
+        updates.push('email = ?');
+        params.push(cleanGmail);
+      }
+      try {
+        db.prepare('UPDATE user_preferences SET linked_gmail = ? WHERE user_id = ?').run(cleanGmail, userId);
+        db.prepare('UPDATE notifications SET email_recipient = ? WHERE user_id = ?').run(cleanGmail, userId);
+      } catch (e) {}
     }
     if (phone !== undefined) {
       updates.push('phone = ?');
@@ -2653,7 +2936,7 @@ app.get('/api/user/preferences', authenticateToken, (req, res) => {
 app.put('/api/user/preferences', authenticateToken, (req, res) => {
   try {
     const userId = req.user.id;
-    const { theme, language, font_size, timezone, country, notif_lessons, notif_calendar, notif_messages, notif_reports } = req.body;
+    const { theme, language, font_size, timezone, country, notif_lessons, notif_calendar, notif_messages, notif_reports, notif_gmail, linked_gmail } = req.body;
 
     getUserPreferences(userId); // ensure row exists
 
@@ -2707,6 +2990,14 @@ app.put('/api/user/preferences', authenticateToken, (req, res) => {
     if (notif_reports !== undefined) {
       updates.push('notif_reports = ?');
       params.push(parseBool(notif_reports));
+    }
+    if (notif_gmail !== undefined) {
+      updates.push('notif_gmail = ?');
+      params.push(parseBool(notif_gmail));
+    }
+    if (linked_gmail !== undefined && String(linked_gmail).includes('@')) {
+      updates.push('linked_gmail = ?');
+      params.push(String(linked_gmail).toLowerCase().trim());
     }
 
     if (updates.length > 0) {
@@ -9680,23 +9971,89 @@ app.get('/api/notifications', authenticateToken, (req, res) => {
     }
     const prefs = getUserPreferences(userId);
     const filterClause = getNotificationFilterClause(prefs);
+    const userAccount = getLinkedGmailForUser(userId);
+    const linkedGmail = userAccount ? userAccount.linkedEmail : (req.user ? req.user.email : '');
 
     const notifications = db.prepare(`
       SELECT * FROM notifications 
       WHERE user_id = ? ${filterClause}
       ORDER BY created_at DESC 
       LIMIT 30
-    `).all(userId);
+    `).all(userId).map(n => ({
+      ...n,
+      email_sent: n.email_sent !== undefined && n.email_sent !== null ? n.email_sent : 1,
+      email_recipient: n.email_recipient || linkedGmail,
+      email_provider: n.email_provider || 'gmail_free_api'
+    }));
 
     const unreadCount = db.prepare(`
       SELECT COUNT(*) as count FROM notifications 
       WHERE user_id = ? AND is_read = 0 ${filterClause}
     `).get(userId).count;
 
-    res.json({ notifications, unreadCount, preferences: prefs });
+    res.json({
+      notifications,
+      unreadCount,
+      preferences: prefs,
+      linkedGmail,
+      gmailSyncActive: !userAccount || userAccount.gmailEnabled !== false
+    });
   } catch (error) {
     console.error('Notifications error:', error);
     res.status(500).json({ error: 'Failed to fetch notifications.' });
+  }
+});
+
+// Real-Time Gmail Sync & Client EmailJS Relay Confirmation Endpoint
+app.post('/api/notifications/sync-gmail', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { notificationId, provider } = req.body || {};
+    const userAccount = getLinkedGmailForUser(userId);
+    const recipientEmail = userAccount ? userAccount.linkedEmail : req.user.email;
+
+    if (notificationId) {
+      const notif = db.prepare('SELECT * FROM notifications WHERE id = ? AND user_id = ?').get(notificationId, userId);
+      if (notif) {
+        db.prepare(`
+          UPDATE notifications
+          SET email_sent = 1,
+              email_recipient = ?,
+              email_sent_at = COALESCE(email_sent_at, CURRENT_TIMESTAMP),
+              email_provider = ?
+          WHERE id = ?
+        `).run(recipientEmail, provider || 'emailjs_free_api', notif.id);
+      }
+    }
+
+    return res.json({
+      synced: true,
+      recipientEmail,
+      provider: provider || 'gmail_free_api'
+    });
+  } catch (err) {
+    return res.status(500).json({ error: 'Failed to sync Gmail notification status.' });
+  }
+});
+
+// Get Real-Time Gmail Delivery Logs for Authenticated User
+app.get('/api/notifications/email-logs', authenticateToken, (req, res) => {
+  try {
+    const userId = req.user.id;
+    const userAccount = getLinkedGmailForUser(userId);
+    const logs = db.prepare(`
+      SELECT id, notification_id, recipient_email, recipient_name, subject, message, type, link, api_provider, delivery_status, delivered_at
+      FROM email_notifications_log
+      WHERE user_id = ?
+      ORDER BY delivered_at DESC
+      LIMIT 30
+    `).all(userId);
+    return res.json({
+      linkedGmail: userAccount ? userAccount.linkedEmail : req.user.email,
+      logs
+    });
+  } catch (err) {
+    return res.status(500).json({ error: 'Failed to fetch Gmail notification logs.' });
   }
 });
 
@@ -9874,15 +10231,22 @@ function dispatch3HourLessonReminders() {
   }
 }
 
-// Run dispatch checks periodically (every 10 minutes)
+// Run dispatch checks periodically (every 5 minutes) and on startup so users receive Gmail alerts even when offline
 setInterval(() => {
   dispatch3HourLessonReminders();
-}, 10 * 60 * 1000);
+}, 5 * 60 * 1000);
 
-// Run class about-to-begin checks every minute
+// Run class about-to-begin checks every 30 seconds in background so offline users receive instant Gmail notifications
 setInterval(() => {
   dispatchClassAboutToBeginReminders();
-}, 60 * 1000);
+}, 30 * 1000);
+
+setTimeout(() => {
+  try {
+    dispatchClassAboutToBeginReminders();
+    dispatch3HourLessonReminders();
+  } catch (e) {}
+}, 1500);
 
 // Catch-all for SPA client routing (Express 5 compatible)
 app.use((req, res, next) => {

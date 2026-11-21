@@ -2118,10 +2118,10 @@
                   </div>
                 </div>
 
-                <div class="form-group" style="margin-bottom: 0.5rem;">
+                <div class="form-group" id="forgot-password-confirm-group" style="display: none; margin-bottom: 0.5rem;">
                   <label class="form-label" for="forgot-confirm-password" style="color: var(--charcoal-900); font-weight: 700;">Confirm New Password</label>
                   <div class="password-input-wrap">
-                    <input type="password" id="forgot-confirm-password" class="form-control" placeholder="Re-enter new password" required autocomplete="new-password" />
+                    <input type="password" id="forgot-confirm-password" class="form-control" placeholder="Re-enter new password" autocomplete="new-password" />
                     <button type="button" class="password-toggle-btn" data-target="forgot-confirm-password" aria-label="Show password" title="Show password">
                       <svg class="eye-show" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8z"></path>
@@ -2287,10 +2287,10 @@
                 </div>
               </div>
 
-              <div class="form-group">
+              <div class="form-group" id="page-password-confirm-group" style="display: none;">
                 <label class="form-label" for="page-reg-confirm" style="color: var(--charcoal-900); font-weight: 700;">Confirm Password</label>
                 <div class="password-input-wrap">
-                  <input type="password" id="page-reg-confirm" class="form-control" placeholder="Re-enter password" required autocomplete="new-password" />
+                  <input type="password" id="page-reg-confirm" class="form-control" placeholder="Re-enter password" autocomplete="new-password" />
                   <button type="button" class="password-toggle-btn" data-target="page-reg-confirm" aria-label="Show password" title="Show password">
                     <svg class="eye-show" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                       <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8z"></path>
@@ -6370,11 +6370,11 @@
               </div>
             </div>
 
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-              <div class="form-group">
+            <div id="modal-confirm-phone-grid" style="display: grid; grid-template-columns: 1fr; gap: 1rem;">
+              <div class="form-group" id="modal-password-confirm-group" style="display: none;">
                 <label class="form-label" for="reg-confirm">Confirm Password</label>
                 <div class="password-input-wrap">
-                  <input type="password" id="reg-confirm" class="form-control" placeholder="Re-enter password" required autocomplete="new-password" />
+                  <input type="password" id="reg-confirm" class="form-control" placeholder="Re-enter password" autocomplete="new-password" />
                   <button type="button" class="password-toggle-btn" data-target="reg-confirm" aria-label="Show password" title="Show password">
                     <svg class="eye-show" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                       <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8z"></path>
@@ -8334,7 +8334,7 @@
   <script src="/js/api.js?v=2.3"></script>
   <script src="/js/timezone-helper.js?v=2.3"></script>
   <script src="/js/i18n.js?v=2.3"></script>
-  <script src="/js/auth.js?v=2.4"></script>
+  <script src="/js/auth.js?v=2.5"></script>
   <script src="/js/notifications.js?v=2.3"></script>
   <script src="/js/tutors.js?v=2.3"></script>
   <script src="/js/student.js?v=2.3"></script>

@@ -62,6 +62,31 @@ const PasswordValidator = {
       }
     }
 
+    const confirmInputMap = {
+      page: 'page-reg-confirm',
+      modal: 'reg-confirm',
+      forgot: 'forgot-confirm-password'
+    };
+    const confirmGroup = document.getElementById(`${prefix}-password-confirm-group`);
+    const confirmInput = document.getElementById(confirmInputMap[prefix]);
+    const matchMsg = document.getElementById(`${prefix}-password-match-msg`);
+
+    if (confirmGroup) {
+      confirmGroup.style.display = evalResult.isStrong ? 'block' : 'none';
+    }
+    if (confirmInput) {
+      confirmInput.required = evalResult.isStrong;
+    }
+    if (prefix === 'modal') {
+      const modalGrid = document.getElementById('modal-confirm-phone-grid');
+      if (modalGrid) {
+        modalGrid.style.gridTemplateColumns = evalResult.isStrong ? '1fr 1fr' : '1fr';
+      }
+    }
+    if (matchMsg && !evalResult.isStrong) {
+      matchMsg.style.display = 'none';
+    }
+
     const bar = document.getElementById(`${prefix}-password-meter-bar`);
     const label = document.getElementById(`${prefix}-password-meter-label`);
 
@@ -582,7 +607,7 @@ const Auth = {
     const pass = passEl.value;
     const confirm = confirmEl.value;
 
-    if (!confirm) {
+    if (!confirm || !PasswordValidator.evaluate(pass).isStrong) {
       msgEl.style.display = 'none';
       return;
     }
@@ -1215,8 +1240,8 @@ const Auth = {
     }
 
     // Confirm Password Matching
-    if (confirmPassword && password !== confirmPassword) {
-      showToast('Passwords do not match. Please verify.', 'error');
+    if (!confirmPassword || password !== confirmPassword) {
+      showToast(!confirmPassword ? 'Please confirm your password.' : 'Passwords do not match. Please verify.', 'error');
       return;
     }
 

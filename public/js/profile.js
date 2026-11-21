@@ -517,7 +517,15 @@ const Profile = {
       darkCard.addEventListener('click', () => this.applyTheme('dark'));
     }
 
-    // Language selector (Profile and Header)
+    // Country / Region selector
+    const countrySelect = document.getElementById('profile-country-select');
+    if (countrySelect) {
+      countrySelect.addEventListener('change', (e) => {
+        this.applyCountry(e.target.value);
+      });
+    }
+
+    // Language selector (Settings page)
     const langSelect = document.getElementById('profile-language-select');
     if (langSelect) {
       ['change', 'input'].forEach(evt => {
@@ -881,6 +889,36 @@ const Profile = {
       console.error('Error loading profile page:', e);
       showToast('Failed to load profile details.', 'error');
     }
+  },
+
+  async loadSettingsPage() {
+    const user = (typeof Auth !== 'undefined' && Auth.currentUser) || (typeof Storage !== 'undefined' ? Storage.getUser() : null);
+    if (!user) {
+      showToast('Please sign in to access your settings and preferences.', 'info');
+      window.location.hash = '#login';
+      return;
+    }
+
+    try {
+      const data = await API.getMe();
+      this.currentUser = data.user || user;
+      this.userPreferences = data.preferences || this.currentUser.preferences || null;
+    } catch (e) {
+      console.warn('Settings page using cached account preferences:', e);
+      this.currentUser = user;
+      if (!this.userPreferences && typeof Storage !== 'undefined' && user.id) {
+        this.userPreferences = Storage.getUserPreferences(user.id) || user.preferences || null;
+      }
+    }
+
+    const u = this.currentUser || user || {};
+    const prefs = this.userPreferences || u.preferences || {};
+
+    const gmailAccountInput = document.getElementById('profile-gmail-account');
+    if (gmailAccountInput) gmailAccountInput.value = u.email || '';
+
+    this.syncAllPreferences(prefs, false);
+    this.updateTimezoneClockDisplays();
   },
 
   renderProfileData() {

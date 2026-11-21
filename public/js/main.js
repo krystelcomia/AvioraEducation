@@ -113,7 +113,7 @@ function showConfirm(title, message, onConfirm, options = {}) {
 
 // Router
 const Router = {
-  routes: ['#home', '#about', '#tutors', '#aviora-buddy', '#buddy', '#aviora-buddy-studio', '#how-it-works', '#book-now', '#book-lesson', '#subscriptions', '#subscription', '#student-subscriptions', '#login', '#signup', '#student-portal', '#dashboard', '#student-lessons', '#student-tutors', '#student-history', '#student-schedule', '#student-messages', '#messages', '#student-profile', '#teacher-portal', '#teacher-classes', '#teacher-class', '#teacher-students', '#teacher-schedule', '#teacher-ratings', '#teacher-messages', '#teacher-dashboard', '#teacher-profile', '#teacher-application', '#admin-portal', '#admin-profile'],
+  routes: ['#home', '#about', '#tutors', '#aviora-buddy', '#buddy', '#aviora-buddy-studio', '#how-it-works', '#book-now', '#book-lesson', '#subscriptions', '#subscription', '#student-subscriptions', '#login', '#signup', '#student-portal', '#dashboard', '#student-lessons', '#student-tutors', '#student-history', '#student-schedule', '#student-messages', '#messages', '#student-profile', '#student-settings', '#settings', '#teacher-portal', '#teacher-classes', '#teacher-class', '#teacher-students', '#teacher-schedule', '#teacher-ratings', '#teacher-messages', '#teacher-dashboard', '#teacher-profile', '#teacher-application', '#admin-portal', '#admin-profile'],
 
   init() {
     window.addEventListener('hashchange', () => this.handleRoute());
@@ -171,11 +171,16 @@ const Router = {
       link.classList.toggle('active', isActive);
     });
 
-    // Explicitly toggle active ring on Profile Avatar link
+    // Explicitly toggle active ring on Profile Avatar link and Settings icon link
     const profileLink = document.getElementById('nav-user-profile-btn');
     if (profileLink) {
       const isProfileActive = ['#student-profile', '#teacher-profile', '#admin-profile', '#profile'].includes(hash);
       profileLink.classList.toggle('active', isProfileActive);
+    }
+    const settingsLink = document.getElementById('nav-settings-btn');
+    if (settingsLink) {
+      const isSettingsActive = ['#student-settings', '#settings'].includes(hash);
+      settingsLink.classList.toggle('active', isSettingsActive);
     }
   },
 
@@ -358,6 +363,23 @@ const Router = {
       window.scrollTo(0, 0);
       if (typeof Profile !== 'undefined' && Profile.loadProfilePage) {
         await Profile.loadProfilePage();
+      }
+    } else if (hash === '#student-settings' || hash === '#settings') {
+      const user = Auth.currentUser;
+      if (!user) {
+        showToast('Please sign in to access your settings and preferences.', 'info');
+        window.location.hash = '#login';
+        return;
+      }
+      if (user.role !== 'student') {
+        window.location.hash = (user.role === 'admin') ? '#admin-profile' : '#teacher-profile';
+        return;
+      }
+      const view = document.getElementById('view-student-settings');
+      if (view) view.style.display = 'block';
+      window.scrollTo(0, 0);
+      if (typeof Profile !== 'undefined' && Profile.loadSettingsPage) {
+        await Profile.loadSettingsPage();
       }
     } else if (hash === '#teacher-profile' || (hash === '#profile' && Auth.currentUser && (Auth.currentUser.role === 'teacher' || Auth.currentUser.role === 'tutor'))) {
       const user = Auth.currentUser;

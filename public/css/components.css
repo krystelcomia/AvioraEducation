@@ -2565,6 +2565,43 @@
   background: rgba(198, 138, 40, 0.08);
 }
 
+.nav-settings-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--charcoal-800, #2D3748);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 6px;
+  border-radius: 8px;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  line-height: 0;
+}
+
+.nav-settings-btn::after {
+  display: none !important;
+}
+
+.nav-settings-btn:hover,
+.nav-settings-btn.active {
+  color: var(--gold-600, #C68A28);
+  background: rgba(198, 138, 40, 0.08);
+}
+
+[data-theme="dark"] .nav-settings-btn {
+  color: #E2E8F0;
+}
+
+[data-theme="dark"] .nav-settings-btn:hover,
+[data-theme="dark"] .nav-settings-btn.active {
+  background: rgba(198, 138, 40, 0.15);
+  color: #E6B566;
+}
+
 .nav-notif-badge {
   position: absolute;
   top: 1px;

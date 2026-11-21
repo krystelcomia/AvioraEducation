@@ -5887,21 +5887,15 @@ const I18n = {
       logoutBtn.setAttribute('aria-label', this.t('nav.logout'));
     }
 
-    // Settings Profile Card Header
-    const profCardTitle = document.querySelector('.profile-card-title');
-    if (profCardTitle) {
-      const svg = profCardTitle.querySelector('svg');
-      const text = this.t('settings.title');
-      if (svg) {
-        profCardTitle.innerHTML = '';
-        profCardTitle.appendChild(svg);
-        profCardTitle.appendChild(document.createTextNode(' ' + text));
-      } else {
-        profCardTitle.textContent = text;
-      }
+    // Settings Card Header (strictly target the Settings page card so Profile card titles are not overwritten)
+    const settingsCardTitleSpan = document.querySelector('#student-settings-card-title [data-i18n="settings.title"]');
+    if (settingsCardTitleSpan) {
+      settingsCardTitleSpan.textContent = this.t('settings.title');
     }
-    const profCardSub = document.querySelector('.profile-card-sub');
-    if (profCardSub) profCardSub.textContent = this.t('settings.subtitle');
+    const settingsCardSub = document.getElementById('student-settings-card-sub');
+    if (settingsCardSub) {
+      settingsCardSub.textContent = this.t('settings.subtitle');
+    }
 
     // Save Profile button
     const btnSaveProf = document.getElementById('btn-save-profile');

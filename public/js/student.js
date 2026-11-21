@@ -184,7 +184,13 @@ const Student = {
           r.room_status = 'ended';
         }
       });
-      this.subscription = data.subscription || null;
+      const rawSub = data.subscription || null;
+      const isSubActive = rawSub && rawSub.status === 'active' && (!rawSub.expires_at || (() => {
+        const s = String(rawSub.expires_at).trim();
+        const ms = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/.test(s) ? Date.parse(s.replace(' ', 'T') + 'Z') : Date.parse(s);
+        return Number.isNaN(ms) ? true : ms > Date.now();
+      })());
+      this.subscription = isSubActive ? rawSub : null;
       if (typeof data.wallet_balance !== 'undefined' && typeof Auth !== 'undefined' && Auth.updateWalletBalance) {
         Auth.updateWalletBalance(data.wallet_balance, data.wallet_tutor || null, data.wallet_details || null);
       }

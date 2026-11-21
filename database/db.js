@@ -836,7 +836,9 @@ function initSchema() {
       ['voucher_code', 'TEXT'],
       ['discount_percent', 'REAL DEFAULT 0'],
       ['discount_amount', 'REAL DEFAULT 0'],
-      ['original_price', 'REAL']
+      ['original_price', 'REAL'],
+      ['expired_at', 'DATETIME'],
+      ['updated_at', 'DATETIME']
     ];
     for (const [colName, colType] of subVoucherCols) {
       if (!subCols.some(c => c.name === colName)) {

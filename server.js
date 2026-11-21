@@ -2019,6 +2019,92 @@ function reconcileStudentWallet(studentId) {
   }
 }
 
+/**
+ * Reconcile a student's subscriptions: any subscription whose allotted validity
+ * window (`expires_at`) has elapsed resets to 'expired' with 0 remaining lessons
+ * so the student can avail of a new plan cleanly.
+ */
+function reconcileStudentSubscriptions(studentId) {
+  try {
+    if (!studentId) return { expiredCount: 0, activeSubscriptions: [], lastExpiredSubscription: null };
+
+    const nowMs = Date.now();
+    const candidateRows = db.prepare(`
+      SELECT * FROM student_subscriptions
+      WHERE user_id = ? AND status IN ('active', 'exhausted')
+      ORDER BY id DESC
+    `).all(studentId);
+
+    let expiredCount = 0;
+
+    for (const sub of candidateRows) {
+      const expMs = parseSqlUtcMs(sub.expires_at);
+      if (expMs !== null && nowMs >= expMs) {
+        const wasActive = sub.status === 'active';
+        const unusedLessons = Math.max(0, Number(sub.lessons_remaining) || 0);
+
+        db.prepare(`
+          UPDATE student_subscriptions
+          SET status = 'expired',
+              lessons_remaining = 0,
+              expired_at = COALESCE(expired_at, CURRENT_TIMESTAMP),
+              updated_at = CURRENT_TIMESTAMP
+          WHERE id = ?
+        `).run(sub.id);
+
+        expiredCount++;
+
+        if (wasActive) {
+          const expLabel = formatWalletDateLabel(expMs) || 'its expiration date';
+          const unusedNote = unusedLessons > 0
+            ? ` (${unusedLessons} unused lesson credit${unusedLessons === 1 ? '' : 's'} went unused before expiration)`
+            : '';
+          sendNotification(
+            studentId,
+            'Subscription Expired & Reset',
+            `Your ${sub.plan_name} subscription expired on ${expLabel}${unusedNote} and has been reset. You can now avail of a new subscription package anytime.`,
+            'subscription',
+            '#subscriptions'
+          );
+        }
+      }
+    }
+
+    const activeSubscriptions = db.prepare(`
+      SELECT * FROM student_subscriptions
+      WHERE user_id = ? AND status = 'active' AND expires_at > CURRENT_TIMESTAMP
+      ORDER BY id DESC
+    `).all(studentId);
+
+    const lastExpiredSubscription = db.prepare(`
+      SELECT * FROM student_subscriptions
+      WHERE user_id = ? AND status = 'expired'
+      ORDER BY id DESC LIMIT 1
+    `).get(studentId) || null;
+
+    return { expiredCount, activeSubscriptions, lastExpiredSubscription };
+  } catch (err) {
+    console.error('reconcileStudentSubscriptions error:', err);
+    return { expiredCount: 0, activeSubscriptions: [], lastExpiredSubscription: null };
+  }
+}
+
+function processAllStudentSubscriptions() {
+  try {
+    const rows = db.prepare(`
+      SELECT DISTINCT user_id FROM student_subscriptions
+      WHERE status IN ('active', 'exhausted')
+    `).all();
+    for (const row of rows) {
+      if (row && row.user_id) {
+        reconcileStudentSubscriptions(row.user_id);
+      }
+    }
+  } catch (e) {
+    console.warn('Subscription validity sweep notice:', e.message);
+  }
+}
+
 // Authentication Middleware
 function authenticateToken(req, res, next) {
   const authHeader = req.headers['authorization'];
@@ -3536,6 +3622,7 @@ app.get('/api/auth/me', authenticateToken, (req, res) => {
     if (req.user.role === 'student') {
       const studentProfile = db.prepare('SELECT * FROM student_profiles WHERE user_id = ?').get(userId);
       extra.studentProfile = studentProfile;
+      reconcileStudentSubscriptions(userId);
       const walletData = reconcileStudentWallet(userId);
       req.user.wallet_balance = walletData.balance;
       req.user.wallet_tutor_id = walletData.tutorId;

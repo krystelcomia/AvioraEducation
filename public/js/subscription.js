@@ -469,6 +469,16 @@ const StudentSub = {
     }
   },
 
+  isSubscriptionValid(sub) {
+    if (!sub || sub.status !== 'active') return false;
+    if (!sub.expires_at) return true;
+    const raw = String(sub.expires_at).trim();
+    const expMs = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/.test(raw)
+      ? Date.parse(raw.replace(' ', 'T') + 'Z')
+      : Date.parse(raw);
+    return Number.isNaN(expMs) ? true : expMs > Date.now();
+  },
+
   renderHub(data) {
     if (!data) return;
 
@@ -480,7 +490,7 @@ const StudentSub = {
     if (avatarEl && user && user.avatar_url) avatarEl.src = user.avatar_url;
 
     // Active subscription card
-    const activeSub = data.activeSubscription;
+    const activeSub = this.isSubscriptionValid(data.activeSubscription) ? data.activeSubscription : null;
     const activePlanEl = document.getElementById('sub-active-plan-name');
     const activeStatusEl = document.getElementById('sub-active-status');
     const lessonsRemEl = document.getElementById('sub-lessons-remaining');
@@ -513,7 +523,7 @@ const StudentSub = {
     // Render concurrent active subscriptions if > 1
     const multiPlansWrap = document.getElementById('sub-all-active-plans-wrap');
     const multiPlansContainer = document.getElementById('sub-all-active-plans-container');
-    const activeSubs = Array.isArray(data.activeSubscriptions) ? data.activeSubscriptions : (activeSub ? [activeSub] : []);
+    const activeSubs = (Array.isArray(data.activeSubscriptions) ? data.activeSubscriptions : (activeSub ? [activeSub] : [])).filter(s => this.isSubscriptionValid(s));
 
     if (multiPlansWrap && multiPlansContainer) {
       if (activeSubs.length > 1) {
@@ -1869,9 +1879,12 @@ const StudentSub = {
       this.closeEnrollmentModal();
       await this.loadSubscriptionHub();
 
-      // Refresh student dashboard and requests if loaded
+      // Refresh student dashboard, tutors banner, and requests if loaded
       if (typeof Student !== 'undefined' && Student.loadDashboard) {
         Student.loadDashboard();
+      }
+      if (typeof Tutors !== 'undefined' && Tutors.renderTutorsSubBanner) {
+        Tutors.renderTutorsSubBanner();
       }
 
     } catch (err) {

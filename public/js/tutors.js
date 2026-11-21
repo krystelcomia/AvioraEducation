@@ -1449,7 +1449,7 @@ const Tutors = {
     // 1. Fetch Student Subscription Status to display in modal
     try {
       const subRes = await API.getStudentSubscription();
-      this.studentSubscription = subRes.activeSubscription || null;
+      this.studentSubscription = this.isSubscriptionValid(subRes.activeSubscription) ? subRes.activeSubscription : null;
     } catch (err) {
       this.studentSubscription = null;
     }
@@ -2024,6 +2024,16 @@ const Tutors = {
     }
   },
 
+  isSubscriptionValid(sub) {
+    if (!sub || sub.status !== 'active') return false;
+    if (!sub.expires_at) return true;
+    const raw = String(sub.expires_at).trim();
+    const expMs = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/.test(raw)
+      ? Date.parse(raw.replace(' ', 'T') + 'Z')
+      : Date.parse(raw);
+    return Number.isNaN(expMs) ? true : expMs > Date.now();
+  },
+
   async renderTutorsSubBanner() {
     const banner = document.getElementById('tutors-student-sub-banner');
     if (!banner) return;
@@ -2036,7 +2046,7 @@ const Tutors = {
 
     try {
       const res = await API.getStudentSubscription();
-      const sub = res.activeSubscription;
+      const sub = this.isSubscriptionValid(res.activeSubscription) ? res.activeSubscription : null;
       if (sub && sub.status === 'active') {
         banner.className = 'booking-sub-card';
         banner.style.display = 'flex';

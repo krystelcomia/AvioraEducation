@@ -763,9 +763,9 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background-image: url('/assets/images/auth-bg.jpg?v=3');
+  background-image: url('/assets/images/auth-bg.jpg?v=4');
   background-size: cover;
-  background-position: center 25%;
+  background-position: center 18%;
   background-repeat: no-repeat;
   filter: blur(2.5px) brightness(0.98);
   z-index: -2;

@@ -847,7 +847,7 @@ const Tutors = {
             subjects: this.getTutorActiveSubjects ? this.getTutorActiveSubjects(t) : (t.subjects || [])
           }));
         }
-      } catch (e) {}
+      } catch (e) { }
     }
 
     let tutor = null;
@@ -864,14 +864,14 @@ const Tutors = {
             tutorId = foundId;
           }
         }
-      } catch (e) {}
+      } catch (e) { }
     }
 
     // Try finding by id, user_id, or name match in allTutors
     if (this.allTutors && this.allTutors.length > 0 && tutorId && tutorId !== 'latest') {
       const queryStr = String(tutorId).toLowerCase().trim();
-      tutor = this.allTutors.find(t => 
-        String(t.id) === queryStr || 
+      tutor = this.allTutors.find(t =>
+        String(t.id) === queryStr ||
         String(t.user_id) === queryStr ||
         (t.name && (t.name.toLowerCase() === queryStr || t.name.toLowerCase().includes(queryStr)))
       );
@@ -1250,8 +1250,8 @@ const Tutors = {
   renderAttachmentHtml(m) {
     if (!m || !m.attachment_url) return '';
     const isImg = (m.attachment_type && m.attachment_type.startsWith('image/')) ||
-                  /\.(png|jpe?g|gif|webp|svg|bmp)$/i.test(m.attachment_url) ||
-                  /\.(png|jpe?g|gif|webp|svg|bmp)$/i.test(m.attachment_name || '');
+      /\.(png|jpe?g|gif|webp|svg|bmp)$/i.test(m.attachment_url) ||
+      /\.(png|jpe?g|gif|webp|svg|bmp)$/i.test(m.attachment_name || '');
     if (isImg) {
       return `
         <div class="messenger-bubble-img-wrap">
@@ -1367,7 +1367,7 @@ const Tutors = {
           this.allTutors = freshData.tutors;
           tutor = this.allTutors.find(t => t.id == tutorId || t.user_id == tutorId);
         }
-      } catch (e) {}
+      } catch (e) { }
     }
 
     if (tutorId) {

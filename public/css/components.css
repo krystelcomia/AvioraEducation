@@ -767,7 +767,7 @@
   background-size: cover;
   background-position: center 18%;
   background-repeat: no-repeat;
-  filter: blur(2.5px) brightness(0.98);
+  filter: none;
   z-index: -2;
   pointer-events: none;
 }
@@ -782,7 +782,7 @@
 }
 
 [data-theme="dark"] .auth-page-view::before {
-  filter: blur(2.5px) brightness(0.65);
+  filter: brightness(0.65);
 }
 
 [data-theme="dark"] .auth-page-view::after {

@@ -194,6 +194,7 @@ function initSchema() {
       notif_gmail INTEGER DEFAULT 1,
       linked_gmail TEXT,
       tutor_signup_profile TEXT,
+      registration_immutable TEXT,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
@@ -592,6 +593,9 @@ function initSchema() {
     }
     if (prefCols.length > 0 && !prefCols.some(c => c.name === 'tutor_signup_profile')) {
       db.prepare("ALTER TABLE user_preferences ADD COLUMN tutor_signup_profile TEXT").run();
+    }
+    if (prefCols.length > 0 && !prefCols.some(c => c.name === 'registration_immutable')) {
+      db.prepare("ALTER TABLE user_preferences ADD COLUMN registration_immutable TEXT").run();
     }
   } catch (e) {}
 
@@ -2008,6 +2012,7 @@ function saveUserPreferences(userId, prefs = {}) {
             notif_gmail = COALESCE(?, notif_gmail),
             linked_gmail = COALESCE(?, linked_gmail),
             tutor_signup_profile = COALESCE(?, tutor_signup_profile),
+            registration_immutable = COALESCE(?, registration_immutable),
             updated_at = CURRENT_TIMESTAMP
         WHERE user_id = ?
       `).run(
@@ -2025,6 +2030,9 @@ function saveUserPreferences(userId, prefs = {}) {
         prefs.tutor_signup_profile !== undefined
           ? (typeof prefs.tutor_signup_profile === 'string' ? prefs.tutor_signup_profile : JSON.stringify(prefs.tutor_signup_profile))
           : null,
+        prefs.registration_immutable !== undefined
+          ? (typeof prefs.registration_immutable === 'string' ? prefs.registration_immutable : JSON.stringify(prefs.registration_immutable))
+          : null,
         userId
       );
     } else {
@@ -2033,9 +2041,12 @@ function saveUserPreferences(userId, prefs = {}) {
       const serializedTutorSignup = prefs.tutor_signup_profile !== undefined
         ? (typeof prefs.tutor_signup_profile === 'string' ? prefs.tutor_signup_profile : JSON.stringify(prefs.tutor_signup_profile))
         : null;
+      const serializedImmutable = prefs.registration_immutable !== undefined
+        ? (typeof prefs.registration_immutable === 'string' ? prefs.registration_immutable : JSON.stringify(prefs.registration_immutable))
+        : null;
       db.prepare(`
-        INSERT INTO user_preferences (user_id, theme, language, country, timezone, font_size, notif_lessons, notif_calendar, notif_messages, notif_reports, notif_gmail, linked_gmail, tutor_signup_profile)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO user_preferences (user_id, theme, language, country, timezone, font_size, notif_lessons, notif_calendar, notif_messages, notif_reports, notif_gmail, linked_gmail, tutor_signup_profile, registration_immutable)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).run(
         userId,
         prefs.theme || 'light',
@@ -2049,7 +2060,8 @@ function saveUserPreferences(userId, prefs = {}) {
         prefs.notif_reports !== undefined ? prefs.notif_reports : 0,
         prefs.notif_gmail !== undefined ? prefs.notif_gmail : 1,
         prefs.linked_gmail || userEmail,
-        serializedTutorSignup
+        serializedTutorSignup,
+        serializedImmutable
       );
     }
     return getUserPreferences(userId);

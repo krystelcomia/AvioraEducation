@@ -298,7 +298,31 @@ const Teacher = {
       : (this.application?.name || 'Applicant');
 
     if (stage === 'not_submitted') {
-      bannerContainer.innerHTML = '';
+      bannerContainer.innerHTML = targetContainerId !== 'teacher-banner-dashboard' ? '' : `
+        <div class="app-status-banner" style="margin-bottom: 1.5rem; background: rgba(197, 157, 40, 0.08); border: 1px solid rgba(197, 157, 40, 0.35); border-radius: var(--radius-md); padding: 1.25rem; display: flex; gap: 1rem; align-items: flex-start; flex-wrap: wrap;">
+          <div class="status-icon-circle" style="background: rgba(197, 157, 40, 0.2); color: var(--gold-700); width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+            ${Icons.shield(22)}
+          </div>
+          <div class="status-banner-content" style="flex: 1; min-width: 240px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
+              <div style="font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.04em; font-weight: 700;">
+                Tutor Onboarding • ${applicantName}
+              </div>
+              <span class="status-pill pending" style="font-size: 0.75rem;">Credential Submission Required</span>
+            </div>
+            <h3 style="color: var(--text-primary); margin: 0.2rem 0 0; font-size: 1.15rem; font-weight: 700;">
+              Welcome to Your Tutor Dashboard
+            </h3>
+            <p style="color: var(--text-secondary); margin: 0.45rem 0 0.85rem; font-size: 0.88rem; line-height: 1.5;">
+              Your tutor account is ready in view mode. Submit your resume, diploma, and qualifications to complete onboarding and unlock student bookings, live virtual sessions, and public rate management after administrator review.
+            </p>
+            <a href="#teacher-application" class="btn btn-primary btn-sm" style="display: inline-flex; align-items: center; gap: 0.4rem; text-decoration: none;">
+              <span>Complete Credential Application</span>
+              <span>→</span>
+            </a>
+          </div>
+        </div>
+      `;
       return;
     }
 
@@ -537,20 +561,28 @@ const Teacher = {
     this.renderStatusBanner('teacher-banner-dashboard');
 
     const user = Auth.currentUser;
+    const draft = this.tutorDraftProfile || {};
     const heroName = document.getElementById('teacher-hero-name');
     const heroBio = document.getElementById('teacher-hero-bio');
     const heroTag = document.getElementById('teacher-headline-tag');
     const heroAvatar = document.getElementById('teacher-hero-avatar');
+    const heroStatusBadge = document.getElementById('teacher-dashboard-status-badge');
 
     const defaultEducatorAvatar = 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=300&q=80';
-    const resolvedName = user?.name || 'Joshua Garcia';
-    const resolvedBio = this.tutorProfile?.bio || this.application?.bio || user?.bio || 'Dedicated mathematics educator passionate about guiding students through algebra, geometry, and calculus with interactive problem solving.';
-    const resolvedTag = this.tutorProfile?.headline || this.application?.headline || user?.headline || 'Mathematics & Calculus Specialist';
+    const resolvedName = user?.name || 'Educator';
+    const resolvedBio = this.tutorProfile?.bio || this.application?.bio || draft.bio || user?.bio || 'Dedicated educator on Aviora Education guiding students toward academic mastery.';
+    const resolvedTag = this.tutorProfile?.headline || this.application?.headline || draft.headline || user?.headline || 'Educator & Academic Specialist';
     const resolvedAvatar = this.tutorProfile?.avatar_url || user?.avatar_url || user?.avatar || this.tutorProfile?.avatar || defaultEducatorAvatar;
 
     if (heroName) heroName.textContent = resolvedName;
     if (heroBio) heroBio.textContent = resolvedBio;
     if (heroTag) heroTag.textContent = resolvedTag;
+    if (heroStatusBadge) {
+      const stage = this.getApplicationStage();
+      heroStatusBadge.textContent = stage === 'approved'
+        ? 'Verified Educator'
+        : (stage === 'not_submitted' ? 'Onboarding Required' : 'Application Under Review');
+    }
     if (heroAvatar) {
       heroAvatar.src = resolvedAvatar;
       heroAvatar.onerror = () => { heroAvatar.src = defaultEducatorAvatar; };
@@ -561,8 +593,17 @@ const Teacher = {
       navAvatar.onerror = () => { navAvatar.src = defaultEducatorAvatar; };
     }
 
-    const countryVal = this.tutorProfile?.country || (typeof localStorage !== 'undefined' ? localStorage.getItem('aviora_country') : null) || 'United States';
-    const tzVal = this.tutorProfile?.timezone || (typeof localStorage !== 'undefined' ? localStorage.getItem('aviora_timezone') : null) || 'America/New_York';
+    const uidKey = user && user.id ? `_${user.id}` : '';
+    const countryVal = this.tutorProfile?.country
+      || draft.country
+      || (uidKey ? localStorage.getItem(`aviora_country${uidKey}`) : null)
+      || user?.country
+      || 'United States';
+    const tzVal = this.tutorProfile?.timezone
+      || draft.timezone
+      || (uidKey ? localStorage.getItem(`aviora_timezone${uidKey}`) : null)
+      || user?.timezone
+      || 'America/New_York';
     const dashFlag = document.getElementById('teacher-dashboard-country-flag');
     const dashName = document.getElementById('teacher-dashboard-country-name');
     const dashClock = document.getElementById('teacher-dashboard-live-clock');
@@ -578,6 +619,9 @@ const Teacher = {
     }
 
     await this.loadTeacherDashboard();
+    if (typeof I18n !== 'undefined' && I18n.currentLanguage && I18n.currentLanguage !== 'en-US') {
+      I18n.applyLanguage(I18n.currentLanguage, false);
+    }
     if (typeof Router !== 'undefined' && Router.updateActiveNav) Router.updateActiveNav();
   },
 
@@ -5599,9 +5643,10 @@ const Teacher = {
         clockEl.setAttribute('data-tz', tzVal);
       }
 
-      // Sync settings / preferences in Profile module
-      if (typeof Profile !== 'undefined' && Profile.syncAllPreferences) {
-        Profile.syncAllPreferences(prefs);
+      // Sync settings / preferences in Profile module and lock registration details
+      if (typeof Profile !== 'undefined') {
+        if (Profile.syncAllPreferences) Profile.syncAllPreferences(prefs);
+        if (Profile.applyRegistrationLocks) Profile.applyRegistrationLocks(prefs, u, { ...tp, ...app, ...draft });
       }
     } catch (err) {
       console.error('Failed to load tutor profile page:', err);

@@ -2208,6 +2208,34 @@ function resolveLocationPreferences(country, timezone, language) {
   };
 }
 
+function buildRegistrationImmutableSnapshot(role, data = {}) {
+  const fields = {
+    name: true,
+    email: true,
+    country: true,
+    timezone: true,
+    language: true
+  };
+  if (role === 'student') {
+    fields.grade_level = true;
+    if (data.phone && String(data.phone).trim()) fields.phone = true;
+    if (data.school && String(data.school).trim()) fields.school = true;
+    if (data.target_subjects && String(data.target_subjects).trim()) fields.target_subjects = true;
+    if (data.learning_goals && String(data.learning_goals).trim()) fields.learning_goals = true;
+  } else {
+    fields.institution = true;
+    fields.subjects = true;
+    if (data.phone && String(data.phone).trim()) fields.phone = true;
+    if (data.headline && String(data.headline).trim()) fields.headline = true;
+    if (data.bio && String(data.bio).trim()) fields.bio = true;
+  }
+  return {
+    locked: true,
+    role,
+    fields
+  };
+}
+
 app.post('/api/auth/register', (req, res) => {
   try {
     const {
@@ -2343,12 +2371,22 @@ app.post('/api/auth/register', (req, res) => {
       }
     }
 
+    const registrationImmutable = buildRegistrationImmutableSnapshot(designatedRole, {
+      phone,
+      school,
+      target_subjects: (target_subjects !== undefined && target_subjects !== null) ? target_subjects : subjects,
+      learning_goals,
+      headline,
+      bio
+    });
+
     const savedPrefs = saveUserPreferences(userId, {
       theme: 'light',
       country: userCountry,
       timezone: userTimezone,
       language: userLanguage,
       linked_gmail: cleanEmail,
+      registration_immutable: registrationImmutable,
       ...(tutorDraftProfile ? { tutor_signup_profile: tutorDraftProfile } : {})
     });
 
@@ -2544,12 +2582,21 @@ app.post('/api/auth/sync-account', (req, res) => {
           timezone: userTimezone
         };
       }
+      const registrationImmutable = buildRegistrationImmutableSnapshot(designatedRole, {
+        phone,
+        school,
+        target_subjects: (target_subjects !== undefined && target_subjects !== null) ? target_subjects : subjects,
+        learning_goals,
+        headline,
+        bio
+      });
       saveUserPreferences(userId, {
         theme: 'light',
         country: userCountry,
         timezone: userTimezone,
         language: userLanguage,
         linked_gmail: cleanEmail,
+        registration_immutable: registrationImmutable,
         ...(tutorDraftProfile ? { tutor_signup_profile: tutorDraftProfile } : {})
       });
       user = db.prepare('SELECT * FROM users WHERE id = ?').get(userId);
@@ -3946,15 +3993,37 @@ app.put('/api/auth/profile', authenticateToken, (req, res) => {
   try {
     const { name, email, phone, avatar_url, studentData, tutorData } = req.body;
     const userId = req.user.id;
+    const isAdmin = req.user.role === 'admin';
+    const currentPrefs = getUserPreferences(userId) || {};
+    const immutableSnapshot = safeParseObject(currentPrefs.registration_immutable) || {};
+    const lockedFields = immutableSnapshot.fields || {};
+    const normStr = (v) => (v === undefined || v === null) ? '' : String(v).trim();
+
+    if (!isAdmin) {
+      if (name !== undefined && name !== null && normStr(name) !== normStr(req.user.name)) {
+        return res.status(403).json({ error: 'Full name provided during account creation is immutable and cannot be modified.' });
+      }
+      if (email !== undefined && email !== null && normStr(email).toLowerCase() !== normStr(req.user.email).toLowerCase()) {
+        return res.status(403).json({ error: 'Primary email address provided during account creation is immutable and cannot be modified.' });
+      }
+      if (req.body.country !== undefined && normStr(req.body.country) && normStr(req.body.country) !== normStr(currentPrefs.country || req.user.country)) {
+        return res.status(403).json({ error: 'Country provided during account creation is immutable and cannot be modified.' });
+      }
+      if (req.body.timezone !== undefined && normStr(req.body.timezone) && normStr(req.body.timezone) !== normStr(currentPrefs.timezone)) {
+        return res.status(403).json({ error: 'Time zone provided during account creation is immutable and cannot be modified.' });
+      }
+      if (lockedFields.phone && phone !== undefined && normStr(phone) !== normStr(req.user.phone)) {
+        return res.status(403).json({ error: 'Phone number provided during account creation is immutable and cannot be modified.' });
+      }
+    }
 
     const updates = [];
     const params = [];
-    // Full name for student accounts remains permanently unchanged from registration
-    if (name !== undefined && name !== null && req.user.role !== 'student') {
+    if (isAdmin && name !== undefined && name !== null) {
       updates.push('name = ?');
       params.push(name.trim());
     }
-    if (email !== undefined && email !== null && String(email).includes('@')) {
+    if (isAdmin && email !== undefined && email !== null && String(email).includes('@')) {
       const cleanGmail = String(email).toLowerCase().trim();
       const conflict = db.prepare('SELECT id FROM users WHERE LOWER(email) = LOWER(?) AND id != ?').get(cleanGmail, userId);
       if (!conflict) {
@@ -3966,7 +4035,7 @@ app.put('/api/auth/profile', authenticateToken, (req, res) => {
         db.prepare('UPDATE notifications SET email_recipient = ? WHERE user_id = ?').run(cleanGmail, userId);
       } catch (e) {}
     }
-    if (phone !== undefined) {
+    if (phone !== undefined && (isAdmin || !lockedFields.phone)) {
       updates.push('phone = ?');
       params.push(phone || null);
     }
@@ -3987,71 +4056,78 @@ app.put('/api/auth/profile', authenticateToken, (req, res) => {
     }
 
     if (req.user.role === 'student' && studentData) {
-      // Grade level remains exactly as entered during registration and cannot be modified in the profile
+      const existingSp = db.prepare('SELECT grade_level, school, learning_goals, target_subjects FROM student_profiles WHERE user_id = ?').get(userId) || {};
+      if (studentData.grade_level !== undefined && normStr(studentData.grade_level) && normStr(studentData.grade_level) !== normStr(existingSp.grade_level)) {
+        return res.status(403).json({ error: 'Grade level provided during account creation is immutable and cannot be modified.' });
+      }
+      if (lockedFields.school && studentData.school !== undefined && normStr(studentData.school) !== normStr(existingSp.school)) {
+        return res.status(403).json({ error: 'School provided during account creation is immutable and cannot be modified.' });
+      }
+      if (lockedFields.learning_goals && studentData.learning_goals !== undefined && normStr(studentData.learning_goals) !== normStr(existingSp.learning_goals)) {
+        return res.status(403).json({ error: 'Learning goals provided during account creation are immutable and cannot be modified.' });
+      }
+      if (lockedFields.target_subjects && studentData.target_subjects !== undefined && normStr(studentData.target_subjects) !== normStr(existingSp.target_subjects)) {
+        return res.status(403).json({ error: 'Target subjects provided during account creation are immutable and cannot be modified.' });
+      }
+
       db.prepare(`
         UPDATE student_profiles
         SET school = ?, learning_goals = ?, target_subjects = ?, updated_at = CURRENT_TIMESTAMP
         WHERE user_id = ?
       `).run(
-        studentData.school || null,
-        studentData.learning_goals || null,
-        studentData.target_subjects || null,
+        lockedFields.school ? existingSp.school : (studentData.school !== undefined ? (studentData.school || null) : existingSp.school),
+        lockedFields.learning_goals ? existingSp.learning_goals : (studentData.learning_goals !== undefined ? (studentData.learning_goals || null) : existingSp.learning_goals),
+        lockedFields.target_subjects ? existingSp.target_subjects : (studentData.target_subjects !== undefined ? (studentData.target_subjects || null) : existingSp.target_subjects),
         userId
       );
     }
 
     if ((req.user.role === 'teacher' || req.user.role === 'tutor') && tutorData) {
-      const existingProf = db.prepare('SELECT subjects, subject_rates, hourly_rate, rate_currency, country FROM tutor_profiles WHERE user_id = ?').get(userId);
-      const newBaseRate = parseFloat(tutorData.hourly_rate) || existingProf?.hourly_rate || 45;
-      const effectiveCountry = tutorData.country || req.body.country || existingProf?.country || 'United States';
-      const newRateCurr = tutorData.rate_currency || (String(effectiveCountry).toLowerCase() === 'philippines' ? 'PHP' : (existingProf?.rate_currency || 'USD'));
+      const existingProf = db.prepare('SELECT headline, bio, institution, highest_degree, subjects, subject_rates, hourly_rate, rate_currency, country, timezone FROM tutor_profiles WHERE user_id = ?').get(userId) || {};
+      const existingApp = db.prepare('SELECT headline, bio, institution, highest_degree, subjects FROM teacher_applications WHERE user_id = ?').get(userId) || {};
+      const draftProf = safeParseObject(currentPrefs.tutor_signup_profile) || {};
+
+      const effectiveCountry = existingProf.country || currentPrefs.country || req.user.country || 'United States';
+      const effectiveTimezone = existingProf.timezone || currentPrefs.timezone || 'America/New_York';
+      if (tutorData.country !== undefined && normStr(tutorData.country) && normStr(tutorData.country) !== normStr(effectiveCountry)) {
+        return res.status(403).json({ error: 'Country provided during account creation is immutable and cannot be modified.' });
+      }
+      if (tutorData.timezone !== undefined && normStr(tutorData.timezone) && normStr(tutorData.timezone) !== normStr(effectiveTimezone)) {
+        return res.status(403).json({ error: 'Time zone provided during account creation is immutable and cannot be modified.' });
+      }
+      const existingHeadline = existingProf.headline || existingApp.headline || draftProf.headline || '';
+      const existingBio = existingProf.bio || existingApp.bio || draftProf.bio || '';
+      if (lockedFields.headline && tutorData.headline !== undefined && normStr(tutorData.headline) !== normStr(existingHeadline)) {
+        return res.status(403).json({ error: 'Professional headline provided during account creation is immutable and cannot be modified.' });
+      }
+      if (lockedFields.bio && tutorData.bio !== undefined && normStr(tutorData.bio) !== normStr(existingBio)) {
+        return res.status(403).json({ error: 'Biography provided during account creation is immutable and cannot be modified.' });
+      }
+
+      const newBaseRate = parseFloat(tutorData.hourly_rate) || existingProf.hourly_rate || 45;
+      const newRateCurr = tutorData.rate_currency || (String(effectiveCountry).toLowerCase() === 'philippines' ? 'PHP' : (existingProf.rate_currency || 'USD'));
+      const finalHeadline = lockedFields.headline ? existingHeadline : (tutorData.headline || existingHeadline || null);
+      const finalBio = lockedFields.bio ? existingBio : (tutorData.bio || existingBio || null);
+
       db.prepare(`
         UPDATE tutor_profiles
-        SET headline = ?, bio = ?, hourly_rate = ?, rate_currency = ?, availability_schedule = ?, updated_at = CURRENT_TIMESTAMP
+        SET headline = ?, bio = ?, hourly_rate = ?, rate_currency = ?, availability_schedule = COALESCE(?, availability_schedule), updated_at = CURRENT_TIMESTAMP
         WHERE user_id = ?
       `).run(
-        tutorData.headline || null,
-        tutorData.bio || null,
+        finalHeadline,
+        finalBio,
         newBaseRate,
         newRateCurr,
         tutorData.availability_schedule || null,
         userId
       );
-      if (tutorData.country || req.body.country) {
-        const cVal = tutorData.country || req.body.country;
-        db.prepare('UPDATE tutor_profiles SET country = ? WHERE user_id = ?').run(cVal, userId);
-        db.prepare('UPDATE users SET country = ? WHERE id = ?').run(cVal, userId);
-        db.prepare('UPDATE teacher_applications SET country = ? WHERE user_id = ?').run(cVal, userId);
-        db.prepare('UPDATE user_preferences SET country = ? WHERE user_id = ?').run(cVal, userId);
-      }
-      if (tutorData.timezone || req.body.timezone) {
-        const tzVal = tutorData.timezone || req.body.timezone;
-        db.prepare('UPDATE tutor_profiles SET timezone = ? WHERE user_id = ?').run(tzVal, userId);
-        db.prepare('UPDATE teacher_applications SET timezone = ? WHERE user_id = ?').run(tzVal, userId);
-        db.prepare('UPDATE user_preferences SET timezone = ? WHERE user_id = ?').run(tzVal, userId);
-      }
-      if (tutorData.institution !== undefined) {
-        db.prepare('UPDATE tutor_profiles SET institution = ? WHERE user_id = ?').run(tutorData.institution, userId);
-        db.prepare('UPDATE teacher_applications SET institution = ? WHERE user_id = ?').run(tutorData.institution, userId);
-      }
-      if (tutorData.highest_degree !== undefined) {
-        db.prepare('UPDATE tutor_profiles SET highest_degree = ? WHERE user_id = ?').run(tutorData.highest_degree, userId);
-        db.prepare('UPDATE teacher_applications SET highest_degree = ? WHERE user_id = ?').run(tutorData.highest_degree, userId);
-      }
-      if (tutorData.subjects !== undefined) {
-        const subjsJson = typeof tutorData.subjects === 'string'
-          ? JSON.stringify(tutorData.subjects.split(',').map(s => s.trim()).filter(Boolean))
-          : JSON.stringify(tutorData.subjects);
-        db.prepare('UPDATE tutor_profiles SET subjects = ? WHERE user_id = ?').run(subjsJson, userId);
-        db.prepare('UPDATE teacher_applications SET subjects = ? WHERE user_id = ?').run(subjsJson, userId);
-      }
       db.prepare(`
         UPDATE teacher_applications
         SET headline = COALESCE(?, headline), bio = COALESCE(?, bio), hourly_rate = ?, rate_currency = ?, updated_at = CURRENT_TIMESTAMP
         WHERE user_id = ?
       `).run(
-        tutorData.headline || null,
-        tutorData.bio || null,
+        finalHeadline,
+        finalBio,
         newBaseRate,
         newRateCurr,
         userId
@@ -4121,9 +4197,29 @@ app.get('/api/user/preferences', authenticateToken, (req, res) => {
 app.put('/api/user/preferences', authenticateToken, (req, res) => {
   try {
     const userId = req.user.id;
+    const isAdmin = req.user.role === 'admin';
     const { theme, language, font_size, timezone, country, notif_lessons, notif_calendar, notif_messages, notif_reports, notif_gmail, linked_gmail } = req.body;
 
-    getUserPreferences(userId); // ensure row exists
+    const currentPrefs = getUserPreferences(userId); // ensure row exists
+    const normStr = (v) => (v === undefined || v === null) ? '' : String(v).trim();
+
+    if (!isAdmin && currentPrefs) {
+      if (language !== undefined && normStr(language) !== normStr(currentPrefs.language || 'en-US')) {
+        return res.status(403).json({
+          error: 'Language preference set during account creation is immutable and cannot be changed.'
+        });
+      }
+      if (country !== undefined && normStr(country) !== normStr(currentPrefs.country || 'United States')) {
+        return res.status(403).json({
+          error: 'Country / location set during account creation is immutable and cannot be changed.'
+        });
+      }
+      if (timezone !== undefined && normStr(timezone) !== normStr(currentPrefs.timezone || 'America/New_York')) {
+        return res.status(403).json({
+          error: 'Time zone preference set during account creation is immutable and cannot be changed.'
+        });
+      }
+    }
 
     const updates = [];
     const params = [];
@@ -4132,7 +4228,7 @@ app.put('/api/user/preferences', authenticateToken, (req, res) => {
       updates.push('theme = ?');
       params.push(theme === 'dark' ? 'dark' : 'light');
     }
-    if (language !== undefined) {
+    if (isAdmin && language !== undefined) {
       updates.push('language = ?');
       params.push(language);
     }
@@ -4142,13 +4238,13 @@ app.put('/api/user/preferences', authenticateToken, (req, res) => {
       updates.push('font_size = ?');
       params.push(sanitizedSize);
     }
-    if (timezone !== undefined) {
+    if (isAdmin && timezone !== undefined) {
       updates.push('timezone = ?');
       params.push(timezone);
       db.prepare('UPDATE tutor_profiles SET timezone = ? WHERE user_id = ?').run(timezone, userId);
       db.prepare('UPDATE teacher_applications SET timezone = ? WHERE user_id = ?').run(timezone, userId);
     }
-    if (country !== undefined) {
+    if (isAdmin && country !== undefined) {
       updates.push('country = ?');
       params.push(country);
       db.prepare('UPDATE users SET country = ? WHERE id = ?').run(country, userId);

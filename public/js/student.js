@@ -198,8 +198,15 @@ const Student = {
       // Update Header info
       const studentNameElem = document.getElementById('student-display-name');
       const studentAvatarElem = document.getElementById('student-display-avatar');
+      const gradeBadge = document.getElementById('student-grade-badge');
       if (studentNameElem) studentNameElem.textContent = user.name;
       if (studentAvatarElem) studentAvatarElem.src = user.avatar_url || '/assets/favicon.png';
+      const resolvedGrade = (typeof Profile !== 'undefined' && Profile.studentProfile?.grade_level)
+        || data.studentProfile?.grade_level
+        || user.grade_level;
+      if (gradeBadge && resolvedGrade) {
+        gradeBadge.textContent = resolvedGrade;
+      }
 
       // Time-aware greeting & live clock
       this.updateTimeAwareGreeting();
@@ -242,6 +249,9 @@ const Student = {
       if (typeof Auth !== 'undefined' && Auth.loadNotifications) {
         Auth.loadNotifications();
       }
+      if (typeof I18n !== 'undefined' && I18n.currentLanguage && I18n.currentLanguage !== 'en-US') {
+        I18n.applyLanguage(I18n.currentLanguage, false);
+      }
 
       // Check if hash has session or action query params to focus immediately
       const rawHash = window.location.hash || '';
@@ -260,7 +270,22 @@ const Student = {
     const clockElem = document.getElementById('student-clock-display');
 
     const now = new Date();
-    const hour = now.getHours();
+    const viewerTz = (typeof AvioraGeo !== 'undefined' && typeof AvioraGeo.getViewerTimezone === 'function')
+      ? AvioraGeo.getViewerTimezone()
+      : null;
+    const viewerAbbr = (viewerTz && typeof AvioraGeo.getTimezoneAbbr === 'function')
+      ? AvioraGeo.getTimezoneAbbr(viewerTz)
+      : '';
+    const langLocale = (typeof I18n !== 'undefined' && I18n.currentLanguage) ? I18n.currentLanguage : 'en-US';
+
+    let hour = now.getHours();
+    if (viewerTz) {
+      try {
+        const hourStr = new Intl.DateTimeFormat('en-US', { timeZone: viewerTz, hour: 'numeric', hour12: false }).format(now);
+        const parsedHour = parseInt(hourStr, 10);
+        if (!Number.isNaN(parsedHour)) hour = parsedHour % 24;
+      } catch (e) {}
+    }
 
     let greeting = 'Welcome back,';
     if (hour < 12) {
@@ -274,11 +299,24 @@ const Student = {
     if (greetingElem) greetingElem.textContent = greeting;
 
     if (clockElem) {
-      const options = { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' };
+      const options = {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        ...(viewerTz ? { timeZone: viewerTz } : {})
+      };
       try {
-        clockElem.textContent = now.toLocaleDateString('en-US', options);
+        const formatted = now.toLocaleDateString(langLocale, options);
+        clockElem.textContent = viewerAbbr ? `${formatted} (${viewerAbbr})` : formatted;
       } catch (e) {
-        clockElem.textContent = now.toDateString();
+        try {
+          const fallback = now.toLocaleDateString('en-US', options);
+          clockElem.textContent = viewerAbbr ? `${fallback} (${viewerAbbr})` : fallback;
+        } catch (err) {
+          clockElem.textContent = now.toDateString();
+        }
       }
     }
   },
@@ -1492,6 +1530,9 @@ const Student = {
       const gradeBadge = document.getElementById('student-grade-badge');
       if (gradeBadge) {
         gradeBadge.textContent = sp.grade_level || 'Active Student';
+      }
+      if (typeof Profile !== 'undefined' && Profile.applyRegistrationLocks) {
+        Profile.applyRegistrationLocks(data.preferences, u, sp);
       }
     } catch (e) {
       console.warn('Could not load student profile form data:', e);

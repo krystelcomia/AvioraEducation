@@ -5765,11 +5765,13 @@ const I18n = {
     this.currentLanguage = cleanLang;
     document.documentElement.setAttribute('lang', cleanLang);
 
-    // Keep profile settings dropdown in sync
-    const profileLangSelect = document.getElementById('profile-language-select');
-    if (profileLangSelect && profileLangSelect.value !== cleanLang) {
-      profileLangSelect.value = cleanLang;
-    }
+    // Keep profile settings dropdowns in sync
+    ['profile-language-select', 'teacher-language-select', 'admin-language-select'].forEach(id => {
+      const sel = document.getElementById(id);
+      if (sel && sel.value !== cleanLang) {
+        sel.value = cleanLang;
+      }
+    });
 
     try {
       if (user && user.id) {
@@ -5861,6 +5863,13 @@ const I18n = {
       'nav-link-teacher-schedule': 'nav.schedule',
       'nav-link-teacher-dashboard': 'nav.dashboard'
     };
+
+    const ratingsNav = document.getElementById('nav-link-teacher-ratings');
+    if (ratingsNav && this.currentLanguage !== 'en-US') {
+      ratingsNav.textContent = this.translatePhrase('Ratings', this.currentLanguage);
+    } else if (ratingsNav && this.currentLanguage === 'en-US') {
+      ratingsNav.textContent = 'Ratings';
+    }
 
     Object.keys(navMap).forEach(id => {
       const el = document.getElementById(id);

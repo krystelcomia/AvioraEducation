@@ -5,7 +5,10 @@
  */
 
 window.getTimezoneAbbr = function (tz) {
-  const currentTz = tz || localStorage.getItem('aviora_timezone') || 'America/New_York';
+  if (typeof AvioraGeo !== 'undefined' && typeof AvioraGeo.getTimezoneAbbr === 'function') {
+    const resolvedTz = tz || (typeof AvioraGeo.getViewerTimezone === 'function' ? AvioraGeo.getViewerTimezone() : 'America/New_York');
+    return AvioraGeo.getTimezoneAbbr(resolvedTz);
+  }
   const abbrs = {
     'America/New_York': 'EST',
     'America/Chicago': 'CST',
@@ -17,7 +20,7 @@ window.getTimezoneAbbr = function (tz) {
     'Asia/Tokyo': 'JST',
     'UTC': 'UTC'
   };
-  return abbrs[currentTz] || '';
+  return abbrs[tz || 'America/New_York'] || '';
 };
 
 const Profile = {
@@ -173,6 +176,18 @@ const Profile = {
       return;
     }
 
+    if (persistToServer && u.role !== 'admin') {
+      const lockedLang = this.userPreferences?.language || u.language || localStorage.getItem(`aviora_language_${u.id}`) || 'en-US';
+      ['profile-language-select', 'teacher-language-select'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = lockedLang;
+      });
+      if (notify) {
+        showToast('Language preference set during account creation is immutable and cannot be changed.', 'info');
+      }
+      return;
+    }
+
     const activeLang = lang || 'en-US';
     const langSelect = document.getElementById('profile-language-select');
     if (langSelect) langSelect.value = activeLang;
@@ -213,6 +228,19 @@ const Profile = {
   },
 
   applyCountry(country, notify = true, persistToServer = true) {
+    const u = (typeof Auth !== 'undefined' && Auth.currentUser) || (typeof Storage !== 'undefined' ? Storage.getUser() : null);
+    if (persistToServer && u && u.id && u.role !== 'admin') {
+      const lockedCountry = this.userPreferences?.country || u.country || localStorage.getItem(`aviora_country_${u.id}`) || 'United States';
+      ['profile-country-select', 'teacher-country-select', 'teacher-profile-country'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = lockedCountry;
+      });
+      if (notify) {
+        showToast('Country / location set during account creation is immutable and cannot be changed.', 'info');
+      }
+      return;
+    }
+
     const activeCountry = country || 'United States';
     ['profile-country-select', 'teacher-country-select', 'teacher-profile-country', 'admin-country-select', 'app-country'].forEach(id => {
       const el = document.getElementById(id);
@@ -322,6 +350,19 @@ const Profile = {
   },
 
   applyTimezone(tz, notify = true, persistToServer = true) {
+    const u = (typeof Auth !== 'undefined' && Auth.currentUser) || (typeof Storage !== 'undefined' ? Storage.getUser() : null);
+    if (persistToServer && u && u.id && u.role !== 'admin') {
+      const lockedTz = this.userPreferences?.timezone || u.timezone || localStorage.getItem(`aviora_timezone_${u.id}`) || 'America/New_York';
+      ['profile-timezone-select', 'teacher-timezone-select', 'teacher-profile-timezone'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = lockedTz;
+      });
+      if (notify) {
+        showToast('Time zone preference set during account creation is immutable and cannot be changed.', 'info');
+      }
+      return;
+    }
+
     const activeTz = tz || 'America/New_York';
     const tzAbbrLabel = (typeof AvioraGeo !== 'undefined' && typeof AvioraGeo.getTimezoneAbbr === 'function')
       ? AvioraGeo.getTimezoneAbbr(activeTz)
@@ -951,7 +992,61 @@ const Profile = {
     if (gmailAccountInput) gmailAccountInput.value = prefs.linked_gmail || u.linked_google_email || googleLinked?.email || u.email || '';
 
     this.syncAllPreferences(prefs, false);
+    this.applyRegistrationLocks(prefs, u, this.studentProfile);
     this.updateTimezoneClockDisplays();
+  },
+
+  applyRegistrationLocks(prefs = null, user = null, profileData = null) {
+    const u = user || this.currentUser || (typeof Auth !== 'undefined' ? Auth.currentUser : null) || {};
+    if (!u || u.role === 'admin') return;
+
+    const p = prefs || this.userPreferences || u.preferences || {};
+    let parsedImm = {};
+    try {
+      parsedImm = typeof p.registration_immutable === 'string'
+        ? JSON.parse(p.registration_immutable || '{}')
+        : (p.registration_immutable || {});
+    } catch (e) {}
+    const lockedFields = parsedImm.fields || {};
+
+    const lockElement = (id, msg = 'Set during account creation — cannot be modified') => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.disabled = true;
+      if ('readOnly' in el) el.readOnly = true;
+      el.style.opacity = '0.72';
+      el.style.cursor = 'not-allowed';
+      el.title = msg;
+      el.dataset.registrationLocked = '1';
+    };
+
+    // Regional & language preferences chosen during registration are always immutable
+    ['profile-country-select', 'profile-language-select', 'profile-timezone-select',
+      'teacher-country-select', 'teacher-language-select', 'teacher-timezone-select',
+      'teacher-profile-country', 'teacher-profile-timezone'].forEach(id => {
+      lockElement(id, 'Configured during account creation — cannot be modified');
+    });
+
+    // Core identity fields are always immutable
+    ['profile-name', 'profile-email', 'profile-grade',
+      'teacher-profile-name', 'teacher-profile-email',
+      'teacher-profile-institution', 'teacher-profile-subjects'].forEach(id => {
+      lockElement(id, 'Registered account detail — cannot be modified');
+    });
+
+    // Profile details provided during account creation remain immutable
+    const sp = profileData || this.studentProfile || {};
+    if (lockedFields.phone || (sp.phone && u.phone)) {
+      if (lockedFields.phone) {
+        lockElement('profile-phone');
+        lockElement('teacher-profile-phone');
+      }
+    }
+    if (lockedFields.school) lockElement('profile-school');
+    if (lockedFields.learning_goals) lockElement('profile-goals');
+    if (lockedFields.target_subjects) lockElement('profile-subjects');
+    if (lockedFields.headline) lockElement('t-profile-headline');
+    if (lockedFields.bio) lockElement('t-profile-bio');
   },
 
   renderProfileData() {
@@ -1010,6 +1105,7 @@ const Profile = {
 
     // Synchronize All Saved Preferences from DB to UI controls
     this.syncAllPreferences(prefs, false);
+    this.applyRegistrationLocks(prefs, u, sp);
 
     // Refresh Daily Lucky Spin Wheel
     if (typeof SpinWheel !== 'undefined' && SpinWheel.refresh) {
@@ -1037,21 +1133,25 @@ const Profile = {
   },
 
   async performAutoSaveProfile() {
-    // Full name remains exactly as entered during registration and cannot be modified
     const name = this.currentUser?.name || (typeof Auth !== 'undefined' && Auth.currentUser?.name) || document.getElementById('profile-name')?.value?.trim();
-    const phone = document.getElementById('profile-phone')?.value.trim();
-    // Grade level remains exactly as entered during registration and cannot be modified in the profile
+    const phoneEl = document.getElementById('profile-phone');
+    const phone = phoneEl?.value.trim();
     const grade_level = this.studentProfile?.grade_level || document.getElementById('profile-grade')?.value || 'Grade 11 - High School';
-    const school = document.getElementById('profile-school')?.value.trim();
-    const learning_goals = document.getElementById('profile-goals')?.value.trim();
-    const target_subjects = document.getElementById('profile-subjects')?.value.trim();
+    const schoolEl = document.getElementById('profile-school');
+    const goalsEl = document.getElementById('profile-goals');
+    const subjectsEl = document.getElementById('profile-subjects');
+
+    const studentData = { grade_level };
+    if (schoolEl && !schoolEl.disabled) studentData.school = schoolEl.value.trim();
+    if (goalsEl && !goalsEl.disabled) studentData.learning_goals = goalsEl.value.trim();
+    if (subjectsEl && !subjectsEl.disabled) studentData.target_subjects = subjectsEl.value.trim();
+
+    const payload = { studentData };
+    if (phoneEl && !phoneEl.disabled) payload.phone = phone;
 
     try {
       this.setSaveStatus('saving', typeof I18n !== 'undefined' ? I18n.t('common.saving', 'Saving...') : 'Saving...');
-      await API.updateProfile({
-        phone,
-        studentData: { grade_level, school, learning_goals, target_subjects }
-      });
+      await API.updateProfile(payload);
 
       if (typeof Auth !== 'undefined' && Auth.currentUser) {
         Auth.currentUser.name = name;

@@ -1553,6 +1553,9 @@ const Auth = {
       if (res.tutorDraftProfile && typeof Teacher !== 'undefined') {
         Teacher.tutorDraftProfile = res.tutorDraftProfile;
       }
+      if (res.studentProfile && typeof Profile !== 'undefined') {
+        Profile.studentProfile = res.studentProfile;
+      }
       if (res.preferences) {
         this.syncUserPreferences(res.preferences);
       }
@@ -1567,14 +1570,19 @@ const Auth = {
       }
       
       if (res.user.role === 'teacher' || res.user.role === 'tutor') {
-        showToast(`Account created successfully! Welcome to Aviora, ${res.user.name}. Please provide your credentials and upload your resume and diploma.`, 'success');
-        window.location.hash = '#teacher-application';
+        showToast(`Account created successfully! Welcome to Aviora, ${res.user.name}. Your Tutor Dashboard is ready—please complete your credential application to unlock live tutoring operations.`, 'success');
+        window.location.hash = '#teacher-dashboard';
         if (typeof Router !== 'undefined' && Router.handleRoute) {
           Router.handleRoute();
         }
       } else {
         showToast(`Account created successfully! Welcome to Aviora, ${res.user.name}.`, 'success');
-        this.handlePostAuthRedirect(res.user);
+        window.location.hash = '#student-portal';
+        if (typeof Router !== 'undefined' && Router.handleRoute) {
+          Router.handleRoute();
+        } else {
+          this.handlePostAuthRedirect(res.user);
+        }
       }
     } catch (err) {
       showToast(err.message, 'error');
@@ -2992,6 +3000,15 @@ const Auth = {
 
     if (typeof AvioraCurrency !== 'undefined' && typeof AvioraCurrency.updateDOM === 'function') {
       AvioraCurrency.updateDOM();
+    }
+
+    if (user && user.id && typeof I18n !== 'undefined' && typeof I18n.applyLanguage === 'function') {
+      const userLang = localStorage.getItem(`aviora_language_${user.id}`)
+        || user.language
+        || (typeof Profile !== 'undefined' && Profile.userPreferences?.language)
+        || I18n.currentLanguage
+        || 'en-US';
+      I18n.applyLanguage(userLang, false);
     }
 
     if (typeof Router !== 'undefined' && Router.updateActiveNav) {

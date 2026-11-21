@@ -5227,9 +5227,11 @@ app.get('/api/student/dashboard', authenticateToken, requireRole('student'), (re
       total_hours: requests.filter(r => r.status === 'completed').reduce((acc, r) => acc + (r.duration_hours || 0), 0)
     };
 
+    reconcileStudentSubscriptions(studentId);
+
     const activeSub = db.prepare(`
       SELECT * FROM student_subscriptions
-      WHERE user_id = ? AND status = 'active'
+      WHERE user_id = ? AND status = 'active' AND expires_at > CURRENT_TIMESTAMP
       ORDER BY id DESC LIMIT 1
     `).get(studentId);
 

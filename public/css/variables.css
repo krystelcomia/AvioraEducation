@@ -741,7 +741,8 @@
 [data-theme="dark"] .footer-social-link:hover span {
   color: var(--gold-400) !important;
 }
-[data-theme="dark"] .footer-social-link .footer-x-icon {
+[data-theme="dark"] .footer-social-link .footer-x-icon,
+[data-theme="dark"] .footer-social-link .footer-tiktok-icon {
   color: #FFFFFF !important;
 }
 [data-theme="dark"] .newsletter-input {

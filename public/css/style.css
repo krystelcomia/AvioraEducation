@@ -1813,6 +1813,7 @@ a { text-decoration: none; color: inherit; transition: color var(--transition-fa
 .footer-social-link .footer-ig-icon,
 .footer-social-link .footer-fb-icon,
 .footer-social-link .footer-x-icon,
+.footer-social-link .footer-tiktok-icon,
 .footer-social-link .footer-email-icon {
   flex-shrink: 0;
   transition: transform var(--transition-fast);
@@ -1830,6 +1831,10 @@ a { text-decoration: none; color: inherit; transition: color var(--transition-fa
   color: #0F1419;
 }
 
+.footer-social-link .footer-tiktok-icon {
+  color: #0F1419;
+}
+
 .footer-social-link .footer-email-icon {
   color: #EA4335;
 }
@@ -1837,6 +1842,7 @@ a { text-decoration: none; color: inherit; transition: color var(--transition-fa
 .footer-social-link:hover .footer-ig-icon,
 .footer-social-link:hover .footer-fb-icon,
 .footer-social-link:hover .footer-x-icon,
+.footer-social-link:hover .footer-tiktok-icon,
 .footer-social-link:hover .footer-email-icon {
   transform: scale(1.12);
 }

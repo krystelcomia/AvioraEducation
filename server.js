@@ -2167,9 +2167,55 @@ function requireRole(...roles) {
 // ==========================================
 
 // Register
+const COUNTRY_DEFAULTS_MAP = {
+  'United States': { timezone: 'America/New_York', language: 'en-US' },
+  'United Kingdom': { timezone: 'Europe/London', language: 'en-US' },
+  'Canada': { timezone: 'America/Toronto', language: 'en-US' },
+  'Australia': { timezone: 'Australia/Sydney', language: 'en-US' },
+  'Philippines': { timezone: 'Asia/Manila', language: 'fil-PH' },
+  'Singapore': { timezone: 'Asia/Singapore', language: 'en-US' },
+  'Japan': { timezone: 'Asia/Tokyo', language: 'ja-JP' },
+  'South Korea': { timezone: 'Asia/Seoul', language: 'ko-KR' },
+  'China': { timezone: 'Asia/Shanghai', language: 'zh-CN' },
+  'India': { timezone: 'Asia/Kolkata', language: 'hi-IN' },
+  'France': { timezone: 'Europe/Paris', language: 'fr-FR' },
+  'Germany': { timezone: 'Europe/Berlin', language: 'de-DE' },
+  'Spain': { timezone: 'Europe/Madrid', language: 'es-ES' },
+  'Italy': { timezone: 'Europe/Rome', language: 'it-IT' },
+  'Brazil': { timezone: 'America/Sao_Paulo', language: 'pt-BR' },
+  'Mexico': { timezone: 'America/Mexico_City', language: 'es-ES' },
+  'United Arab Emirates': { timezone: 'Asia/Dubai', language: 'ar-SA' },
+  'Saudi Arabia': { timezone: 'Asia/Riyadh', language: 'ar-SA' },
+  'Indonesia': { timezone: 'Asia/Jakarta', language: 'id-ID' },
+  'Vietnam': { timezone: 'Asia/Ho_Chi_Minh', language: 'vi-VN' },
+  'Turkey': { timezone: 'Europe/Istanbul', language: 'tr-TR' },
+  'Netherlands': { timezone: 'Europe/Amsterdam', language: 'nl-NL' },
+  'Poland': { timezone: 'Europe/Warsaw', language: 'pl-PL' },
+  'Sweden': { timezone: 'Europe/Stockholm', language: 'sv-SE' },
+  'Thailand': { timezone: 'Asia/Bangkok', language: 'th-TH' },
+  'Switzerland': { timezone: 'Europe/Zurich', language: 'de-DE' },
+  'South Africa': { timezone: 'Africa/Johannesburg', language: 'en-US' },
+  'New Zealand': { timezone: 'Pacific/Auckland', language: 'en-US' }
+};
+
+function resolveLocationPreferences(country, timezone, language) {
+  const cleanCountry = (country && String(country).trim()) || 'United States';
+  const def = COUNTRY_DEFAULTS_MAP[cleanCountry] || { timezone: 'America/New_York', language: 'en-US' };
+  return {
+    country: cleanCountry,
+    timezone: (timezone && String(timezone).trim()) || def.timezone,
+    language: (language && String(language).trim()) || def.language
+  };
+}
+
 app.post('/api/auth/register', (req, res) => {
   try {
-    const { name, email, password, role, phone, grade_level, school, headline, subjects } = req.body;
+    const {
+      name, email, password, role, phone,
+      grade_level, school, learning_goals, target_subjects,
+      headline, subjects, institution, highest_degree, years_experience, bio,
+      country, timezone, language
+    } = req.body;
 
     if (!name || !email || !password || !role) {
       return res.status(400).json({ error: 'Name, email, password, and account type are required.' });
@@ -2225,9 +2271,11 @@ app.post('/api/auth/register', (req, res) => {
       ? 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=300&q=80'
       : 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=300&q=80';
 
+    const { country: userCountry, timezone: userTimezone, language: userLanguage } = resolveLocationPreferences(country, timezone, language);
+
     const insertUser = db.prepare(`
-      INSERT INTO users (name, email, password_hash, role, phone, avatar_url, status)
-      VALUES (?, ?, ?, ?, ?, ?, 'active')
+      INSERT INTO users (name, email, password_hash, role, phone, avatar_url, country, status)
+      VALUES (?, ?, ?, ?, ?, ?, ?, 'active')
     `);
 
     const result = insertUser.run(
@@ -2236,16 +2284,25 @@ app.post('/api/auth/register', (req, res) => {
       passwordHash,
       designatedRole,
       phone || null,
-      defaultAvatar
+      defaultAvatar,
+      userCountry
     );
 
     const userId = result.lastInsertRowid;
 
+    let studentProfile = null;
+    let tutorDraftProfile = null;
+
     if (designatedRole === 'student') {
+      const resolvedGoals = (learning_goals && String(learning_goals).trim()) || 'Achieve academic excellence and master core coursework.';
+      const resolvedTargetSubjects = (target_subjects !== undefined && target_subjects !== null)
+        ? String(target_subjects).trim()
+        : (subjects ? String(subjects).trim() : '');
       db.prepare(`
         INSERT INTO student_profiles (user_id, grade_level, school, learning_goals, target_subjects)
         VALUES (?, ?, ?, ?, ?)
-      `).run(userId, grade_level || 'Grade 11 - High School', school || '', 'Achieve academic excellence and master core coursework.', subjects || '');
+      `).run(userId, grade_level || 'Grade 11 - High School', school || '', resolvedGoals, resolvedTargetSubjects);
+      studentProfile = db.prepare('SELECT * FROM student_profiles WHERE user_id = ?').get(userId);
 
       // Notify admin of new student account
       const admin = db.prepare("SELECT id FROM users WHERE role = 'admin' LIMIT 1").get();
@@ -2259,6 +2316,20 @@ app.post('/api/auth/register', (req, res) => {
         );
       }
     } else if (designatedRole === 'tutor' || designatedRole === 'teacher') {
+      const parsedSubjects = Array.isArray(subjects)
+        ? subjects.map(s => String(s).trim()).filter(Boolean)
+        : (typeof subjects === 'string' ? subjects.split(',').map(s => s.trim()).filter(Boolean) : []);
+      tutorDraftProfile = {
+        headline: (headline && String(headline).trim()) || '',
+        subjects: parsedSubjects,
+        institution: (institution && String(institution).trim()) || '',
+        highest_degree: (highest_degree && String(highest_degree).trim()) || '',
+        years_experience: years_experience ? Number(years_experience) : 2,
+        bio: (bio && String(bio).trim()) || '',
+        country: userCountry,
+        timezone: userTimezone
+      };
+
       // Notify admin of new teacher account registration (directed to complete application form)
       const admin = db.prepare("SELECT id FROM users WHERE role = 'admin' LIMIT 1").get();
       if (admin) {
@@ -2271,6 +2342,15 @@ app.post('/api/auth/register', (req, res) => {
         );
       }
     }
+
+    const savedPrefs = saveUserPreferences(userId, {
+      theme: 'light',
+      country: userCountry,
+      timezone: userTimezone,
+      language: userLanguage,
+      linked_gmail: cleanEmail,
+      ...(tutorDraftProfile ? { tutor_signup_profile: tutorDraftProfile } : {})
+    });
 
     const token = jwt.sign(
       { id: userId, email: cleanEmail, role: designatedRole },
@@ -2285,6 +2365,9 @@ app.post('/api/auth/register', (req, res) => {
       role: designatedRole,
       phone: phone || null,
       avatar_url: defaultAvatar,
+      country: userCountry,
+      timezone: userTimezone,
+      language: userLanguage,
       status: 'active'
     };
 
@@ -2299,7 +2382,9 @@ app.post('/api/auth/register', (req, res) => {
       message: 'Account successfully registered.',
       token,
       user: userObj,
-      preferences: getUserPreferences(userId)
+      preferences: savedPrefs,
+      ...(studentProfile ? { studentProfile } : {}),
+      ...(tutorDraftProfile ? { tutorDraftProfile } : {})
     });
   } catch (error) {
     console.error('Registration error:', error);
@@ -2377,6 +2462,7 @@ app.post('/api/auth/login', (req, res) => {
       { expiresIn: '7d' }
     );
 
+    const userPrefs = getUserPreferences(user.id);
     const sanitizedUser = {
       id: user.id,
       name: user.name,
@@ -2384,7 +2470,9 @@ app.post('/api/auth/login', (req, res) => {
       role: user.role,
       phone: user.phone,
       avatar_url: user.avatar_url,
-      country: user.country || 'United States',
+      country: user.country || userPrefs?.country || 'United States',
+      timezone: userPrefs?.timezone || 'America/New_York',
+      language: userPrefs?.language || 'en-US',
       status: user.status
     };
 
@@ -2392,7 +2480,7 @@ app.post('/api/auth/login', (req, res) => {
       message: 'Logged in successfully.',
       token,
       user: sanitizedUser,
-      preferences: getUserPreferences(user.id)
+      preferences: userPrefs
     });
   } catch (error) {
     console.error('Login error:', error);
@@ -2403,7 +2491,12 @@ app.post('/api/auth/login', (req, res) => {
 // Auto-sync / restore created accounts across serverless lifecycles
 app.post('/api/auth/sync-account', (req, res) => {
   try {
-    const { name, email, password, role, phone, grade_level, school, headline, subjects } = req.body;
+    const {
+      name, email, password, role, phone,
+      grade_level, school, learning_goals, target_subjects,
+      headline, subjects, institution, highest_degree, years_experience, bio,
+      country, timezone, language
+    } = req.body;
     if (!email || !password) {
       return res.status(400).json({ error: 'Email and password are required.' });
     }
@@ -2413,6 +2506,7 @@ app.post('/api/auth/sync-account', (req, res) => {
     const salt = bcrypt.genSaltSync(10);
     const passwordHash = bcrypt.hashSync(password, salt);
     const designatedRole = role === 'teacher' || role === 'tutor' ? 'teacher' : 'student';
+    const { country: userCountry, timezone: userTimezone, language: userLanguage } = resolveLocationPreferences(country, timezone, language);
 
     if (!user) {
       const defaultAvatar = (designatedRole === 'teacher' || designatedRole === 'tutor')
@@ -2420,29 +2514,44 @@ app.post('/api/auth/sync-account', (req, res) => {
         : 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=300&q=80';
 
       const result = db.prepare(`
-        INSERT INTO users (name, email, password_hash, role, phone, avatar_url, status)
-        VALUES (?, ?, ?, ?, ?, ?, 'active')
-      `).run(name ? name.trim() : cleanEmail.split('@')[0], cleanEmail, passwordHash, designatedRole, phone || null, defaultAvatar);
+        INSERT INTO users (name, email, password_hash, role, phone, avatar_url, country, status)
+        VALUES (?, ?, ?, ?, ?, ?, ?, 'active')
+      `).run(name ? name.trim() : cleanEmail.split('@')[0], cleanEmail, passwordHash, designatedRole, phone || null, defaultAvatar, userCountry);
 
       const userId = result.lastInsertRowid;
+      let tutorDraftProfile = null;
       if (designatedRole === 'student') {
+        const resolvedGoals = (learning_goals && String(learning_goals).trim()) || 'Achieve academic excellence and master core coursework.';
+        const resolvedTargetSubjects = (target_subjects !== undefined && target_subjects !== null)
+          ? String(target_subjects).trim()
+          : (subjects ? String(subjects).trim() : '');
         db.prepare(`
           INSERT INTO student_profiles (user_id, grade_level, school, learning_goals, target_subjects)
-          VALUES (?, ?, ?, 'Achieve academic excellence and master core coursework.', ?)
-        `).run(userId, grade_level || 'Grade 11 - High School', school || '', subjects || '');
+          VALUES (?, ?, ?, ?, ?)
+        `).run(userId, grade_level || 'Grade 11 - High School', school || '', resolvedGoals, resolvedTargetSubjects);
       } else {
-        db.prepare(`
-          INSERT INTO teacher_applications (
-            user_id, headline, hourly_rate, subjects, status, interview_status
-          ) VALUES (?, ?, 45.0, ?, 'pending', 'pending')
-        `).run(userId, headline || 'Educator & Academic Specialist', subjects || 'Mathematics');
-
-        db.prepare(`
-          INSERT INTO tutor_profiles (
-            user_id, headline, hourly_rate, subjects, is_active
-          ) VALUES (?, ?, 45.0, ?, 1)
-        `).run(userId, headline || 'Educator & Academic Specialist', subjects || 'Mathematics');
+        const parsedSubjects = Array.isArray(subjects)
+          ? subjects.map(s => String(s).trim()).filter(Boolean)
+          : (typeof subjects === 'string' ? subjects.split(',').map(s => s.trim()).filter(Boolean) : []);
+        tutorDraftProfile = {
+          headline: (headline && String(headline).trim()) || '',
+          subjects: parsedSubjects,
+          institution: (institution && String(institution).trim()) || '',
+          highest_degree: (highest_degree && String(highest_degree).trim()) || '',
+          years_experience: years_experience ? Number(years_experience) : 2,
+          bio: (bio && String(bio).trim()) || '',
+          country: userCountry,
+          timezone: userTimezone
+        };
       }
+      saveUserPreferences(userId, {
+        theme: 'light',
+        country: userCountry,
+        timezone: userTimezone,
+        language: userLanguage,
+        linked_gmail: cleanEmail,
+        ...(tutorDraftProfile ? { tutor_signup_profile: tutorDraftProfile } : {})
+      });
       user = db.prepare('SELECT * FROM users WHERE id = ?').get(userId);
     } else {
       db.prepare("UPDATE users SET password_hash = ?, status = 'active' WHERE id = ?").run(passwordHash, user.id);
@@ -2454,6 +2563,7 @@ app.post('/api/auth/sync-account', (req, res) => {
       JWT_SECRET,
       { expiresIn: '7d' }
     );
+    const prefs = getUserPreferences(user.id);
 
     return res.json({
       message: 'Account successfully authenticated.',
@@ -2465,9 +2575,12 @@ app.post('/api/auth/sync-account', (req, res) => {
         role: user.role,
         phone: user.phone,
         avatar_url: user.avatar_url,
+        country: user.country || prefs?.country || 'United States',
+        timezone: prefs?.timezone || 'America/New_York',
+        language: prefs?.language || 'en-US',
         status: user.status
       },
-      preferences: getUserPreferences(user.id)
+      preferences: prefs
     });
   } catch (err) {
     console.error('Account sync error:', err);
@@ -3807,9 +3920,19 @@ app.get('/api/auth/me', authenticateToken, (req, res) => {
     extra.preferences = userPrefs;
     extra.linkedAccounts = linkedAccounts;
     extra.linkedGoogleEmail = (linkedGmailInfo && linkedGmailInfo.linkedEmail) || userPrefs?.linked_gmail || req.user.email;
+    if ((req.user.role === 'teacher' || req.user.role === 'tutor') && userPrefs?.tutor_signup_profile) {
+      extra.tutorDraftProfile = safeParseObject(userPrefs.tutor_signup_profile);
+    }
 
     return res.json({
-      user: { ...req.user, linked_accounts: linkedAccounts, linked_google_email: extra.linkedGoogleEmail },
+      user: {
+        ...req.user,
+        country: req.user.country || userPrefs?.country || 'United States',
+        timezone: userPrefs?.timezone || 'America/New_York',
+        language: userPrefs?.language || 'en-US',
+        linked_accounts: linkedAccounts,
+        linked_google_email: extra.linkedGoogleEmail
+      },
       ...extra
     });
   } catch (error) {
@@ -7215,7 +7338,16 @@ app.get('/api/teacher/application-status', authenticateToken, requireRole('teach
       tutorProfile.availability_schedule = safeParseObject(tutorProfile.availability_schedule);
     }
 
-    res.json({ user, application, tutorProfile });
+    const prefs = getUserPreferences(userId);
+    const tutorDraftProfile = prefs?.tutor_signup_profile ? safeParseObject(prefs.tutor_signup_profile) : null;
+    const enrichedUser = user ? {
+      ...user,
+      country: user.country || prefs?.country || 'United States',
+      timezone: prefs?.timezone || 'America/New_York',
+      language: prefs?.language || 'en-US'
+    } : null;
+
+    res.json({ user: enrichedUser, application, tutorProfile, tutorDraftProfile, preferences: prefs });
   } catch (error) {
     console.error('Application status error:', error);
     res.status(500).json({ error: 'Failed to retrieve application status.' });

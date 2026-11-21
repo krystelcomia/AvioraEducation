@@ -370,9 +370,18 @@ const Tutors = {
     const rateDisplay = this.getTutorRateDisplay(t);
     const country = t.country || 'United States';
     const timezone = t.timezone || (typeof AvioraGeo !== 'undefined' ? AvioraGeo.getDefaultTimezone(country) : 'America/New_York');
+    const viewerTz = (typeof AvioraGeo !== 'undefined' && typeof AvioraGeo.getViewerTimezone === 'function')
+      ? AvioraGeo.getViewerTimezone()
+      : timezone;
+    const displayTz = viewerTz || timezone;
     const flag = typeof AvioraGeo !== 'undefined' ? AvioraGeo.getCountryFlag(country) : '🌐';
-    const localTime = typeof AvioraGeo !== 'undefined' ? AvioraGeo.getCurrentTimeInZone(timezone) : '';
-    const tzAbbr = typeof AvioraGeo !== 'undefined' ? AvioraGeo.getTimezoneAbbr(timezone) : 'EST';
+    const localTime = typeof AvioraGeo !== 'undefined' ? AvioraGeo.getCurrentTimeInZone(displayTz) : '';
+    const tzAbbr = typeof AvioraGeo !== 'undefined' ? AvioraGeo.getTimezoneAbbr(displayTz) : 'EST';
+    const tutorLocalTime = typeof AvioraGeo !== 'undefined' ? AvioraGeo.getCurrentTimeInZone(timezone) : '';
+    const tutorAbbr = typeof AvioraGeo !== 'undefined' ? AvioraGeo.getTimezoneAbbr(timezone) : 'EST';
+    const clockTooltip = (viewerTz && viewerTz !== timezone)
+      ? `Adjusted to your timezone (${tzAbbr}). Tutor local time in ${country}: ${tutorLocalTime} (${tutorAbbr})`
+      : `Current local time in ${country} (${tzAbbr})`;
 
     return `
       <div class="tutor-card" data-tutor-id="${t.id}">
@@ -401,7 +410,7 @@ const Tutors = {
                 <span class="tutor-country-name">${country}</span>
                 <span class="tutor-geo-divider">•</span>
                 <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="display:inline-block; flex-shrink: 0; color: var(--gold-800);"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-                <span class="tutor-live-clock" data-tutor-tz="${timezone}">${localTime} (${tzAbbr})</span>
+                <span class="tutor-live-clock" data-tutor-tz="${timezone}" data-tutor-country="${country}" title="${clockTooltip}">${localTime} (${tzAbbr})</span>
               </span>
             </div>
           </div>
@@ -481,9 +490,18 @@ const Tutors = {
       this.selectedTutor = tutor;
       const country = tutor.country || 'United States';
       const timezone = tutor.timezone || (typeof AvioraGeo !== 'undefined' ? AvioraGeo.getDefaultTimezone(country) : 'America/New_York');
+      const viewerTz = (typeof AvioraGeo !== 'undefined' && typeof AvioraGeo.getViewerTimezone === 'function')
+        ? AvioraGeo.getViewerTimezone()
+        : timezone;
+      const displayTz = viewerTz || timezone;
       const flag = typeof AvioraGeo !== 'undefined' ? AvioraGeo.getCountryFlag(country) : '🌐';
-      const localTime = typeof AvioraGeo !== 'undefined' ? AvioraGeo.getCurrentTimeInZone(timezone) : '';
-      const tzAbbr = typeof AvioraGeo !== 'undefined' ? AvioraGeo.getTimezoneAbbr(timezone) : 'EST';
+      const localTime = typeof AvioraGeo !== 'undefined' ? AvioraGeo.getCurrentTimeInZone(displayTz) : '';
+      const tzAbbr = typeof AvioraGeo !== 'undefined' ? AvioraGeo.getTimezoneAbbr(displayTz) : 'EST';
+      const tutorLocalTime = typeof AvioraGeo !== 'undefined' ? AvioraGeo.getCurrentTimeInZone(timezone) : '';
+      const tutorAbbr = typeof AvioraGeo !== 'undefined' ? AvioraGeo.getTimezoneAbbr(timezone) : 'EST';
+      const clockTooltip = (viewerTz && viewerTz !== timezone)
+        ? `Adjusted to your timezone (${tzAbbr}). Tutor local time in ${country}: ${tutorLocalTime} (${tutorAbbr})`
+        : `Current local time in ${country} (${tzAbbr})`;
 
       const subjectsTags = (tutor.subjects || []).map(s => {
         const sRate = this.getTutorSubjectRate(tutor, s);
@@ -497,11 +515,21 @@ const Tutors = {
       const daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
       const sched = tutor.availability_schedule || {};
 
+      const getRefDateForWeekday = (dayName) => {
+        const names = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        const targetIdx = names.indexOf(dayName);
+        const d = new Date();
+        const diff = targetIdx >= 0 ? (targetIdx - d.getDay() + 7) % 7 : 0;
+        d.setDate(d.getDate() + diff);
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      };
+
       daysOfWeek.forEach(day => {
         const hasKey = Object.prototype.hasOwnProperty.call(sched, day);
         const slots = hasKey ? sched[day] : (day !== 'Sunday' ? ['09:00 - 12:00', '14:00 - 17:00'] : []);
         const slotsArray = Array.isArray(slots) ? slots : (slots ? [slots] : []);
         const dayMode = sched.day_modes && sched.day_modes[day];
+        const refDate = getRefDateForWeekday(day);
         let badgesHtml = '';
         if (slotsArray.length === 0) {
           badgesHtml = `<span class="schedule-slot-badge" style="display: inline-flex; align-items: center; gap: 0.3rem; background: rgba(239, 68, 68, 0.08); color: #DC2626; border-color: rgba(239, 68, 68, 0.25);">🚫 Not Available</span>`;
@@ -509,7 +537,13 @@ const Tutors = {
           const modeTag = dayMode === 'all_day'
             ? `<span class="badge-gold" style="font-size: 0.68rem; margin-right: 0.35rem;">All Day</span>`
             : '';
-          badgesHtml = modeTag + slotsArray.map(slot => `<span class="schedule-slot-badge" style="display: inline-flex; align-items: center; gap: 0.3rem;">${Icons.clock(12)} ${slot}</span>`).join(' ');
+          badgesHtml = modeTag + slotsArray.map(slot => {
+            const displaySlot = (typeof AvioraGeo !== 'undefined' && typeof AvioraGeo.formatTimeRangeForViewer === 'function')
+              ? AvioraGeo.formatTimeRangeForViewer(refDate, slot, timezone, displayTz)
+              : slot;
+            const slotTitle = (displayTz !== timezone) ? ` title="Tutor local time in ${country}: ${slot} (${tutorAbbr})"` : '';
+            return `<span class="schedule-slot-badge" style="display: inline-flex; align-items: center; gap: 0.3rem;"${slotTitle}>${Icons.clock(12)} ${displaySlot}</span>`;
+          }).join(' ');
         }
 
         scheduleRowsHtml += `
@@ -604,7 +638,7 @@ const Tutors = {
                   <span class="tutor-country-name">${country}</span>
                   <span class="tutor-geo-divider">•</span>
                   <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="display:inline-block; flex-shrink: 0; color: var(--gold-800);"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-                  <span class="tutor-live-clock" data-tutor-tz="${timezone}">${localTime} (${tzAbbr})</span>
+                  <span class="tutor-live-clock" data-tutor-tz="${timezone}" data-tutor-country="${country}" title="${clockTooltip}">${localTime} (${tzAbbr})</span>
                 </span>
               </div>
 
@@ -745,7 +779,9 @@ const Tutors = {
                 <span>Weekly Availability Schedule</span>
               </h2>
               <p style="font-size: 0.82rem; color: var(--text-secondary); margin-bottom: 1rem;">
-                Standard weekly time slots open for 1-on-1 sessions:
+                ${displayTz !== timezone
+                  ? `Times adjusted to your timezone (<strong style="color: var(--gold-800);">${tzAbbr}</strong> — tutor is based in ${country} (${tutorAbbr})).`
+                  : `Standard weekly time slots open for 1-on-1 sessions (${tzAbbr}):`}
               </p>
               <table class="tutor-schedule-table">
                 <tbody>

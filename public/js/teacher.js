@@ -240,6 +240,7 @@ const Teacher = {
       const statusData = await API.getTeacherStatus();
       this.application = statusData.application;
       this.tutorProfile = statusData.tutorProfile;
+      this.tutorDraftProfile = statusData.tutorDraftProfile || null;
       if (statusData.user && typeof Auth !== 'undefined' && Auth.currentUser) {
         Auth.currentUser = Object.assign({}, Auth.currentUser, statusData.user);
         if (typeof Storage !== 'undefined') Storage.setUser(Auth.currentUser);
@@ -5144,9 +5145,9 @@ const Teacher = {
   },
 
   populateApplicationForm() {
-    if (!this.application) return;
+    const app = this.application || this.tutorDraftProfile;
+    if (!app) return;
 
-    const app = this.application;
     const resumeBadge = document.getElementById('resume-file-badge');
     const diplomaBadge = document.getElementById('diploma-file-badge');
     if (resumeBadge && app.resume_filename) {
@@ -5485,6 +5486,7 @@ const Teacher = {
       const u = data.user || user;
       const tp = data.tutorProfile || this.tutorProfile || {};
       const app = data.teacherApplication || this.application || {};
+      const draft = data.tutorDraftProfile || this.tutorDraftProfile || {};
       const prefs = data.preferences || u.preferences || {};
 
       // Render Hero Details
@@ -5496,8 +5498,8 @@ const Teacher = {
       const subjectBadge = document.getElementById('teacher-profile-subject-badge');
 
       const defaultEducatorAvatar = 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=300&q=80';
-      if (heroName) heroName.textContent = u.name || user?.name || 'Joshua Garcia';
-      if (heroEmail) heroEmail.textContent = u.email || user?.email || 'joshuagarcia@gmail.com';
+      if (heroName) heroName.textContent = u.name || user?.name || 'Educator';
+      if (heroEmail) heroEmail.textContent = u.email || user?.email || '';
       if (heroAvatar) {
         const avatarSrc = tp.avatar_url || u.avatar_url || user?.avatar_url || user?.avatar || tp.avatar || defaultEducatorAvatar;
         heroAvatar.src = avatarSrc;
@@ -5511,7 +5513,7 @@ const Teacher = {
 
       const isApproved = (app.status === 'approved');
       if (statusBadge) {
-        statusBadge.innerHTML = isApproved ? `${Icons.check(13)} Verified Educator` : (app.status === 'pending' ? `${Icons.hourglass(13)} Application Under Review` : 'Accredited Educator');
+        statusBadge.innerHTML = isApproved ? `${Icons.check(13)} Verified Educator` : (app.status === 'pending' ? `${Icons.hourglass(13)} Application Under Review` : 'Prospective Educator');
         statusBadge.className = isApproved ? 'badge-gold' : 'badge-accent';
       }
 
@@ -5521,8 +5523,8 @@ const Teacher = {
         rateBadge.textContent = (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.format(rateVal, { from: tutorCurr.code, to: tutorCurr.code, perHour: true }) : `${tutorCurr.symbol}${rateVal} / hr`;
       }
 
-      const degreeText = app.highest_degree || tp.highest_degree || 'Stanford Ph.D.';
-      const instText = app.institution || tp.institution || 'Applied Mathematics';
+      const degreeText = app.highest_degree || tp.highest_degree || draft.highest_degree || 'Educator Credential';
+      const instText = app.institution || tp.institution || draft.institution || (tp.headline || draft.headline || 'Aviora Faculty');
       if (subjectBadge) {
         subjectBadge.textContent = `${degreeText} • ${instText}`;
       }
@@ -5559,21 +5561,24 @@ const Teacher = {
           });
         }
       }
-      if (headlineInp) headlineInp.value = tp.headline || app.headline || '';
-      if (instInp) instInp.value = `${app.highest_degree || tp.highest_degree || ''}${app.institution ? ' • ' + app.institution : ''}`;
+      if (headlineInp) headlineInp.value = tp.headline || app.headline || draft.headline || '';
+      const resolvedDegree = app.highest_degree || tp.highest_degree || draft.highest_degree || '';
+      const resolvedInst = app.institution || tp.institution || draft.institution || '';
+      if (instInp) instInp.value = resolvedDegree && resolvedInst ? `${resolvedDegree} • ${resolvedInst}` : (resolvedInst || resolvedDegree || '');
 
       const activeSubjs = this.filterOutDeletedSubjects(
-        (this.subjects && this.subjects.length > 0) ? this.subjects : (tp.subjects || app.subjects || [])
+        (this.subjects && this.subjects.length > 0) ? this.subjects : (tp.subjects || app.subjects || draft.subjects || [])
       );
       const subjectsList = Array.isArray(activeSubjs)
         ? activeSubjs.join(', ')
         : (typeof activeSubjs === 'string' ? activeSubjs : '');
       if (subjInp) subjInp.value = subjectsList;
 
-      if (bioInp) bioInp.value = tp.bio || app.bio || '';
+      if (bioInp) bioInp.value = tp.bio || app.bio || draft.bio || '';
 
-      const countryVal = tp.country || u.country || localStorage.getItem('aviora_country') || 'United States';
-      const tzVal = tp.timezone || u.timezone || localStorage.getItem('aviora_timezone') || 'America/New_York';
+      const uidKey = u.id ? `_${u.id}` : '';
+      const countryVal = tp.country || prefs.country || u.country || (uidKey ? localStorage.getItem(`aviora_country${uidKey}`) : null) || 'United States';
+      const tzVal = tp.timezone || prefs.timezone || u.timezone || (uidKey ? localStorage.getItem(`aviora_timezone${uidKey}`) : null) || 'America/New_York';
 
       const countryInp = document.getElementById('teacher-profile-country');
       const tzInp = document.getElementById('teacher-profile-timezone');

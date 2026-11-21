@@ -448,14 +448,22 @@ const BookLesson = {
       : ((this.selectedTutor?.availability_schedule || {})[dayName] || ['09:00 - 12:00', '14:00 - 17:00']);
     const sched = this.selectedTutor?.availability_schedule || {};
     const dateMode = (sched.date_modes && sched.date_modes[dateStr]) || (sched.day_modes && sched.day_modes[dayName]) || null;
-    const modeLabel = dateMode === 'all_day' ? ' • Available All Day' : (blocks.length > 0 ? ` • ${blocks.join(', ')}` : '');
-    if (label) label.textContent = `${dateFormatted}${modeLabel}`;
 
-    const studentCountry = (typeof Profile !== 'undefined' && Profile.userPreferences?.country) || localStorage.getItem('aviora_country') || 'United States';
-    const studentTz = (typeof Profile !== 'undefined' && Profile.userPreferences?.timezone) || localStorage.getItem('aviora_timezone') || 'America/New_York';
+    const studentCountry = (typeof AvioraGeo !== 'undefined' && typeof AvioraGeo.getViewerCountry === 'function')
+      ? AvioraGeo.getViewerCountry()
+      : ((typeof Profile !== 'undefined' && Profile.userPreferences?.country) || 'United States');
+    const studentTz = (typeof AvioraGeo !== 'undefined' && typeof AvioraGeo.getViewerTimezone === 'function')
+      ? AvioraGeo.getViewerTimezone()
+      : ((typeof Profile !== 'undefined' && Profile.userPreferences?.timezone) || 'America/New_York');
     const tutorCountry = this.selectedTutor?.country || 'United States';
     const tutorTz = this.selectedTutor?.timezone || (typeof AvioraGeo !== 'undefined' ? AvioraGeo.getDefaultTimezone(tutorCountry) : 'America/New_York');
     const isCrossTz = studentTz !== tutorTz;
+
+    const convertedBlocks = (typeof AvioraGeo !== 'undefined' && typeof AvioraGeo.formatTimeRangeForViewer === 'function')
+      ? blocks.map(b => AvioraGeo.formatTimeRangeForViewer(dateStr, b, tutorTz, studentTz))
+      : blocks;
+    const modeLabel = dateMode === 'all_day' ? ' • Available All Day' : (convertedBlocks.length > 0 ? ` • ${convertedBlocks.join(', ')}` : '');
+    if (label) label.textContent = `${dateFormatted}${modeLabel}`;
 
     let slots = [];
     if (typeof AvioraGeo !== 'undefined') {

@@ -142,6 +142,53 @@
       return c ? c.timezone : 'America/New_York';
     },
 
+    getCountryLanguage(countryName) {
+      const LANGUAGE_MAP = {
+        'United States': { code: 'en-US', name: 'English (US)' },
+        'United Kingdom': { code: 'en-US', name: 'English (US)' },
+        'Canada': { code: 'en-US', name: 'English (US)' },
+        'Australia': { code: 'en-US', name: 'English (US)' },
+        'Philippines': { code: 'fil-PH', name: 'Filipino (Tagalog)' },
+        'Singapore': { code: 'en-US', name: 'English (US)' },
+        'Japan': { code: 'ja-JP', name: '日本語 (Japanese)' },
+        'South Korea': { code: 'ko-KR', name: '한국어 (Korean)' },
+        'China': { code: 'zh-CN', name: '中文 (简体 / Simplified Chinese)' },
+        'Taiwan': { code: 'zh-TW', name: '中文 (繁體 / Traditional Chinese)' },
+        'India': { code: 'hi-IN', name: 'हिन्दी (Hindi)' },
+        'France': { code: 'fr-FR', name: 'Français (French)' },
+        'Germany': { code: 'de-DE', name: 'Deutsch (German)' },
+        'Spain': { code: 'es-ES', name: 'Español (Spanish)' },
+        'Italy': { code: 'it-IT', name: 'Italiano (Italian)' },
+        'Brazil': { code: 'pt-BR', name: 'Português (Portuguese)' },
+        'Mexico': { code: 'es-ES', name: 'Español (Spanish)' },
+        'United Arab Emirates': { code: 'ar-SA', name: 'العربية (Arabic)' },
+        'Saudi Arabia': { code: 'ar-SA', name: 'العربية (Arabic)' },
+        'Indonesia': { code: 'id-ID', name: 'Bahasa Indonesia (Indonesian)' },
+        'Vietnam': { code: 'vi-VN', name: 'Tiếng Việt (Vietnamese)' },
+        'Turkey': { code: 'tr-TR', name: 'Türkçe (Turkish)' },
+        'Netherlands': { code: 'nl-NL', name: 'Nederlands (Dutch)' },
+        'Poland': { code: 'pl-PL', name: 'Polski (Polish)' },
+        'Sweden': { code: 'sv-SE', name: 'Svenska (Swedish)' },
+        'Thailand': { code: 'th-TH', name: 'ไทย (Thai)' },
+        'Switzerland': { code: 'de-DE', name: 'Deutsch (German)' },
+        'South Africa': { code: 'en-US', name: 'English (US)' },
+        'New Zealand': { code: 'en-US', name: 'English (US)' }
+      };
+      if (!countryName) return LANGUAGE_MAP['United States'];
+      if (LANGUAGE_MAP[countryName]) return LANGUAGE_MAP[countryName];
+      const lower = String(countryName).trim().toLowerCase();
+      const matchedKey = Object.keys(LANGUAGE_MAP).find(k => k.toLowerCase() === lower);
+      return matchedKey ? LANGUAGE_MAP[matchedKey] : LANGUAGE_MAP['United States'];
+    },
+
+    getDefaultLanguage(countryName) {
+      return this.getCountryLanguage(countryName).code;
+    },
+
+    getDefaultLanguageName(countryName) {
+      return this.getCountryLanguage(countryName).name;
+    },
+
     getTimezoneAbbr(tz) {
       const activeTz = tz || (typeof localStorage !== 'undefined' ? localStorage.getItem('aviora_timezone') : null) || 'America/New_York';
       if (TIMEZONE_ABBRS[activeTz]) return TIMEZONE_ABBRS[activeTz];
@@ -241,10 +288,26 @@
       };
     },
 
+    formatTimeRangeForViewer(dateStr, timeRangeStr, fromTz, toTz) {
+      if (!timeRangeStr || !fromTz || !toTz || fromTz === toTz) {
+        return timeRangeStr;
+      }
+      const conv = this.convertTimeRange(dateStr, timeRangeStr, fromTz, toTz);
+      const abbr = this.getTimezoneAbbr(toTz);
+      let shift = '';
+      if (conv.studentDate && dateStr) {
+        if (conv.studentDate < dateStr) shift = ' (-1d)';
+        else if (conv.studentDate > dateStr) shift = ' (+1d)';
+      }
+      return `${conv.studentTime} (${abbr})${shift}`;
+    },
+
     getConvertedSlotsForStudent(studentDateStr, tutor, studentTz, durationMins = 50) {
       if (!tutor || !studentDateStr) return [];
       const tutorTz = tutor.timezone || 'America/New_York';
-      const cleanStudentTz = studentTz || (typeof localStorage !== 'undefined' ? localStorage.getItem('aviora_timezone') : null) || 'America/New_York';
+      const cleanStudentTz = studentTz
+        || (typeof this.getViewerTimezone === 'function' ? this.getViewerTimezone() : null)
+        || 'America/New_York';
 
       const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
       const [year, month, day] = studentDateStr.split('-').map(Number);
@@ -328,23 +391,43 @@
     },
 
     updateLiveClocks() {
-      // 1. Tutor card live clocks
+      const viewerTz = typeof this.getViewerTimezone === 'function' ? this.getViewerTimezone() : null;
+      const viewerAbbr = viewerTz ? this.getTimezoneAbbr(viewerTz) : '';
+
+      // 1. Tutor card live clocks — adjusted to the active user/student timezone
       document.querySelectorAll('.tutor-live-clock[data-tutor-tz]').forEach(el => {
-        const tz = el.getAttribute('data-tutor-tz');
-        if (tz) {
-          const time = this.getCurrentTimeInZone(tz);
-          const abbr = this.getTimezoneAbbr(tz);
+        const tutorTz = el.getAttribute('data-tutor-tz');
+        if (tutorTz) {
+          const displayTz = viewerTz || tutorTz;
+          const time = this.getCurrentTimeInZone(displayTz);
+          const abbr = this.getTimezoneAbbr(displayTz);
           el.textContent = `${time} (${abbr})`;
+          if (viewerTz && viewerTz !== tutorTz) {
+            const tutorAbbr = this.getTimezoneAbbr(tutorTz);
+            const tutorTime = this.getCurrentTimeInZone(tutorTz);
+            const country = el.getAttribute('data-tutor-country') || '';
+            el.setAttribute('title', `Adjusted to your timezone (${viewerAbbr}). Tutor local time${country ? ' in ' + country : ''}: ${tutorTime} (${tutorAbbr})`);
+          } else {
+            el.removeAttribute('title');
+          }
         }
       });
 
-      // 2. Tutor full profile live clock
+      // 2. Tutor full profile live clock — adjusted to the active user/student timezone
       document.querySelectorAll('.tutor-profile-live-time[data-tutor-tz]').forEach(el => {
-        const tz = el.getAttribute('data-tutor-tz');
-        if (tz) {
-          const time = this.getCurrentTimeInZone(tz);
-          const abbr = this.getTimezoneAbbr(tz);
+        const tutorTz = el.getAttribute('data-tutor-tz');
+        if (tutorTz) {
+          const displayTz = viewerTz || tutorTz;
+          const time = this.getCurrentTimeInZone(displayTz);
+          const abbr = this.getTimezoneAbbr(displayTz);
           el.textContent = `${time} (${abbr})`;
+          if (viewerTz && viewerTz !== tutorTz) {
+            const tutorAbbr = this.getTimezoneAbbr(tutorTz);
+            const tutorTime = this.getCurrentTimeInZone(tutorTz);
+            el.setAttribute('title', `Adjusted to your timezone (${viewerAbbr}). Tutor local time: ${tutorTime} (${tutorAbbr})`);
+          } else {
+            el.removeAttribute('title');
+          }
         }
       });
 
@@ -392,6 +475,40 @@
       if (this._clockInterval) clearInterval(this._clockInterval);
       this.updateLiveClocks();
       this._clockInterval = setInterval(() => this.updateLiveClocks(), intervalMs);
+    },
+
+    getViewerCountry() {
+      if (typeof window === 'undefined') return 'United States';
+      const user = (typeof Auth !== 'undefined' && Auth.currentUser)
+        ? Auth.currentUser
+        : (typeof Storage !== 'undefined' && Storage.getUser ? Storage.getUser() : null);
+      if (!user || !user.id) {
+        return 'United States';
+      }
+      const uidKey = `_${user.id}`;
+      return localStorage.getItem(`aviora_country${uidKey}`)
+        || (typeof Profile !== 'undefined' && Profile.userPreferences?.country)
+        || user.country
+        || 'United States';
+    },
+
+    getViewerTimezone() {
+      if (typeof window === 'undefined') return 'America/New_York';
+      const user = (typeof Auth !== 'undefined' && Auth.currentUser)
+        ? Auth.currentUser
+        : (typeof Storage !== 'undefined' && Storage.getUser ? Storage.getUser() : null);
+      if (!user || !user.id) {
+        return 'America/New_York';
+      }
+      const uidKey = `_${user.id}`;
+      const prefs = (typeof Storage !== 'undefined' && Storage.getUserPreferences)
+        ? Storage.getUserPreferences(user.id)
+        : null;
+      return localStorage.getItem(`aviora_timezone${uidKey}`)
+        || (typeof Profile !== 'undefined' && Profile.userPreferences?.timezone)
+        || (prefs && prefs.timezone)
+        || user.timezone
+        || this.getDefaultTimezone(this.getViewerCountry());
     }
   };
 
@@ -417,17 +534,7 @@
     },
 
     getActiveCountry() {
-      if (typeof window === 'undefined') return 'United States';
-      const user = (typeof Auth !== 'undefined' && Auth.currentUser)
-        ? Auth.currentUser
-        : (typeof Storage !== 'undefined' && Storage.getUser ? Storage.getUser() : null);
-      if (!user || !user.id) {
-        return 'United States';
-      }
-      const uidKey = `_${user.id}`;
-      return localStorage.getItem(`aviora_country${uidKey}`)
-        || user.country
-        || 'United States';
+      return AvioraGeo.getViewerCountry();
     },
 
     getActiveCurrency() {

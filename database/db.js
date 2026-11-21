@@ -193,6 +193,7 @@ function initSchema() {
       notif_reports INTEGER DEFAULT 0,
       notif_gmail INTEGER DEFAULT 1,
       linked_gmail TEXT,
+      tutor_signup_profile TEXT,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
@@ -588,6 +589,9 @@ function initSchema() {
     const prefCols = db.prepare("PRAGMA table_info(user_preferences)").all();
     if (prefCols.length > 0 && !prefCols.some(c => c.name === 'country')) {
       db.prepare("ALTER TABLE user_preferences ADD COLUMN country TEXT DEFAULT 'United States'").run();
+    }
+    if (prefCols.length > 0 && !prefCols.some(c => c.name === 'tutor_signup_profile')) {
+      db.prepare("ALTER TABLE user_preferences ADD COLUMN tutor_signup_profile TEXT").run();
     }
   } catch (e) {}
 
@@ -2003,6 +2007,7 @@ function saveUserPreferences(userId, prefs = {}) {
             notif_reports = COALESCE(?, notif_reports),
             notif_gmail = COALESCE(?, notif_gmail),
             linked_gmail = COALESCE(?, linked_gmail),
+            tutor_signup_profile = COALESCE(?, tutor_signup_profile),
             updated_at = CURRENT_TIMESTAMP
         WHERE user_id = ?
       `).run(
@@ -2017,14 +2022,20 @@ function saveUserPreferences(userId, prefs = {}) {
         prefs.notif_reports !== undefined ? prefs.notif_reports : null,
         prefs.notif_gmail !== undefined ? prefs.notif_gmail : null,
         prefs.linked_gmail !== undefined ? prefs.linked_gmail : null,
+        prefs.tutor_signup_profile !== undefined
+          ? (typeof prefs.tutor_signup_profile === 'string' ? prefs.tutor_signup_profile : JSON.stringify(prefs.tutor_signup_profile))
+          : null,
         userId
       );
     } else {
       const userRow = db.prepare('SELECT email FROM users WHERE id = ?').get(userId);
       const userEmail = userRow ? userRow.email : null;
+      const serializedTutorSignup = prefs.tutor_signup_profile !== undefined
+        ? (typeof prefs.tutor_signup_profile === 'string' ? prefs.tutor_signup_profile : JSON.stringify(prefs.tutor_signup_profile))
+        : null;
       db.prepare(`
-        INSERT INTO user_preferences (user_id, theme, language, country, timezone, font_size, notif_lessons, notif_calendar, notif_messages, notif_reports, notif_gmail, linked_gmail)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO user_preferences (user_id, theme, language, country, timezone, font_size, notif_lessons, notif_calendar, notif_messages, notif_reports, notif_gmail, linked_gmail, tutor_signup_profile)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).run(
         userId,
         prefs.theme || 'light',
@@ -2037,7 +2048,8 @@ function saveUserPreferences(userId, prefs = {}) {
         prefs.notif_messages !== undefined ? prefs.notif_messages : 1,
         prefs.notif_reports !== undefined ? prefs.notif_reports : 0,
         prefs.notif_gmail !== undefined ? prefs.notif_gmail : 1,
-        prefs.linked_gmail || userEmail
+        prefs.linked_gmail || userEmail,
+        serializedTutorSignup
       );
     }
     return getUserPreferences(userId);

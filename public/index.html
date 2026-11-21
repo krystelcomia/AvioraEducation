@@ -2213,132 +2213,315 @@
               <img src="/assets/wordmark.png?v=1" alt="Aviora Education" class="brand-wordmark" style="height: 40px; max-width: 170px;" />
             </a>
             <h1 class="simple-login-title">Join Aviora Education</h1>
-            <p class="simple-login-subtitle">Create your account to unlock world-class 1-on-1 instruction</p>
+            <p class="simple-login-subtitle" id="page-signup-subtitle">Step 1 of 2: Enter your account credentials</p>
+
+            <!-- 2-Step Registration Indicator -->
+            <div id="page-signup-stepper" style="display: flex; align-items: center; justify-content: center; gap: 0.6rem; margin-top: 1rem;">
+              <div id="page-signup-pill-1" style="display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.32rem 0.8rem; border-radius: 999px; font-size: 0.78rem; font-weight: 700; background: var(--gold-500, #C59D28); color: #111827;">
+                <span>1</span>
+                <span>Account Details</span>
+              </div>
+              <div style="width: 24px; height: 2px; background: rgba(197, 157, 40, 0.35);"></div>
+              <div id="page-signup-pill-2" style="display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.32rem 0.8rem; border-radius: 999px; font-size: 0.78rem; font-weight: 600; background: rgba(0, 0, 0, 0.06); color: var(--text-secondary);">
+                <span>2</span>
+                <span>Profile Setup</span>
+              </div>
+            </div>
           </div>
 
-          <!-- Page Create Account Form (With Strong Password Requirement) -->
+          <!-- Page Create Account Form (2-Step: Account Details -> Profile Setup) -->
           <div id="page-register-section">
-            <form id="page-register-form">
-              <div class="form-group">
-                <label class="form-label" style="color: var(--charcoal-900); font-weight: 700;">I want to join as</label>
-                <div style="display: flex; gap: 1.5rem; margin-top: 0.35rem;">
-                  <label style="display: flex; align-items: center; gap: 0.45rem; font-size: 0.88rem; color: var(--charcoal-900); font-weight: 600; cursor: pointer;">
-                    <input type="radio" name="page_register_role" value="student" checked /> Student / Parent
-                  </label>
-                  <label style="display: flex; align-items: center; gap: 0.45rem; font-size: 0.88rem; color: var(--charcoal-900); font-weight: 600; cursor: pointer;">
-                    <input type="radio" name="page_register_role" value="tutor" /> Prospective Tutor
-                  </label>
-                </div>
-              </div>
-
-              <div class="form-group">
-                <label class="form-label" for="page-reg-name" style="color: var(--charcoal-900); font-weight: 700;">Full Name</label>
-                <input type="text" id="page-reg-name" class="form-control" placeholder="First & Last Name" required />
-              </div>
-
-              <div class="form-group">
-                <label class="form-label" for="page-reg-email" style="color: var(--charcoal-900); font-weight: 700;">Email Address</label>
-                <input type="email" id="page-reg-email" class="form-control" placeholder="Enter your email" required autocomplete="email" />
-              </div>
-
-              <!-- Strong Password Field with Real-Time Checklist -->
-              <div class="form-group">
-                <label class="form-label" for="page-reg-password" style="color: var(--charcoal-900); font-weight: 700;">Create Strong Password</label>
-                <div class="password-input-wrap">
-                  <input type="password" id="page-reg-password" class="form-control" placeholder="Create a strong password" required autocomplete="new-password" />
-                  <button type="button" class="password-toggle-btn" data-target="page-reg-password" aria-label="Show password" title="Show password">
-                    <svg class="eye-show" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8z"></path>
-                      <circle cx="12" cy="12" r="3"></circle>
-                    </svg>
-                    <svg class="eye-hide" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: none;">
-                      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
-                      <line x1="1" y1="1" x2="23" y2="23"></line>
-                    </svg>
-                  </button>
-                </div>
-
-                <!-- Password Strength Meter & Interactive Rules -->
-                <div class="password-strength-box" id="page-password-strength-box" style="display: none;">
-                  <div class="password-meter-header">
-                    <span style="color: var(--charcoal-800); font-weight: 600;">Password Strength:</span>
-                    <span class="password-meter-label" id="page-password-meter-label" style="color: var(--charcoal-600);">Enter password</span>
-                  </div>
-                  <div class="password-meter-track">
-                    <div class="password-meter-bar" id="page-password-meter-bar"></div>
-                  </div>
-                  <div class="password-rules-list">
-                    <div class="password-rule-item" id="page-rule-length">
-                      <span class="rule-icon">○</span> 8+ characters
-                    </div>
-                    <div class="password-rule-item" id="page-rule-uppercase">
-                      <span class="rule-icon">○</span> Uppercase letter (A-Z)
-                    </div>
-                    <div class="password-rule-item" id="page-rule-lowercase">
-                      <span class="rule-icon">○</span> Lowercase letter (a-z)
-                    </div>
-                    <div class="password-rule-item" id="page-rule-number">
-                      <span class="rule-icon">○</span> Number (0-9)
-                    </div>
-                    <div class="password-rule-item" id="page-rule-special" style="grid-column: span 2;">
-                      <span class="rule-icon">○</span> Special character (!@#$%^&*)
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div class="form-group" id="page-password-confirm-group" style="display: none;">
-                <label class="form-label" for="page-reg-confirm" style="color: var(--charcoal-900); font-weight: 700;">Confirm Password</label>
-                <div class="password-input-wrap">
-                  <input type="password" id="page-reg-confirm" class="form-control" placeholder="Re-enter password" autocomplete="new-password" />
-                  <button type="button" class="password-toggle-btn" data-target="page-reg-confirm" aria-label="Show password" title="Show password">
-                    <svg class="eye-show" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8z"></path>
-                      <circle cx="12" cy="12" r="3"></circle>
-                    </svg>
-                    <svg class="eye-hide" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: none;">
-                      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
-                      <line x1="1" y1="1" x2="23" y2="23"></line>
-                    </svg>
-                  </button>
-                </div>
-                <div id="page-password-match-msg" style="font-size: 0.76rem; margin-top: 0.35rem; display: none;"></div>
-              </div>
-
-              <!-- Student Fields -->
-              <div id="page-student-extra-fields">
+            <form id="page-register-form" novalidate>
+              <!-- STEP 1: ACCOUNT DETAILS -->
+              <div id="page-register-step-1">
                 <div class="form-group">
-                  <label class="form-label" for="page-reg-grade" style="color: var(--charcoal-900); font-weight: 700;">Grade / Educational Level</label>
-                  <select id="page-reg-grade" class="form-control">
-                    <option value="Kindergarten">Kindergarten</option>
-                    <option value="Grade 1 - Elementary School">Grade 1 - Elementary School</option>
-                    <option value="Grade 2 - Elementary School">Grade 2 - Elementary School</option>
-                    <option value="Grade 3 - Elementary School">Grade 3 - Elementary School</option>
-                    <option value="Grade 4 - Elementary School">Grade 4 - Elementary School</option>
-                    <option value="Grade 5 - Elementary School">Grade 5 - Elementary School</option>
-                    <option value="Grade 6 - Elementary School">Grade 6 - Elementary School</option>
-                    <option value="Grade 7 - Middle School">Grade 7 - Middle School</option>
-                    <option value="Grade 8 - Middle School">Grade 8 - Middle School</option>
-                    <option value="Grade 9 - High School">Grade 9 - High School</option>
-                    <option value="Grade 10 - High School">Grade 10 - High School</option>
-                    <option value="Grade 11 - High School" selected>Grade 11 - High School</option>
-                    <option value="Grade 12 - High School">Grade 12 - High School</option>
-                    <option value="College / Undergraduate">College / Undergraduate</option>
-                    <option value="Graduate / Postgraduate">Graduate / Postgraduate</option>
-                    <option value="Language Learner (Language Learning Only)">Language Learner (Language Learning Only)</option>
+                  <label class="form-label" style="color: var(--charcoal-900); font-weight: 700;">I want to join as</label>
+                  <div style="display: flex; gap: 1.5rem; margin-top: 0.35rem;">
+                    <label style="display: flex; align-items: center; gap: 0.45rem; font-size: 0.88rem; color: var(--charcoal-900); font-weight: 600; cursor: pointer;">
+                      <input type="radio" name="page_register_role" value="student" checked /> Student / Parent
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 0.45rem; font-size: 0.88rem; color: var(--charcoal-900); font-weight: 600; cursor: pointer;">
+                      <input type="radio" name="page_register_role" value="tutor" /> Prospective Tutor
+                    </label>
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="page-reg-name" style="color: var(--charcoal-900); font-weight: 700;">Full Name</label>
+                  <input type="text" id="page-reg-name" class="form-control" placeholder="First & Last Name" required />
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="page-reg-email" style="color: var(--charcoal-900); font-weight: 700;">Email Address</label>
+                  <input type="email" id="page-reg-email" class="form-control" placeholder="Enter your email" required autocomplete="email" />
+                </div>
+
+                <!-- Strong Password Field with Real-Time Checklist -->
+                <div class="form-group">
+                  <label class="form-label" for="page-reg-password" style="color: var(--charcoal-900); font-weight: 700;">Create Strong Password</label>
+                  <div class="password-input-wrap">
+                    <input type="password" id="page-reg-password" class="form-control" placeholder="Create a strong password" required autocomplete="new-password" />
+                    <button type="button" class="password-toggle-btn" data-target="page-reg-password" aria-label="Show password" title="Show password">
+                      <svg class="eye-show" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8z"></path>
+                        <circle cx="12" cy="12" r="3"></circle>
+                      </svg>
+                      <svg class="eye-hide" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: none;">
+                        <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                        <line x1="1" y1="1" x2="23" y2="23"></line>
+                      </svg>
+                    </button>
+                  </div>
+
+                  <!-- Password Strength Meter & Interactive Rules -->
+                  <div class="password-strength-box" id="page-password-strength-box" style="display: none;">
+                    <div class="password-meter-header">
+                      <span style="color: var(--charcoal-800); font-weight: 600;">Password Strength:</span>
+                      <span class="password-meter-label" id="page-password-meter-label" style="color: var(--charcoal-600);">Enter password</span>
+                    </div>
+                    <div class="password-meter-track">
+                      <div class="password-meter-bar" id="page-password-meter-bar"></div>
+                    </div>
+                    <div class="password-rules-list">
+                      <div class="password-rule-item" id="page-rule-length">
+                        <span class="rule-icon">○</span> 8+ characters
+                      </div>
+                      <div class="password-rule-item" id="page-rule-uppercase">
+                        <span class="rule-icon">○</span> Uppercase letter (A-Z)
+                      </div>
+                      <div class="password-rule-item" id="page-rule-lowercase">
+                        <span class="rule-icon">○</span> Lowercase letter (a-z)
+                      </div>
+                      <div class="password-rule-item" id="page-rule-number">
+                        <span class="rule-icon">○</span> Number (0-9)
+                      </div>
+                      <div class="password-rule-item" id="page-rule-special" style="grid-column: span 2;">
+                        <span class="rule-icon">○</span> Special character (!@#$%^&*)
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="form-group" id="page-password-confirm-group" style="display: none;">
+                  <label class="form-label" for="page-reg-confirm" style="color: var(--charcoal-900); font-weight: 700;">Confirm Password</label>
+                  <div class="password-input-wrap">
+                    <input type="password" id="page-reg-confirm" class="form-control" placeholder="Re-enter password" autocomplete="new-password" />
+                    <button type="button" class="password-toggle-btn" data-target="page-reg-confirm" aria-label="Show password" title="Show password">
+                      <svg class="eye-show" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8z"></path>
+                        <circle cx="12" cy="12" r="3"></circle>
+                      </svg>
+                      <svg class="eye-hide" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: none;">
+                        <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                        <line x1="1" y1="1" x2="23" y2="23"></line>
+                      </svg>
+                    </button>
+                  </div>
+                  <div id="page-password-match-msg" style="font-size: 0.76rem; margin-top: 0.35rem; display: none;"></div>
+                </div>
+
+                <button type="button" class="btn btn-primary" id="page-reg-next-btn" style="width: 100%; margin-top: 1rem; padding: 0.85rem; font-weight: 700; font-size: 0.95rem;">Next →</button>
+              </div>
+
+              <!-- STEP 2: PROFILE SETUP -->
+              <div id="page-register-step-2" style="display: none;">
+                <div id="page-reg-summary-pill" style="background: rgba(197, 157, 40, 0.08); border: 1px solid rgba(197, 157, 40, 0.28); border-radius: 10px; padding: 0.65rem 0.85rem; margin-bottom: 1rem; font-size: 0.8rem; color: var(--charcoal-900); display: flex; justify-content: space-between; align-items: center; gap: 0.5rem;">
+                  <span id="page-reg-summary-text" style="font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"></span>
+                  <button type="button" id="page-reg-edit-step1-btn" style="background: none; border: none; color: var(--gold-800); font-weight: 700; font-size: 0.76rem; text-decoration: underline; cursor: pointer; flex-shrink: 0;">Edit</button>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="page-reg-phone" style="color: var(--charcoal-900); font-weight: 700;">Phone Number <span style="font-weight: 400; color: var(--text-secondary); font-size: 0.78rem;">(Optional)</span></label>
+                  <input type="tel" id="page-reg-phone" class="form-control" placeholder="+1 (555) 123-4567" autocomplete="tel" />
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="page-reg-country" style="color: var(--charcoal-900); font-weight: 700;">Location (Country / Region)</label>
+                  <select id="page-reg-country" class="form-control">
+                    <option value="United States">🇺🇸 United States</option>
+                    <option value="United Kingdom">🇬🇧 United Kingdom</option>
+                    <option value="Canada">🇨🇦 Canada</option>
+                    <option value="Australia">🇦🇺 Australia</option>
+                    <option value="Philippines">🇵🇭 Philippines</option>
+                    <option value="Singapore">🇸🇬 Singapore</option>
+                    <option value="Japan">🇯🇵 Japan</option>
+                    <option value="South Korea">🇰🇷 South Korea</option>
+                    <option value="China">🇨🇳 China</option>
+                    <option value="India">🇮🇳 India</option>
+                    <option value="France">🇫🇷 France</option>
+                    <option value="Germany">🇩🇪 Germany</option>
+                    <option value="Spain">🇪🇸 Spain</option>
+                    <option value="Italy">🇮🇹 Italy</option>
+                    <option value="Brazil">🇧🇷 Brazil</option>
+                    <option value="Mexico">🇲🇽 Mexico</option>
+                    <option value="United Arab Emirates">🇦🇪 United Arab Emirates</option>
+                    <option value="Saudi Arabia">🇸🇦 Saudi Arabia</option>
+                    <option value="Indonesia">🇮🇩 Indonesia</option>
+                    <option value="Vietnam">🇻🇳 Vietnam</option>
+                    <option value="Turkey">🇹🇷 Turkey</option>
+                    <option value="Netherlands">🇳🇱 Netherlands</option>
+                    <option value="Poland">🇵🇱 Poland</option>
+                    <option value="Sweden">🇸🇪 Sweden</option>
+                    <option value="Thailand">🇹🇭 Thailand</option>
+                    <option value="Switzerland">🇨🇭 Switzerland</option>
+                    <option value="South Africa">🇿🇦 South Africa</option>
+                    <option value="New Zealand">🇳🇿 New Zealand</option>
                   </select>
                 </div>
-              </div>
 
-              <!-- Teacher Fields -->
-              <div id="page-teacher-extra-fields" style="display: none;">
-                <div class="form-group">
-                  <label class="form-label" for="page-reg-subjects" style="color: var(--charcoal-900); font-weight: 700;">Academic Specialty &amp; Subjects</label>
-                  <input type="text" id="page-reg-subjects" class="form-control" placeholder="e.g. AP Calculus, Physics, Coding" />
+                <!-- Live Location Auto-Configuration Preview -->
+                <div id="page-reg-location-preview" style="background: rgba(197, 157, 40, 0.06); border: 1px solid rgba(197, 157, 40, 0.25); border-radius: 10px; padding: 0.75rem 0.85rem; margin-bottom: 1rem;">
+                  <div style="font-size: 0.74rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--gold-800); margin-bottom: 0.4rem;">Auto-Configured from Your Location</div>
+                  <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.5rem; font-size: 0.76rem;">
+                    <div>
+                      <div style="color: var(--text-secondary); font-size: 0.7rem;">Local Time</div>
+                      <div id="page-reg-preview-time" style="font-weight: 700; color: var(--charcoal-900);">—</div>
+                    </div>
+                    <div>
+                      <div style="color: var(--text-secondary); font-size: 0.7rem;">Currency</div>
+                      <div id="page-reg-preview-currency" style="font-weight: 700; color: var(--charcoal-900);">$ USD</div>
+                    </div>
+                    <div>
+                      <div style="color: var(--text-secondary); font-size: 0.7rem;">Language</div>
+                      <div id="page-reg-preview-language" style="font-weight: 700; color: var(--charcoal-900);">English (US)</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+                  <div class="form-group">
+                    <label class="form-label" for="page-reg-timezone" style="color: var(--charcoal-900); font-weight: 700; font-size: 0.82rem;">Time Zone</label>
+                    <select id="page-reg-timezone" class="form-control">
+                      <option value="America/New_York">America/New_York (EST)</option>
+                      <option value="America/Chicago">America/Chicago (CST)</option>
+                      <option value="America/Denver">America/Denver (MST)</option>
+                      <option value="America/Los_Angeles">America/Los_Angeles (PST)</option>
+                      <option value="Europe/London">Europe/London (GMT/BST)</option>
+                      <option value="America/Toronto">America/Toronto (EST)</option>
+                      <option value="Australia/Sydney">Australia/Sydney (AEST)</option>
+                      <option value="Asia/Manila">Asia/Manila (PHT)</option>
+                      <option value="Asia/Singapore">Asia/Singapore (SGT)</option>
+                      <option value="Asia/Tokyo">Asia/Tokyo (JST)</option>
+                      <option value="Asia/Seoul">Asia/Seoul (KST)</option>
+                      <option value="Asia/Shanghai">Asia/Shanghai (CST)</option>
+                      <option value="Asia/Kolkata">Asia/Kolkata (IST)</option>
+                      <option value="Europe/Paris">Europe/Paris (CET)</option>
+                      <option value="Europe/Berlin">Europe/Berlin (CET)</option>
+                      <option value="Europe/Madrid">Europe/Madrid (CET)</option>
+                      <option value="Europe/Rome">Europe/Rome (CET)</option>
+                      <option value="America/Sao_Paulo">America/Sao_Paulo (BRT)</option>
+                      <option value="America/Mexico_City">America/Mexico_City (CST)</option>
+                      <option value="Asia/Dubai">Asia/Dubai (GST)</option>
+                      <option value="Asia/Riyadh">Asia/Riyadh (AST)</option>
+                      <option value="Asia/Jakarta">Asia/Jakarta (WIB)</option>
+                      <option value="Asia/Ho_Chi_Minh">Asia/Ho_Chi_Minh (ICT)</option>
+                      <option value="Europe/Istanbul">Europe/Istanbul (TRT)</option>
+                      <option value="Europe/Amsterdam">Europe/Amsterdam (CET)</option>
+                      <option value="Europe/Warsaw">Europe/Warsaw (CET)</option>
+                      <option value="Europe/Stockholm">Europe/Stockholm (CET)</option>
+                      <option value="Asia/Bangkok">Asia/Bangkok (ICT)</option>
+                      <option value="Europe/Zurich">Europe/Zurich (CET)</option>
+                      <option value="Africa/Johannesburg">Africa/Johannesburg (SAST)</option>
+                      <option value="Pacific/Auckland">Pacific/Auckland (NZST)</option>
+                      <option value="UTC">UTC (Coordinated Time)</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" for="page-reg-language" style="color: var(--charcoal-900); font-weight: 700; font-size: 0.82rem;">Language</label>
+                    <select id="page-reg-language" class="form-control">
+                      <option value="en-US">English (US)</option>
+                      <option value="es-ES">Español (Spanish)</option>
+                      <option value="fr-FR">Français (French)</option>
+                      <option value="de-DE">Deutsch (German)</option>
+                      <option value="zh-CN">中文 (简体 / Simplified Chinese)</option>
+                      <option value="zh-TW">中文 (繁體 / Traditional Chinese)</option>
+                      <option value="ja-JP">日本語 (Japanese)</option>
+                      <option value="fil-PH">Filipino (Tagalog)</option>
+                      <option value="ko-KR">한국어 (Korean)</option>
+                      <option value="it-IT">Italiano (Italian)</option>
+                      <option value="pt-BR">Português (Portuguese)</option>
+                      <option value="ru-RU">Русский (Russian)</option>
+                      <option value="ar-SA">العربية (Arabic)</option>
+                      <option value="hi-IN">हिन्दी (Hindi)</option>
+                      <option value="vi-VN">Tiếng Việt (Vietnamese)</option>
+                      <option value="id-ID">Bahasa Indonesia (Indonesian)</option>
+                      <option value="tr-TR">Türkçe (Turkish)</option>
+                      <option value="nl-NL">Nederlands (Dutch)</option>
+                      <option value="pl-PL">Polski (Polish)</option>
+                      <option value="sv-SE">Svenska (Swedish)</option>
+                      <option value="th-TH">ไทย (Thai)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <!-- Student Profile Fields -->
+                <div id="page-student-extra-fields">
+                  <div class="form-group">
+                    <label class="form-label" for="page-reg-grade" style="color: var(--charcoal-900); font-weight: 700;">Grade / Educational Level</label>
+                    <select id="page-reg-grade" class="form-control">
+                      <option value="Kindergarten">Kindergarten</option>
+                      <option value="Grade 1 - Elementary School">Grade 1 - Elementary School</option>
+                      <option value="Grade 2 - Elementary School">Grade 2 - Elementary School</option>
+                      <option value="Grade 3 - Elementary School">Grade 3 - Elementary School</option>
+                      <option value="Grade 4 - Elementary School">Grade 4 - Elementary School</option>
+                      <option value="Grade 5 - Elementary School">Grade 5 - Elementary School</option>
+                      <option value="Grade 6 - Elementary School">Grade 6 - Elementary School</option>
+                      <option value="Grade 7 - Middle School">Grade 7 - Middle School</option>
+                      <option value="Grade 8 - Middle School">Grade 8 - Middle School</option>
+                      <option value="Grade 9 - High School">Grade 9 - High School</option>
+                      <option value="Grade 10 - High School">Grade 10 - High School</option>
+                      <option value="Grade 11 - High School" selected>Grade 11 - High School</option>
+                      <option value="Grade 12 - High School">Grade 12 - High School</option>
+                      <option value="College / Undergraduate">College / Undergraduate</option>
+                      <option value="Graduate / Postgraduate">Graduate / Postgraduate</option>
+                      <option value="Language Learner (Language Learning Only)">Language Learner (Language Learning Only)</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" for="page-reg-school" style="color: var(--charcoal-900); font-weight: 700;">School / Institution</label>
+                    <input type="text" id="page-reg-school" class="form-control" placeholder="e.g. Oakridge High School" />
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" for="page-reg-target-subjects" style="color: var(--charcoal-900); font-weight: 700;">Target Subjects of Interest</label>
+                    <input type="text" id="page-reg-target-subjects" class="form-control" placeholder="e.g. Calculus, Physics, English Literature" />
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" for="page-reg-goals" style="color: var(--charcoal-900); font-weight: 700;">Primary Learning Goals</label>
+                    <textarea id="page-reg-goals" class="form-control" rows="2" placeholder="e.g. Master AP Calculus and improve exam performance"></textarea>
+                  </div>
+                </div>
+
+                <!-- Teacher Profile Fields -->
+                <div id="page-teacher-extra-fields" style="display: none;">
+                  <div class="form-group">
+                    <label class="form-label" for="page-reg-headline" style="color: var(--charcoal-900); font-weight: 700;">Professional Headline</label>
+                    <input type="text" id="page-reg-headline" class="form-control" placeholder="e.g. Senior Mathematics &amp; Physics Educator" />
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" for="page-reg-subjects" style="color: var(--charcoal-900); font-weight: 700;">Academic Specialty &amp; Subjects</label>
+                    <input type="text" id="page-reg-subjects" class="form-control" placeholder="e.g. AP Calculus, Physics, Coding" />
+                  </div>
+                  <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 0.75rem;">
+                    <div class="form-group">
+                      <label class="form-label" for="page-reg-institution" style="color: var(--charcoal-900); font-weight: 700;">University / Institution</label>
+                      <input type="text" id="page-reg-institution" class="form-control" placeholder="e.g. University of the Philippines" />
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label" for="page-reg-experience" style="color: var(--charcoal-900); font-weight: 700;">Years Exp.</label>
+                      <input type="number" id="page-reg-experience" class="form-control" min="0" max="60" value="2" />
+                    </div>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" for="page-reg-bio" style="color: var(--charcoal-900); font-weight: 700;">Teaching Bio &amp; Methodology</label>
+                    <textarea id="page-reg-bio" class="form-control" rows="2" placeholder="Describe your teaching style and student outcomes..."></textarea>
+                  </div>
+                </div>
+
+                <div style="display: flex; gap: 0.75rem; margin-top: 1rem;">
+                  <button type="button" class="btn btn-secondary" id="page-reg-back-btn" style="flex: 0 0 auto; padding: 0.85rem 1.15rem; font-weight: 700; font-size: 0.92rem;">← Back</button>
+                  <button type="submit" class="btn btn-primary" id="page-reg-submit-btn" style="flex: 1; padding: 0.85rem; font-weight: 700; font-size: 0.95rem;">Create Aviora Account</button>
                 </div>
               </div>
-
-              <button type="submit" class="btn btn-primary" id="page-reg-submit-btn" style="width: 100%; margin-top: 1rem; padding: 0.85rem; font-weight: 700; font-size: 0.95rem;">Create Aviora Account</button>
             </form>
           </div>
 
@@ -8307,17 +8490,17 @@
   <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
   <script src="/js/icons.js?v=2.3"></script>
   <script src="/js/api.js?v=2.3"></script>
-  <script src="/js/timezone-helper.js?v=2.3"></script>
+  <script src="/js/timezone-helper.js?v=2.4"></script>
   <script src="/js/i18n.js?v=2.3"></script>
-  <script src="/js/auth.js?v=2.6"></script>
+  <script src="/js/auth.js?v=2.7"></script>
   <script src="/js/notifications.js?v=2.4"></script>
-  <script src="/js/tutors.js?v=2.3"></script>
+  <script src="/js/tutors.js?v=2.4"></script>
   <script src="/js/student.js?v=2.3"></script>
-  <script src="/js/book-lesson.js?v=2.3"></script>
-  <script src="/js/subscription.js?v=2.3"></script>
-  <script src="/js/profile.js?v=2.4"></script>
+  <script src="/js/book-lesson.js?v=2.4"></script>
+  <script src="/js/subscription.js?v=2.4"></script>
+  <script src="/js/profile.js?v=2.5"></script>
   <script src="/js/spin-wheel.js?v=2.3"></script>
-  <script src="/js/teacher.js?v=2.3"></script>
+  <script src="/js/teacher.js?v=2.4"></script>
   <script src="/js/admin.js?v=2.3"></script>
   <script src="/js/buddy.js?v=2.3"></script>
   <script src="/js/virtual-room.js?v=2.3"></script>

@@ -460,8 +460,48 @@ const Auth = {
 
     const pageRegisterForm = document.getElementById('page-register-form');
     if (pageRegisterForm) {
-      pageRegisterForm.addEventListener('submit', (e) => this.handleRegister(e, 'page'));
+      pageRegisterForm.addEventListener('submit', (e) => {
+        const step2 = document.getElementById('page-register-step-2');
+        if (step2 && step2.style.display === 'none') {
+          e.preventDefault();
+          this.goToSignupStep2();
+          return;
+        }
+        this.handleRegister(e, 'page');
+      });
     }
+
+    const nextStepBtn = document.getElementById('page-reg-next-btn');
+    if (nextStepBtn) {
+      nextStepBtn.addEventListener('click', () => this.goToSignupStep2());
+    }
+    const backStepBtn = document.getElementById('page-reg-back-btn');
+    if (backStepBtn) {
+      backStepBtn.addEventListener('click', () => this.backToSignupStep1());
+    }
+    const editStep1Btn = document.getElementById('page-reg-edit-step1-btn');
+    if (editStep1Btn) {
+      editStep1Btn.addEventListener('click', () => this.backToSignupStep1());
+    }
+
+    const regCountrySelect = document.getElementById('page-reg-country');
+    if (regCountrySelect) {
+      regCountrySelect.addEventListener('change', () => this.onSignupLocationChanged(true));
+    }
+    const regTzSelect = document.getElementById('page-reg-timezone');
+    if (regTzSelect) {
+      regTzSelect.addEventListener('change', () => this.onSignupLocationChanged(false));
+    }
+    const regLangSelect = document.getElementById('page-reg-language');
+    if (regLangSelect) {
+      regLangSelect.addEventListener('change', () => this.onSignupLocationChanged(false));
+    }
+
+    window.addEventListener('hashchange', () => {
+      if (window.location.hash !== '#signup') {
+        this.resetSignupFlow();
+      }
+    });
 
     // Forgot Password Flow Event Listeners
     const forgotEmailForm = document.getElementById('forgot-email-form');
@@ -1132,6 +1172,155 @@ const Auth = {
     }
   },
 
+  resetSignupFlow() {
+    const step1 = document.getElementById('page-register-step-1');
+    const step2 = document.getElementById('page-register-step-2');
+    const subtitle = document.getElementById('page-signup-subtitle');
+    const pill1 = document.getElementById('page-signup-pill-1');
+    const pill2 = document.getElementById('page-signup-pill-2');
+
+    if (step1) step1.style.display = 'block';
+    if (step2) step2.style.display = 'none';
+    if (subtitle) subtitle.textContent = 'Step 1 of 2: Enter your account credentials';
+    if (pill1) {
+      pill1.style.background = 'var(--gold-500, #C59D28)';
+      pill1.style.color = '#111827';
+      pill1.style.fontWeight = '700';
+    }
+    if (pill2) {
+      pill2.style.background = 'rgba(0, 0, 0, 0.06)';
+      pill2.style.color = 'var(--text-secondary)';
+      pill2.style.fontWeight = '600';
+    }
+  },
+
+  onSignupLocationChanged(autoSyncFromCountry = true) {
+    const countryEl = document.getElementById('page-reg-country');
+    const tzEl = document.getElementById('page-reg-timezone');
+    const langEl = document.getElementById('page-reg-language');
+    const previewTime = document.getElementById('page-reg-preview-time');
+    const previewCurr = document.getElementById('page-reg-preview-currency');
+    const previewLang = document.getElementById('page-reg-preview-language');
+
+    const country = countryEl ? countryEl.value : 'United States';
+    if (autoSyncFromCountry && typeof AvioraGeo !== 'undefined') {
+      const defTz = AvioraGeo.getDefaultTimezone(country);
+      const defLang = typeof AvioraGeo.getDefaultLanguage === 'function' ? AvioraGeo.getDefaultLanguage(country) : 'en-US';
+      if (tzEl && defTz) {
+        if (!Array.from(tzEl.options).some(o => o.value === defTz)) {
+          const opt = document.createElement('option');
+          opt.value = defTz;
+          opt.textContent = `${defTz} (${AvioraGeo.getTimezoneAbbr(defTz)})`;
+          tzEl.appendChild(opt);
+        }
+        tzEl.value = defTz;
+      }
+      if (langEl && defLang) {
+        langEl.value = defLang;
+      }
+    }
+
+    const activeTz = tzEl ? tzEl.value : (typeof AvioraGeo !== 'undefined' ? AvioraGeo.getDefaultTimezone(country) : 'America/New_York');
+    if (previewTime && typeof AvioraGeo !== 'undefined') {
+      const nowStr = AvioraGeo.getCurrentTimeInZone(activeTz);
+      const abbr = AvioraGeo.getTimezoneAbbr(activeTz);
+      previewTime.textContent = `${nowStr} (${abbr})`;
+    }
+    if (previewCurr && typeof AvioraGeo !== 'undefined') {
+      const cObj = AvioraGeo.getCountry(country);
+      previewCurr.textContent = cObj ? `${cObj.symbol} ${cObj.currency}` : '$ USD';
+    }
+    if (previewLang && langEl) {
+      const selectedOpt = langEl.options[langEl.selectedIndex];
+      previewLang.textContent = selectedOpt ? selectedOpt.textContent.split(' (')[0] : 'English';
+    }
+  },
+
+  goToSignupStep2() {
+    const nameEl = document.getElementById('page-reg-name');
+    const emailEl = document.getElementById('page-reg-email');
+    const passEl = document.getElementById('page-reg-password');
+    const confirmEl = document.getElementById('page-reg-confirm');
+
+    const name = nameEl ? nameEl.value.trim() : '';
+    const email = emailEl ? emailEl.value.trim() : '';
+    const password = passEl ? passEl.value : '';
+    const confirmPassword = confirmEl ? confirmEl.value : '';
+
+    if (!name) {
+      showToast('Please enter your full name.', 'error');
+      if (nameEl) nameEl.focus();
+      return;
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!email || !emailRegex.test(email)) {
+      showToast('Please enter a valid email address.', 'error');
+      if (emailEl) emailEl.focus();
+      return;
+    }
+    const passEval = PasswordValidator.evaluate(password);
+    if (!passEval.isStrong) {
+      showToast('Please fulfill all 5 strong password requirements before continuing.', 'error');
+      const strengthBox = document.getElementById('page-password-strength-box');
+      if (strengthBox) {
+        strengthBox.style.display = 'block';
+        strengthBox.style.borderColor = 'rgba(239, 68, 68, 0.7)';
+      }
+      if (passEl) passEl.focus();
+      return;
+    }
+    if (!confirmPassword || password !== confirmPassword) {
+      showToast(!confirmPassword ? 'Please confirm your password.' : 'Passwords do not match. Please verify.', 'error');
+      if (confirmEl) confirmEl.focus();
+      return;
+    }
+
+    const roleRadio = document.querySelector('input[name="page_register_role"]:checked');
+    const role = roleRadio ? roleRadio.value : 'student';
+    this.togglePageRoleFields(role);
+
+    const step1 = document.getElementById('page-register-step-1');
+    const step2 = document.getElementById('page-register-step-2');
+    const subtitle = document.getElementById('page-signup-subtitle');
+    const pill1 = document.getElementById('page-signup-pill-1');
+    const pill2 = document.getElementById('page-signup-pill-2');
+    const summaryText = document.getElementById('page-reg-summary-text');
+
+    if (step1) step1.style.display = 'none';
+    if (step2) step2.style.display = 'block';
+    if (subtitle) subtitle.textContent = 'Step 2 of 2: Complete your profile & regional setup';
+    if (pill1) {
+      pill1.style.background = 'rgba(16, 185, 129, 0.14)';
+      pill1.style.color = '#047857';
+      pill1.style.fontWeight = '700';
+    }
+    if (pill2) {
+      pill2.style.background = 'var(--gold-500, #C59D28)';
+      pill2.style.color = '#111827';
+      pill2.style.fontWeight = '700';
+    }
+    if (summaryText) {
+      const roleLabel = (role === 'tutor' || role === 'teacher') ? 'Prospective Tutor' : 'Student / Parent';
+      summaryText.textContent = `${name} • ${email} • ${roleLabel}`;
+    }
+
+    const countryEl = document.getElementById('page-reg-country');
+    const tzEl = document.getElementById('page-reg-timezone');
+    const langEl = document.getElementById('page-reg-language');
+    const countryChanged = !countryEl || !countryEl.dataset.userTouched;
+    this.onSignupLocationChanged(countryChanged);
+    if (countryEl && !countryEl._touchBound) {
+      countryEl._touchBound = true;
+      countryEl.addEventListener('change', () => { countryEl.dataset.userTouched = '1'; });
+    }
+    if (tzEl && !tzEl._touchBound) { tzEl._touchBound = true; }
+    if (langEl && !langEl._touchBound) { langEl._touchBound = true; }
+  },
+
+  backToSignupStep1() {
+    this.resetSignupFlow();
+  },
+
   fillLoginForm(email, password, context = 'modal') {
     if (context === 'page') {
       this.switchPageTab('login');
@@ -1316,16 +1505,38 @@ const Auth = {
 
     const payload = { name, email, password, role, phone };
 
+    if (isPage) {
+      const countryEl = document.getElementById('page-reg-country');
+      const tzEl = document.getElementById('page-reg-timezone');
+      const langEl = document.getElementById('page-reg-language');
+      const country = countryEl ? countryEl.value : 'United States';
+      const timezone = tzEl ? tzEl.value : (typeof AvioraGeo !== 'undefined' ? AvioraGeo.getDefaultTimezone(country) : 'America/New_York');
+      const language = langEl ? langEl.value : (typeof AvioraGeo !== 'undefined' && typeof AvioraGeo.getDefaultLanguage === 'function' ? AvioraGeo.getDefaultLanguage(country) : 'en-US');
+      payload.country = country;
+      payload.timezone = timezone;
+      payload.language = language;
+    }
+
     if (role === 'student') {
       const gradeEl = document.getElementById(isPage ? 'page-reg-grade' : 'reg-student-grade');
-      const schoolEl = document.getElementById('reg-student-school');
+      const schoolEl = document.getElementById(isPage ? 'page-reg-school' : 'reg-student-school');
+      const goalsEl = document.getElementById('page-reg-goals');
+      const targetSubjEl = document.getElementById('page-reg-target-subjects');
       payload.grade_level = gradeEl ? gradeEl.value : 'Grade 11 - High School';
-      payload.school = schoolEl ? schoolEl.value.trim() : 'Aviora Student Academy';
+      payload.school = schoolEl ? schoolEl.value.trim() : '';
+      if (goalsEl && goalsEl.value.trim()) payload.learning_goals = goalsEl.value.trim();
+      if (targetSubjEl && targetSubjEl.value.trim()) payload.target_subjects = targetSubjEl.value.trim();
     } else if (role === 'tutor' || role === 'teacher') {
-      const headlineEl = document.getElementById('reg-teacher-headline');
+      const headlineEl = document.getElementById(isPage ? 'page-reg-headline' : 'reg-teacher-headline');
       const subjectsEl = document.getElementById(isPage ? 'page-reg-subjects' : 'reg-teacher-subjects');
-      payload.headline = headlineEl ? headlineEl.value.trim() : 'Educator & Academic Specialist';
-      payload.subjects = subjectsEl ? subjectsEl.value.trim() : 'Mathematics, Natural Sciences';
+      const instEl = document.getElementById('page-reg-institution');
+      const expEl = document.getElementById('page-reg-experience');
+      const bioEl = document.getElementById('page-reg-bio');
+      payload.headline = headlineEl && headlineEl.value.trim() ? headlineEl.value.trim() : 'Educator & Academic Specialist';
+      payload.subjects = subjectsEl && subjectsEl.value.trim() ? subjectsEl.value.trim() : 'Mathematics, Natural Sciences';
+      if (instEl && instEl.value.trim()) payload.institution = instEl.value.trim();
+      if (expEl && expEl.value) payload.years_experience = parseInt(expEl.value, 10) || 2;
+      if (bioEl && bioEl.value.trim()) payload.bio = bioEl.value.trim();
     }
 
     try {
@@ -1339,12 +1550,21 @@ const Auth = {
       Storage.setToken(res.token);
       Storage.setUser(res.user);
       this.currentUser = res.user;
+      if (res.tutorDraftProfile && typeof Teacher !== 'undefined') {
+        Teacher.tutorDraftProfile = res.tutorDraftProfile;
+      }
       if (res.preferences) {
         this.syncUserPreferences(res.preferences);
       }
 
+      if (isPage) {
+        this.resetSignupFlow();
+      }
       this.closeModal();
       this.updateNavUI(res.user);
+      if (typeof AvioraGeo !== 'undefined' && typeof AvioraGeo.updateLiveClocks === 'function') {
+        AvioraGeo.updateLiveClocks();
+      }
       
       if (res.user.role === 'teacher' || res.user.role === 'tutor') {
         showToast(`Account created successfully! Welcome to Aviora, ${res.user.name}. Please provide your credentials and upload your resume and diploma.`, 'success');

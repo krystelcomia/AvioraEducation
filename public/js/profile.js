@@ -245,7 +245,7 @@ const Profile = {
       AvioraCurrency.updateDOM();
     }
 
-    // Auto-update timezone when country is selected if appropriate
+    // Auto-update timezone and language when country is selected
     if (typeof AvioraGeo !== 'undefined') {
       const defTz = AvioraGeo.getDefaultTimezone(activeCountry);
       const currentTz = key ? localStorage.getItem(`aviora_timezone${key}`) : null;
@@ -253,6 +253,20 @@ const Profile = {
         if (typeof this.applyTimezone === 'function') {
           this.applyTimezone(defTz, false, persistToServer);
         }
+      }
+
+      if (typeof AvioraGeo.getDefaultLanguage === 'function') {
+        const defLang = AvioraGeo.getDefaultLanguage(activeCountry);
+        const currentLang = key ? localStorage.getItem(`aviora_language${key}`) : null;
+        if (!currentLang || notify) {
+          if (typeof this.applyLanguage === 'function') {
+            this.applyLanguage(defLang, false, persistToServer);
+          }
+        }
+      }
+
+      if (typeof AvioraGeo.updateLiveClocks === 'function') {
+        AvioraGeo.updateLiveClocks();
       }
     }
 
@@ -309,14 +323,20 @@ const Profile = {
 
   applyTimezone(tz, notify = true, persistToServer = true) {
     const activeTz = tz || 'America/New_York';
-    const tzSelect = document.getElementById('profile-timezone-select');
-    if (tzSelect) tzSelect.value = activeTz;
-    const tTzSelect = document.getElementById('teacher-timezone-select');
-    if (tTzSelect) tTzSelect.value = activeTz;
-    const tpTzSelect = document.getElementById('teacher-profile-timezone');
-    if (tpTzSelect) tpTzSelect.value = activeTz;
-    const aTzSelect = document.getElementById('admin-timezone-select');
-    if (aTzSelect) aTzSelect.value = activeTz;
+    const tzAbbrLabel = (typeof AvioraGeo !== 'undefined' && typeof AvioraGeo.getTimezoneAbbr === 'function')
+      ? AvioraGeo.getTimezoneAbbr(activeTz)
+      : activeTz;
+    ['profile-timezone-select', 'teacher-timezone-select', 'teacher-profile-timezone', 'admin-timezone-select'].forEach(id => {
+      const sel = document.getElementById(id);
+      if (!sel) return;
+      if (!Array.from(sel.options).some(o => o.value === activeTz)) {
+        const opt = document.createElement('option');
+        opt.value = activeTz;
+        opt.textContent = `${activeTz} (${tzAbbrLabel})`;
+        sel.appendChild(opt);
+      }
+      sel.value = activeTz;
+    });
 
     this.updateTimezoneClockDisplays(activeTz);
 
@@ -333,6 +353,18 @@ const Profile = {
     const key = this.getUserKey();
     if (key) localStorage.setItem(`aviora_timezone${key}`, activeTz);
     localStorage.setItem('aviora_timezone', activeTz);
+
+    if (typeof AvioraGeo !== 'undefined' && typeof AvioraGeo.updateLiveClocks === 'function') {
+      AvioraGeo.updateLiveClocks();
+    }
+    if (typeof Tutors !== 'undefined') {
+      const hash = window.location.hash || '';
+      if (hash.startsWith('#tutor-profile') && Tutors.selectedTutor?.id && typeof Tutors.loadFullProfilePage === 'function') {
+        Tutors.loadFullProfilePage(Tutors.selectedTutor.id);
+      } else if (hash.startsWith('#tutors') && typeof Tutors.renderTutors === 'function' && Array.isArray(Tutors.allTutors) && Tutors.allTutors.length > 0) {
+        Tutors.renderTutors(Tutors.filteredTutors?.length ? Tutors.filteredTutors : Tutors.allTutors);
+      }
+    }
 
     if (persistToServer && typeof Auth !== 'undefined' && Auth.currentUser && typeof API !== 'undefined') {
       this.setSaveStatus('saving');

@@ -805,23 +805,34 @@ function getLinkedGmailForUser(userId) {
     if (!user) return null;
 
     let linkedEmail = user.email || '';
+    let gmailEnabled = true;
+    let prefLinkedGmail = '';
     try {
       const prefs = db.prepare('SELECT linked_gmail, notif_gmail FROM user_preferences WHERE user_id = ?').get(userId);
       if (prefs && prefs.linked_gmail && prefs.linked_gmail.includes('@')) {
-        linkedEmail = prefs.linked_gmail.trim();
+        prefLinkedGmail = prefs.linked_gmail.trim();
+        linkedEmail = prefLinkedGmail;
       }
       if (prefs && prefs.notif_gmail === 0) {
-        return { ...user, linkedEmail, gmailEnabled: false };
+        gmailEnabled = false;
       }
     } catch (e) {}
 
-    if (!linkedEmail || !linkedEmail.toLowerCase().endsWith('@gmail.com')) {
-      try {
-        const oauthRow = db.prepare("SELECT email FROM oauth_linked_accounts WHERE user_id = ? AND provider = 'google' ORDER BY linked_at DESC LIMIT 1").get(userId);
-        if (oauthRow && oauthRow.email) {
-          linkedEmail = oauthRow.email.trim();
-        }
-      } catch (e) {}
+    let oauthGoogleEmail = '';
+    try {
+      const oauthRow = db.prepare("SELECT email FROM oauth_linked_accounts WHERE user_id = ? AND provider = 'google' ORDER BY linked_at DESC LIMIT 1").get(userId);
+      if (oauthRow && oauthRow.email && oauthRow.email.includes('@')) {
+        oauthGoogleEmail = oauthRow.email.trim();
+      }
+    } catch (e) {}
+
+    const userEmailLower = String(user.email || '').toLowerCase().trim();
+    if (prefLinkedGmail && prefLinkedGmail.toLowerCase() !== userEmailLower) {
+      linkedEmail = prefLinkedGmail;
+    } else if (oauthGoogleEmail && oauthGoogleEmail.toLowerCase() !== userEmailLower) {
+      linkedEmail = oauthGoogleEmail;
+    } else if (oauthGoogleEmail) {
+      linkedEmail = oauthGoogleEmail;
     }
 
     return {
@@ -829,8 +840,9 @@ function getLinkedGmailForUser(userId) {
       name: user.name || 'Aviora Member',
       email: user.email,
       linkedEmail: linkedEmail || user.email,
+      oauthGoogleEmail: oauthGoogleEmail || null,
       role: user.role,
-      gmailEnabled: true
+      gmailEnabled
     };
   } catch (e) {
     return null;
@@ -2277,7 +2289,7 @@ app.post('/api/auth/register', (req, res) => {
     };
 
     let remainingTutorInfo = null;
-    const finalUser = db.prepare('SELECT wallet_balance, wallet_tutor_id FROM users WHERE id = ?').get(studentId);
+    const finalUser = db.prepare('SELECT wallet_balance, wallet_tutor_id FROM users WHERE id = ?').get(userId);
     if (finalUser && finalUser.wallet_tutor_id && (parseFloat(finalUser.wallet_balance) || 0) > 0) {
       const rt = db.prepare('SELECT id, name, avatar_url FROM users WHERE id = ?').get(finalUser.wallet_tutor_id);
       if (rt) remainingTutorInfo = { id: rt.id, name: rt.name, avatar_url: rt.avatar_url };
@@ -2480,55 +2492,109 @@ app.get('/api/auth/emailjs-config', (req, res) => {
 // Map: email -> { code: '123456', expiresAt: timestamp, attempts: 0, verified: boolean, userName: string }
 const passwordResetStore = new Map();
 
-// 1. Request verification code for password reset
-app.post('/api/auth/forgot-password/request', (req, res) => {
+// Helper: find user either by primary account email or linked Google / Gmail email
+function findUserByEmailOrLinkedGoogle(rawEmail) {
+  const cleanEmail = String(rawEmail || '').toLowerCase().trim();
+  if (!cleanEmail) return null;
+
+  let user = db.prepare('SELECT id, name, email, role FROM users WHERE LOWER(email) = LOWER(?)').get(cleanEmail);
+  if (!user && cleanEmail === 'joshuagarcia@gmail.com') {
+    ensureJoshuaAccount();
+    user = db.prepare('SELECT id, name, email, role FROM users WHERE LOWER(email) = LOWER(?)').get(cleanEmail);
+  }
+  if (!user && cleanEmail === 'comiakrystel65@gmail.com') {
+    ensureKrystelAccount();
+    user = db.prepare('SELECT id, name, email, role FROM users WHERE LOWER(email) = LOWER(?)').get(cleanEmail);
+  }
+  if (!user) {
+    try {
+      user = db.prepare(`
+        SELECT u.id, u.name, u.email, u.role
+        FROM oauth_linked_accounts ola
+        JOIN users u ON u.id = ola.user_id
+        WHERE ola.provider = 'google' AND LOWER(ola.email) = LOWER(?)
+        ORDER BY ola.linked_at DESC
+        LIMIT 1
+      `).get(cleanEmail);
+    } catch (e) {}
+  }
+  if (!user) {
+    try {
+      user = db.prepare(`
+        SELECT u.id, u.name, u.email, u.role
+        FROM user_preferences up
+        JOIN users u ON u.id = up.user_id
+        WHERE LOWER(up.linked_gmail) = LOWER(?)
+        ORDER BY up.updated_at DESC
+        LIMIT 1
+      `).get(cleanEmail);
+    } catch (e) {}
+  }
+  return user || null;
+}
+
+// 1. Request verification code for password reset (supports primary email OR linked Google account)
+app.post('/api/auth/forgot-password/request', async (req, res) => {
   try {
     const { email } = req.body;
     if (!email || typeof email !== 'string' || !email.trim()) {
-      return res.status(400).json({ error: 'Please enter your registered email address.' });
+      return res.status(400).json({ error: 'Please enter your registered email or linked Google address.' });
     }
     const cleanEmail = email.toLowerCase().trim();
 
-    // Verify user exists in database or is permanent account
-    let user = db.prepare('SELECT id, name, email FROM users WHERE LOWER(email) = LOWER(?)').get(cleanEmail);
-    const isJoshua = cleanEmail === 'joshuagarcia@gmail.com';
-    const isKrystel = cleanEmail === 'comiakrystel65@gmail.com';
-
-    if (!user && isJoshua) {
-      ensureJoshuaAccount();
-      user = db.prepare('SELECT id, name, email FROM users WHERE LOWER(email) = LOWER(?)').get(cleanEmail);
-    }
-    if (!user && isKrystel) {
-      ensureKrystelAccount();
-      user = db.prepare('SELECT id, name, email FROM users WHERE LOWER(email) = LOWER(?)').get(cleanEmail);
+    const user = findUserByEmailOrLinkedGoogle(cleanEmail);
+    if (!user) {
+      return res.status(404).json({ error: 'No account registered with this email or linked Google account. Please check your spelling or create an account.' });
     }
 
-    if (!user && !isJoshua && !isKrystel) {
-      return res.status(404).json({ error: 'No account registered with this email address. Please check your spelling or create an account.' });
-    }
-
-    const userName = (user && user.name) || (isJoshua ? 'Joshua Garcia' : (isKrystel ? 'Krystel Comia' : cleanEmail.split('@')[0]));
+    const linkedInfo = getLinkedGmailForUser(user.id);
+    const recoveryEmail = ((linkedInfo && linkedInfo.linkedEmail) || user.email || cleanEmail).toLowerCase().trim();
+    const userName = user.name || recoveryEmail.split('@')[0];
 
     // Generate secure 6-digit numeric verification code
     const code = Math.floor(100000 + Math.random() * 900000).toString();
     const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes expiry
 
-    passwordResetStore.set(cleanEmail, {
+    const resetEntry = {
       code,
       expiresAt,
       attempts: 0,
       verified: false,
-      userName
-    });
+      userName,
+      userId: user.id,
+      accountEmail: user.email,
+      recoveryEmail
+    };
 
-    console.log(`[Aviora Security] Password reset code generated for ${cleanEmail}: ${code}`);
+    passwordResetStore.set(cleanEmail, resetEntry);
+    if (recoveryEmail !== cleanEmail) {
+      passwordResetStore.set(recoveryEmail, resetEntry);
+    }
+
+    console.log(`[Aviora Security] Password reset code generated for user ${user.id} (${recoveryEmail}): ${code}`);
+
+    try {
+      await dispatchRealTimeGmailAPI({
+        notificationId: null,
+        userId: user.id,
+        userName,
+        recipientEmail: recoveryEmail,
+        title: 'Password Recovery Verification Code',
+        message: `Your Aviora Education password reset verification code is ${code}. This code expires in 10 minutes. Never share this code with anyone.`,
+        type: 'security',
+        link: '#login'
+      });
+    } catch (dispatchErr) {
+      console.warn('Recovery code email relay warning:', dispatchErr.message);
+    }
 
     return res.json({
       success: true,
       message: 'Verification code generated.',
       email: cleanEmail,
+      recoveryEmail,
       userName,
-      code, // Returned to client to power client-side EmailJS dispatch!
+      code, // Returned to client to power client-side EmailJS dispatch when configured
       expiresInMinutes: 10
     });
   } catch (error) {
@@ -2554,6 +2620,7 @@ app.post('/api/auth/forgot-password/verify', (req, res) => {
 
     if (Date.now() > record.expiresAt) {
       passwordResetStore.delete(cleanEmail);
+      if (record.recoveryEmail) passwordResetStore.delete(record.recoveryEmail);
       return res.status(400).json({ error: 'Verification code has expired. Please request a new code.' });
     }
 
@@ -2561,6 +2628,7 @@ app.post('/api/auth/forgot-password/verify', (req, res) => {
       record.attempts = (record.attempts || 0) + 1;
       if (record.attempts >= 5) {
         passwordResetStore.delete(cleanEmail);
+        if (record.recoveryEmail) passwordResetStore.delete(record.recoveryEmail);
         return res.status(400).json({ error: 'Too many incorrect attempts. Please request a new code.' });
       }
       return res.status(400).json({ error: 'Incorrect verification code. Please check your inbox and try again.' });
@@ -2574,7 +2642,8 @@ app.post('/api/auth/forgot-password/verify', (req, res) => {
     return res.json({
       success: true,
       message: 'Verification code confirmed. You may now set your new password.',
-      resetToken
+      resetToken,
+      recoveryEmail: record.recoveryEmail || cleanEmail
     });
   } catch (error) {
     console.error('Verify code error:', error);
@@ -2620,12 +2689,21 @@ app.post('/api/auth/forgot-password/reset', (req, res) => {
     const salt = bcrypt.genSaltSync(10);
     const passwordHash = bcrypt.hashSync(newPassword, salt);
 
-    // Update in database if exists
-    let user = db.prepare('SELECT id, name, email, role FROM users WHERE LOWER(email) = LOWER(?)').get(cleanEmail);
+    // Update target user resolved from primary email OR linked Google account
+    let user = record.userId
+      ? db.prepare('SELECT id, name, email, role FROM users WHERE id = ?').get(record.userId)
+      : findUserByEmailOrLinkedGoogle(cleanEmail);
+
     if (user) {
       db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(passwordHash, user.id);
+      sendNotification(
+        user.id,
+        'Password Updated Successfully',
+        'Your Aviora Education account password was reset using your verified recovery code.',
+        'security',
+        '#settings'
+      );
     } else {
-      // If user was a permanent account not yet in SQLite
       const isJoshua = cleanEmail === 'joshuagarcia@gmail.com';
       const designatedRole = isJoshua ? 'teacher' : 'student';
       const name = isJoshua ? 'Joshua Garcia' : 'Krystel Comia';
@@ -2640,6 +2718,7 @@ app.post('/api/auth/forgot-password/reset', (req, res) => {
 
     // Clean up reset session
     passwordResetStore.delete(cleanEmail);
+    if (record.recoveryEmail) passwordResetStore.delete(record.recoveryEmail);
 
     return res.json({
       success: true,
@@ -2655,21 +2734,46 @@ app.post('/api/auth/forgot-password/reset', (req, res) => {
 // GOOGLE & FACEBOOK OAUTH API & PLATFORM REDIRECTS
 // ===================================================
 
+function resolveGoogleCallbackUrl(req) {
+  const protocol = req.headers['x-forwarded-proto'] || req.protocol || 'http';
+  const host = req.get('host') || 'localhost:3000';
+  const isLocalReq = host.includes('localhost') || host.includes('127.0.0.1');
+  const envCb = process.env.GOOGLE_CALLBACK_URL || '';
+  if (envCb && (!envCb.includes('localhost') || isLocalReq)) {
+    return envCb;
+  }
+  return `${protocol}://${host}/api/auth/google/callback`;
+}
+
+function escapeHtmlAttr(str) {
+  return String(str || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 function linkOrRegisterOAuthUser(provider, profile) {
   const email = profile?.email ? profile.email.toLowerCase().trim() : null;
   const name = profile?.name ? profile.name.trim() : (provider === 'google' ? 'Google Scholar' : 'Facebook Scholar');
   const avatar = profile?.avatar || profile?.picture || (provider === 'google'
     ? 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=300&q=80'
     : 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=300&q=80');
-  const role = profile?.role || 'student';
+  let role = (profile?.role || 'student').toLowerCase().trim();
+  if (role === 'parent') role = 'student';
+  if (role === 'teacher') role = 'tutor';
+  if (!['student', 'tutor'].includes(role)) role = 'student';
 
   if (!email) {
     throw new Error('Email address is required from social provider.');
   }
 
-  let user = db.prepare('SELECT * FROM users WHERE LOWER(email) = LOWER(?)').get(email);
+  let user = findUserByEmailOrLinkedGoogle(email);
+  let isNewUser = false;
 
   if (!user) {
+    isNewUser = true;
     // Auto-register user from Google / Facebook
     const salt = bcrypt.genSaltSync(10);
     const tempPasswordHash = bcrypt.hashSync('OAuth_' + Math.random().toString(36) + 'Aa1!#', salt);
@@ -2687,43 +2791,18 @@ function linkOrRegisterOAuthUser(provider, profile) {
           INSERT INTO student_profiles (user_id, grade_level, school, learning_goals, target_subjects)
           VALUES (?, 'Grade 11 - High School', 'Aviora Learning Cohort', 'Academic excellence & mastery', 'Mathematics, Natural Sciences')
         `).run(newUserId);
-      } else if (role === 'teacher' || role === 'tutor') {
-        const subjectsJson = JSON.stringify(['Mathematics', 'Natural Sciences']);
-        const gradeLevelsJson = JSON.stringify(['High School', 'College / Undergraduate']);
-        const defaultSchedule = JSON.stringify({
-          Monday: ['09:00 - 12:00', '14:00 - 17:00'],
-          Tuesday: ['10:00 - 13:00', '15:00 - 18:00'],
-          Wednesday: ['09:00 - 12:00', '14:00 - 17:00'],
-          Thursday: ['13:00 - 18:00'],
-          Friday: ['09:00 - 15:00']
-        });
-
-        const appRes = db.prepare(`
-          INSERT INTO teacher_applications (
-            user_id, headline, highest_degree, institution, graduation_year,
-            years_experience, subjects, grade_levels, hourly_rate, bio,
-            teaching_philosophy, availability_schedule, status
-          ) VALUES (?, 'Educator & Academic Specialist', 'Bachelor of Science', 'Accredited Institution', 2022, 3, ?, ?, 45.0, 'Joined via ' || ?, 'Academic excellence through personalized instruction.', ?, 'approved')
-        `).run(newUserId, subjectsJson, gradeLevelsJson, provider === 'google' ? 'Google' : 'Facebook', defaultSchedule);
-
-        db.prepare(`
-          INSERT INTO tutor_profiles (
-            user_id, application_id, headline, bio, highest_degree,
-            institution, years_experience, subjects, grade_levels,
-            hourly_rate, rating, reviews_count, total_sessions,
-            availability_schedule, is_featured, is_active
-          ) VALUES (?, ?, 'Educator & Academic Specialist', 'Joined via ' || ?, 'Bachelor of Science', 'Accredited Institution', 3, ?, ?, 45.0, 5.0, 0, 0, ?, 0, 1)
-        `).run(newUserId, appRes.lastInsertRowid, provider === 'google' ? 'Google' : 'Facebook', subjectsJson, gradeLevelsJson, defaultSchedule);
       }
 
-      // Notify admin
+      // Notify admin of new account creation
       const admin = db.prepare("SELECT id FROM users WHERE role = 'admin' LIMIT 1").get();
       if (admin) {
         sendNotification(
           admin.id,
-          'New Social Account Created',
-          `${name} (${email}) registered via ${provider} as a ${role}.`,
-          'registration',
+          role === 'tutor' ? 'New Teacher Account Created' : 'New Student Account Created',
+          role === 'tutor'
+            ? `${name} (${email}) registered via ${provider} as a prospective tutor and is directed to complete onboarding.`
+            : `${name} (${email}) registered via ${provider} as a student.`,
+          role === 'tutor' ? 'application' : 'registration',
           '/#admin'
         );
       }
@@ -2732,11 +2811,13 @@ function linkOrRegisterOAuthUser(provider, profile) {
     } catch (insertErr) {
       if (insertErr.message && (insertErr.message.includes('UNIQUE constraint failed') || insertErr.message.includes('users.email'))) {
         user = db.prepare('SELECT * FROM users WHERE LOWER(email) = LOWER(?)').get(email);
+        isNewUser = false;
       } else {
         throw insertErr;
       }
     }
   } else {
+    user = db.prepare('SELECT * FROM users WHERE id = ?').get(user.id) || user;
     // Existing user: ensure provider is linked
     try {
       db.prepare("UPDATE users SET auth_provider = ? WHERE id = ? AND (auth_provider IS NULL OR auth_provider = 'local')")
@@ -2759,6 +2840,25 @@ function linkOrRegisterOAuthUser(provider, profile) {
     console.warn('OAuth link recording warning:', e.message);
   }
 
+  // Persist Google account into user_preferences so all notifications, password recovery, & settings use it
+  if (provider === 'google') {
+    try {
+      saveUserPreferences(user.id, { linked_gmail: email, notif_gmail: 1 });
+    } catch (e) {}
+  }
+
+  if (isNewUser && provider === 'google') {
+    try {
+      sendNotification(
+        user.id,
+        'Google Account Linked to Aviora',
+        `Your Google account (${email}) is now linked for password recovery, class alerts, and real-time notifications.`,
+        'registration',
+        role === 'tutor' ? '#teacher-application' : '#student-portal'
+      );
+    } catch (e) {}
+  }
+
   return user;
 }
 
@@ -2766,9 +2866,7 @@ function linkOrRegisterOAuthUser(provider, profile) {
 app.get('/api/auth/google', (req, res) => {
   const mode = req.query.mode || 'login';
   const role = req.query.role || 'student';
-  const protocol = req.headers['x-forwarded-proto'] || req.protocol || 'http';
-  const host = req.get('host') || 'localhost:3000';
-  const callbackUrl = process.env.GOOGLE_CALLBACK_URL || `${protocol}://${host}/api/auth/google/callback`;
+  const callbackUrl = resolveGoogleCallbackUrl(req);
 
   const state = Buffer.from(JSON.stringify({ mode, role, ts: Date.now() })).toString('base64');
 
@@ -2783,10 +2881,65 @@ app.get('/api/auth/google', (req, res) => {
         scope: 'openid email profile',
         prompt: 'select_account',
         access_type: 'offline',
+        include_granted_scopes: 'true',
         state
       }).toString();
     return res.redirect(googleAuthUrl);
   }
+
+  // Parse any Google accounts previously linked/remembered in the user's browser session
+  let knownAccounts = [];
+  if (req.query.known) {
+    try {
+      const decoded = Buffer.from(String(req.query.known), 'base64url').toString('utf8');
+      const parsed = JSON.parse(decoded);
+      if (Array.isArray(parsed)) {
+        knownAccounts = parsed
+          .filter(a => a && typeof a.email === 'string' && a.email.includes('@'))
+          .slice(0, 6)
+          .map(a => ({
+            name: String(a.name || a.email.split('@')[0]).trim(),
+            email: String(a.email).toLowerCase().trim(),
+            avatar: String(a.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=300&q=80')
+          }));
+      }
+    } catch (e) {}
+  }
+
+  if (knownAccounts.length === 0) {
+    knownAccounts = [{
+      name: 'Krystel Comia',
+      email: 'comiakrystel65@gmail.com',
+      avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=300&q=80'
+    }];
+  } else if (!knownAccounts.some(a => a.email === 'comiakrystel65@gmail.com')) {
+    knownAccounts.push({
+      name: 'Krystel Comia',
+      email: 'comiakrystel65@gmail.com',
+      avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=300&q=80'
+    });
+  }
+
+  const avatarColors = ['#7c3aed', '#0b57d0', '#059669', '#b45309', '#dc2626', '#0f766e'];
+  const accountsHtml = knownAccounts.map((acc, idx) => {
+    const initial = escapeHtmlAttr((acc.name || acc.email || 'G').charAt(0).toUpperCase());
+    const bgCol = avatarColors[idx % avatarColors.length];
+    return `
+        <form action="/api/auth/google/callback" method="GET" style="display:contents;">
+          <input type="hidden" name="state" value="${escapeHtmlAttr(state)}">
+          <input type="hidden" name="name" value="${escapeHtmlAttr(acc.name)}">
+          <input type="hidden" name="email" value="${escapeHtmlAttr(acc.email)}">
+          <input type="hidden" name="avatar" value="${escapeHtmlAttr(acc.avatar)}">
+          <button type="submit" class="account-item">
+            <div class="account-avatar" style="background: ${bgCol};">${initial}</div>
+            <div class="account-details">
+              <div class="account-name">${escapeHtmlAttr(acc.name)}</div>
+              <div class="account-email">${escapeHtmlAttr(acc.email)}</div>
+            </div>
+            <span class="signed-in-badge">Signed in</span>
+          </button>
+        </form>`;
+  }).join('\n');
 
   // Authentic Google Account Chooser Page - prevents Error 401: invalid_client
   const html = `<!DOCTYPE html>
@@ -3038,21 +3191,7 @@ app.get('/api/auth/google', (req, res) => {
       <p class="subhead">to continue to <strong>Aviora Education</strong></p>
 
       <div class="account-list">
-        <!-- Default Account: Krystel Comia -->
-        <form action="/api/auth/google/callback" method="GET" style="display:contents;">
-          <input type="hidden" name="state" value="${state}">
-          <input type="hidden" name="name" value="Krystel Comia">
-          <input type="hidden" name="email" value="comiakrystel65@gmail.com">
-          <input type="hidden" name="avatar" value="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=300&q=80">
-          <button type="submit" class="account-item">
-            <div class="account-avatar">K</div>
-            <div class="account-details">
-              <div class="account-name">Krystel Comia</div>
-              <div class="account-email">comiakrystel65@gmail.com</div>
-            </div>
-            <span class="signed-in-badge">Signed in</span>
-          </button>
-        </form>
+        ${accountsHtml}
 
         <!-- Use another account -->
         <button type="button" class="account-item" id="use-another-btn" onclick="toggleAnother()">
@@ -3133,9 +3272,7 @@ app.all('/api/auth/google/callback', async (req, res) => {
       } catch (e) {}
     }
 
-    const protocol = req.headers['x-forwarded-proto'] || req.protocol || 'http';
-    const host = req.get('host') || 'localhost:3000';
-    const callbackUrl = process.env.GOOGLE_CALLBACK_URL || `${protocol}://${host}/api/auth/google/callback`;
+    const callbackUrl = resolveGoogleCallbackUrl(req);
 
     let profile = null;
 
@@ -3183,7 +3320,7 @@ app.all('/api/auth/google/callback', async (req, res) => {
       { expiresIn: '7d' }
     );
 
-    return res.redirect(`/#auth-success?token=${token}&provider=google&name=${encodeURIComponent(user.name)}&email=${encodeURIComponent(user.email)}&role=${user.role}&avatar=${encodeURIComponent(user.avatar_url || '')}`);
+    return res.redirect(`/#auth-success?token=${token}&userId=${encodeURIComponent(user.id)}&provider=google&name=${encodeURIComponent(user.name)}&email=${encodeURIComponent(user.email)}&linkedGmail=${encodeURIComponent(email)}&role=${user.role}&avatar=${encodeURIComponent(user.avatar_url || '')}`);
   } catch (err) {
     console.error('Google callback error:', err);
     return res.redirect(`/#login?error=${encodeURIComponent(err.message || 'Failed to complete Google authentication.')}`);
@@ -3590,7 +3727,7 @@ app.post('/api/auth/link-account', authenticateToken, (req, res) => {
     }
     const email = profile?.email ? profile.email.toLowerCase().trim() : req.user.email;
     const name = profile?.name ? profile.name.trim() : req.user.name;
-    const avatar = profile?.picture || req.user.avatar_url;
+    const avatar = profile?.picture || profile?.avatar || req.user.avatar_url;
 
     db.prepare(`
       INSERT INTO oauth_linked_accounts (user_id, provider, provider_user_id, email, name, avatar_url)
@@ -3602,10 +3739,18 @@ app.post('/api/auth/link-account', authenticateToken, (req, res) => {
         linked_at = CURRENT_TIMESTAMP
     `).run(req.user.id, provider, profile?.id || email, email, name, avatar);
 
+    if (provider === 'google') {
+      try {
+        saveUserPreferences(req.user.id, { linked_gmail: email, notif_gmail: 1 });
+        db.prepare('UPDATE notifications SET email_recipient = ? WHERE user_id = ?').run(email, req.user.id);
+      } catch (e) {}
+    }
+
     const linked = db.prepare('SELECT provider, email, name, avatar_url, linked_at FROM oauth_linked_accounts WHERE user_id = ?').all(req.user.id);
     return res.json({
       message: `Successfully linked your ${provider === 'google' ? 'Google' : 'Facebook'} account (${email})!`,
-      linkedAccounts: linked
+      linkedAccounts: linked,
+      linked_gmail: provider === 'google' ? email : undefined
     });
   } catch (err) {
     console.error('Link account error:', err);
@@ -3652,11 +3797,19 @@ app.get('/api/auth/me', authenticateToken, (req, res) => {
     const userPrefs = getUserPreferences(userId);
     const filterClause = getNotificationFilterClause(userPrefs);
     const unreadCount = db.prepare(`SELECT COUNT(*) as count FROM notifications WHERE user_id = ? AND is_read = 0 ${filterClause}`).get(userId).count;
+    let linkedAccounts = [];
+    try {
+      linkedAccounts = db.prepare('SELECT provider, email, name, avatar_url, linked_at FROM oauth_linked_accounts WHERE user_id = ?').all(userId);
+    } catch (e) {}
+    const linkedGmailInfo = getLinkedGmailForUser(userId);
+
     extra.unreadNotifications = unreadCount;
     extra.preferences = userPrefs;
+    extra.linkedAccounts = linkedAccounts;
+    extra.linkedGoogleEmail = (linkedGmailInfo && linkedGmailInfo.linkedEmail) || userPrefs?.linked_gmail || req.user.email;
 
     return res.json({
-      user: req.user,
+      user: { ...req.user, linked_accounts: linkedAccounts, linked_google_email: extra.linkedGoogleEmail },
       ...extra
     });
   } catch (error) {

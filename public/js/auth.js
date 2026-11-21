@@ -635,6 +635,30 @@ const Auth = {
     }
   },
 
+  getKnownGoogleAccounts() {
+    try {
+      const raw = localStorage.getItem('aviora_known_google_accounts');
+      const parsed = raw ? JSON.parse(raw) : [];
+      return Array.isArray(parsed) ? parsed.filter(a => a && a.email) : [];
+    } catch (e) {
+      return [];
+    }
+  },
+
+  rememberGoogleAccount(profile) {
+    if (!profile || !profile.email) return;
+    try {
+      const cleanEmail = String(profile.email).toLowerCase().trim();
+      const list = this.getKnownGoogleAccounts().filter(a => String(a.email).toLowerCase().trim() !== cleanEmail);
+      list.unshift({
+        name: profile.name || cleanEmail.split('@')[0],
+        email: cleanEmail,
+        avatar: profile.avatar || profile.picture || ''
+      });
+      localStorage.setItem('aviora_known_google_accounts', JSON.stringify(list.slice(0, 6)));
+    } catch (e) {}
+  },
+
   saveLinkedAccount(provider, profile) {
     try {
       const data = {
@@ -648,6 +672,9 @@ const Auth = {
       };
       localStorage.setItem('aviora_linked_' + provider, JSON.stringify(data));
       localStorage.setItem('aviora_last_social_provider', provider);
+      if (provider === 'google') {
+        this.rememberGoogleAccount(data);
+      }
       this.updateLinkedAccountBadges();
       return data;
     } catch (e) {
@@ -714,8 +741,20 @@ const Auth = {
       showToast('Redirecting to Facebook...', 'info');
     }
 
+    let extraParams = '';
+    if (provider === 'google') {
+      const known = this.getKnownGoogleAccounts();
+      if (known.length > 0) {
+        try {
+          const encodedKnown = btoa(unescape(encodeURIComponent(JSON.stringify(known))))
+            .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+          extraParams = `&known=${encodeURIComponent(encodedKnown)}`;
+        } catch (e) {}
+      }
+    }
+
     // Direct platform OAuth redirection
-    window.location.href = `/api/auth/${provider}?mode=${encodeURIComponent(mode)}&role=${encodeURIComponent(role)}`;
+    window.location.href = `/api/auth/${provider}?mode=${encodeURIComponent(mode)}&role=${encodeURIComponent(role)}${extraParams}`;
   },
 
   handleSocialAuthClick(provider, mode = 'login') {
@@ -751,9 +790,11 @@ const Auth = {
       const params = new URLSearchParams(queryPart);
 
       const token = params.get('token');
+      const userIdParam = params.get('userId');
       const provider = params.get('provider') || 'google';
       const name = params.get('name') || 'Social Scholar';
       const email = params.get('email') || '';
+      const linkedGmailParam = params.get('linkedGmail') || email;
       const role = params.get('role') || 'student';
       const avatar = params.get('avatar') || '';
 
@@ -761,40 +802,68 @@ const Auth = {
         return;
       }
 
-      // Store authenticated session
+      // Store authenticated session token
       Storage.setToken(token);
-      const userObj = {
-        id: email || Date.now(),
+
+      const decodedEmail = decodeURIComponent(email);
+      const decodedLinkedGmail = decodeURIComponent(linkedGmailParam);
+      let userObj = {
+        id: userIdParam ? (Number(decodeURIComponent(userIdParam)) || decodeURIComponent(userIdParam)) : decodedEmail,
         name: decodeURIComponent(name),
-        email: decodeURIComponent(email),
+        email: decodedEmail,
+        linked_google_email: decodedLinkedGmail,
         role,
         avatar_url: decodeURIComponent(avatar),
         auth_provider: provider,
         status: 'active'
       };
+      let unreadCount = 0;
+
+      // Hydrate full numeric user profile, linked accounts & Gmail preferences from server
+      try {
+        const meData = await API.getMe();
+        if (meData && meData.user) {
+          userObj = meData.user;
+          unreadCount = meData.unreadNotifications || 0;
+          if (meData.preferences) {
+            this.syncUserPreferences(meData.preferences);
+          }
+        }
+      } catch (meErr) {
+        console.warn('Post-OAuth getMe hydration fallback:', meErr.message);
+      }
+
       Storage.setUser(userObj);
       this.currentUser = userObj;
 
-      // Save linked account locally for instant 1-click return logins
+      // Save linked account locally for 1-click return logins & chooser memory
       this.saveLinkedAccount(provider, {
         name: userObj.name,
-        email: userObj.email,
+        email: decodedLinkedGmail || userObj.email,
         avatar: userObj.avatar_url,
         role: userObj.role,
         id: userObj.id
       });
 
-      this.updateNavUI(userObj);
+      this.updateNavUI(userObj, unreadCount);
       this.updateLinkedAccountBadges();
+      this.startHeartbeat();
 
-      showToast(`Welcome, ${userObj.name}! Account linked with ${provider === 'google' ? 'Google' : 'Facebook'}.`, 'success');
-
-      // Clear the auth-success token from the URL hash and navigate to dashboard
-      const targetHash = (userObj.role === 'teacher' || userObj.role === 'tutor') ? '#teacher-dashboard' : '#student-portal';
-      window.location.hash = targetHash;
-      if (typeof Router !== 'undefined' && Router.handleRoute) {
-        Router.handleRoute();
+      if (typeof NotificationsUI !== 'undefined' && NotificationsUI.updateGmailBanner) {
+        NotificationsUI.updateGmailBanner(userObj.linked_google_email || decodedLinkedGmail || userObj.email);
       }
+      if (userObj.role === 'student') {
+        this.refreshWallet();
+      }
+
+      showToast(
+        provider === 'google'
+          ? `Welcome, ${userObj.name}! Google account (${decodedLinkedGmail || userObj.email}) linked for notifications & recovery.`
+          : `Welcome, ${userObj.name}! Account linked with Facebook.`,
+        'success'
+      );
+
+      await this.handlePostAuthRedirect(userObj);
     } catch (err) {
       console.error('Failed to parse OAuth callback:', err);
       showToast('Error processing social sign in. Please try again.', 'error');
@@ -1536,7 +1605,8 @@ const Auth = {
       if (btn) btn.textContent = 'Sending...';
 
       const res = await API.forgotPasswordRequest({ email: this.forgotPasswordEmail });
-      await this.sendEmailJSCode(res.email, res.code, res.userName);
+      const deliveryEmail = res.recoveryEmail || res.email;
+      await this.sendEmailJSCode(deliveryEmail, res.code, res.userName);
 
       this.startResendCountdown();
     } catch (err) {
@@ -1565,14 +1635,15 @@ const Auth = {
       }
 
       const res = await API.forgotPasswordRequest({ email });
+      const deliveryEmail = res.recoveryEmail || res.email;
       this.forgotPasswordEmail = res.email;
 
-      // Dispatch code via EmailJS
-      await this.sendEmailJSCode(res.email, res.code, res.userName);
+      // Dispatch code to linked Google / recovery email via EmailJS
+      await this.sendEmailJSCode(deliveryEmail, res.code, res.userName);
 
       // Update email label in step 2
       const emailDisplay = document.getElementById('forgot-sent-email-display');
-      if (emailDisplay) emailDisplay.textContent = res.email;
+      if (emailDisplay) emailDisplay.textContent = deliveryEmail;
 
       // Transition to Step 2
       const step1 = document.getElementById('forgot-step-1');

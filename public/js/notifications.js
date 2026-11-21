@@ -52,7 +52,8 @@ const NotificationsUI = {
   },
 
   updateGmailBanner(email) {
-    const targetEmail = email || (typeof Auth !== 'undefined' && Auth.currentUser && Auth.currentUser.email) || '';
+    const authUser = (typeof Auth !== 'undefined' && Auth.currentUser) || null;
+    const targetEmail = email || (authUser && (authUser.linked_google_email || authUser.email)) || '';
     if (targetEmail) {
       this.linkedGmail = targetEmail;
     }
@@ -67,7 +68,7 @@ const NotificationsUI = {
     if (!user || !Array.isArray(notifications) || notifications.length === 0) return;
 
     const dispatchedSet = this.getStoredGmailDispatchedIds(user.id);
-    const emailToUse = linkedGmail || user.email || '';
+    const emailToUse = linkedGmail || user.linked_google_email || user.email || '';
 
     // On initial load, mark historical notifications (> 5 mins old) as already dispatched by server
     const now = Date.now();

@@ -914,8 +914,9 @@ const Profile = {
     const u = this.currentUser || user || {};
     const prefs = this.userPreferences || u.preferences || {};
 
+    const googleLinked = Array.isArray(u.linked_accounts) ? u.linked_accounts.find(a => a.provider === 'google') : null;
     const gmailAccountInput = document.getElementById('profile-gmail-account');
-    if (gmailAccountInput) gmailAccountInput.value = u.email || '';
+    if (gmailAccountInput) gmailAccountInput.value = prefs.linked_gmail || u.linked_google_email || googleLinked?.email || u.email || '';
 
     this.syncAllPreferences(prefs, false);
     this.updateTimezoneClockDisplays();
@@ -971,8 +972,9 @@ const Profile = {
     if (goalsInput) goalsInput.value = sp.learning_goals || '';
     if (subjectsInput) subjectsInput.value = sp.target_subjects || '';
 
+    const googleLinked = Array.isArray(u.linked_accounts) ? u.linked_accounts.find(a => a.provider === 'google') : null;
     const gmailAccountInput = document.getElementById('profile-gmail-account');
-    if (gmailAccountInput) gmailAccountInput.value = u.email || '';
+    if (gmailAccountInput) gmailAccountInput.value = prefs.linked_gmail || u.linked_google_email || googleLinked?.email || u.email || '';
 
     // Synchronize All Saved Preferences from DB to UI controls
     this.syncAllPreferences(prefs, false);
@@ -1040,20 +1042,31 @@ const Profile = {
   async autoSaveGmail() {
     const gmailInput = document.getElementById('profile-gmail-account');
     if (!gmailInput) return;
-    const email = gmailInput.value.trim();
+    const email = gmailInput.value.trim().toLowerCase();
     if (!email || !email.includes('@')) return;
 
     try {
       this.setSaveStatus('saving', typeof I18n !== 'undefined' ? I18n.t('common.saving', 'Saving...') : 'Saving...');
-      await API.updateProfile({ email });
-      if (typeof Auth !== 'undefined' && Auth.currentUser) {
-        Auth.currentUser.email = email;
-        Storage.setUser(Auth.currentUser);
+      await API.updateUserPreferences({ linked_gmail: email, notif_gmail: 1 });
+      if (typeof API.linkAccount === 'function') {
+        await API.linkAccount({
+          provider: 'google',
+          profile: { email, name: (typeof Auth !== 'undefined' && Auth.currentUser?.name) || email.split('@')[0] }
+        }).catch(() => {});
       }
-      const pEmail = document.getElementById('profile-email');
-      if (pEmail) pEmail.value = email;
-      const heroEmail = document.getElementById('profile-hero-email');
-      if (heroEmail) heroEmail.textContent = email;
+      if (this.userPreferences) {
+        this.userPreferences.linked_gmail = email;
+      }
+      if (typeof Auth !== 'undefined' && Auth.currentUser) {
+        Auth.currentUser.linked_google_email = email;
+        Storage.setUser(Auth.currentUser);
+        if (Auth.saveLinkedAccount) {
+          Auth.saveLinkedAccount('google', { email, name: Auth.currentUser.name || email.split('@')[0] });
+        }
+      }
+      if (typeof NotificationsUI !== 'undefined' && NotificationsUI.updateGmailBanner) {
+        NotificationsUI.updateGmailBanner(email);
+      }
       this.setSaveStatus('saved', typeof I18n !== 'undefined' ? I18n.t('common.saved', 'Saved to Account') : 'Saved to Account');
     } catch (e) {
       console.warn('Auto-save Gmail error:', e);

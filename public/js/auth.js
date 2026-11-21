@@ -52,6 +52,15 @@ const PasswordValidator = {
 
   updateUI(prefix, password) {
     const evalResult = this.evaluate(password);
+    const hasTyped = (password || '').length > 0;
+
+    const strengthBox = document.getElementById(`${prefix}-password-strength-box`);
+    if (strengthBox) {
+      strengthBox.style.display = hasTyped ? 'block' : 'none';
+      if (!hasTyped || evalResult.isStrong) {
+        strengthBox.style.borderColor = '';
+      }
+    }
 
     const bar = document.getElementById(`${prefix}-password-meter-bar`);
     const label = document.getElementById(`${prefix}-password-meter-label`);
@@ -519,6 +528,7 @@ const Auth = {
     const pageMatchMsg = document.getElementById('page-password-match-msg');
 
     if (pagePasswordInput) {
+      PasswordValidator.updateUI('page', pagePasswordInput.value);
       pagePasswordInput.addEventListener('input', () => {
         PasswordValidator.updateUI('page', pagePasswordInput.value);
         this.checkPasswordMatch(pagePasswordInput, pageConfirmInput, pageMatchMsg);
@@ -536,6 +546,7 @@ const Auth = {
     const modalMatchMsg = document.getElementById('modal-password-match-msg');
 
     if (modalPasswordInput) {
+      PasswordValidator.updateUI('modal', modalPasswordInput.value);
       modalPasswordInput.addEventListener('input', () => {
         PasswordValidator.updateUI('modal', modalPasswordInput.value);
         this.checkPasswordMatch(modalPasswordInput, modalConfirmInput, modalMatchMsg);
@@ -553,6 +564,7 @@ const Auth = {
     const forgotMatchMsg = document.getElementById('forgot-password-match-msg');
 
     if (forgotPasswordInput) {
+      PasswordValidator.updateUI('forgot', forgotPasswordInput.value);
       forgotPasswordInput.addEventListener('input', () => {
         PasswordValidator.updateUI('forgot', forgotPasswordInput.value);
         this.checkPasswordMatch(forgotPasswordInput, forgotConfirmInput, forgotMatchMsg);
@@ -1195,6 +1207,7 @@ const Auth = {
       showToast('Please fulfill all 5 strong password requirements before creating your account.', 'error');
       const strengthBox = document.getElementById(isPage ? 'page-password-strength-box' : 'modal-password-strength-box');
       if (strengthBox) {
+        strengthBox.style.display = 'block';
         strengthBox.style.borderColor = 'rgba(239, 68, 68, 0.7)';
         strengthBox.scrollIntoView({ behavior: 'instant', block: 'center' });
       }
@@ -1627,6 +1640,7 @@ const Auth = {
       showToast('Please fulfill all 5 security standards to keep your account safe.', 'error');
       const strengthBox = document.getElementById('forgot-password-strength-box');
       if (strengthBox) {
+        strengthBox.style.display = 'block';
         strengthBox.style.borderColor = 'rgba(239, 68, 68, 0.7)';
         strengthBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }

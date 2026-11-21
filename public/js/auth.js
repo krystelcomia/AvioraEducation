@@ -2544,16 +2544,6 @@ const Auth = {
                 </div>
                 <button type="button" class="notif-mark-read-btn" id="notif-mark-read-btn">Mark all as read</button>
               </div>
-              <div class="notif-gmail-sync-bar" id="notif-gmail-sync-bar" title="All notifications are delivered in real-time to your linked Gmail account even when the website is closed.">
-                <div class="notif-gmail-sync-left">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="notif-gmail-icon">
-                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
-                    <polyline points="22,6 12,13 2,6"></polyline>
-                  </svg>
-                  <span class="notif-gmail-address" id="notif-gmail-address">${this.escapeHtml ? this.escapeHtml(user.email || '') : (user.email || '')}</span>
-                </div>
-                <span class="notif-gmail-live-pill">● Gmail Sync</span>
-              </div>
               <div class="notif-dropdown-body" id="notif-dropdown-body">
                 <div class="notif-loading-item">Loading notifications...</div>
               </div>

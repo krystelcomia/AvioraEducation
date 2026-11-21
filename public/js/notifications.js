@@ -284,7 +284,6 @@ const NotificationsUI = {
       const isUnread = Number(notif.is_read) === 0;
       const timeStr = this.formatRelativeTime(notif.created_at);
       const safeLink = notif.link ? notif.link : '#';
-      const recipientEmail = notif.email_recipient || this.linkedGmail || ((typeof Auth !== 'undefined' && Auth.currentUser && Auth.currentUser.email) || '');
 
       return `
         <a href="${safeLink}" class="notif-item ${isUnread ? 'unread' : ''}" data-id="${notif.id}" onclick="NotificationsUI.handleItemClick(event, ${notif.id}, '${safeLink}')">
@@ -292,15 +291,7 @@ const NotificationsUI = {
           <div class="notif-item-details">
             <div class="notif-item-title">${this.escapeHtml(notif.title || 'Notification')}</div>
             <div class="notif-item-msg">${this.escapeHtml(notif.message || '')}</div>
-            <div class="notif-item-meta-row">
-              <span class="notif-item-time">${timeStr}</span>
-              ${recipientEmail ? `
-                <span class="notif-item-gmail-pill" title="Delivered in real-time to ${this.escapeHtml(recipientEmail)}">
-                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
-                  Sent to Gmail
-                </span>
-              ` : ''}
-            </div>
+            <span class="notif-item-time">${timeStr}</span>
           </div>
           ${isUnread ? `
             <button type="button" class="notif-item-read-btn" title="Mark as read" aria-label="Mark as read" onclick="event.preventDefault(); event.stopPropagation(); NotificationsUI.markSingleRead(${notif.id});">

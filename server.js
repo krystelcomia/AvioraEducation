@@ -5513,16 +5513,22 @@ app.get('/api/student/subscription', authenticateToken, requireRole('student'), 
 
     // Formatted active sub details (supporting multi-plan concurrent subscriptions)
     const formattedActiveSubs = activeSubs.map(sub => {
-      const now = new Date();
-      const expDate = new Date(sub.expires_at);
-      const diffMs = expDate - now;
+      const nowMs = Date.now();
+      const expMs = parseSqlUtcMs(sub.expires_at);
+      const expDate = expMs !== null ? new Date(expMs) : new Date(sub.expires_at);
+      const diffMs = expDate.getTime() - nowMs;
       const daysRemaining = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
+      const purchaseMs = parseSqlUtcMs(sub.purchase_date);
+      const purchaseDateObj = purchaseMs !== null ? new Date(purchaseMs) : new Date(sub.purchase_date);
+      const totalLessons = Number(sub.lessons_total) || 0;
+      const validityDays = (!Number(sub.is_trial) && (totalLessons === 4 || totalLessons === 8)) ? 30 : 60;
 
       return {
         ...sub,
+        validity_days: validityDays,
         days_remaining: daysRemaining,
         formatted_expires_at: expDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
-        formatted_purchase_date: new Date(sub.purchase_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+        formatted_purchase_date: purchaseDateObj.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
       };
     });
 
@@ -5573,12 +5579,13 @@ app.get('/api/student/subscription', authenticateToken, requireRole('student'), 
         name: 'Trial Lesson',
         lessons: 1,
         priceDisplay: 'Calculated upon setup',
-        validity: '14 Days',
+        validity: '60 Days',
+        validity_days: 60,
         badge: 'Available (1-Time Use)',
         duration_minutes: 25,
         duration_options: [25, 50],
         commission_rate: 0.50,
-        description: 'Diagnostic trial session (25-min or 50-min option) with an accredited tutor to evaluate fit and establish your roadmap.',
+        description: '1-on-1 introductory lesson (25-min or 50-min option) with your chosen verified tutor to discuss learning goals, preview the live video and screen-share classroom, and receive written post-class feedback.',
         is_trial: true,
         trial_used: trialUsed
       },
@@ -5587,11 +5594,12 @@ app.get('/api/student/subscription', authenticateToken, requireRole('student'), 
         name: 'Starter Tier: 4 Lessons',
         lessons: 4,
         priceDisplay: 'Calculated upon setup',
-        validity: '1 Month (30 Days)',
+        validity: '30 Days',
+        validity_days: 30,
         badge: mostPopularKey === '4_lessons' ? 'Most Popular' : 'Starter Package',
         duration_minutes: 50,
         commission_rate: 0.30,
-        description: 'Ideal for weekly check-ins, targeted exam revision, and coursework clarification across 4 lessons.',
+        description: 'Focused 30-day starter package for homework support, targeted topic review, or exam prep across 4 50-minute 1-on-1 live video classes with in-class chat, screen sharing, auto-transcripts, and written tutor feedback.',
         is_popular: mostPopularKey === '4_lessons',
         is_suggested: false,
         booking_count: popularityStats.counts['4_lessons'] || 0
@@ -5601,13 +5609,14 @@ app.get('/api/student/subscription', authenticateToken, requireRole('student'), 
         name: 'Mastery Tier: 8 Lessons',
         lessons: 8,
         priceDisplay: 'Calculated upon setup',
-        validity: '1 Month (30 Days)',
+        validity: '30 Days',
+        validity_days: 30,
         badge: mostPopularKey === '8_lessons' ? 'Most Popular' : 'Mastery Package',
         is_popular: mostPopularKey === '8_lessons',
         is_suggested: false,
         duration_minutes: 50,
         commission_rate: 0.30,
-        description: 'Our premier bi-weekly intensive mentorship package across 8 lessons.',
+        description: 'Steady 30-day twice-weekly study package for building conceptual mastery and bridging skill gaps across 8 50-minute 1-on-1 classes with per-lesson topic choice, live screen sharing, auto-transcripts, and tutor feedback.',
         booking_count: popularityStats.counts['8_lessons'] || 0
       },
       {
@@ -5615,11 +5624,12 @@ app.get('/api/student/subscription', authenticateToken, requireRole('student'), 
         name: 'Honors Tier: 12 Lessons',
         lessons: 12,
         priceDisplay: 'Calculated upon setup',
-        validity: '1 Month (30 Days)',
+        validity: '60 Days',
+        validity_days: 60,
         badge: mostPopularKey === '12_lessons' ? 'Most Popular' : 'Honors Intensive',
         duration_minutes: 50,
         commission_rate: 0.30,
-        description: 'Comprehensive immersion for Olympiad, MCAT, AP/IB diploma, or Ivy League admissions across 12 lessons.',
+        description: 'Extended 60-day study package designed for structured exam prep, multi-unit coursework, and guided progression across 12 50-minute 1-on-1 live sessions with downloadable transcripts and post-class feedback.',
         is_popular: mostPopularKey === '12_lessons',
         is_suggested: false,
         booking_count: popularityStats.counts['12_lessons'] || 0
@@ -5629,11 +5639,12 @@ app.get('/api/student/subscription', authenticateToken, requireRole('student'), 
         name: '16 Lessons Package',
         lessons: 16,
         priceDisplay: 'Calculated upon setup',
-        validity: '1 Month (30 Days)',
+        validity: '60 Days',
+        validity_days: 60,
         badge: mostPopularKey === '16_lessons' ? 'Most Popular' : 'Elite Scholar',
         duration_minutes: 50,
         commission_rate: 0.30,
-        description: 'sustained four-times-weekly mentorship for accelerated mastery, advanced coursework, and rigorous exam readiness across 16 sessions.',
+        description: 'Multi-week 60-day coaching package for deeper coursework coverage, regular guided practice, and direct tutor messaging across 16 50-minute 1-on-1 interactive lessons.',
         is_popular: mostPopularKey === '16_lessons',
         is_suggested: false,
         booking_count: popularityStats.counts['16_lessons'] || 0
@@ -5643,11 +5654,12 @@ app.get('/api/student/subscription', authenticateToken, requireRole('student'), 
         name: '20 Lessons Package',
         lessons: 20,
         priceDisplay: 'Calculated upon setup',
-        validity: '1 Month (30 Days)',
+        validity: '60 Days',
+        validity_days: 60,
         badge: 'Suggested',
         duration_minutes: 50,
         commission_rate: 0.30,
-        description: 'Our comprehensive daily-pace academic accelerator designed for complete subject mastery and top-tier test preparation across 20 sessions.',
+        description: 'Our most comprehensive 60-day mentorship track for full-term academic support and consistent 1-on-1 instruction across 20 50-minute live lessons with full topic flexibility, live transcripts, and written feedback logs.',
         is_popular: mostPopularKey === '20_lessons',
         is_suggested: true,
         booking_count: popularityStats.counts['20_lessons'] || 0
@@ -5657,11 +5669,11 @@ app.get('/api/student/subscription', authenticateToken, requireRole('student'), 
     const termsAndConditions = {
       no_refund: 'Strict No-Refund Policy: Subscriptions and lesson package purchases are final and non-refundable once activated. Unused lessons cannot be converted to cash or credited past the validity period.',
       upfront_payment: 'Upfront Payment Required: All lesson packages must be paid in full upfront before tutoring session slots can be confirmed on the calendar.',
-      validity: '1-Month Validity Window: All 4, 8, 12, 16, and 20-lesson packages are valid for exactly 30 calendar days from the date of purchase. Sessions not scheduled within this 30-day period expire automatically.',
-      flexible_dates: 'Student-Determined Schedule: All lesson dates, times, and tutor selections are freely scheduled by the student through the tutor live availability calendar.',
-      one_time_trial: '1-Time Trial Lesson (25-Min or 50-Min): Students can choose between a 25-minute or 50-minute class duration when setting up their trial session.',
-      reschedule: '3-Hour Rescheduling Notice: Students may reschedule any booked session with at least 3 hours advance notice before the class without forfeiting the lesson credit.',
-      class_duration: 'Class Duration: Trial lessons can be set to 25 minutes or 50 minutes in length. All standard subscription subjects are 50 minutes per class.'
+      validity: 'Subscription Expiration Windows (30 Days vs. 60 Days): The 4-lesson and 8-lesson packages expire 30 calendar days from the date of purchase. Trial lessons, 12-, 16-, and 20-lesson packages, and all other lesson packages expire 60 calendar days from the date of purchase. Once expired, any unused lessons reset so you can avail of a new package.',
+      flexible_dates: 'Student-Determined Schedule: All lesson dates, times, and topics per lesson are freely scheduled by the student through the tutor live availability calendar.',
+      one_time_trial: '1-Time Trial Lesson (25-Min or 50-Min • 60-Day Validity): Students can choose between a 25-minute or 50-minute trial duration upon setup (calculated by the selected tutor’s rate, valid for 60 days, strictly 1-time use per account).',
+      reschedule: '3-Hour Rescheduling Notice: Students may reschedule any booked session with at least 3 hours advance notice before class without forfeiting the lesson credit.',
+      class_duration: 'Class Duration & Experience: Trial lessons can be set to 25 minutes or 50 minutes, and standard subscription lessons run up to 50 minutes each—conducted via Aviora’s 1-on-1 virtual classroom with live video/audio, screen sharing, in-class chat, tutor voice transcripts, and post-class feedback.'
     };
 
     res.json({
@@ -5744,16 +5756,16 @@ app.post('/api/student/subscription/purchase', authenticateToken, requireRole('s
     }
 
     const packageMap = {
-      'trial': { key: 'trial', name: `Trial Lesson (${resolvedTrialDuration}-Min)`, lessons: 1, price: 0.00, days: 14, is_trial: 1, duration_minutes: resolvedTrialDuration, commission_rate: 0.50 },
-      'free_trial': { key: 'trial', name: `Trial Lesson (${resolvedTrialDuration}-Min)`, lessons: 1, price: 0.00, days: 14, is_trial: 1, duration_minutes: resolvedTrialDuration, commission_rate: 0.50 },
+      'trial': { key: 'trial', name: `Trial Lesson (${resolvedTrialDuration}-Min)`, lessons: 1, price: 0.00, days: 60, is_trial: 1, duration_minutes: resolvedTrialDuration, commission_rate: 0.50 },
+      'free_trial': { key: 'trial', name: `Trial Lesson (${resolvedTrialDuration}-Min)`, lessons: 1, price: 0.00, days: 60, is_trial: 1, duration_minutes: resolvedTrialDuration, commission_rate: 0.50 },
       '4_lessons': { key: '4_lessons', name: 'Starter Tier: 4 Lessons', lessons: 4, price: 220.00, days: 30, is_trial: 0, duration_minutes: 50, commission_rate: 0.30 },
       'scholar': { key: '4_lessons', name: 'Starter Tier: 4 Lessons', lessons: 4, price: 220.00, days: 30, is_trial: 0, duration_minutes: 50, commission_rate: 0.30 },
       '8_lessons': { key: '8_lessons', name: 'Mastery Tier: 8 Lessons', lessons: 8, price: 399.00, days: 30, is_trial: 0, duration_minutes: 50, commission_rate: 0.30 },
       'mastery': { key: '8_lessons', name: 'Mastery Tier: 8 Lessons', lessons: 8, price: 399.00, days: 30, is_trial: 0, duration_minutes: 50, commission_rate: 0.30 },
       'honors': { key: '8_lessons', name: 'Mastery Tier: 8 Lessons', lessons: 8, price: 399.00, days: 30, is_trial: 0, duration_minutes: 50, commission_rate: 0.30 },
-      '12_lessons': { key: '12_lessons', name: 'Honors Tier: 12 Lessons', lessons: 12, price: 540.00, days: 30, is_trial: 0, duration_minutes: 50, commission_rate: 0.30 },
-      '16_lessons': { key: '16_lessons', name: 'Elite Scholar: 16 Lessons', lessons: 16, price: 720.00, days: 30, is_trial: 0, duration_minutes: 50, commission_rate: 0.30 },
-      '20_lessons': { key: '20_lessons', name: 'Capstone Accelerator: 20 Lessons', lessons: 20, price: 900.00, days: 30, is_trial: 0, duration_minutes: 50, commission_rate: 0.30 }
+      '12_lessons': { key: '12_lessons', name: 'Honors Tier: 12 Lessons', lessons: 12, price: 540.00, days: 60, is_trial: 0, duration_minutes: 50, commission_rate: 0.30 },
+      '16_lessons': { key: '16_lessons', name: 'Elite Scholar: 16 Lessons', lessons: 16, price: 720.00, days: 60, is_trial: 0, duration_minutes: 50, commission_rate: 0.30 },
+      '20_lessons': { key: '20_lessons', name: 'Capstone Accelerator: 20 Lessons', lessons: 20, price: 900.00, days: 60, is_trial: 0, duration_minutes: 50, commission_rate: 0.30 }
     };
 
     let selectedPkg = packageMap[package_key];
@@ -5766,7 +5778,7 @@ app.post('/api/student/subscription/purchase', authenticateToken, requireRole('s
           name: `${count} Lessons Package`,
           lessons: count,
           price: 0.00,
-          days: 30,
+          days: (count === 4 || count === 8) ? 30 : 60,
           is_trial: 0,
           duration_minutes: 50,
           commission_rate: 0.30
@@ -6001,6 +6013,7 @@ app.post('/api/student/subscription/purchase', authenticateToken, requireRole('s
         message: `Successfully enrolled in ${selectedPkg.name}! All ${selectedPkg.lessons} lesson${selectedPkg.lessons > 1 ? 's have' : ' has'} been scheduled for a total of $${finalCalculatedPrice.toFixed(2)}${voucherNote}.`,
         plan: selectedPkg.name,
         lessons_total: selectedPkg.lessons,
+        validityDays: selectedPkg.days,
         subtotal: subtotalCalculatedPrice,
         voucher_code: appliedVoucher ? appliedVoucher.code : null,
         discount_percent: discountPercent,
@@ -6022,7 +6035,7 @@ app.post('/api/student/subscription/purchase', authenticateToken, requireRole('s
     if (selectedPkg.is_trial) {
       const trialCheck = db.prepare('SELECT id FROM student_subscriptions WHERE user_id = ? AND is_trial = 1').get(studentId);
       if (trialCheck) {
-        return res.status(400).json({ error: 'The trial is a one-time offer for $0 and has already been used by this account.' });
+        return res.status(400).json({ error: 'The trial lesson is strictly limited to one use per account and has already been used.' });
       }
     }
 
@@ -6077,7 +6090,7 @@ app.post('/api/student/subscription/purchase', authenticateToken, requireRole('s
       const sessionNotes = notes 
         ? `${notes} (Enrolled in ${selectedPkg.name} - ${allocatedLessons} lesson${allocatedLessons > 1 ? 's' : ''} planned with ${tutorUser.name})`
         : (selectedPkg.is_trial 
-            ? 'One-Time Free Trial Lesson (30 Minutes)' 
+            ? `One-Time Trial Lesson (${selectedPkg.duration_minutes} Minutes)` 
             : `Enrolled via ${selectedPkg.name} (${allocatedLessons} lesson${allocatedLessons > 1 ? 's' : ''} allocated with ${tutorUser.name})`);
 
       const sessionTotalAmt = selectedPkg.is_trial ? 0.00 : (tutorProfile.hourly_rate * lessonDurationHours);
@@ -6143,7 +6156,7 @@ app.post('/api/student/subscription/purchase', authenticateToken, requireRole('s
 
     sendNotification(
       studentId,
-      selectedPkg.is_trial ? 'Free Trial Activated & Scheduled' : 'Subscription Activated',
+      selectedPkg.is_trial ? 'Trial Lesson Activated & Scheduled' : 'Subscription Activated',
       studentNotifMsg,
       'subscription',
       '#subscriptions'
@@ -6153,10 +6166,11 @@ app.post('/api/student/subscription/purchase', authenticateToken, requireRole('s
       success: true,
       message: hasScheduledLesson
         ? (selectedPkg.is_trial 
-            ? `Your free 30-minute trial lesson with ${tutorUser?.name || 'your tutor'} on ${scheduled_date} at ${scheduled_time} is confirmed!` 
+            ? `Your ${selectedPkg.duration_minutes}-minute Trial Lesson with ${tutorUser?.name || 'your tutor'} on ${scheduled_date} at ${scheduled_time} is confirmed!` 
             : `Successfully enrolled in ${selectedPkg.name}! Your lesson with ${tutorUser?.name || 'your tutor'} on ${scheduled_date} at ${scheduled_time} is confirmed (${finalRemainingLessons} remaining lesson${finalRemainingLessons === 1 ? '' : 's'}). Total: $${calculatedPrice.toFixed(2)}.`)
-        : `Successfully enrolled in ${selectedPkg.name}! Your ${selectedPkg.lessons} lessons are now available for scheduling. Total: $${calculatedPrice.toFixed(2)}.`,
+        : `Successfully enrolled in ${selectedPkg.name}! Your ${selectedPkg.lessons} lessons are now available for scheduling (valid for ${selectedPkg.days} days). Total: $${calculatedPrice.toFixed(2)}.`,
       plan: selectedPkg.name,
+      validityDays: selectedPkg.days,
       remainingLessons: finalRemainingLessons,
       isTrial: selectedPkg.is_trial === 1,
       hasScheduledLesson,

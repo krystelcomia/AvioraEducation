@@ -185,9 +185,11 @@ const StudentSub = {
     const planConfig = this.getPlanConfig(this.activePackageKey);
     const durationText = document.getElementById('sub-summary-duration-text');
     const slotDurationBadge = document.getElementById('sub-enroll-slot-duration-badge');
+    const activePlanBadge = document.getElementById('sub-modal-active-plan-badge');
     if (planConfig.isTrial) {
       if (durationText) durationText.textContent = `${this.trialDuration} Minutes (1-on-1 Trial Session)`;
       if (slotDurationBadge) slotDurationBadge.textContent = `${this.trialDuration}-Min Trial`;
+      if (activePlanBadge) activePlanBadge.textContent = `Trial Lesson (${this.trialDuration}-Min • 60-Day Validity)`;
       if (this.selectedLessons && this.selectedLessons[0] && this.selectedLessons[0].scheduled_time) {
         const startPart = this.selectedLessons[0].scheduled_time.split(' - ')[0]?.trim();
         if (startPart && startPart.includes(':')) {
@@ -333,6 +335,7 @@ const StudentSub = {
     const step2Subtitle = document.getElementById('sub-enroll-step2-subtitle');
     const notesLabel = document.getElementById('sub-enroll-notes-label');
     const durationText = document.getElementById('sub-summary-duration-text');
+    const summaryValidityEl = document.getElementById('sub-summary-validity-text');
     const slotDurationBadge = document.getElementById('sub-enroll-slot-duration-badge');
     const tabsGrid = document.getElementById('sub-lesson-tabs-grid');
     const trialDurBox = document.getElementById('sub-trial-duration-box');
@@ -363,6 +366,15 @@ const StudentSub = {
     if (durationText) {
       durationText.textContent = planConfig.isTrial ? `${this.trialDuration} Minutes (1-on-1 Trial Session)` : '50 Minutes per lesson';
     }
+    if (summaryValidityEl) {
+      summaryValidityEl.textContent = `${planConfig.validityDays} Days from purchase`;
+    }
+    const activePlanBadgeEl = document.getElementById('sub-modal-active-plan-badge');
+    if (activePlanBadgeEl) {
+      activePlanBadgeEl.textContent = planConfig.isTrial
+        ? `Trial Lesson (${this.trialDuration}-Min • 60-Day Validity)`
+        : `${planConfig.name} (${planConfig.validityDays}-Day Validity)`;
+    }
     if (slotDurationBadge) {
       slotDurationBadge.textContent = planConfig.isTrial ? `${this.trialDuration}-Min Trial` : '50-Min Class';
     }
@@ -390,7 +402,11 @@ const StudentSub = {
     const count = planConfig.lessons;
 
     const badge = document.getElementById('sub-modal-active-plan-badge');
-    if (badge) badge.textContent = planConfig.isTrial ? `Trial Lesson (${this.trialDuration}-Min)` : planConfig.name;
+    if (badge) {
+      badge.textContent = planConfig.isTrial
+        ? `Trial Lesson (${this.trialDuration}-Min • 60-Day Validity)`
+        : `${planConfig.name} (${planConfig.validityDays}-Day Validity)`;
+    }
 
     const trialBtn = document.getElementById('modal-plan-btn-trial');
     const p4Btn = document.getElementById('modal-plan-btn-4');
@@ -493,6 +509,7 @@ const StudentSub = {
     const activeSub = this.isSubscriptionValid(data.activeSubscription) ? data.activeSubscription : null;
     const activePlanEl = document.getElementById('sub-active-plan-name');
     const activeStatusEl = document.getElementById('sub-active-status');
+    const validityCycleEl = document.getElementById('sub-active-validity-cycle');
     const lessonsRemEl = document.getElementById('sub-lessons-remaining');
     const lessonsTotEl = document.getElementById('sub-lessons-total');
     const progressFill = document.getElementById('sub-lessons-progress');
@@ -500,8 +517,11 @@ const StudentSub = {
     const daysLeftEl = document.getElementById('sub-active-days-left');
 
     if (activeSub) {
+      const totalL = Number(activeSub.lessons_total) || 0;
+      const vDays = activeSub.validity_days || ((!Number(activeSub.is_trial) && (totalL === 4 || totalL === 8)) ? 30 : 60);
       if (activePlanEl) activePlanEl.textContent = activeSub.plan_name;
       if (activeStatusEl) activeStatusEl.textContent = 'Active • Upfront Paid';
+      if (validityCycleEl) validityCycleEl.textContent = `${vDays}-Day Validity Cycle`;
       if (lessonsRemEl) lessonsRemEl.textContent = activeSub.lessons_remaining;
       if (lessonsTotEl) lessonsTotEl.textContent = activeSub.lessons_total;
       if (progressFill) {
@@ -513,6 +533,7 @@ const StudentSub = {
     } else {
       if (activePlanEl) activePlanEl.textContent = 'No Active Subscription';
       if (activeStatusEl) activeStatusEl.textContent = 'Inactive';
+      if (validityCycleEl) validityCycleEl.textContent = '30-Day (4/8) • 60-Day (Others)';
       if (lessonsRemEl) lessonsRemEl.textContent = '0';
       if (lessonsTotEl) lessonsTotEl.textContent = '0';
       if (progressFill) progressFill.style.width = '0%';
@@ -530,10 +551,12 @@ const StudentSub = {
         multiPlansWrap.style.display = 'block';
         multiPlansContainer.innerHTML = activeSubs.map((sub, idx) => {
           const pct = Math.min(100, Math.round((sub.lessons_remaining / sub.lessons_total) * 100));
+          const subTotalL = Number(sub.lessons_total) || 0;
+          const subVDays = sub.validity_days || ((!Number(sub.is_trial) && (subTotalL === 4 || subTotalL === 8)) ? 30 : 60);
           return `
             <div style="background: var(--bg-surface, #FFFFFF); border: 1.5px solid var(--gold-300, #E5C378); border-radius: var(--radius-md); padding: 1.15rem; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                <span class="badge-gold" style="font-size: 0.72rem; font-weight: 800;">Plan #${idx + 1}</span>
+                <span class="badge-gold" style="font-size: 0.72rem; font-weight: 800;">Plan #${idx + 1} • ${subVDays}d Window</span>
                 <span class="status-pill accepted" style="font-size: 0.72rem;">Active</span>
               </div>
               <h5 style="font-size: 1.05rem; font-weight: 800; color: var(--charcoal-900); margin: 0 0 0.4rem 0;">${sub.plan_name}</h5>
@@ -545,7 +568,7 @@ const StudentSub = {
                 <div style="height: 100%; width: ${pct}%; background: var(--gradient-gold); border-radius: 3px;"></div>
               </div>
               <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.78rem; color: var(--charcoal-600); border-top: 1px dashed var(--border-light); padding-top: 0.5rem;">
-                <span>Expires: ${sub.formatted_expires_at || '1 month'}</span>
+                <span>Expires: ${sub.formatted_expires_at || `${subVDays} days`}</span>
                 <span class="badge-gold" style="font-size: 0.7rem;">${sub.days_remaining}d left</span>
               </div>
             </div>
@@ -643,26 +666,29 @@ const StudentSub = {
   getPlanConfig(packageKey) {
     const tDur = this.trialDuration || 25;
     const plans = {
-      'trial': { key: 'trial', name: 'Trial Lesson', lessons: 1, duration: tDur, durationLabel: `${tDur}-Min Trial`, isTrial: true, commissionRate: 0.50 },
-      'free_trial': { key: 'trial', name: 'Trial Lesson', lessons: 1, duration: tDur, durationLabel: `${tDur}-Min Trial`, isTrial: true, commissionRate: 0.50 },
-      '4_lessons': { key: '4_lessons', name: '4 Lessons Package', lessons: 4, duration: 50, durationLabel: '50-Min Class', isTrial: false, commissionRate: 0.30 },
-      'scholar': { key: '4_lessons', name: '4 Lessons Package', lessons: 4, duration: 50, durationLabel: '50-Min Class', isTrial: false, commissionRate: 0.30 },
-      '8_lessons': { key: '8_lessons', name: '8 Lessons Package', lessons: 8, duration: 50, durationLabel: '50-Min Class', isTrial: false, commissionRate: 0.30 },
-      'honors': { key: '8_lessons', name: '8 Lessons Package', lessons: 8, duration: 50, durationLabel: '50-Min Class', isTrial: false, commissionRate: 0.30 },
-      'mastery': { key: '8_lessons', name: '8 Lessons Package', lessons: 8, duration: 50, durationLabel: '50-Min Class', isTrial: false, commissionRate: 0.30 },
-      '12_lessons': { key: '12_lessons', name: '12 Lessons Package', lessons: 12, duration: 50, durationLabel: '50-Min Class', isTrial: false, commissionRate: 0.30 },
-      '16_lessons': { key: '16_lessons', name: '16 Lessons Package', lessons: 16, duration: 50, durationLabel: '50-Min Class', isTrial: false, commissionRate: 0.30 },
-      '20_lessons': { key: '20_lessons', name: '20 Lessons Package', lessons: 20, duration: 50, durationLabel: '50-Min Class', isTrial: false, isSuggested: true, commissionRate: 0.30 }
+      'trial': { key: 'trial', name: 'Trial Lesson', lessons: 1, validityDays: 60, validityLabel: '60 Days', duration: tDur, durationLabel: `${tDur}-Min Trial`, isTrial: true, commissionRate: 0.50 },
+      'free_trial': { key: 'trial', name: 'Trial Lesson', lessons: 1, validityDays: 60, validityLabel: '60 Days', duration: tDur, durationLabel: `${tDur}-Min Trial`, isTrial: true, commissionRate: 0.50 },
+      '4_lessons': { key: '4_lessons', name: '4 Lessons Package', lessons: 4, validityDays: 30, validityLabel: '30 Days', duration: 50, durationLabel: '50-Min Class', isTrial: false, commissionRate: 0.30 },
+      'scholar': { key: '4_lessons', name: '4 Lessons Package', lessons: 4, validityDays: 30, validityLabel: '30 Days', duration: 50, durationLabel: '50-Min Class', isTrial: false, commissionRate: 0.30 },
+      '8_lessons': { key: '8_lessons', name: '8 Lessons Package', lessons: 8, validityDays: 30, validityLabel: '30 Days', duration: 50, durationLabel: '50-Min Class', isTrial: false, commissionRate: 0.30 },
+      'honors': { key: '8_lessons', name: '8 Lessons Package', lessons: 8, validityDays: 30, validityLabel: '30 Days', duration: 50, durationLabel: '50-Min Class', isTrial: false, commissionRate: 0.30 },
+      'mastery': { key: '8_lessons', name: '8 Lessons Package', lessons: 8, validityDays: 30, validityLabel: '30 Days', duration: 50, durationLabel: '50-Min Class', isTrial: false, commissionRate: 0.30 },
+      '12_lessons': { key: '12_lessons', name: '12 Lessons Package', lessons: 12, validityDays: 60, validityLabel: '60 Days', duration: 50, durationLabel: '50-Min Class', isTrial: false, commissionRate: 0.30 },
+      '16_lessons': { key: '16_lessons', name: '16 Lessons Package', lessons: 16, validityDays: 60, validityLabel: '60 Days', duration: 50, durationLabel: '50-Min Class', isTrial: false, commissionRate: 0.30 },
+      '20_lessons': { key: '20_lessons', name: '20 Lessons Package', lessons: 20, validityDays: 60, validityLabel: '60 Days', duration: 50, durationLabel: '50-Min Class', isTrial: false, isSuggested: true, commissionRate: 0.30 }
     };
     if (plans[packageKey]) return plans[packageKey];
 
     const match = String(packageKey || '').match(/^(\d+)(_lessons)?$/);
     if (match) {
       const count = Math.max(1, Math.min(30, parseInt(match[1], 10)));
+      const validityDays = (count === 4 || count === 8) ? 30 : 60;
       return {
         key: `${count}_lessons`,
         name: `${count} Lessons Package`,
         lessons: count,
+        validityDays,
+        validityLabel: `${validityDays} Days`,
         duration: 50,
         durationLabel: '50-Min Class',
         isTrial: false,
@@ -688,7 +714,7 @@ const StudentSub = {
     };
     let packageKey = packageMap[planKey] || planKey || '4_lessons';
     if ((packageKey === 'trial' || packageKey === 'free_trial') && this.data && this.data.trialUsed) {
-      showToast('The free trial is limited to one use per account and has already been used.', 'warning');
+      showToast('The trial lesson is limited to one use per account and has already been used.', 'warning');
       packageKey = '4_lessons';
     }
     const planConfig = this.getPlanConfig(packageKey);
@@ -877,6 +903,7 @@ const StudentSub = {
     const step2Subtitle = document.getElementById('sub-enroll-step2-subtitle');
     const notesLabel = document.getElementById('sub-enroll-notes-label');
     const durationText = document.getElementById('sub-summary-duration-text');
+    const summaryValidityEl = document.getElementById('sub-summary-validity-text');
     const slotDurationBadge = document.getElementById('sub-enroll-slot-duration-badge');
     const tabsGrid = document.getElementById('sub-lesson-tabs-grid');
     const trialDurBox = document.getElementById('sub-trial-duration-box');
@@ -906,6 +933,15 @@ const StudentSub = {
     }
     if (durationText) {
       durationText.textContent = planConfig.isTrial ? `${this.trialDuration} Minutes (1-on-1 Trial Session)` : '50 Minutes per lesson';
+    }
+    if (summaryValidityEl) {
+      summaryValidityEl.textContent = `${planConfig.validityDays} Days from purchase`;
+    }
+    const activePlanBadgeEl = document.getElementById('sub-modal-active-plan-badge');
+    if (activePlanBadgeEl) {
+      activePlanBadgeEl.textContent = planConfig.isTrial
+        ? `Trial Lesson (${this.trialDuration}-Min • 60-Day Validity)`
+        : `${planConfig.name} (${planConfig.validityDays}-Day Validity)`;
     }
     if (slotDurationBadge) {
       slotDurationBadge.textContent = planConfig.isTrial ? `${this.trialDuration}-Min Trial` : '50-Min Class';

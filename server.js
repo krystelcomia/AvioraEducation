@@ -5451,10 +5451,13 @@ app.get('/api/student/subscription', authenticateToken, requireRole('student'), 
   try {
     const studentId = req.user.id;
 
+    // Expire & reset any subscriptions whose validity period has elapsed before querying active plans
+    reconcileStudentSubscriptions(studentId);
+
     // Check all active subscriptions (supports multiple concurrent plans)
     const activeSubs = db.prepare(`
       SELECT * FROM student_subscriptions
-      WHERE user_id = ? AND status = 'active'
+      WHERE user_id = ? AND status = 'active' AND expires_at > CURRENT_TIMESTAMP
       ORDER BY id DESC
     `).all(studentId);
     const activeSub = activeSubs[0] || null;
@@ -5725,6 +5728,7 @@ app.post('/api/student/vouchers/validate', authenticateToken, requireRole('stude
 app.post('/api/student/subscription/purchase', authenticateToken, requireRole('student'), (req, res) => {
   try {
     const studentId = req.user.id;
+    reconcileStudentSubscriptions(studentId);
     const { package_key, tutor_id, lessons_with_tutor, subject, scheduled_date, scheduled_time, notes, lessons, trial_duration, voucher_code } = req.body;
     const resolvedTrialDuration = Number(trial_duration) === 50 ? 50 : 25;
 
@@ -6212,9 +6216,10 @@ app.post('/api/student/requests', authenticateToken, requireRole('student'), (re
     let remainingCreditsAfter = null;
 
     if (finalPaymentMethod === 'subscription') {
+      reconcileStudentSubscriptions(studentId);
       const activeSub = db.prepare(`
         SELECT * FROM student_subscriptions
-        WHERE user_id = ? AND status = 'active' AND lessons_remaining > 0
+        WHERE user_id = ? AND status = 'active' AND lessons_remaining > 0 AND expires_at > CURRENT_TIMESTAMP
         ORDER BY id DESC LIMIT 1
       `).get(studentId);
 
@@ -6388,10 +6393,15 @@ app.post('/api/student/requests/:id/cancel', authenticateToken, requireRole('stu
     // Refund handling:
     let refundAmount = 0;
     if (request.payment_method === 'subscription' && (!request.total_amount || parseFloat(request.total_amount) === 0)) {
+      reconcileStudentSubscriptions(studentId);
       db.prepare(`
         UPDATE student_subscriptions 
-        SET lessons_remaining = lessons_remaining + 1, updated_at = CURRENT_TIMESTAMP
-        WHERE user_id = ? AND status = 'active'
+        SET lessons_remaining = lessons_remaining + 1, status = 'active', updated_at = CURRENT_TIMESTAMP
+        WHERE id = (
+          SELECT id FROM student_subscriptions
+          WHERE user_id = ? AND status IN ('active', 'exhausted') AND expires_at > CURRENT_TIMESTAMP
+          ORDER BY id DESC LIMIT 1
+        )
       `).run(studentId);
     } else {
       // Non-subscription (card, wallet, direct) or paid session: refund full lesson cost to wallet
@@ -11702,6 +11712,7 @@ function processAllStudentWalletValidities() {
 setInterval(() => {
   dispatch3HourLessonReminders();
   processAllStudentWalletValidities();
+  processAllStudentSubscriptions();
 }, 5 * 60 * 1000);
 
 // Run class about-to-begin checks every 30 seconds in background so offline users receive instant Gmail notifications
@@ -11714,6 +11725,7 @@ setTimeout(() => {
     dispatchClassAboutToBeginReminders();
     dispatch3HourLessonReminders();
     processAllStudentWalletValidities();
+    processAllStudentSubscriptions();
   } catch (e) {}
 }, 1500);
 

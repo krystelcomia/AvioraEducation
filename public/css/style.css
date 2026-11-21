@@ -257,6 +257,13 @@ a { text-decoration: none; color: inherit; transition: color var(--transition-fa
   .nav-container {
     padding: 0 1.25rem;
   }
+  .brand-logo {
+    height: 48px;
+  }
+  .brand-wordmark {
+    height: 28px;
+    max-width: 120px;
+  }
 }
 
 .brand-link {
@@ -288,6 +295,17 @@ a { text-decoration: none; color: inherit; transition: color var(--transition-fa
 
 .brand-logo:hover {
   transform: scale(1.04);
+}
+
+.brand-wordmark {
+  height: 36px;
+  width: auto;
+  max-width: 155px;
+  object-fit: contain;
+  display: block;
+  flex-shrink: 0;
+  user-select: none;
+  filter: drop-shadow(0 1px 4px rgba(184, 126, 20, 0.14));
 }
 
 /* Distinctive Luxury Brand Title & Subtitle */

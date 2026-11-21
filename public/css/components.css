@@ -819,9 +819,9 @@
 }
 
 .simple-login-brand-logo {
-  height: 82px;
+  height: 64px;
   width: auto;
-  max-width: 106px;
+  max-width: 82px;
   border-radius: 0;
   object-fit: contain;
   filter: drop-shadow(0 2px 10px rgba(198, 138, 40, 0.22));

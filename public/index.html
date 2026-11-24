@@ -6962,19 +6962,19 @@
        MODAL: SUBSCRIPTION ENROLLMENT & TUTOR SCHEDULING
        ========================================= -->
   <div class="modal-overlay" id="sub-enrollment-modal">
-    <div class="modal-card" style="max-width: 780px; max-height: 90vh; display: flex; flex-direction: column;">
-      <div class="modal-header" style="background: linear-gradient(135deg, #FAF7F2 0%, #F5EFE6 100%); border-bottom: 1px solid rgba(198, 138, 40, 0.2); padding: 1.25rem 1.75rem;">
-        <div>
-          <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
+    <div class="modal-card sub-enrollment-modal-card" style="width: 100%; max-width: 1020px; max-height: 90vh; display: flex; flex-direction: column; overflow: hidden; box-sizing: border-box;">
+      <div class="modal-header" style="background: linear-gradient(135deg, #FAF7F2 0%, #F5EFE6 100%); border-bottom: 1px solid rgba(198, 138, 40, 0.2); padding: 1.25rem 1.5rem; box-sizing: border-box;">
+        <div style="min-width: 0;">
+          <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem; flex-wrap: wrap;">
             <span class="badge-gold" id="sub-enroll-badge">Plan Enrollment</span>
             <span style="font-size: 0.8rem; color: var(--text-secondary);" id="sub-enroll-step-tag">Step 1: Tutor &amp; Schedule Selection</span>
           </div>
           <h3 class="modal-title text-gold" id="sub-enroll-modal-title" style="font-size: 1.35rem; margin: 0;">Subscription Enrollment &amp; Tutor Scheduling</h3>
         </div>
-        <button class="modal-close-btn" id="sub-enroll-modal-close" onclick="StudentSub.closeEnrollmentModal()">✕</button>
+        <button class="modal-close-btn" id="sub-enroll-modal-close" style="flex-shrink: 0;" onclick="StudentSub.closeEnrollmentModal()">✕</button>
       </div>
 
-      <div class="modal-body" style="overflow-y: auto; flex: 1; padding: 1.5rem 1.75rem;">
+      <div class="modal-body" style="overflow-y: auto; overflow-x: hidden; flex: 1; padding: 1.5rem; box-sizing: border-box;">
 
         <!-- Automatically Determined Selected Plan Bar (and Trial Duration when applicable) -->
         <div class="sub-enroll-plan-selector-box" style="background: linear-gradient(135deg, #FFFDF8 0%, #F9F5EC 100%); border: 1.5px solid rgba(198, 138, 40, 0.35); border-radius: var(--radius-md); padding: 0.85rem 1.15rem; margin-bottom: 1.25rem; box-shadow: var(--shadow-sm);">
@@ -7041,12 +7041,12 @@
         </div>
 
         <!-- 2. Configure Lessons Selection -->
-        <div style="margin-bottom: 1.35rem;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.45rem;">
+        <div style="margin-bottom: 1.35rem; min-width: 0; max-width: 100%;">
+          <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 0.45rem;">
             <label class="form-label" id="sub-enroll-step2-title" style="font-weight: 700; color: var(--charcoal-900); margin-bottom: 0;">
               2. Select 4 Lessons: Choose Topics &amp; Respective Dates &amp; Times
             </label>
-            <span id="sub-enroll-lessons-progress-tag" class="badge-gold" style="font-size: 0.72rem; font-weight: 700;">0 of 4 Scheduled</span>
+            <span id="sub-enroll-lessons-progress-tag" class="badge-gold" style="font-size: 0.72rem; font-weight: 700; white-space: nowrap; flex-shrink: 0;">0 of 4 Scheduled</span>
           </div>
           <div id="sub-enroll-step2-subtitle" style="font-size: 0.8rem; color: var(--charcoal-600); margin-bottom: 0.75rem; line-height: 1.45;">
             Choose a different topic for each lesson using the dropdown on each card (e.g., <strong>Algebra for Lesson 1</strong>, <strong>Calculus for Lesson 2</strong>). Click on any lesson marked <strong>"Needs Schedule"</strong> to open its date &amp; time setup.

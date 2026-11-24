@@ -13,7 +13,7 @@ try {
   if (typeof process.loadEnvFile === 'function') {
     process.loadEnvFile();
   }
-} catch (e) {}
+} catch (e) { }
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -440,11 +440,11 @@ function getTutorEffectiveSchedule(teacherId) {
   try {
     const tp = db.prepare('SELECT availability_schedule FROM tutor_profiles WHERE user_id = ?').get(teacherId);
     tpSched = safeParseObject(tp?.availability_schedule);
-  } catch (e) {}
+  } catch (e) { }
   try {
     const ta = db.prepare('SELECT availability_schedule FROM teacher_applications WHERE user_id = ?').get(teacherId);
     taSched = safeParseObject(ta?.availability_schedule);
-  } catch (e) {}
+  } catch (e) { }
 
   const p1 = tpSched || {};
   const p2 = taSched || {};
@@ -463,7 +463,7 @@ function getTutorEffectiveSchedule(teacherId) {
     for (const r of noteRows) {
       if (r.date && r.note) merged.date_notes[r.date] = r.note;
     }
-  } catch (e) {}
+  } catch (e) { }
 
   // Merge dedicated tutor_date_hours table if present
   try {
@@ -479,7 +479,7 @@ function getTutorEffectiveSchedule(teacherId) {
         if (r.mode) merged.day_modes[r.day_of_week] = r.mode;
       }
     }
-  } catch (e) {}
+  } catch (e) { }
 
   const unavailSet = new Set([
     ...(Array.isArray(p2.unavailable_dates) ? p2.unavailable_dates : []),
@@ -816,7 +816,7 @@ function getLinkedGmailForUser(userId) {
       if (prefs && prefs.notif_gmail === 0) {
         gmailEnabled = false;
       }
-    } catch (e) {}
+    } catch (e) { }
 
     let oauthGoogleEmail = '';
     try {
@@ -824,7 +824,7 @@ function getLinkedGmailForUser(userId) {
       if (oauthRow && oauthRow.email && oauthRow.email.includes('@')) {
         oauthGoogleEmail = oauthRow.email.trim();
       }
-    } catch (e) {}
+    } catch (e) { }
 
     const userEmailLower = String(user.email || '').toLowerCase().trim();
     if (prefLinkedGmail && prefLinkedGmail.toLowerCase() !== userEmailLower) {
@@ -1031,7 +1031,7 @@ async function dispatchRealTimeGmailAPI({ notificationId, userId, userName, reci
           WHERE id = ?
         `).run(recipientEmail, providerUsed, subject, notificationId);
       }
-    } catch (e) {}
+    } catch (e) { }
 
     return { sent: true, recipientEmail, provider: providerUsed, subject };
   } catch (err) {
@@ -1077,7 +1077,7 @@ function sendNotification(userId, title, message, type = 'info', link = null) {
           )
           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'gmail_free_api', 'delivered')
         `).run(notifId, userId, recipientEmail, userName, subject, message, htmlContent, type || 'info', link || null);
-      } catch (logErr) {}
+      } catch (logErr) { }
 
       // Asynchronously dispatch real-time email notification via free API (non-blocking)
       Promise.resolve().then(() =>
@@ -1091,7 +1091,7 @@ function sendNotification(userId, title, message, type = 'info', link = null) {
           type,
           link
         })
-      ).catch(() => {});
+      ).catch(() => { });
     }
 
     return notifId;
@@ -1110,7 +1110,7 @@ const onlineUsers = new Map(); // userId -> { lastSeen: timestamp, isOnline: boo
 // Reset any stale persisted online flags on server boot so only active sessions show online
 try {
   db.prepare("UPDATE users SET is_online = 0").run();
-} catch (e) {}
+} catch (e) { }
 
 function markUserActive(userId) {
   if (!userId) return;
@@ -1124,7 +1124,7 @@ function markUserActive(userId) {
       SET status = 'delivered', delivered_at = CURRENT_TIMESTAMP 
       WHERE receiver_id = ? AND status = 'sent' AND is_read = 0
     `).run(id);
-  } catch (e) {}
+  } catch (e) { }
 }
 
 function isUserOnline(userId) {
@@ -1143,7 +1143,7 @@ function markUserOffline(userId) {
   onlineUsers.delete(id);
   try {
     db.prepare("UPDATE users SET is_online = 0 WHERE id = ?").run(id);
-  } catch (e) {}
+  } catch (e) { }
 }
 
 // Periodic cleanup of stale presence (every 10s; offline after 25s of no heartbeat)
@@ -1154,7 +1154,7 @@ setInterval(() => {
       onlineUsers.delete(userId);
       try {
         db.prepare("UPDATE users SET is_online = 0 WHERE id = ?").run(userId);
-      } catch (e) {}
+      } catch (e) { }
     }
   }
 }, 10000);
@@ -1210,7 +1210,7 @@ function reconcileStudentWallet(studentId) {
 
     try {
       db.prepare("ALTER TABLE buddy_sessions ADD COLUMN payment_method TEXT DEFAULT 'card'").run();
-    } catch (e) {}
+    } catch (e) { }
 
     const student = db.prepare('SELECT wallet_balance, wallet_tutor_id, wallet_credited_at, wallet_expiry_warned_at, wallet_forfeited_at, created_at FROM users WHERE id = ?').get(studentId);
     let storedBalance = student ? (parseFloat(student.wallet_balance) || 0) : 0;
@@ -2561,7 +2561,7 @@ app.post('/api/auth/check-availability', (req, res) => {
 app.post('/api/auth/login', (req, res) => {
   try {
     const { email, password } = req.body;
-    
+
     // Check for missing or incomplete inputs
     if (!email || typeof email !== 'string' || !email.trim()) {
       return res.status(400).json({ error: 'Email address is required.' });
@@ -2820,7 +2820,7 @@ function findUserByEmailOrLinkedGoogle(rawEmail) {
         || normalizeCanonicalEmail(r.linked_email) === canonEmail
       );
       if (matched) user = { id: matched.id, name: matched.name, email: matched.email, role: matched.role };
-    } catch (e) {}
+    } catch (e) { }
   }
   if (!user) {
     try {
@@ -2836,7 +2836,7 @@ function findUserByEmailOrLinkedGoogle(rawEmail) {
         || normalizeCanonicalEmail(r.linked_gmail) === canonEmail
       );
       if (matched) user = { id: matched.id, name: matched.name, email: matched.email, role: matched.role };
-    } catch (e) {}
+    } catch (e) { }
   }
   return user || null;
 }
@@ -3137,7 +3137,7 @@ function linkOrRegisterOAuthUser(provider, profile) {
     try {
       db.prepare("UPDATE users SET auth_provider = ? WHERE id = ? AND (auth_provider IS NULL OR auth_provider = 'local')")
         .run(provider, user.id);
-    } catch (e) {}
+    } catch (e) { }
   }
 
   // Record persistent link in oauth_linked_accounts
@@ -3159,7 +3159,7 @@ function linkOrRegisterOAuthUser(provider, profile) {
   if (provider === 'google') {
     try {
       saveUserPreferences(user.id, { linked_gmail: email, notif_gmail: 1 });
-    } catch (e) {}
+    } catch (e) { }
   }
 
   if (isNewUser && provider === 'google') {
@@ -3171,7 +3171,7 @@ function linkOrRegisterOAuthUser(provider, profile) {
         'registration',
         role === 'tutor' ? '#teacher-application' : '#student-portal'
       );
-    } catch (e) {}
+    } catch (e) { }
   }
 
   return user;
@@ -3218,7 +3218,7 @@ app.get('/api/auth/google', (req, res) => {
             avatar: String(a.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=300&q=80')
           }));
       }
-    } catch (e) {}
+    } catch (e) { }
   }
 
   if (knownAccounts.length === 0) {
@@ -3584,7 +3584,7 @@ app.all('/api/auth/google/callback', async (req, res) => {
     if (state) {
       try {
         parsedState = JSON.parse(Buffer.from(state, 'base64').toString('utf8'));
-      } catch (e) {}
+      } catch (e) { }
     }
 
     const callbackUrl = resolveGoogleCallbackUrl(req);
@@ -3927,7 +3927,7 @@ app.all('/api/auth/facebook/callback', async (req, res) => {
     if (state) {
       try {
         parsedState = JSON.parse(Buffer.from(state, 'base64').toString('utf8'));
-      } catch (e) {}
+      } catch (e) { }
     }
 
     const protocol = req.headers['x-forwarded-proto'] || req.protocol || 'http';
@@ -4007,7 +4007,7 @@ app.post('/api/auth/oauth', (req, res) => {
     let linkedAccounts = [];
     try {
       linkedAccounts = db.prepare('SELECT provider, email, name, avatar_url, linked_at FROM oauth_linked_accounts WHERE user_id = ?').all(user.id);
-    } catch (e) {}
+    } catch (e) { }
 
     const sanitizedUser = {
       id: user.id,
@@ -4070,7 +4070,7 @@ app.post('/api/auth/link-account', authenticateToken, (req, res) => {
       try {
         saveUserPreferences(req.user.id, { linked_gmail: email, notif_gmail: 1 });
         db.prepare('UPDATE notifications SET email_recipient = ? WHERE user_id = ?').run(email, req.user.id);
-      } catch (e) {}
+      } catch (e) { }
     }
 
     const linked = db.prepare('SELECT provider, email, name, avatar_url, linked_at FROM oauth_linked_accounts WHERE user_id = ?').all(req.user.id);
@@ -4127,7 +4127,7 @@ app.get('/api/auth/me', authenticateToken, (req, res) => {
     let linkedAccounts = [];
     try {
       linkedAccounts = db.prepare('SELECT provider, email, name, avatar_url, linked_at FROM oauth_linked_accounts WHERE user_id = ?').all(userId);
-    } catch (e) {}
+    } catch (e) { }
     const linkedGmailInfo = getLinkedGmailForUser(userId);
 
     extra.unreadNotifications = unreadCount;
@@ -4200,7 +4200,7 @@ app.put('/api/auth/profile', authenticateToken, (req, res) => {
       try {
         db.prepare('UPDATE user_preferences SET linked_gmail = ? WHERE user_id = ?').run(cleanGmail, userId);
         db.prepare('UPDATE notifications SET email_recipient = ? WHERE user_id = ?').run(cleanGmail, userId);
-      } catch (e) {}
+      } catch (e) { }
     }
     if (phone !== undefined && (isAdmin || !lockedFields.phone)) {
       updates.push('phone = ?');
@@ -4219,7 +4219,7 @@ app.put('/api/auth/profile', authenticateToken, (req, res) => {
     if (avatar_url !== undefined && avatar_url !== null) {
       try {
         db.prepare('UPDATE tutor_profiles SET avatar_url = ? WHERE user_id = ?').run(avatar_url, userId);
-      } catch (e) {}
+      } catch (e) { }
     }
 
     if (req.user.role === 'student' && studentData) {
@@ -4322,7 +4322,7 @@ app.post('/api/auth/upload-avatar', authenticateToken, (req, res) => {
         try {
           const fileBuf = fs.readFileSync(req.file.path);
           avatarUrl = `data:${req.file.mimetype || 'image/jpeg'};base64,${fileBuf.toString('base64')}`;
-          try { fs.unlinkSync(req.file.path); } catch (uErr) {}
+          try { fs.unlinkSync(req.file.path); } catch (uErr) { }
         } catch (readErr) {
           avatarUrl = `/uploads/${req.file.filename}`;
         }
@@ -4337,7 +4337,7 @@ app.post('/api/auth/upload-avatar', authenticateToken, (req, res) => {
       db.prepare('UPDATE users SET avatar_url = ? WHERE id = ?').run(avatarUrl, req.user.id);
       try {
         db.prepare('UPDATE tutor_profiles SET avatar_url = ? WHERE user_id = ?').run(avatarUrl, req.user.id);
-      } catch (e) {}
+      } catch (e) { }
 
       const user = db.prepare('SELECT id, name, email, role, phone, avatar_url, country, status, wallet_balance FROM users WHERE id = ?').get(req.user.id);
       const tutorProfile = db.prepare('SELECT * FROM tutor_profiles WHERE user_id = ?').get(req.user.id);
@@ -5422,8 +5422,8 @@ app.get('/api/tutors/:id', (req, res) => {
     `).get(tutor.user_id);
 
     const actualStudents = studentCountRow?.count || 0;
-    tutor.total_students = actualStudents > 0 
-      ? actualStudents 
+    tutor.total_students = actualStudents > 0
+      ? actualStudents
       : Math.max(16, Math.round((tutor.total_sessions || 24) * 0.42));
 
     tutor.is_online = isUserOnline(tutor.user_id) ? 1 : 0;
@@ -5470,7 +5470,7 @@ app.post('/api/user/offline', (req, res) => {
       try {
         const decoded = jwt.verify(token, JWT_SECRET);
         userId = decoded.id;
-      } catch (e) {}
+      } catch (e) { }
     }
     if (!userId && req.query && req.query.user_id) {
       userId = req.query.user_id;
@@ -5480,7 +5480,7 @@ app.post('/api/user/offline', (req, res) => {
         try {
           const parsed = JSON.parse(req.body);
           userId = parsed.user_id;
-        } catch (e) {}
+        } catch (e) { }
       } else if (req.body.user_id) {
         userId = req.body.user_id;
       }
@@ -5528,7 +5528,7 @@ app.get('/api/tutors/:id/messages', (req, res) => {
         const u = db.prepare('SELECT email FROM users WHERE id = ?').get(currentUserId);
         if (u) currentUserEmail = u.email;
         markUserActive(currentUserId);
-      } catch (e) {}
+      } catch (e) { }
     }
 
     let rows = [];
@@ -5677,7 +5677,7 @@ app.post('/api/tutors/:id/messages', (req, res) => {
           // Permanently link any previous messages from this email to the user id so history is preserved
           db.prepare('UPDATE messages SET sender_id = ? WHERE sender_id IS NULL AND sender_email = ?').run(senderId, user.email);
         }
-      } catch (e) {}
+      } catch (e) { }
     }
 
     const tutorIsOnline = isUserOnline(tutor.user_id);
@@ -6343,8 +6343,8 @@ app.post('/api/student/subscription/purchase', authenticateToken, requireRole('s
     // Check if multi-lesson selection setup is submitted
     if (Array.isArray(lessons) && lessons.length > 0) {
       if (lessons.length !== selectedPkg.lessons) {
-        return res.status(400).json({ 
-          error: `Please configure exactly ${selectedPkg.lessons} lesson${selectedPkg.lessons > 1 ? 's' : ''} for the ${selectedPkg.name}.` 
+        return res.status(400).json({
+          error: `Please configure exactly ${selectedPkg.lessons} lesson${selectedPkg.lessons > 1 ? 's' : ''} for the ${selectedPkg.name}.`
         });
       }
 
@@ -6639,11 +6639,11 @@ app.post('/api/student/subscription/purchase', authenticateToken, requireRole('s
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'accepted', ?, ?)
       `);
 
-      const sessionNotes = notes 
+      const sessionNotes = notes
         ? `${notes} (Enrolled in ${selectedPkg.name} - ${allocatedLessons} lesson${allocatedLessons > 1 ? 's' : ''} planned with ${tutorUser.name})`
-        : (selectedPkg.is_trial 
-            ? `One-Time Trial Lesson (${selectedPkg.duration_minutes} Minutes)` 
-            : `Enrolled via ${selectedPkg.name} (${allocatedLessons} lesson${allocatedLessons > 1 ? 's' : ''} allocated with ${tutorUser.name})`);
+        : (selectedPkg.is_trial
+          ? `One-Time Trial Lesson (${selectedPkg.duration_minutes} Minutes)`
+          : `Enrolled via ${selectedPkg.name} (${allocatedLessons} lesson${allocatedLessons > 1 ? 's' : ''} allocated with ${tutorUser.name})`);
 
       const sessionTotalAmt = selectedPkg.is_trial ? 0.00 : (tutorProfile.hourly_rate * lessonDurationHours);
       insertSession.run(
@@ -6676,8 +6676,8 @@ app.post('/api/student/subscription/purchase', authenticateToken, requireRole('s
     // Multi-Plan Support: Active subscriptions remain concurrent and active! Previous plans are NOT deactivated.
 
     // Dynamic price calculation if tutor chosen
-    const calculatedPrice = (!selectedPkg.is_trial && tutorProfile?.hourly_rate) 
-      ? (tutorProfile.hourly_rate * selectedPkg.lessons) 
+    const calculatedPrice = (!selectedPkg.is_trial && tutorProfile?.hourly_rate)
+      ? (tutorProfile.hourly_rate * selectedPkg.lessons)
       : selectedPkg.price;
 
     // Insert new subscription
@@ -6717,9 +6717,9 @@ app.post('/api/student/subscription/purchase', authenticateToken, requireRole('s
     res.status(201).json({
       success: true,
       message: hasScheduledLesson
-        ? (selectedPkg.is_trial 
-            ? `Your ${selectedPkg.duration_minutes}-minute Trial Lesson with ${tutorUser?.name || 'your tutor'} on ${scheduled_date} at ${scheduled_time} is confirmed!` 
-            : `Successfully enrolled in ${selectedPkg.name}! Your lesson with ${tutorUser?.name || 'your tutor'} on ${scheduled_date} at ${scheduled_time} is confirmed (${finalRemainingLessons} remaining lesson${finalRemainingLessons === 1 ? '' : 's'}). Total: $${calculatedPrice.toFixed(2)}.`)
+        ? (selectedPkg.is_trial
+          ? `Your ${selectedPkg.duration_minutes}-minute Trial Lesson with ${tutorUser?.name || 'your tutor'} on ${scheduled_date} at ${scheduled_time} is confirmed!`
+          : `Successfully enrolled in ${selectedPkg.name}! Your lesson with ${tutorUser?.name || 'your tutor'} on ${scheduled_date} at ${scheduled_time} is confirmed (${finalRemainingLessons} remaining lesson${finalRemainingLessons === 1 ? '' : 's'}). Total: $${calculatedPrice.toFixed(2)}.`)
         : `Successfully enrolled in ${selectedPkg.name}! Your ${selectedPkg.lessons} lessons are now available for scheduling (valid for ${selectedPkg.days} days). Total: $${calculatedPrice.toFixed(2)}.`,
       plan: selectedPkg.name,
       validityDays: selectedPkg.days,
@@ -6954,7 +6954,7 @@ app.post('/api/student/requests/:id/cancel', authenticateToken, requireRole('stu
         WHERE user_id = ? 
           AND link LIKE ?
       `).run(studentId, `%session=${requestId}%`);
-    } catch (e) {}
+    } catch (e) { }
 
     // Refund handling:
     let refundAmount = 0;
@@ -7639,12 +7639,12 @@ app.post('/api/teacher/detect-document', authenticateToken, requireRole('teacher
     }
     const inspection = await inspectDocument(req.file, expectedType);
     // Remove the temp file
-    try { fs.unlinkSync(req.file.path); } catch (e) {}
+    try { fs.unlinkSync(req.file.path); } catch (e) { }
     return res.json(inspection);
   } catch (error) {
     console.error('Document detection error:', error);
     if (req.file && req.file.path) {
-      try { fs.unlinkSync(req.file.path); } catch (e) {}
+      try { fs.unlinkSync(req.file.path); } catch (e) { }
     }
     return res.status(500).json({ error: 'Failed to inspect document.' });
   }
@@ -7691,9 +7691,9 @@ app.post('/api/teacher/apply', authenticateToken, requireRole('teacher'), teache
         const rf = req.files['resume_document'][0];
         const check = await inspectDocument(rf, 'resume');
         if (!check.valid) {
-          try { fs.unlinkSync(rf.path); } catch (e) {}
+          try { fs.unlinkSync(rf.path); } catch (e) { }
           if (req.files['diploma_document'] && req.files['diploma_document'][0]) {
-            try { fs.unlinkSync(req.files['diploma_document'][0].path); } catch (e) {}
+            try { fs.unlinkSync(req.files['diploma_document'][0].path); } catch (e) { }
           }
           return res.status(400).json({ error: check.error });
         }
@@ -7706,7 +7706,7 @@ app.post('/api/teacher/apply', authenticateToken, requireRole('teacher'), teache
         const df = req.files['diploma_document'][0];
         const check = await inspectDocument(df, 'diploma');
         if (!check.valid) {
-          try { fs.unlinkSync(df.path); } catch (e) {}
+          try { fs.unlinkSync(df.path); } catch (e) { }
           return res.status(400).json({ error: check.error });
         }
         diplomaFile = `/uploads/${df.filename}`;
@@ -7717,7 +7717,7 @@ app.post('/api/teacher/apply', authenticateToken, requireRole('teacher'), teache
         const cf = req.files['credential_document'][0];
         const check = await inspectDocument(cf, 'diploma');
         if (!check.valid) {
-          try { fs.unlinkSync(cf.path); } catch (e) {}
+          try { fs.unlinkSync(cf.path); } catch (e) { }
           return res.status(400).json({ error: check.error });
         }
         diplomaFile = `/uploads/${cf.filename}`;
@@ -7891,7 +7891,7 @@ app.get('/api/teacher/dashboard', authenticateToken, requireRole('teacher'), (re
         ORDER BY created_at DESC 
         LIMIT 1
       `).get(teacherId);
-    } catch (e) {}
+    } catch (e) { }
 
     const hasPendingPayout = latestPayout ? latestPayout.status === 'pending' : false;
     const payoutStatus = latestPayout ? latestPayout.status : 'unrequested';
@@ -8190,7 +8190,7 @@ function checkAndAutoEndElapsedRooms() {
               SET total_sessions = total_sessions + 1, updated_at = CURRENT_TIMESTAMP 
               WHERE user_id = ?
             `).run(r.tutor_id);
-          } catch (tErr) {}
+          } catch (tErr) { }
         }
       }
     }
@@ -8550,7 +8550,7 @@ app.put('/api/teacher/subjects', authenticateToken, requireRole('teacher'), (req
             }
             db.prepare('UPDATE teacher_applications SET grade_levels = ? WHERE user_id = ?').run(gradesJson, teacherId);
           }
-        } catch (e) {}
+        } catch (e) { }
       }
     } else if (action === 'update') {
       const targetSubj = String(subject || '').trim();
@@ -8631,7 +8631,7 @@ app.put('/api/teacher/subjects', authenticateToken, requireRole('teacher'), (req
           primaryHourlyRate,
           appRecord.availability_schedule || '{}'
         );
-      } catch (e) {}
+      } catch (e) { }
     }
 
     db.prepare(`
@@ -8779,7 +8779,7 @@ app.get('/api/teacher/students', authenticateToken, requireRole('teacher'), (req
 
     const studentsWithData = students.map(s => {
       const studentTasks = tasks.filter(t => t.student_id === s.student_id);
-      const studentMsgs = messages.filter(m => 
+      const studentMsgs = messages.filter(m =>
         (m.sender_id === s.student_id && m.receiver_id === teacherId) ||
         (m.sender_id === teacherId && m.receiver_id === s.student_id)
       );
@@ -9048,7 +9048,7 @@ function saveTutorAvailabilitySchedule(teacherId, scheduleObj) {
           db.prepare('DELETE FROM tutor_date_notes WHERE tutor_id = ? AND date = ?').run(teacherId, d);
         }
       }
-    } catch (e) {}
+    } catch (e) { }
   }
 
   // Sync date hours to tutor_date_hours table
@@ -9066,7 +9066,7 @@ function saveTutorAvailabilitySchedule(teacherId, scheduleObj) {
           stmt.run(teacherId, d, modeVal, JSON.stringify(blks));
         }
       }
-    } catch (e) {}
+    } catch (e) { }
   }
 
   // Sync weekday hours to tutor_date_hours table
@@ -9083,7 +9083,7 @@ function saveTutorAvailabilitySchedule(teacherId, scheduleObj) {
         stmt.run(teacherId, day, modeVal, JSON.stringify(scheduleObj[day]));
       }
     }
-  } catch (e) {}
+  } catch (e) { }
 }
 
 // Toggle Occupied Time Slot (Mark as Unavailable / Available)
@@ -11111,7 +11111,7 @@ app.post('/api/admin/teacher-applications/:id/review', authenticateToken, requir
 
     // Stage 3: Final approval requires the interview stage first
     if (status === 'approved' && application.status !== 'approved' &&
-        !['scheduled', 'completed', 'waived'].includes(application.interview_status)) {
+      !['scheduled', 'completed', 'waived'].includes(application.interview_status)) {
       return res.status(400).json({ error: 'Please approve the application and schedule a virtual interview before giving final approval.' });
     }
 
@@ -11732,7 +11732,7 @@ app.post('/api/admin/buddy-sessions/:id/schedule', authenticateToken, requireRol
 
     const s2Id = student2_id ? parseInt(student2_id, 10) : session.student2_id;
     let finalCode = (session_code && session_code.trim().toUpperCase()) || session.session_code;
-    
+
     // Check if new code conflicts with another session
     if (finalCode !== session.session_code) {
       const existing = db.prepare('SELECT id FROM buddy_sessions WHERE session_code = ? AND id != ?').get(finalCode, sessionId);
@@ -12330,7 +12330,7 @@ setTimeout(() => {
     dispatch3HourLessonReminders();
     processAllStudentWalletValidities();
     processAllStudentSubscriptions();
-  } catch (e) {}
+  } catch (e) { }
 }, 1500);
 
 // Catch-all for SPA client routing (Express 5 compatible)

@@ -1530,8 +1530,16 @@ const Student = {
   async loadProfileForm() {
     try {
       const data = await API.getMe();
-      const sp = data.studentProfile || {};
-      const u = data.user || {};
+      let sp = data.studentProfile || {};
+      let u = data.user || {};
+      if (typeof Auth !== 'undefined' && typeof Auth.mergeSavedProfileState === 'function') {
+        const merged = Auth.mergeSavedProfileState(u, sp);
+        u = merged.user || u;
+        sp = merged.studentProfile || sp;
+        if (merged.needsServerHeal && typeof Auth.healServerProfileIfNeeded === 'function') {
+          Auth.healServerProfileIfNeeded(merged.healPayload, u);
+        }
+      }
 
       const nameInput = document.getElementById('sp-name') || document.getElementById('profile-name');
       const phoneInput = document.getElementById('sp-phone') || document.getElementById('profile-phone');
@@ -1709,11 +1717,17 @@ const Student = {
         submitBtn.textContent = 'Saving Changes...';
       }
 
+      const phoneEl = document.getElementById('sp-phone') || document.getElementById('profile-phone');
+      const allowEmptyPhone = Boolean(phoneEl && !phoneEl.disabled && !phone);
       const res = await API.updateProfile({
         name,
-        phone,
+        ...(phoneEl && !phoneEl.disabled ? { phone, ...(allowEmptyPhone ? { allow_empty_phone: true } : {}) } : {}),
         studentData: { grade_level, school, learning_goals, target_subjects }
       });
+
+      if (res && res.token && typeof Storage !== 'undefined' && Storage.setToken) {
+        Storage.setToken(res.token);
+      }
 
       if (res && res.user && typeof Auth !== 'undefined' && Auth.currentUser) {
         Auth.currentUser = { ...Auth.currentUser, ...res.user };
@@ -1722,7 +1736,8 @@ const Student = {
           Auth.saveCreatedAccount({
             name: Auth.currentUser.name,
             email: Auth.currentUser.email,
-            phone: Auth.currentUser.phone,
+            ...(phoneEl && !phoneEl.disabled ? { phone: Auth.currentUser.phone, explicitPhoneClear: allowEmptyPhone } : {}),
+            avatar_url: Auth.currentUser.avatar_url,
             school,
             learning_goals,
             target_subjects

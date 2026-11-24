@@ -736,11 +736,37 @@ const Profile = {
       if (el.tagName === 'SELECT') {
         el.addEventListener('change', () => this.autoSaveProfile(true));
       } else {
-        el.addEventListener('input', () => this.autoSaveProfile(false));
-        el.addEventListener('change', () => this.autoSaveProfile(true));
-        el.addEventListener('blur', () => this.autoSaveProfile(true));
+        el.addEventListener('input', () => {
+          this._hasPendingProfileSave = true;
+          const activeEmail = (this.currentUser?.email || (typeof Auth !== 'undefined' && Auth.currentUser?.email) || '').toLowerCase().trim();
+          if (id === 'profile-phone') {
+            this._userEditedPhone = true;
+            const trimmedPhone = el.value.trim();
+            if (trimmedPhone && activeEmail && typeof Auth !== 'undefined' && Auth.saveProfileBackup) {
+              Auth.saveProfileBackup(activeEmail, { phone: trimmedPhone });
+            }
+          } else if (activeEmail && typeof Auth !== 'undefined' && Auth.saveProfileBackup) {
+            const keyMap = { 'profile-school': 'school', 'profile-goals': 'learning_goals', 'profile-subjects': 'target_subjects' };
+            const fieldName = keyMap[id];
+            if (fieldName) Auth.saveProfileBackup(activeEmail, { [fieldName]: el.value.trim() });
+          }
+          this.autoSaveProfile(false);
+        });
+        el.addEventListener('change', () => {
+          if (id === 'profile-phone') this._userEditedPhone = true;
+          this.autoSaveProfile(true, id === 'profile-phone');
+        });
+        el.addEventListener('blur', () => {
+          this.autoSaveProfile(true, id === 'profile-phone' && this._userEditedPhone);
+        });
       }
     });
+
+    if (!this._profileUnloadBound) {
+      this._profileUnloadBound = true;
+      window.addEventListener('pagehide', () => this.flushPendingProfileSave());
+      window.addEventListener('beforeunload', () => this.flushPendingProfileSave());
+    }
 
     // Account Security: Gmail Account field auto-save
     const gmailAccountEl = document.getElementById('profile-gmail-account');
@@ -943,10 +969,17 @@ const Profile = {
 
       this.updateAllAvatars(dataUrl);
 
+      const activeEmail = (this.currentUser?.email || (typeof Auth !== 'undefined' && Auth.currentUser?.email) || '').toLowerCase().trim();
+      if (activeEmail && typeof Auth !== 'undefined' && Auth.saveProfileBackup) {
+        Auth.saveProfileBackup(activeEmail, { avatar_url: dataUrl });
+      }
+
       let finalUrl = dataUrl;
       let savedUser = null;
+      let savedToken = null;
       try {
         const res = await API.updateProfile({ avatar_url: dataUrl });
+        if (res && res.token) savedToken = res.token;
         if (res && res.user) {
           savedUser = res.user;
           if (res.user.avatar_url) finalUrl = res.user.avatar_url;
@@ -956,14 +989,29 @@ const Profile = {
         const formData = new FormData();
         formData.append('avatar', file);
         const res = await API.uploadAvatar(formData);
+        if (res && res.token) savedToken = res.token;
         if (res && res.avatar_url) finalUrl = res.avatar_url;
         if (res && res.user) savedUser = res.user;
       }
+
+      if (savedToken && typeof Storage !== 'undefined' && Storage.setToken) {
+        Storage.setToken(savedToken);
+      }
+
+      const backup = (activeEmail && typeof Auth !== 'undefined' && Auth.getSavedProfileBackup)
+        ? Auth.getSavedProfileBackup(activeEmail)
+        : {};
+      const preservedPhone = (savedUser && savedUser.phone)
+        || this.currentUser?.phone
+        || (typeof Auth !== 'undefined' && Auth.currentUser?.phone)
+        || backup.phone
+        || null;
 
       if (this.currentUser) {
         this.currentUser = {
           ...this.currentUser,
           ...(savedUser || {}),
+          ...(preservedPhone ? { phone: preservedPhone } : {}),
           avatar_url: finalUrl
         };
       }
@@ -971,18 +1019,27 @@ const Profile = {
         Auth.currentUser = {
           ...Auth.currentUser,
           ...(savedUser || {}),
+          ...(preservedPhone ? { phone: preservedPhone } : {}),
           avatar_url: finalUrl
         };
         if (typeof Storage !== 'undefined') Storage.setUser(Auth.currentUser);
         if (Auth.currentUser.email) {
-          try {
-            localStorage.setItem('aviora_avatar_email_' + Auth.currentUser.email.toLowerCase().trim(), finalUrl);
-          } catch (e) {}
+          if (typeof Auth.saveProfileBackup === 'function') {
+            Auth.saveProfileBackup(Auth.currentUser.email, {
+              avatar_url: finalUrl,
+              ...(preservedPhone ? { phone: preservedPhone } : {})
+            });
+          } else {
+            try {
+              localStorage.setItem('aviora_avatar_email_' + Auth.currentUser.email.toLowerCase().trim(), finalUrl);
+            } catch (e) {}
+          }
         }
         if (typeof Auth.saveCreatedAccount === 'function') {
           Auth.saveCreatedAccount({
             name: Auth.currentUser.name,
             email: Auth.currentUser.email,
+            ...(preservedPhone ? { phone: preservedPhone } : {}),
             avatar_url: finalUrl
           });
         }
@@ -1040,9 +1097,24 @@ const Profile = {
 
     try {
       const data = await API.getMe();
-      this.currentUser = data.user || user;
-      this.studentProfile = data.studentProfile || {};
+      let resolvedUser = data.user || user;
+      let resolvedSp = data.studentProfile || {};
+      let needsHeal = false;
+      let healPayload = {};
+      if (typeof Auth !== 'undefined' && typeof Auth.mergeSavedProfileState === 'function') {
+        const merged = Auth.mergeSavedProfileState(resolvedUser, resolvedSp);
+        resolvedUser = merged.user;
+        resolvedSp = merged.studentProfile || resolvedSp;
+        needsHeal = merged.needsServerHeal;
+        healPayload = merged.healPayload;
+      }
+      this.currentUser = resolvedUser;
+      this.studentProfile = resolvedSp;
       this.userPreferences = data.preferences || null;
+      if (typeof Auth !== 'undefined') {
+        Auth.currentUser = resolvedUser;
+        if (typeof Storage !== 'undefined') Storage.setUser(resolvedUser);
+      }
 
       // Load subscription
       try {
@@ -1053,6 +1125,9 @@ const Profile = {
       }
 
       this.renderProfileData();
+      if (needsHeal && typeof Auth !== 'undefined' && Auth.healServerProfileIfNeeded) {
+        Auth.healServerProfileIfNeeded(healPayload, resolvedUser);
+      }
     } catch (e) {
       console.error('Error loading profile page:', e);
       showToast('Failed to load profile details.', 'error');
@@ -1069,8 +1144,22 @@ const Profile = {
 
     try {
       const data = await API.getMe();
-      this.currentUser = data.user || user;
+      let resolvedUser = data.user || user;
+      let needsHeal = false;
+      let healPayload = {};
+      if (typeof Auth !== 'undefined' && typeof Auth.mergeSavedProfileState === 'function') {
+        const merged = Auth.mergeSavedProfileState(resolvedUser, data.studentProfile || null);
+        resolvedUser = merged.user || resolvedUser;
+        needsHeal = merged.needsServerHeal;
+        healPayload = merged.healPayload;
+        Auth.currentUser = resolvedUser;
+        if (typeof Storage !== 'undefined') Storage.setUser(resolvedUser);
+      }
+      this.currentUser = resolvedUser;
       this.userPreferences = data.preferences || this.currentUser.preferences || null;
+      if (needsHeal && typeof Auth !== 'undefined' && Auth.healServerProfileIfNeeded) {
+        Auth.healServerProfileIfNeeded(healPayload, resolvedUser);
+      }
     } catch (e) {
       console.warn('Settings page using cached account preferences:', e);
       this.currentUser = user;
@@ -1145,8 +1234,17 @@ const Profile = {
   },
 
   renderProfileData() {
-    const u = this.currentUser || {};
-    const sp = this.studentProfile || {};
+    let u = this.currentUser || {};
+    let sp = this.studentProfile || {};
+    if (typeof Auth !== 'undefined' && typeof Auth.mergeSavedProfileState === 'function' && u.email) {
+      const merged = Auth.mergeSavedProfileState(u, sp);
+      u = merged.user || u;
+      sp = merged.studentProfile || sp;
+      this.currentUser = u;
+      this.studentProfile = sp;
+    }
+    this._profileRenderedForUserId = u.id || null;
+    this._userEditedPhone = false;
     const sub = this.activeSubscription;
     const prefs = this.userPreferences || u.preferences || {};
 
@@ -1210,27 +1308,34 @@ const Profile = {
   },
 
   autoSaveDebounceTimer: null,
+  _hasPendingProfileSave: false,
+  _userEditedPhone: false,
+  _profileRenderedForUserId: null,
 
-  autoSaveProfile(immediate = false) {
+  autoSaveProfile(immediate = false, explicitPhoneAction = false) {
     if (this.autoSaveDebounceTimer) {
       clearTimeout(this.autoSaveDebounceTimer);
       this.autoSaveDebounceTimer = null;
     }
 
     if (immediate) {
-      this.performAutoSaveProfile();
+      this.performAutoSaveProfile(explicitPhoneAction);
     } else {
       this.setSaveStatus('saving', typeof I18n !== 'undefined' ? I18n.t('common.saving', 'Saving...') : 'Saving...');
       this.autoSaveDebounceTimer = setTimeout(() => {
-        this.performAutoSaveProfile();
+        this.performAutoSaveProfile(explicitPhoneAction);
       }, 600);
     }
   },
 
-  async performAutoSaveProfile() {
-    const name = this.currentUser?.name || (typeof Auth !== 'undefined' && Auth.currentUser?.name) || document.getElementById('profile-name')?.value?.trim();
+  buildProfileSavePayload(explicitPhoneAction = false) {
+    const activeUser = this.currentUser || (typeof Auth !== 'undefined' && Auth.currentUser) || {};
+    if (this._profileRenderedForUserId && activeUser.id && this._profileRenderedForUserId !== activeUser.id) {
+      return null;
+    }
+
     const phoneEl = document.getElementById('profile-phone');
-    const phone = phoneEl?.value.trim();
+    const rawPhone = phoneEl ? phoneEl.value.trim() : '';
     const grade_level = this.studentProfile?.grade_level || document.getElementById('profile-grade')?.value || 'Grade 11 - High School';
     const schoolEl = document.getElementById('profile-school');
     const goalsEl = document.getElementById('profile-goals');
@@ -1242,16 +1347,97 @@ const Profile = {
     if (subjectsEl && !subjectsEl.disabled) studentData.target_subjects = subjectsEl.value.trim();
 
     const payload = { studentData };
-    if (phoneEl && !phoneEl.disabled) payload.phone = phone;
+    const backup = (activeUser.email && typeof Auth !== 'undefined' && Auth.getSavedProfileBackup)
+      ? Auth.getSavedProfileBackup(activeUser.email)
+      : {};
+    const existingSavedPhone = (activeUser.phone && String(activeUser.phone).trim()) || backup.phone || '';
+
+    if (phoneEl && !phoneEl.disabled) {
+      if (rawPhone) {
+        payload.phone = rawPhone;
+      } else if (explicitPhoneAction && this._userEditedPhone) {
+        payload.phone = '';
+        payload.allow_empty_phone = true;
+      } else if (existingSavedPhone && !this._userEditedPhone) {
+        phoneEl.value = existingSavedPhone;
+      }
+    }
+
+    return { payload, studentData, rawPhone, existingSavedPhone };
+  },
+
+  flushPendingProfileSave() {
+    if (!this._hasPendingProfileSave && !this.autoSaveDebounceTimer) return;
+    if (this.autoSaveDebounceTimer) {
+      clearTimeout(this.autoSaveDebounceTimer);
+      this.autoSaveDebounceTimer = null;
+    }
+    const built = this.buildProfileSavePayload(this._userEditedPhone);
+    if (!built) return;
+    const { payload, studentData } = built;
+    const activeUser = this.currentUser || (typeof Auth !== 'undefined' && Auth.currentUser);
+    if (activeUser && activeUser.email && typeof Auth !== 'undefined' && Auth.saveProfileBackup) {
+      Auth.saveProfileBackup(activeUser.email, {
+        ...(payload.phone !== undefined ? { phone: payload.phone, explicitPhoneClear: Boolean(payload.allow_empty_phone) } : {}),
+        school: studentData.school,
+        learning_goals: studentData.learning_goals,
+        target_subjects: studentData.target_subjects
+      });
+    }
+    const token = typeof Storage !== 'undefined' ? Storage.getToken() : null;
+    if (!token) return;
+    this._hasPendingProfileSave = false;
+    try {
+      fetch('/api/auth/profile', {
+        method: 'PUT',
+        keepalive: true,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(payload)
+      }).catch(() => {});
+    } catch (e) {}
+  },
+
+  async performAutoSaveProfile(explicitPhoneAction = false) {
+    const built = this.buildProfileSavePayload(explicitPhoneAction);
+    if (!built) return;
+    const { payload, studentData, rawPhone } = built;
+    const name = this.currentUser?.name || (typeof Auth !== 'undefined' && Auth.currentUser?.name) || document.getElementById('profile-name')?.value?.trim();
+    const grade_level = studentData.grade_level;
+    const phoneEl = document.getElementById('profile-phone');
+    const explicitClear = Boolean(payload.allow_empty_phone);
+
+    // Synchronously back up typed edits so immediate reloads still keep them
+    const activeEmail = (this.currentUser?.email || (typeof Auth !== 'undefined' && Auth.currentUser?.email) || '').toLowerCase().trim();
+    if (activeEmail && typeof Auth !== 'undefined' && Auth.saveProfileBackup) {
+      Auth.saveProfileBackup(activeEmail, {
+        ...(payload.phone !== undefined ? { phone: payload.phone, explicitPhoneClear: explicitClear } : {}),
+        school: studentData.school,
+        learning_goals: studentData.learning_goals,
+        target_subjects: studentData.target_subjects
+      });
+    }
 
     try {
       this.setSaveStatus('saving', typeof I18n !== 'undefined' ? I18n.t('common.saving', 'Saving...') : 'Saving...');
       const res = await API.updateProfile(payload);
+      if (res && res.token && typeof Storage !== 'undefined' && Storage.setToken) {
+        Storage.setToken(res.token);
+      }
 
+      const prevAvatar = this.currentUser?.avatar_url || (typeof Auth !== 'undefined' && Auth.currentUser?.avatar_url);
       if (res && res.user) {
-        this.currentUser = { ...(this.currentUser || {}), ...res.user };
-      } else if (this.currentUser && phoneEl && !phoneEl.disabled) {
-        this.currentUser.phone = phone || null;
+        this.currentUser = {
+          ...(this.currentUser || {}),
+          ...res.user,
+          avatar_url: (res.user.avatar_url && (!Auth?.isDefaultAvatarUrl?.(res.user.avatar_url) || !prevAvatar || Auth?.isDefaultAvatarUrl?.(prevAvatar)))
+            ? res.user.avatar_url
+            : prevAvatar
+        };
+      } else if (this.currentUser && phoneEl && !phoneEl.disabled && payload.phone !== undefined) {
+        this.currentUser.phone = payload.phone || null;
       }
       if (res && res.studentProfile) {
         this.studentProfile = res.studentProfile;
@@ -1263,21 +1449,30 @@ const Profile = {
 
       if (typeof Auth !== 'undefined' && Auth.currentUser) {
         Auth.currentUser.name = name;
-        if (phoneEl && !phoneEl.disabled) {
-          Auth.currentUser.phone = (res && res.user && res.user.phone !== undefined) ? res.user.phone : (phone || null);
+        if (this.currentUser?.phone !== undefined) {
+          Auth.currentUser.phone = this.currentUser.phone;
+        } else if (phoneEl && !phoneEl.disabled && payload.phone !== undefined) {
+          Auth.currentUser.phone = rawPhone || null;
+        }
+        if (this.currentUser?.avatar_url) {
+          Auth.currentUser.avatar_url = this.currentUser.avatar_url;
         }
         Storage.setUser(Auth.currentUser);
         if (typeof Auth.saveCreatedAccount === 'function' && Auth.currentUser.email) {
           Auth.saveCreatedAccount({
             name: Auth.currentUser.name,
             email: Auth.currentUser.email,
-            phone: Auth.currentUser.phone,
+            ...(payload.phone !== undefined || Auth.currentUser.phone ? { phone: Auth.currentUser.phone, explicitPhoneClear: explicitClear } : {}),
+            avatar_url: Auth.currentUser.avatar_url,
             school: studentData.school,
             learning_goals: studentData.learning_goals,
             target_subjects: studentData.target_subjects
           });
         }
       }
+
+      this._hasPendingProfileSave = false;
+      if (explicitPhoneAction) this._userEditedPhone = false;
 
       const heroName = document.getElementById('profile-hero-name');
       if (heroName && name) heroName.textContent = name;

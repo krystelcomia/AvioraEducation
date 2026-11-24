@@ -212,11 +212,18 @@ const Auth = {
           try { data = await API.getMe(); } catch (e) {}
         }
       }
+      const merged = this.mergeSavedProfileState(data.user, data.studentProfile);
+      data.user = merged.user;
+      if (merged.studentProfile) data.studentProfile = merged.studentProfile;
+
       this.currentUser = data.user;
       Storage.setUser(data.user);
       if (typeof Profile !== 'undefined') {
         Profile.currentUser = data.user;
         if (data.studentProfile) Profile.studentProfile = data.studentProfile;
+      }
+      if (merged.needsServerHeal) {
+        this.healServerProfileIfNeeded(merged.healPayload, data.user);
       }
       if (data.preferences) {
         this.syncUserPreferences(data.preferences);
@@ -275,8 +282,7 @@ const Auth = {
         const savedPrefs = Storage.getUserPreferences(storedUser.id) || {};
         const cleanSyncEmail = storedUser.email.toLowerCase().trim();
         const savedEmailTheme = localStorage.getItem(`aviora_theme_email_${cleanSyncEmail}`) || (storedUser.id ? localStorage.getItem(`aviora_theme_${storedUser.id}`) : null);
-        let savedEmailAvatar = null;
-        try { savedEmailAvatar = localStorage.getItem(`aviora_avatar_email_${cleanSyncEmail}`); } catch (e) {}
+        const backup = this.getSavedProfileBackup(cleanSyncEmail);
         const res = await fetch('/api/auth/sync-account', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -285,8 +291,8 @@ const Auth = {
             email: cleanSyncEmail,
             password: savedAccount.password,
             role: savedAccount.role || storedUser.role || 'student',
-            phone: savedAccount.phone || storedUser.phone || null,
-            avatar_url: savedEmailAvatar || savedAccount.avatar_url || storedUser.avatar_url || null,
+            phone: backup.phone || savedAccount.phone || storedUser.phone || null,
+            avatar_url: backup.avatar_url || savedAccount.avatar_url || storedUser.avatar_url || null,
             country: savedAccount.country || savedPrefs.country || storedUser.country || 'United States',
             timezone: savedAccount.timezone || savedPrefs.timezone || storedUser.timezone,
             language: savedAccount.language || savedPrefs.language || storedUser.language,
@@ -296,9 +302,9 @@ const Auth = {
             notif_messages: savedPrefs.notif_messages,
             notif_reports: savedPrefs.notif_reports,
             grade_level: savedAccount.grade_level,
-            school: savedAccount.school,
-            learning_goals: savedAccount.learning_goals,
-            target_subjects: savedAccount.target_subjects,
+            school: backup.school || savedAccount.school,
+            learning_goals: backup.learning_goals || savedAccount.learning_goals,
+            target_subjects: backup.target_subjects || savedAccount.target_subjects,
             headline: savedAccount.headline,
             subjects: savedAccount.subjects,
             institution: savedAccount.institution,
@@ -311,9 +317,14 @@ const Auth = {
         const data = await res.json();
         if (!data || !data.token || !data.user) return false;
 
+        const merged = this.mergeSavedProfileState(data.user);
+        data.user = merged.user;
         Storage.setToken(data.token);
         Storage.setUser(data.user);
         this.currentUser = data.user;
+        if (merged.needsServerHeal) {
+          this.healServerProfileIfNeeded(merged.healPayload, data.user);
+        }
         if (data.preferences) {
           Storage.setUserPreferences(data.user.id, data.preferences);
           this.syncUserPreferences(data.preferences);
@@ -407,38 +418,241 @@ const Auth = {
     }
   },
 
+  isDefaultAvatarUrl(url) {
+    if (!url || !String(url).trim()) return true;
+    const s = String(url).trim();
+    return s.startsWith('https://images.unsplash.com/photo-1535713875002-d1d0cf377fde')
+      || s.startsWith('https://images.unsplash.com/photo-1500648767791-00dcc994a43e')
+      || s.startsWith('https://images.unsplash.com/photo-1494790108377-be9c29b29330')
+      || s.startsWith('https://images.unsplash.com/photo-1534528741775-53994a69daeb')
+      || s === '/assets/favicon.png';
+  },
+
+  getSavedProfileBackup(email) {
+    if (!email || !String(email).includes('@')) {
+      return { phone: null, phoneCleared: false, avatar_url: null };
+    }
+    const cleanEmail = String(email).toLowerCase().trim();
+    const savedAcct = this.getSavedCreatedAccount(cleanEmail) || {};
+    let phone = null;
+    let phoneCleared = false;
+    let avatar_url = null;
+    let extra = {};
+    try {
+      phoneCleared = localStorage.getItem(`aviora_phone_cleared_${cleanEmail}`) === '1';
+      const rawPhone = localStorage.getItem(`aviora_phone_email_${cleanEmail}`);
+      if (rawPhone && rawPhone.trim()) phone = rawPhone.trim();
+      else if (!phoneCleared && savedAcct.phone && String(savedAcct.phone).trim()) phone = String(savedAcct.phone).trim();
+
+      const rawAvatar = localStorage.getItem(`aviora_avatar_email_${cleanEmail}`);
+      if (rawAvatar && rawAvatar.trim() && !this.isDefaultAvatarUrl(rawAvatar)) {
+        avatar_url = rawAvatar.trim();
+      } else if (savedAcct.avatar_url && !this.isDefaultAvatarUrl(savedAcct.avatar_url)) {
+        avatar_url = savedAcct.avatar_url;
+      }
+
+      const rawExtra = localStorage.getItem(`aviora_profile_email_${cleanEmail}`);
+      if (rawExtra) extra = JSON.parse(rawExtra) || {};
+    } catch (e) {}
+
+    return {
+      phone,
+      phoneCleared,
+      avatar_url,
+      school: extra.school !== undefined ? extra.school : savedAcct.school,
+      learning_goals: extra.learning_goals !== undefined ? extra.learning_goals : savedAcct.learning_goals,
+      target_subjects: extra.target_subjects !== undefined ? extra.target_subjects : savedAcct.target_subjects
+    };
+  },
+
+  saveProfileBackup(email, patch = {}) {
+    if (!email || !String(email).includes('@')) return;
+    const cleanEmail = String(email).toLowerCase().trim();
+    try {
+      if (patch.phone !== undefined) {
+        const cleanPhone = patch.phone === null ? '' : String(patch.phone).trim();
+        if (cleanPhone) {
+          localStorage.setItem(`aviora_phone_email_${cleanEmail}`, cleanPhone);
+          localStorage.removeItem(`aviora_phone_cleared_${cleanEmail}`);
+        } else if (patch.explicitPhoneClear === true) {
+          localStorage.removeItem(`aviora_phone_email_${cleanEmail}`);
+          localStorage.setItem(`aviora_phone_cleared_${cleanEmail}`, '1');
+        }
+      }
+      if (patch.avatar_url && !this.isDefaultAvatarUrl(patch.avatar_url)) {
+        try {
+          localStorage.setItem(`aviora_avatar_email_${cleanEmail}`, String(patch.avatar_url).trim());
+        } catch (e) {}
+      }
+      if (patch.school !== undefined || patch.learning_goals !== undefined || patch.target_subjects !== undefined) {
+        let cur = {};
+        try {
+          cur = JSON.parse(localStorage.getItem(`aviora_profile_email_${cleanEmail}`) || '{}') || {};
+        } catch (e) {}
+        if (patch.school !== undefined) cur.school = patch.school;
+        if (patch.learning_goals !== undefined) cur.learning_goals = patch.learning_goals;
+        if (patch.target_subjects !== undefined) cur.target_subjects = patch.target_subjects;
+        localStorage.setItem(`aviora_profile_email_${cleanEmail}`, JSON.stringify(cur));
+      }
+    } catch (e) {}
+  },
+
+  /** Merge server user/student data with local per-email backups so reloads never lose saved phone/avatar. */
+  mergeSavedProfileState(user, studentProfile = null) {
+    if (!user) return { user, studentProfile, needsServerHeal: false, healPayload: {} };
+    const cleanEmail = user.email ? String(user.email).toLowerCase().trim() : '';
+    if (!cleanEmail) return { user, studentProfile, needsServerHeal: false, healPayload: {} };
+
+    const mergedUser = { ...user };
+    const backup = this.getSavedProfileBackup(cleanEmail);
+    const healPayload = {};
+    let needsServerHeal = false;
+
+    const serverPhone = mergedUser.phone ? String(mergedUser.phone).trim() : '';
+    if (serverPhone) {
+      this.saveProfileBackup(cleanEmail, { phone: serverPhone });
+    } else if (!backup.phoneCleared && backup.phone) {
+      mergedUser.phone = backup.phone;
+      healPayload.phone = backup.phone;
+      needsServerHeal = true;
+    }
+
+    const serverAvatar = mergedUser.avatar_url ? String(mergedUser.avatar_url).trim() : '';
+    if (serverAvatar && !this.isDefaultAvatarUrl(serverAvatar)) {
+      this.saveProfileBackup(cleanEmail, { avatar_url: serverAvatar });
+    } else if (backup.avatar_url && !this.isDefaultAvatarUrl(backup.avatar_url)) {
+      mergedUser.avatar_url = backup.avatar_url;
+      healPayload.avatar_url = backup.avatar_url;
+      needsServerHeal = true;
+    }
+
+    let mergedSp = studentProfile ? { ...studentProfile } : null;
+    if (mergedSp) {
+      const spHeal = {};
+      if (mergedSp.school && String(mergedSp.school).trim()) {
+        this.saveProfileBackup(cleanEmail, { school: mergedSp.school });
+      } else if (backup.school && String(backup.school).trim()) {
+        mergedSp.school = backup.school;
+        spHeal.school = backup.school;
+      }
+      if (mergedSp.target_subjects && String(mergedSp.target_subjects).trim()) {
+        this.saveProfileBackup(cleanEmail, { target_subjects: mergedSp.target_subjects });
+      } else if (backup.target_subjects && String(backup.target_subjects).trim()) {
+        mergedSp.target_subjects = backup.target_subjects;
+        spHeal.target_subjects = backup.target_subjects;
+      }
+      if (mergedSp.learning_goals && String(mergedSp.learning_goals).trim() && mergedSp.learning_goals !== 'Achieve academic excellence and master core coursework.') {
+        this.saveProfileBackup(cleanEmail, { learning_goals: mergedSp.learning_goals });
+      } else if (backup.learning_goals && String(backup.learning_goals).trim() && backup.learning_goals !== 'Achieve academic excellence and master core coursework.') {
+        mergedSp.learning_goals = backup.learning_goals;
+        spHeal.learning_goals = backup.learning_goals;
+      }
+      if (Object.keys(spHeal).length > 0) {
+        healPayload.studentData = { grade_level: mergedSp.grade_level || 'Grade 11 - High School', ...spHeal };
+        needsServerHeal = true;
+      }
+    }
+
+    return { user: mergedUser, studentProfile: mergedSp, needsServerHeal, healPayload };
+  },
+
+  async healServerProfileIfNeeded(healPayload, targetUser = null) {
+    if (!healPayload || Object.keys(healPayload).length === 0) return null;
+    if (typeof Storage === 'undefined' || !Storage.getToken() || typeof API === 'undefined') return null;
+    if (this._profileHealInFlight) return null;
+    this._profileHealInFlight = true;
+    try {
+      const res = await API.updateProfile(healPayload);
+      if (res && res.token) Storage.setToken(res.token);
+      if (res && res.user) {
+        const activeUser = this.currentUser || targetUser || {};
+        const mergedAfter = {
+          ...activeUser,
+          ...res.user,
+          phone: res.user.phone || activeUser.phone || healPayload.phone || null,
+          avatar_url: (!this.isDefaultAvatarUrl(res.user.avatar_url) ? res.user.avatar_url : null)
+            || (!this.isDefaultAvatarUrl(activeUser.avatar_url) ? activeUser.avatar_url : null)
+            || healPayload.avatar_url
+            || res.user.avatar_url
+        };
+        if (!this.currentUser || (mergedAfter.email && this.currentUser.email === mergedAfter.email)) {
+          this.currentUser = mergedAfter;
+          Storage.setUser(mergedAfter);
+          if (typeof Profile !== 'undefined') {
+            Profile.currentUser = mergedAfter;
+            if (mergedAfter.avatar_url && typeof Profile.updateAllAvatars === 'function') {
+              Profile.updateAllAvatars(mergedAfter.avatar_url);
+            }
+          }
+          const phoneInput = document.getElementById('profile-phone') || document.getElementById('sp-phone');
+          if (phoneInput && !phoneInput.value && mergedAfter.phone) {
+            phoneInput.value = mergedAfter.phone;
+          }
+        }
+      }
+      return res;
+    } catch (e) {
+      return null;
+    } finally {
+      this._profileHealInFlight = false;
+    }
+  },
+
   saveCreatedAccount(account) {
     if (!account || !account.email) return;
     try {
       const accounts = this.getCreatedAccounts();
       const email = account.email.toLowerCase().trim();
-      const chosenAvatar = account.avatar_url || account.avatar || accounts[email]?.avatar_url;
-      if (chosenAvatar && String(chosenAvatar).startsWith('data:')) {
-        try { localStorage.setItem(`aviora_avatar_email_${email}`, chosenAvatar); } catch (e) {}
+      const existing = accounts[email] || {};
+      const incomingAvatar = account.avatar_url || account.avatar;
+      let chosenAvatar = existing.avatar_url;
+      if (incomingAvatar) {
+        if (!this.isDefaultAvatarUrl(incomingAvatar) || !existing.avatar_url || account.allowDefaultAvatar === true) {
+          chosenAvatar = incomingAvatar;
+        }
       }
+
+      const incomingPhone = account.phone !== undefined ? (account.phone === null ? '' : String(account.phone).trim()) : undefined;
+      let chosenPhone = existing.phone || null;
+      if (incomingPhone !== undefined) {
+        if (incomingPhone) {
+          chosenPhone = incomingPhone;
+        } else if (account.explicitPhoneClear === true) {
+          chosenPhone = null;
+        }
+      }
+
+      this.saveProfileBackup(email, {
+        ...(incomingPhone !== undefined ? { phone: incomingPhone, explicitPhoneClear: account.explicitPhoneClear === true } : {}),
+        ...(chosenAvatar && !this.isDefaultAvatarUrl(chosenAvatar) ? { avatar_url: chosenAvatar } : {}),
+        ...(account.school !== undefined ? { school: account.school } : {}),
+        ...(account.learning_goals !== undefined ? { learning_goals: account.learning_goals } : {}),
+        ...(account.target_subjects !== undefined ? { target_subjects: account.target_subjects } : {})
+      });
+
       accounts[email] = {
-        name: account.name || accounts[email]?.name || 'Aviora Member',
+        name: account.name || existing.name || 'Aviora Member',
         email,
-        password: account.password || accounts[email]?.password,
-        role: account.role || accounts[email]?.role || 'student',
-        phone: account.phone !== undefined ? account.phone : (accounts[email]?.phone || null),
-        grade_level: account.grade_level || accounts[email]?.grade_level,
-        school: account.school !== undefined ? account.school : accounts[email]?.school,
-        learning_goals: account.learning_goals !== undefined ? account.learning_goals : accounts[email]?.learning_goals,
-        target_subjects: account.target_subjects !== undefined ? account.target_subjects : accounts[email]?.target_subjects,
-        headline: account.headline || accounts[email]?.headline,
-        subjects: account.subjects || accounts[email]?.subjects,
-        country: account.country || accounts[email]?.country,
-        timezone: account.timezone || accounts[email]?.timezone,
-        language: account.language || accounts[email]?.language,
-        theme: account.theme || accounts[email]?.theme,
-        institution: account.institution || accounts[email]?.institution,
-        highest_degree: account.highest_degree || accounts[email]?.highest_degree,
-        years_experience: account.years_experience || accounts[email]?.years_experience,
-        hourly_rate: account.hourly_rate || accounts[email]?.hourly_rate,
-        bio: account.bio || accounts[email]?.bio,
+        password: account.password || existing.password,
+        role: account.role || existing.role || 'student',
+        phone: chosenPhone,
+        grade_level: account.grade_level || existing.grade_level,
+        school: account.school !== undefined ? account.school : existing.school,
+        learning_goals: account.learning_goals !== undefined ? account.learning_goals : existing.learning_goals,
+        target_subjects: account.target_subjects !== undefined ? account.target_subjects : existing.target_subjects,
+        headline: account.headline || existing.headline,
+        subjects: account.subjects || existing.subjects,
+        country: account.country || existing.country,
+        timezone: account.timezone || existing.timezone,
+        language: account.language || existing.language,
+        theme: account.theme || existing.theme,
+        institution: account.institution || existing.institution,
+        highest_degree: account.highest_degree || existing.highest_degree,
+        years_experience: account.years_experience || existing.years_experience,
+        hourly_rate: account.hourly_rate || existing.hourly_rate,
+        bio: account.bio || existing.bio,
         avatar_url: chosenAvatar,
-        created_at: accounts[email]?.created_at || new Date().toISOString(),
+        created_at: existing.created_at || new Date().toISOString(),
         updated_at: new Date().toISOString()
       };
       try {
@@ -1120,6 +1334,9 @@ const Auth = {
         profile
       });
 
+      const mergedOAuth = this.mergeSavedProfileState(res.user);
+      res.user = mergedOAuth.user;
+
       // Save persistent link in localStorage
       this.saveLinkedAccount(provider, {
         name: res.user.name,
@@ -1132,6 +1349,9 @@ const Auth = {
       Storage.setToken(res.token);
       Storage.setUser(res.user);
       this.currentUser = res.user;
+      if (mergedOAuth.needsServerHeal) {
+        this.healServerProfileIfNeeded(mergedOAuth.healPayload, res.user);
+      }
       if (res.preferences) {
         this.syncUserPreferences(res.preferences);
       } else {
@@ -1580,23 +1800,22 @@ const Auth = {
           try {
             const cleanLoginEmail = email.toLowerCase().trim();
             const savedEmailTheme = localStorage.getItem(`aviora_theme_email_${cleanLoginEmail}`);
-            let savedEmailAvatar = null;
-            try { savedEmailAvatar = localStorage.getItem(`aviora_avatar_email_${cleanLoginEmail}`); } catch (e) {}
+            const backup = this.getSavedProfileBackup(cleanLoginEmail);
             res = await API.syncAccount({
               name: (savedAccount && savedAccount.name) || (isJoshua ? 'Joshua Garcia' : 'Krystel Comia'),
               email: cleanLoginEmail,
               password: password,
               role: (savedAccount && savedAccount.role) || (isJoshua ? 'teacher' : 'student'),
-              phone: savedAccount?.phone || null,
-              avatar_url: savedEmailAvatar || savedAccount?.avatar_url || null,
+              phone: backup.phone || savedAccount?.phone || null,
+              avatar_url: backup.avatar_url || savedAccount?.avatar_url || null,
               country: savedAccount?.country,
               timezone: savedAccount?.timezone,
               language: savedAccount?.language,
               theme: savedEmailTheme || savedAccount?.theme,
               grade_level: savedAccount?.grade_level,
-              school: savedAccount?.school,
-              learning_goals: savedAccount?.learning_goals,
-              target_subjects: savedAccount?.target_subjects,
+              school: backup.school || savedAccount?.school,
+              learning_goals: backup.learning_goals || savedAccount?.learning_goals,
+              target_subjects: backup.target_subjects || savedAccount?.target_subjects,
               headline: savedAccount?.headline,
               subjects: savedAccount?.subjects,
               institution: savedAccount?.institution,
@@ -1611,6 +1830,9 @@ const Auth = {
           throw loginErr;
         }
       }
+
+      const mergedLogin = this.mergeSavedProfileState(res.user);
+      res.user = mergedLogin.user;
 
       Storage.setToken(res.token);
       Storage.setUser(res.user);
@@ -1629,6 +1851,9 @@ const Auth = {
           language: res.user.language,
           theme: res.preferences?.theme
         });
+      }
+      if (mergedLogin.needsServerHeal) {
+        this.healServerProfileIfNeeded(mergedLogin.healPayload, res.user);
       }
       if (res.preferences) {
         this.syncUserPreferences(res.preferences);
@@ -1734,7 +1959,8 @@ const Auth = {
       this.saveCreatedAccount({
         ...payload,
         id: res.user?.id,
-        avatar_url: res.user?.avatar_url
+        avatar_url: res.user?.avatar_url,
+        ...(res.user?.phone ? { phone: res.user.phone } : {})
       });
 
       Storage.setToken(res.token);

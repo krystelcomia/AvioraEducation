@@ -5541,7 +5541,14 @@ const Teacher = {
 
     try {
       const data = await API.getMe();
-      const u = data.user || user;
+      let u = data.user || user;
+      if (typeof Auth !== 'undefined' && typeof Auth.mergeSavedProfileState === 'function') {
+        const merged = Auth.mergeSavedProfileState(u);
+        u = merged.user || u;
+        if (merged.needsServerHeal && typeof Auth.healServerProfileIfNeeded === 'function') {
+          Auth.healServerProfileIfNeeded(merged.healPayload, u);
+        }
+      }
       const tp = data.tutorProfile || this.tutorProfile || {};
       const app = data.teacherApplication || this.application || {};
       const draft = data.tutorDraftProfile || this.tutorDraftProfile || {};
@@ -5556,10 +5563,13 @@ const Teacher = {
       const subjectBadge = document.getElementById('teacher-profile-subject-badge');
 
       const defaultEducatorAvatar = 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=300&q=80';
+      const isDefaultAv = (url) => typeof Auth !== 'undefined' && Auth.isDefaultAvatarUrl ? Auth.isDefaultAvatarUrl(url) : (!url);
       if (heroName) heroName.textContent = u.name || user?.name || 'Educator';
       if (heroEmail) heroEmail.textContent = u.email || user?.email || '';
       if (heroAvatar) {
-        const avatarSrc = tp.avatar_url || u.avatar_url || user?.avatar_url || user?.avatar || tp.avatar || defaultEducatorAvatar;
+        const avatarSrc = (!isDefaultAv(u.avatar_url) ? u.avatar_url : null)
+          || (!isDefaultAv(tp.avatar_url) ? tp.avatar_url : null)
+          || tp.avatar_url || u.avatar_url || user?.avatar_url || user?.avatar || tp.avatar || defaultEducatorAvatar;
         heroAvatar.src = avatarSrc;
         heroAvatar.onerror = () => { heroAvatar.src = defaultEducatorAvatar; };
         const navAvatar = document.getElementById('nav-user-profile-avatar');
@@ -5696,14 +5706,23 @@ const Teacher = {
         submitBtn.textContent = 'Updating...';
       }
 
-      const currentAvatar = Auth.currentUser?.avatar_url || Auth.currentUser?.avatar || 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=300&q=80';
+      const savedTeacherBackup = (Auth.currentUser?.email && typeof Auth.getSavedProfileBackup === 'function')
+        ? Auth.getSavedProfileBackup(Auth.currentUser.email)
+        : {};
+      const currentAvatar = savedTeacherBackup.avatar_url || Auth.currentUser?.avatar_url || Auth.currentUser?.avatar || 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=300&q=80';
+      const phoneEl = document.getElementById('teacher-profile-phone');
+      const allowEmptyPhone = Boolean(phoneEl && !phoneEl.disabled && !phone);
       const res = await API.updateProfile({
         name,
-        phone,
+        ...(phoneEl && !phoneEl.disabled ? { phone, ...(allowEmptyPhone ? { allow_empty_phone: true } : {}) } : {}),
         country,
         avatar_url: currentAvatar,
         tutorData: { headline, hourly_rate, rate_currency, bio, country, timezone, institution, subjects }
       });
+
+      if (res && res.token && typeof Storage !== 'undefined' && Storage.setToken) {
+        Storage.setToken(res.token);
+      }
 
       if (res && res.user && typeof Auth !== 'undefined') {
         Auth.currentUser = res.user;
@@ -5714,7 +5733,7 @@ const Teacher = {
             email: res.user.email,
             password: res.user.password || 'Joshua123_',
             role: 'teacher',
-            phone,
+            ...(phoneEl && !phoneEl.disabled ? { phone: res.user.phone || phone, explicitPhoneClear: allowEmptyPhone } : {}),
             headline,
             subjects,
             country,

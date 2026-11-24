@@ -1599,7 +1599,14 @@ const Admin = {
   async loadProfilePage() {
     try {
       const data = await API.getMe();
-      const u = data.user || (typeof Auth !== 'undefined' ? Auth.currentUser : null) || {};
+      let u = data.user || (typeof Auth !== 'undefined' ? Auth.currentUser : null) || {};
+      if (typeof Auth !== 'undefined' && typeof Auth.mergeSavedProfileState === 'function') {
+        const merged = Auth.mergeSavedProfileState(u);
+        u = merged.user || u;
+        if (merged.needsServerHeal && typeof Auth.healServerProfileIfNeeded === 'function') {
+          Auth.healServerProfileIfNeeded(merged.healPayload, u);
+        }
+      }
       const prefs = data.preferences || (u ? u.preferences : null) || {};
 
       const heroName = document.getElementById('admin-profile-hero-name');
@@ -1940,10 +1947,25 @@ const Admin = {
       if (dept) localStorage.setItem('aviora_admin_dept', dept);
       if (bio) localStorage.setItem('aviora_admin_bio', bio);
 
-      const res = await API.updateProfile({ name, phone });
+      const phoneEl = document.getElementById('admin-profile-phone');
+      const allowEmptyPhone = Boolean(phoneEl && !phoneEl.disabled && !phone);
+      const res = await API.updateProfile({
+        name,
+        ...(phoneEl && !phoneEl.disabled ? { phone, ...(allowEmptyPhone ? { allow_empty_phone: true } : {}) } : {})
+      });
+      if (res && res.token && typeof Storage !== 'undefined' && Storage.setToken) {
+        Storage.setToken(res.token);
+      }
       if (res && res.user && typeof Auth !== 'undefined') {
         Auth.currentUser = res.user;
         if (typeof Storage !== 'undefined') Storage.setUser(res.user);
+        if (typeof Auth.saveProfileBackup === 'function' && res.user.email) {
+          Auth.saveProfileBackup(res.user.email, {
+            phone: res.user.phone,
+            explicitPhoneClear: allowEmptyPhone,
+            avatar_url: res.user.avatar_url
+          });
+        }
       }
 
       showToast('Administrator profile updated successfully!', 'success');

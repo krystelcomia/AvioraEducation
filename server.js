@@ -2863,6 +2863,10 @@ app.post('/api/auth/sync-account', (req, res) => {
             spUpdates.push('target_subjects = ?');
             spParams.push(String(target_subjects).trim());
           }
+          if ((!sp.learning_goals || !String(sp.learning_goals).trim() || sp.learning_goals === 'Achieve academic excellence and master core coursework.') && learning_goals && String(learning_goals).trim()) {
+            spUpdates.push('learning_goals = ?');
+            spParams.push(String(learning_goals).trim());
+          }
           if (spUpdates.length > 0) {
             spParams.push(user.id);
             db.prepare(`UPDATE student_profiles SET ${spUpdates.join(', ')} WHERE user_id = ?`).run(...spParams);
@@ -4232,7 +4236,9 @@ app.get('/api/auth/me', authenticateToken, (req, res) => {
         teacherApp.grade_levels = safeParseArray(teacherApp.grade_levels);
       }
       if (tutorProfile) {
-        tutorProfile.avatar_url = tutorProfile.avatar_url || req.user.avatar_url;
+        tutorProfile.avatar_url = (!isDefaultProfileAvatar(req.user.avatar_url) || !tutorProfile.avatar_url)
+          ? req.user.avatar_url
+          : tutorProfile.avatar_url;
         const normProf = normalizeSubjectRates(tutorProfile.subjects, tutorProfile.subject_rates || teacherApp?.subject_rates, tutorProfile.hourly_rate);
         tutorProfile.subjects = normProf.subjects;
         tutorProfile.subject_rates = normProf.subject_rates;
@@ -4284,6 +4290,7 @@ app.put('/api/auth/profile', authenticateToken, (req, res) => {
     const { name, email, phone, avatar_url, studentData, tutorData } = req.body;
     const userId = req.user.id;
     const isAdmin = req.user.role === 'admin';
+    const existingUser = db.prepare('SELECT id, name, email, role, phone, avatar_url, country, status FROM users WHERE id = ?').get(userId);
     const currentPrefs = getUserPreferences(userId) || {};
     const immutableSnapshot = safeParseObject(currentPrefs.registration_immutable) || {};
     const lockedFields = immutableSnapshot.fields || {};
@@ -4327,12 +4334,21 @@ app.put('/api/auth/profile', authenticateToken, (req, res) => {
     }
     if (phone !== undefined && (isAdmin || !lockedFields.phone)) {
       const cleanPhone = phone === null ? '' : String(phone).trim();
-      updates.push('phone = ?');
-      params.push(cleanPhone || null);
+      const hasExistingPhone = Boolean(existingUser && existingUser.phone && String(existingUser.phone).trim());
+      if (cleanPhone || !hasExistingPhone || req.body.allow_empty_phone === true) {
+        updates.push('phone = ?');
+        params.push(cleanPhone || null);
+      }
     }
+    let acceptedAvatarUrl = null;
     if (avatar_url !== undefined && avatar_url !== null && String(avatar_url).trim()) {
-      updates.push('avatar_url = ?');
-      params.push(String(avatar_url).trim());
+      const cleanAvatar = String(avatar_url).trim();
+      const hasCustomExisting = Boolean(existingUser && existingUser.avatar_url && !isDefaultProfileAvatar(existingUser.avatar_url));
+      if (!isDefaultProfileAvatar(cleanAvatar) || !hasCustomExisting || req.body.allow_default_avatar === true) {
+        updates.push('avatar_url = ?');
+        params.push(cleanAvatar);
+        acceptedAvatarUrl = cleanAvatar;
+      }
     }
 
     if (updates.length > 0) {
@@ -4340,9 +4356,9 @@ app.put('/api/auth/profile', authenticateToken, (req, res) => {
       db.prepare(`UPDATE users SET ${updates.join(', ')} WHERE id = ?`).run(...params);
     }
 
-    if (avatar_url !== undefined && avatar_url !== null) {
+    if (acceptedAvatarUrl) {
       try {
-        db.prepare('UPDATE tutor_profiles SET avatar_url = ? WHERE user_id = ?').run(avatar_url, userId);
+        db.prepare('UPDATE tutor_profiles SET avatar_url = ? WHERE user_id = ?').run(acceptedAvatarUrl, userId);
       } catch (e) { }
     }
 
@@ -4426,13 +4442,27 @@ app.put('/api/auth/profile', authenticateToken, (req, res) => {
     }
 
     const updatedUser = db.prepare('SELECT id, name, email, role, phone, avatar_url, country, status, wallet_balance FROM users WHERE id = ?').get(userId);
+    const updatedPrefs = getUserPreferences(userId);
+    const resolvedGeo = getCountryDefaults(updatedUser?.country || updatedPrefs?.country || 'United States');
+    const sanitizedUpdatedUser = updatedUser ? {
+      ...updatedUser,
+      country: updatedUser.country || updatedPrefs?.country || 'United States',
+      timezone: updatedPrefs?.timezone || resolvedGeo.timezone || 'America/New_York',
+      language: updatedPrefs?.language || resolvedGeo.language || 'en-US'
+    } : updatedUser;
+    const refreshedToken = sanitizedUpdatedUser ? signUserToken(sanitizedUpdatedUser, updatedPrefs) : null;
     const updatedTutorProfile = db.prepare('SELECT * FROM tutor_profiles WHERE user_id = ?').get(userId);
-    const updatedStudentProfile = updatedUser && updatedUser.role === 'student'
+    if (updatedTutorProfile && sanitizedUpdatedUser && !isDefaultProfileAvatar(sanitizedUpdatedUser.avatar_url)) {
+      updatedTutorProfile.avatar_url = sanitizedUpdatedUser.avatar_url;
+    }
+    const updatedStudentProfile = sanitizedUpdatedUser && sanitizedUpdatedUser.role === 'student'
       ? db.prepare('SELECT * FROM student_profiles WHERE user_id = ?').get(userId)
       : null;
     return res.json({
       message: 'Profile updated successfully.',
-      user: updatedUser,
+      ...(refreshedToken ? { token: refreshedToken } : {}),
+      user: sanitizedUpdatedUser,
+      preferences: updatedPrefs,
       tutorProfile: updatedTutorProfile,
       ...(updatedStudentProfile ? { studentProfile: updatedStudentProfile } : {})
     });
@@ -4472,8 +4502,25 @@ app.post('/api/auth/upload-avatar', authenticateToken, (req, res) => {
       } catch (e) { }
 
       const user = db.prepare('SELECT id, name, email, role, phone, avatar_url, country, status, wallet_balance FROM users WHERE id = ?').get(req.user.id);
+      const userPrefs = getUserPreferences(req.user.id);
+      const resolvedGeo = getCountryDefaults(user?.country || userPrefs?.country || 'United States');
+      const sanitizedUser = user ? {
+        ...user,
+        country: user.country || userPrefs?.country || 'United States',
+        timezone: userPrefs?.timezone || resolvedGeo.timezone || 'America/New_York',
+        language: userPrefs?.language || resolvedGeo.language || 'en-US'
+      } : user;
+      const refreshedToken = sanitizedUser ? signUserToken(sanitizedUser, userPrefs) : null;
       const tutorProfile = db.prepare('SELECT * FROM tutor_profiles WHERE user_id = ?').get(req.user.id);
-      return res.json({ message: 'Profile avatar updated successfully.', avatar_url: avatarUrl, user, tutorProfile });
+      if (tutorProfile && avatarUrl) tutorProfile.avatar_url = avatarUrl;
+      return res.json({
+        message: 'Profile avatar updated successfully.',
+        ...(refreshedToken ? { token: refreshedToken } : {}),
+        avatar_url: avatarUrl,
+        user: sanitizedUser,
+        preferences: userPrefs,
+        tutorProfile
+      });
     } catch (error) {
       console.error('Avatar upload error:', error);
       return res.status(500).json({ error: 'Failed to save avatar image.' });
@@ -12143,6 +12190,38 @@ app.post('/api/student/schedule/toggle-slot', authenticateToken, requireRole('st
     const existing = db.prepare(`
       SELECT id FROM student_occupied_slots
       WHERE student_id = ? AND time_slot = ? AND date IS ?
+    `).get(studentId, time_slot, cleanDate);
+
+    if (existing) {
+      db.prepare('DELETE FROM student_occupied_slots WHERE id = ?').run(existing.id);
+      const live = getStudentLiveAvailability(studentId);
+      return res.json({
+        message: `Time slot ${time_slot} is now marked Available.`,
+        isOccupied: false,
+        occupiedSlots: live.occupied_slots
+      });
+    } else {
+      db.prepare(`
+        INSERT INTO student_occupied_slots (student_id, day_of_week, time_slot, date, reason)
+        VALUES (?, ?, ?, ?, ?)
+      `).run(studentId, dayName, time_slot, cleanDate, reason || 'Unavailable / Occupied');
+      const live = getStudentLiveAvailability(studentId);
+      return res.json({
+        message: `Time slot ${time_slot} is now marked Unavailable on your calendar.`,
+        isOccupied: true,
+        occupiedSlots: live.occupied_slots
+      });
+    }
+  } catch (error) {
+    console.error('Student toggle slot error:', error);
+    res.status(500).json({ error: 'Failed to toggle time slot: ' + error.message });
+  }
+});
+
+// ==========================================
+// NOTIFICATIONS API
+// ==========================================
+
 app.get('/api/notifications', authenticateToken, (req, res) => {
   try {
     const userId = req.user.id;
@@ -12156,10 +12235,10 @@ app.get('/api/notifications', authenticateToken, (req, res) => {
 
     const notifications = db.prepare(`
       SELECT * FROM notifications 
-      WHERE user_id = ? ${ filterClause }
+      WHERE user_id = ? ${filterClause}
       ORDER BY created_at DESC 
       LIMIT 30
-      `).all(userId).map(n => ({
+    `).all(userId).map(n => ({
       ...n,
       email_sent: n.email_sent !== undefined && n.email_sent !== null ? n.email_sent : 1,
       email_recipient: n.email_recipient || linkedGmail,
@@ -12168,8 +12247,8 @@ app.get('/api/notifications', authenticateToken, (req, res) => {
 
     const unreadCount = db.prepare(`
       SELECT COUNT(*) as count FROM notifications 
-      WHERE user_id = ? AND is_read = 0 ${ filterClause }
-      `).get(userId).count;
+      WHERE user_id = ? AND is_read = 0 ${filterClause}
+    `).get(userId).count;
 
     res.json({
       notifications,
@@ -12198,11 +12277,11 @@ app.post('/api/notifications/sync-gmail', authenticateToken, async (req, res) =>
         db.prepare(`
           UPDATE notifications
           SET email_sent = 1,
-      email_recipient = ?,
-      email_sent_at = COALESCE(email_sent_at, CURRENT_TIMESTAMP),
-      email_provider = ?
-        WHERE id = ?
-          `).run(recipientEmail, provider || 'emailjs_free_api', notif.id);
+              email_recipient = ?,
+              email_sent_at = COALESCE(email_sent_at, CURRENT_TIMESTAMP),
+              email_provider = ?
+          WHERE id = ?
+        `).run(recipientEmail, provider || 'emailjs_free_api', notif.id);
       }
     }
 
@@ -12227,7 +12306,7 @@ app.get('/api/notifications/email-logs', authenticateToken, (req, res) => {
       WHERE user_id = ?
       ORDER BY delivered_at DESC
       LIMIT 30
-      `).all(userId);
+    `).all(userId);
     return res.json({
       linkedGmail: userAccount ? userAccount.linkedEmail : req.user.email,
       logs
@@ -12293,7 +12372,7 @@ app.post('/api/notifications/test-delivery', authenticateToken, (req, res) => {
 
     const prefs = getUserPreferences(userId);
     const filterClause = getNotificationFilterClause(prefs);
-    const unreadCount = db.prepare(`SELECT COUNT(*) as count FROM notifications WHERE user_id = ? AND is_read = 0 ${ filterClause }`).get(userId).count;
+    const unreadCount = db.prepare(`SELECT COUNT(*) as count FROM notifications WHERE user_id = ? AND is_read = 0 ${filterClause}`).get(userId).count;
 
     return res.json({
       sent: true,
@@ -12318,10 +12397,10 @@ function dispatchClassAboutToBeginReminders(targetUserId = null) {
       WHERE tr.status = 'accepted'
         AND tr.status != 'cancelled'
         AND tr.room_status != 'ended'
-      `;
+    `;
     const params = [];
     if (targetUserId) {
-      sql += ` AND tr.student_id = ? `;
+      sql += ` AND tr.student_id = ?`;
       params.push(targetUserId);
     }
     sql += ` ORDER BY tr.requested_date ASC, tr.requested_time ASC`;
@@ -12340,7 +12419,7 @@ function dispatchClassAboutToBeginReminders(targetUserId = null) {
       if (timeMatch) {
         const h = parseInt(timeMatch[1], 10);
         const m = parseInt(timeMatch[2], 10);
-        const sessionDate = new Date(`${ session.requested_date }T${ String(h).padStart(2, '0') }: ${ String(m).padStart(2, '0') }:00`);
+        const sessionDate = new Date(`${session.requested_date}T${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:00`);
         const diffMs = sessionDate.getTime() - now.getTime();
         const diffMins = Math.round(diffMs / (60 * 1000));
 
@@ -12356,17 +12435,17 @@ function dispatchClassAboutToBeginReminders(targetUserId = null) {
       if (shouldRemind) {
         const alreadyNotified = db.prepare(`
           SELECT id FROM notifications 
-          WHERE user_id = ?
-      AND link LIKE ?
-      `).get(session.student_id, ` % session=${ session.id } % `);
+          WHERE user_id = ? 
+            AND link LIKE ?
+        `).get(session.student_id, `%session=${session.id}%`);
 
         if (!alreadyNotified) {
           sendNotification(
             session.student_id,
-            `Class Reminder: ${ session.subject } is About to Begin!`,
-            `Reminder: Your ${ session.subject } class with ${ session.tutor_name } is scheduled for ${ session.requested_time } and is about to begin.Your tutor will open the virtual room shortly!`,
+            `Class Reminder: ${session.subject} is About to Begin!`,
+            `Reminder: Your ${session.subject} class with ${session.tutor_name} is scheduled for ${session.requested_time} and is about to begin. Your tutor will open the virtual room shortly!`,
             'lesson_reminder',
-            `#student - portal ? session = ${ session.id } `
+            `#student-portal?session=${session.id}`
           );
         }
       }
@@ -12383,9 +12462,9 @@ function dispatch3HourLessonReminders() {
       SELECT tr.*, u.name as tutor_name
       FROM tutoring_requests tr
       JOIN users u ON tr.tutor_id = u.id
-      WHERE tr.status IN('accepted', 'pending')
+      WHERE tr.status IN ('accepted', 'pending')
         AND tr.requested_date = date('now')
-      `).all();
+    `).all();
 
     for (const session of upcomingSessions) {
       if (isNotificationAllowed(session.student_id, 'lesson_reminder')) {
@@ -12393,13 +12472,13 @@ function dispatch3HourLessonReminders() {
           SELECT id FROM notifications 
           WHERE user_id = ? AND type = 'lesson_reminder' 
             AND title LIKE '%Lesson Reminder%' AND link LIKE ?
-      `).get(session.student_id, ` % #student - portal % `);
+        `).get(session.student_id, `%#student-portal%`);
 
         if (!alreadyNotified) {
           sendNotification(
             session.student_id,
-            `3 - Hour Lesson Reminder: ${ session.subject } `,
-            `Reminder: Your 50 - minute ${ session.subject } class with ${ session.tutor_name } is scheduled for ${ session.requested_time }.Please prepare your study materials!`,
+            `3-Hour Lesson Reminder: ${session.subject}`,
+            `Reminder: Your 50-minute ${session.subject} class with ${session.tutor_name} is scheduled for ${session.requested_time}. Please prepare your study materials!`,
             'lesson_reminder',
             '#student-portal'
           );
@@ -12416,15 +12495,15 @@ function processAllStudentWalletValidities() {
   try {
     const candidateRows = db.prepare(`
       SELECT DISTINCT id as student_id FROM users WHERE role = 'student' AND COALESCE(wallet_balance, 0) > 0
-    UNION
+      UNION
       SELECT DISTINCT student_id FROM tutoring_requests
       WHERE status = 'cancelled' AND wallet_forfeited_at IS NULL
-    AND(payment_method != 'subscription' OR(total_amount IS NOT NULL AND total_amount > 0))
-    UNION
+        AND (payment_method != 'subscription' OR (total_amount IS NOT NULL AND total_amount > 0))
+      UNION
       SELECT DISTINCT student1_id as student_id FROM buddy_sessions WHERE student1_refunded = 1 AND student1_wallet_forfeited_at IS NULL AND student1_id IS NOT NULL
-    UNION
+      UNION
       SELECT DISTINCT student2_id as student_id FROM buddy_sessions WHERE student2_refunded = 1 AND student2_wallet_forfeited_at IS NULL AND student2_id IS NOT NULL
-      `).all();
+    `).all();
 
     for (const row of candidateRows) {
       if (row && row.student_id) {
@@ -12466,4 +12545,1346 @@ const PAYPAL_MODE = (process.env.PAYPAL_MODE || 'sandbox').toLowerCase();
 const PAYPAL_API_BASE = process.env.PAYPAL_API_BASE || (PAYPAL_MODE === 'live' ? 'https://api-m.paypal.com' : 'https://api-m.sandbox.paypal.com');
 
 const CURRENCY_RATE_BY_CODE = {
-  ...[truncated for diff preview]
+  USD: { code: 'USD', symbol: '$', rate: 1.0, zeroDecimal: false },
+  GBP: { code: 'GBP', symbol: '£', rate: 0.78, zeroDecimal: false },
+  CAD: { code: 'CAD', symbol: 'CA$', rate: 1.36, zeroDecimal: false },
+  AUD: { code: 'AUD', symbol: 'A$', rate: 1.52, zeroDecimal: false },
+  PHP: { code: 'PHP', symbol: '₱', rate: 56.0, zeroDecimal: false },
+  SGD: { code: 'SGD', symbol: 'S$', rate: 1.34, zeroDecimal: false },
+  JPY: { code: 'JPY', symbol: '¥', rate: 152.0, zeroDecimal: true },
+  KRW: { code: 'KRW', symbol: '₩', rate: 1380.0, zeroDecimal: true },
+  CNY: { code: 'CNY', symbol: '¥', rate: 7.23, zeroDecimal: false },
+  INR: { code: 'INR', symbol: '₹', rate: 83.5, zeroDecimal: false },
+  EUR: { code: 'EUR', symbol: '€', rate: 0.92, zeroDecimal: false },
+  BRL: { code: 'BRL', symbol: 'R$', rate: 5.4, zeroDecimal: false },
+  MXN: { code: 'MXN', symbol: 'MX$', rate: 18.2, zeroDecimal: false },
+  AED: { code: 'AED', symbol: 'AED', rate: 3.67, zeroDecimal: false },
+  SAR: { code: 'SAR', symbol: 'SAR', rate: 3.75, zeroDecimal: false },
+  IDR: { code: 'IDR', symbol: 'Rp', rate: 15800.0, zeroDecimal: true },
+  VND: { code: 'VND', symbol: '₫', rate: 25000.0, zeroDecimal: true },
+  TRY: { code: 'TRY', symbol: '₺', rate: 34.0, zeroDecimal: false },
+  PLN: { code: 'PLN', symbol: 'zł', rate: 3.98, zeroDecimal: false },
+  SEK: { code: 'SEK', symbol: 'kr', rate: 10.5, zeroDecimal: false },
+  THB: { code: 'THB', symbol: '฿', rate: 36.5, zeroDecimal: false },
+  CHF: { code: 'CHF', symbol: 'CHF', rate: 0.89, zeroDecimal: false },
+  ZAR: { code: 'ZAR', symbol: 'R', rate: 18.0, zeroDecimal: false },
+  NZD: { code: 'NZD', symbol: 'NZ$', rate: 1.64, zeroDecimal: false }
+};
+
+function getCurrencyMeta(codeOrCountry, isCountry = false) {
+  let code = String(codeOrCountry || 'USD').trim();
+  if (isCountry) {
+    code = getCurrencyForCountry(code);
+  }
+  const upper = code.toUpperCase();
+  return CURRENCY_RATE_BY_CODE[upper] || CURRENCY_RATE_BY_CODE.USD;
+}
+
+function convertCurrencyAmount(amount, fromCode = 'USD', toCode = 'USD') {
+  const numeric = parseFloat(amount);
+  if (!Number.isFinite(numeric)) return 0;
+  const src = getCurrencyMeta(fromCode);
+  const dst = getCurrencyMeta(toCode);
+  if (src.code === dst.code) {
+    return dst.zeroDecimal ? Math.round(numeric) : Math.round(numeric * 100) / 100;
+  }
+  const usd = numeric / (src.rate || 1.0);
+  const rawTarget = usd * (dst.rate || 1.0);
+  if (dst.zeroDecimal || dst.code === 'PHP') {
+    return Math.round(rawTarget);
+  }
+  return Math.round(rawTarget * 100) / 100;
+}
+
+function getStudentBillingCurrency(userId) {
+  const userRow = db.prepare('SELECT country FROM users WHERE id = ?').get(userId);
+  const prefs = getUserPreferences(userId);
+  const country = (userRow && userRow.country) || (prefs && prefs.country) || 'United States';
+  return getCurrencyMeta(country, true);
+}
+
+function formatExactMoney(amount, currencyCode = 'USD', currencySymbol = '$') {
+  const meta = getCurrencyMeta(currencyCode);
+  const sym = currencySymbol || meta.symbol || '$';
+  const num = Number(amount) || 0;
+  const formatted = meta.zeroDecimal
+    ? Math.round(num).toLocaleString('en-US')
+    : num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return `${sym}${formatted}`;
+}
+
+function validateUploadedImageBuffer(file) {
+  if (!file || !Buffer.isBuffer(file.buffer) || file.buffer.length === 0) {
+    return { valid: false, error: 'Please select a valid JPG, JPEG, or PNG screenshot file.' };
+  }
+  if (file.buffer.length > 5 * 1024 * 1024) {
+    return { valid: false, error: 'Image file size must not exceed 5MB.' };
+  }
+  const ext = path.extname(file.originalname || '').toLowerCase();
+  const isJpegHeader = file.buffer.length >= 3 && file.buffer[0] === 0xff && file.buffer[1] === 0xd8 && file.buffer[2] === 0xff;
+  const isPngHeader = file.buffer.length >= 8
+    && file.buffer[0] === 0x89 && file.buffer[1] === 0x50
+    && file.buffer[2] === 0x4e && file.buffer[3] === 0x47
+    && file.buffer[4] === 0x0d && file.buffer[5] === 0x0a
+    && file.buffer[6] === 0x1a && file.buffer[7] === 0x0a;
+
+  if (['.jpg', '.jpeg'].includes(ext) && isJpegHeader) {
+    return { valid: true, mimeType: 'image/jpeg', ext };
+  }
+  if (ext === '.png' && isPngHeader) {
+    return { valid: true, mimeType: 'image/png', ext };
+  }
+  return { valid: false, error: 'Unsupported or invalid image file. Only genuine JPG, JPEG, or PNG screenshots are allowed.' };
+}
+
+function getSafePaymentSettings() {
+  ensurePaymentSettings();
+  const row = db.prepare('SELECT * FROM payment_settings WHERE id = 1').get() || {};
+  const hasQr = Boolean(row.paypal_qr_image && String(row.paypal_qr_image).trim());
+  const paypalCheckoutSupported = Boolean(PAYPAL_CLIENT_ID && PAYPAL_CLIENT_SECRET);
+  return {
+    paypal_holder_name: row.paypal_holder_name || 'Stephanie Nicole Debo Manalo',
+    paypal_contact: row.paypal_contact || '09945586658',
+    paypal_business_email: row.paypal_business_email || '',
+    has_qr_image: hasQr,
+    qr_image_data: hasQr ? row.paypal_qr_image : null,
+    qr_filename: row.paypal_qr_filename || null,
+    qr_updated_at: row.paypal_qr_updated_at || null,
+    paypal_checkout_supported: paypalCheckoutSupported,
+    qr_supports_dynamic_amount: false
+  };
+}
+
+function logPaymentAudit({ paymentId = null, invoiceId, actor = null, action, previousStatus = null, newStatus = null, amount = null, currencyCode = null, notes = null }) {
+  try {
+    db.prepare(`
+      INSERT INTO payment_audit_logs (
+        payment_id, invoice_id, actor_id, actor_name, actor_role, action,
+        previous_status, new_status, amount, currency_code, notes
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      paymentId || null,
+      invoiceId,
+      actor?.id || null,
+      actor?.name || 'System',
+      actor?.role || 'system',
+      action,
+      previousStatus,
+      newStatus,
+      amount,
+      currencyCode,
+      notes
+    );
+  } catch (e) {
+    console.warn('Payment audit log warning:', e.message);
+  }
+}
+
+function generateUniquePaymentCode(prefix, table, column) {
+  const d = new Date();
+  const datePart = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
+  let code = `${prefix}-${datePart}-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
+  while (db.prepare(`SELECT id FROM ${table} WHERE ${column} = ?`).get(code)) {
+    code = `${prefix}-${datePart}-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
+  }
+  return code;
+}
+
+function computeInvoiceDetails(studentId, body = {}) {
+  const {
+    item_type, tutor_user_id, subject, grade_level, requested_date, requested_time,
+    duration_hours, notes, package_key, trial_duration, voucher_code, lessons,
+    student2_id, topic
+  } = body;
+
+  const billingCurrency = getStudentBillingCurrency(studentId);
+
+  if (item_type === 'single_lesson') {
+    if (!tutor_user_id || !subject || !requested_date || !requested_time) {
+      throw Object.assign(new Error('Tutor, subject, date, and time slot are required to create a lesson invoice.'), { statusCode: 400 });
+    }
+    const tutorUser = db.prepare('SELECT id, name FROM users WHERE id = ?').get(tutor_user_id);
+    const tutorProfile = db.prepare('SELECT id, user_id, hourly_rate, rate_currency, is_active, subjects, subject_rates, country FROM tutor_profiles WHERE user_id = ?').get(tutor_user_id);
+    if (!tutorUser || !tutorProfile || !tutorProfile.is_active) {
+      throw Object.assign(new Error('Selected educator is not currently accepting bookings.'), { statusCode: 400 });
+    }
+    const slotCheck = checkScheduleConflict({ studentId, tutorUserId: tutor_user_id, requestedDate: requested_date, requestedTime: requested_time });
+    if (slotCheck.hasConflict) {
+      throw Object.assign(new Error(slotCheck.error), { statusCode: 400 });
+    }
+    const timeStart = (String(requested_time).split(' - ')[0] || String(requested_time)).trim();
+    const requestedDateTime = new Date(`${requested_date}T${timeStart.length === 5 ? timeStart : timeStart.padStart(5, '0')}:00`);
+    if (!isNaN(requestedDateTime.getTime()) && (requestedDateTime.getTime() - Date.now()) / (1000 * 60 * 60) < 3) {
+      throw Object.assign(new Error('Bookings require at least 3 hours advance notice before class start time.'), { statusCode: 400 });
+    }
+
+    const duration = Math.min(parseFloat(duration_hours) || 1.0, 1.0);
+    const tutorRate = getRateForTutorSubject(tutorProfile, subject);
+    const tutorCurr = tutorProfile.rate_currency || getCurrencyForCountry(tutorProfile.country || 'United States');
+    const rawInTutorCurr = Math.round(duration * tutorRate * 100) / 100;
+    const baseAmountUsd = convertCurrencyAmount(rawInTutorCurr, tutorCurr, 'USD');
+    const exactAmount = convertCurrencyAmount(rawInTutorCurr, tutorCurr, billingCurrency.code);
+
+    return {
+      itemType: 'single_lesson',
+      title: `1-on-1 Tutoring: ${subject} with ${tutorUser.name}`,
+      description: `${requested_date} (${requested_time}) • 50-Min Session`,
+      currencyCode: billingCurrency.code,
+      currencySymbol: billingCurrency.symbol,
+      amount: exactAmount,
+      baseAmountUsd,
+      voucherCode: null,
+      discountPercent: 0,
+      discountAmount: 0,
+      metadata: {
+        tutor_user_id: tutorProfile.user_id,
+        tutor_name: tutorUser.name,
+        subject: String(subject).trim(),
+        grade_level: grade_level || 'High School',
+        requested_date,
+        requested_time,
+        duration_hours: duration,
+        hourly_rate: tutorRate,
+        tutor_currency: tutorCurr,
+        notes: String(notes || '').trim()
+      }
+    };
+  }
+
+  if (item_type === 'subscription_package' || item_type === 'trial_lesson') {
+    const resolvedTrialDuration = Number(trial_duration) === 50 ? 50 : 25;
+    const cleanPkgKey = String(package_key || '4_lessons');
+    const packageMap = {
+      trial: { key: 'trial', name: `Trial Lesson (${resolvedTrialDuration}-Min)`, lessons: 1, days: 60, is_trial: 1, duration_minutes: resolvedTrialDuration },
+      free_trial: { key: 'trial', name: `Trial Lesson (${resolvedTrialDuration}-Min)`, lessons: 1, days: 60, is_trial: 1, duration_minutes: resolvedTrialDuration },
+      '4_lessons': { key: '4_lessons', name: 'Starter Tier: 4 Lessons', lessons: 4, days: 30, is_trial: 0, duration_minutes: 50 },
+      '8_lessons': { key: '8_lessons', name: 'Mastery Tier: 8 Lessons', lessons: 8, days: 30, is_trial: 0, duration_minutes: 50 },
+      '12_lessons': { key: '12_lessons', name: 'Honors Tier: 12 Lessons', lessons: 12, days: 60, is_trial: 0, duration_minutes: 50 },
+      '16_lessons': { key: '16_lessons', name: 'Elite Scholar: 16 Lessons', lessons: 16, days: 60, is_trial: 0, duration_minutes: 50 },
+      '20_lessons': { key: '20_lessons', name: 'Capstone Accelerator: 20 Lessons', lessons: 20, days: 60, is_trial: 0, duration_minutes: 50 }
+    };
+    let selectedPkg = packageMap[cleanPkgKey];
+    if (!selectedPkg) {
+      const m = cleanPkgKey.match(/^(\d+)(_lessons)?$/);
+      if (m) {
+        const c = Math.max(1, Math.min(30, parseInt(m[1], 10)));
+        selectedPkg = { key: `${c}_lessons`, name: `${c} Lessons Package`, lessons: c, days: (c === 4 || c === 8) ? 30 : 60, is_trial: 0, duration_minutes: 50 };
+      } else {
+        selectedPkg = packageMap['4_lessons'];
+      }
+    }
+
+    if (!Array.isArray(lessons) || lessons.length !== selectedPkg.lessons) {
+      throw Object.assign(new Error(`Please schedule all ${selectedPkg.lessons} lessons before generating the PayPal invoice.`), { statusCode: 400 });
+    }
+    if (selectedPkg.is_trial) {
+      const trialCheck = db.prepare('SELECT id FROM student_subscriptions WHERE user_id = ? AND is_trial = 1').get(studentId);
+      if (trialCheck) {
+        throw Object.assign(new Error('The trial session is limited to one use per account and has already been used.'), { statusCode: 400 });
+      }
+    }
+
+    let appliedVoucher = null;
+    if (voucher_code && String(voucher_code).trim()) {
+      appliedVoucher = lookupValidVoucher(String(voucher_code).trim());
+      if (!appliedVoucher) {
+        throw Object.assign(new Error('Incorrect or expired voucher code.'), { statusCode: 400 });
+      }
+    }
+
+    const batchSlots = new Map();
+    let subtotalInBilling = 0;
+    let subtotalUsd = 0;
+    const validatedLessons = [];
+
+    for (let i = 0; i < lessons.length; i++) {
+      const item = lessons[i];
+      if (!item.tutor_id || !item.scheduled_date || !item.scheduled_time) {
+        throw Object.assign(new Error(`Lesson ${i + 1} requires a valid tutor, date, and time slot.`), { statusCode: 400 });
+      }
+      const slotKey = `${item.scheduled_date}_${item.scheduled_time}`;
+      if (batchSlots.has(slotKey)) {
+        throw Object.assign(new Error(`Schedule conflict between Lesson ${batchSlots.get(slotKey) + 1} and Lesson ${i + 1}.`), { statusCode: 400 });
+      }
+      batchSlots.set(slotKey, i);
+
+      let tProf = db.prepare('SELECT id, user_id, hourly_rate, rate_currency, country, is_active, subjects, subject_rates FROM tutor_profiles WHERE user_id = ?').get(item.tutor_id);
+      if (!tProf) tProf = db.prepare('SELECT id, user_id, hourly_rate, rate_currency, country, is_active, subjects, subject_rates FROM tutor_profiles WHERE id = ?').get(item.tutor_id);
+      const tUser = tProf ? db.prepare('SELECT id, name FROM users WHERE id = ?').get(tProf.user_id) : null;
+      if (!tProf || !tUser || !tProf.is_active) {
+        throw Object.assign(new Error(`Educator for Lesson ${i + 1} is unavailable.`), { statusCode: 400 });
+      }
+      const conflictCheck = checkScheduleConflict({ studentId, tutorUserId: tProf.user_id, requestedDate: item.scheduled_date, requestedTime: item.scheduled_time });
+      if (conflictCheck.hasConflict) {
+        throw Object.assign(new Error(`Lesson ${i + 1}: ${conflictCheck.error}`), { statusCode: 400 });
+      }
+      const subj = String(item.subject || '').trim() || 'General Tutoring';
+      const tutorRate = Number(getRateForTutorSubject(tProf, subj)) || Number(tProf.hourly_rate) || 58.0;
+      const tutorCurr = tProf.rate_currency || getCurrencyForCountry(tProf.country || 'United States');
+      const lessonInBilling = convertCurrencyAmount(tutorRate, tutorCurr, billingCurrency.code);
+      const lessonInUsd = convertCurrencyAmount(tutorRate, tutorCurr, 'USD');
+
+      subtotalInBilling += lessonInBilling;
+      subtotalUsd += lessonInUsd;
+      validatedLessons.push({
+        index: i + 1,
+        tutor_id: tProf.user_id,
+        tutor_name: tUser.name,
+        subject: subj,
+        scheduled_date: item.scheduled_date,
+        scheduled_time: item.scheduled_time,
+        rate_usd: lessonInUsd,
+        rate_billing: lessonInBilling
+      });
+    }
+
+    const discountPercent = appliedVoucher ? Math.max(0, Math.min(100, Number(appliedVoucher.discount_percent) || 0)) : 0;
+    const discountInBilling = discountPercent > 0
+      ? (billingCurrency.zeroDecimal || billingCurrency.code === 'PHP'
+        ? Math.round(subtotalInBilling * (discountPercent / 100))
+        : Math.round(subtotalInBilling * (discountPercent / 100) * 100) / 100)
+      : 0;
+    const finalAmount = Math.max(0, billingCurrency.zeroDecimal || billingCurrency.code === 'PHP'
+      ? Math.round(subtotalInBilling - discountInBilling)
+      : Math.round((subtotalInBilling - discountInBilling) * 100) / 100);
+    const discountUsd = Math.round(subtotalUsd * (discountPercent / 100) * 100) / 100;
+    const finalUsd = Math.max(0, Math.round((subtotalUsd - discountUsd) * 100) / 100);
+
+    return {
+      itemType: selectedPkg.is_trial ? 'trial_lesson' : 'subscription_package',
+      title: `${selectedPkg.name} (${validatedLessons[0]?.tutor_name || 'Faculty'})`,
+      description: `${selectedPkg.lessons} scheduled session${selectedPkg.lessons > 1 ? 's' : ''} • ${selectedPkg.validityDays || selectedPkg.days}-day validity`,
+      currencyCode: billingCurrency.code,
+      currencySymbol: billingCurrency.symbol,
+      amount: finalAmount,
+      baseAmountUsd: finalUsd,
+      voucherCode: appliedVoucher ? appliedVoucher.code : null,
+      discountPercent,
+      discountAmount: discountInBilling,
+      metadata: {
+        package_key: selectedPkg.key,
+        plan_name: selectedPkg.name,
+        lessons_count: selectedPkg.lessons,
+        days: selectedPkg.days,
+        is_trial: selectedPkg.is_trial,
+        duration_minutes: selectedPkg.duration_minutes,
+        notes: String(notes || '').trim(),
+        lessons: validatedLessons
+      }
+    };
+  }
+
+  if (item_type === 'buddy_session') {
+    const exactAmount = convertCurrencyAmount(6.00, 'USD', billingCurrency.code);
+    return {
+      itemType: 'buddy_session',
+      title: `Aviora Buddy Duo Session: ${(subject && String(subject).trim()) || 'Peer Co-Learning'}`,
+      description: `${requested_date || 'Pending Admin Scheduling'} • Peer Co-Learning ($6.00 USD)`,
+      currencyCode: billingCurrency.code,
+      currencySymbol: billingCurrency.symbol,
+      amount: exactAmount,
+      baseAmountUsd: 6.00,
+      voucherCode: null,
+      discountPercent: 0,
+      discountAmount: 0,
+      metadata: {
+        student2_id: student2_id ? parseInt(student2_id, 10) : null,
+        subject: (subject && String(subject).trim()) || 'Peer Co-Learning & Discussion Studio',
+        topic: (topic && String(topic).trim()) || 'Concept Mastery, Equation Duel & Discussion Topics',
+        scheduled_date: requested_date || 'Pending Admin Scheduling',
+        scheduled_time: requested_time || 'Pending Admin Scheduling'
+      }
+    };
+  }
+
+  throw Object.assign(new Error('Unsupported invoice item type.'), { statusCode: 400 });
+}
+
+function fulfillAcceptedInvoice(invoice) {
+  if (!invoice || invoice.fulfilled) return null;
+  const meta = safeParseObject(invoice.metadata_json) || {};
+  const student = db.prepare('SELECT id, name FROM users WHERE id = ?').get(invoice.student_id);
+
+  if (invoice.item_type === 'single_lesson') {
+    const ins = db.prepare(`
+      INSERT INTO tutoring_requests (
+        student_id, tutor_id, subject, grade_level, requested_date,
+        requested_time, duration_hours, hourly_rate, total_amount, status, notes, payment_method
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, 'paypal')
+    `).run(
+      invoice.student_id,
+      meta.tutor_user_id,
+      meta.subject,
+      meta.grade_level || 'High School',
+      meta.requested_date,
+      meta.requested_time,
+      meta.duration_hours || 1.0,
+      meta.hourly_rate || invoice.base_amount_usd,
+      invoice.base_amount_usd,
+      `${meta.notes ? meta.notes + ' • ' : ''}Paid via PayPal (${invoice.invoice_number})`
+    );
+    db.prepare('UPDATE invoices SET fulfilled = 1, fulfilled_ref_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(ins.lastInsertRowid, invoice.id);
+    if (meta.tutor_user_id) {
+      sendNotification(
+        meta.tutor_user_id,
+        'New Verified Tutoring Request Received',
+        `${student?.name || 'A student'} booked a ${meta.subject} session on ${meta.requested_date} (${meta.requested_time}). PayPal payment verified (${invoice.invoice_number}).`,
+        'request',
+        '/#teacher-requests'
+      );
+    }
+    return ins.lastInsertRowid;
+  }
+
+  if (invoice.item_type === 'subscription_package' || invoice.item_type === 'trial_lesson') {
+    const lessonsList = Array.isArray(meta.lessons) ? meta.lessons : [];
+    const durationHours = meta.is_trial ? ((meta.duration_minutes || 25) / 60) : (50 / 60);
+    const payMethod = meta.is_trial ? 'trial' : 'paypal';
+    const insertSess = db.prepare(`
+      INSERT INTO tutoring_requests (
+        student_id, tutor_id, subject, grade_level, requested_date,
+        requested_time, duration_hours, hourly_rate, total_amount, status, notes, payment_method
+      ) VALUES (?, ?, ?, 'High School', ?, ?, ?, ?, ?, 'accepted', ?, ?)
+    `);
+
+    const discountFactor = invoice.discount_percent > 0 ? (1 - invoice.discount_percent / 100) : 1;
+    for (const l of lessonsList) {
+      const rateUsd = Number(l.rate_usd) || 0;
+      const netUsd = Math.round(rateUsd * discountFactor * 100) / 100;
+      const sessionNotes = meta.notes
+        ? `${meta.notes} (${meta.plan_name}: Lesson ${l.index} of ${meta.lessons_count} • PayPal ${invoice.invoice_number})`
+        : `${meta.plan_name}: Lesson ${l.index} of ${meta.lessons_count} (${l.subject}) • PayPal ${invoice.invoice_number}`;
+      insertSess.run(invoice.student_id, l.tutor_id, l.subject, l.scheduled_date, l.scheduled_time, durationHours, rateUsd, netUsd, sessionNotes, payMethod);
+      sendNotification(
+        l.tutor_id,
+        'New PayPal-Verified Session Scheduled',
+        `${student?.name || 'A student'} scheduled Lesson ${l.index} of ${meta.lessons_count} (${l.subject}) on ${l.scheduled_date} (${l.scheduled_time}).`,
+        'booking',
+        '/#teacher-requests'
+      );
+    }
+
+    const subIns = db.prepare(`
+      INSERT INTO student_subscriptions (
+        user_id, plan_name, lessons_total, lessons_remaining, price_paid,
+        voucher_code, discount_percent, discount_amount, original_price,
+        purchase_date, expires_at, status, is_trial
+      ) VALUES (?, ?, ?, 0, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, datetime('now', '+' || ? || ' days'), 'active', ?)
+    `).run(
+      invoice.student_id,
+      meta.plan_name || 'Package',
+      meta.lessons_count || lessonsList.length || 1,
+      invoice.base_amount_usd,
+      invoice.voucher_code || null,
+      invoice.discount_percent || 0,
+      invoice.discount_amount || 0,
+      Math.round(((invoice.base_amount_usd || 0) / (discountFactor || 1)) * 100) / 100,
+      meta.days || 30,
+      meta.is_trial ? 1 : 0
+    );
+
+    if (invoice.voucher_code) {
+      try { db.prepare('UPDATE vouchers SET used_count = COALESCE(used_count, 0) + 1 WHERE LOWER(code) = LOWER(?)').run(invoice.voucher_code); } catch (e) {}
+    }
+    db.prepare('UPDATE invoices SET fulfilled = 1, fulfilled_ref_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(subIns.lastInsertRowid, invoice.id);
+    return subIns.lastInsertRowid;
+  }
+
+  if (invoice.item_type === 'buddy_session') {
+    const code = generateUniquePaymentCode('BUDDY', 'buddy_sessions', 'session_code').replace(/^BUDDY-\d+-/, 'BUDDY-');
+    const ins = db.prepare(`
+      INSERT INTO buddy_sessions (
+        session_code, session_type, tutor_id, student1_id, student2_id,
+        subject, topic, scheduled_date, scheduled_time, fee_per_student, total_fee,
+        status, room_status, room_started_at, payment_method
+      ) VALUES (?, 'peer_study', NULL, ?, ?, ?, ?, ?, ?, 6.00, 12.00, 'pending', 'closed', CURRENT_TIMESTAMP, 'paypal')
+    `).run(
+      code,
+      invoice.student_id,
+      meta.student2_id || null,
+      meta.subject || 'Peer Co-Learning & Discussion Studio',
+      meta.topic || 'Concept Mastery & Quiz Duel',
+      meta.scheduled_date || 'Pending Admin Scheduling',
+      meta.scheduled_time || 'Pending Admin Scheduling'
+    );
+    db.prepare('UPDATE invoices SET fulfilled = 1, fulfilled_ref_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(ins.lastInsertRowid, invoice.id);
+    return ins.lastInsertRowid;
+  }
+
+  return null;
+}
+
+async function getPayPalOAuthToken() {
+  if (!PAYPAL_CLIENT_ID || !PAYPAL_CLIENT_SECRET) return null;
+  const authHeader = Buffer.from(`${PAYPAL_CLIENT_ID}:${PAYPAL_CLIENT_SECRET}`).toString('base64');
+  const tokenRes = await fetch(`${PAYPAL_API_BASE}/v1/oauth2/token`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Basic ${authHeader}`,
+      'Content-Type': 'application/x-www-form-urlencoded'
+    },
+    body: 'grant_type=client_credentials'
+  });
+  if (!tokenRes.ok) {
+    const errText = await tokenRes.text().catch(() => '');
+    throw new Error(`PayPal authentication failed (${tokenRes.status}): ${errText || 'Check server credentials.'}`);
+  }
+  const tokenJson = await tokenRes.json();
+  return tokenJson.access_token;
+}
+
+function buildDirectPayPalTransferUrl(invoice, settings) {
+  const meta = getCurrencyMeta(invoice.currency_code);
+  const exactVal = meta.zeroDecimal
+    ? String(Math.round(Number(invoice.amount) || 0))
+    : (Number(invoice.amount) || 0).toFixed(2);
+  const recipient = encodeURIComponent(settings.paypal_contact || '09945586658');
+  const amountParam = encodeURIComponent(exactVal);
+  const currencyParam = encodeURIComponent(meta.code || 'USD');
+  return {
+    redirectUrl: `https://www.paypal.com/myaccount/transfer/send/external?recipient=${recipient}&amount=${amountParam}&currencyCode=${currencyParam}`,
+    exactAmount: exactVal,
+    currencyCode: meta.code || 'USD'
+  };
+}
+
+async function buildPayPalRedirectData(invoice, req) {
+  const settings = getSafePaymentSettings();
+  const direct = buildDirectPayPalTransferUrl(invoice, settings);
+  const accessToken = await getPayPalOAuthToken().catch(() => null);
+
+  if (accessToken) {
+    const proto = req.headers['x-forwarded-proto'] || req.protocol || 'http';
+    const host = req.get('host') || `localhost:${PORT}`;
+    const baseUrl = `${proto}://${host}`;
+    const orderPayload = {
+      intent: 'CAPTURE',
+      purchase_units: [{
+        reference_id: invoice.invoice_number,
+        custom_id: invoice.invoice_number,
+        invoice_id: invoice.invoice_number,
+        description: invoice.title,
+        amount: {
+          currency_code: direct.currencyCode,
+          value: (Number(invoice.amount) || 0).toFixed(direct.currencyCode === 'JPY' || direct.currencyCode === 'KRW' ? 0 : 2)
+        }
+      }],
+      application_context: {
+        brand_name: 'Aviora Education',
+        user_action: 'PAY_NOW',
+        return_url: `${baseUrl}/#student-portal?paypal_return=1&invoice=${encodeURIComponent(invoice.invoice_number)}`,
+        cancel_url: `${baseUrl}/#student-portal?invoice=${encodeURIComponent(invoice.invoice_number)}`
+      }
+    };
+
+    const orderRes = await fetch(`${PAYPAL_API_BASE}/v2/checkout/orders`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(orderPayload)
+    });
+    const orderData = await orderRes.json().catch(() => ({}));
+    if (orderRes.ok) {
+      const approveLink = (orderData.links || []).find(l => l.rel === 'approve')?.href || null;
+      if (approveLink) {
+        return {
+          mode: 'orders_api',
+          orderId: orderData.id,
+          redirectUrl: approveLink,
+          exactAmount: direct.exactAmount,
+          currencyCode: direct.currencyCode,
+          recipientName: settings.paypal_holder_name,
+          recipientContact: settings.paypal_contact,
+          invoiceNumber: invoice.invoice_number
+        };
+      }
+    }
+  }
+
+  return {
+    mode: 'direct_transfer',
+    orderId: null,
+    redirectUrl: direct.redirectUrl,
+    exactAmount: direct.exactAmount,
+    currencyCode: direct.currencyCode,
+    recipientName: settings.paypal_holder_name,
+    recipientContact: settings.paypal_contact,
+    invoiceNumber: invoice.invoice_number
+  };
+}
+
+// Get public/authenticated safe PayPal payment settings (NO secret keys returned)
+app.get('/api/payments/settings', authenticateToken, (req, res) => {
+  try {
+    return res.json({ settings: getSafePaymentSettings() });
+  } catch (err) {
+    console.error('Get payment settings error:', err);
+    return res.status(500).json({ error: 'Failed to retrieve payment settings.' });
+  }
+});
+
+// Get authorized PayPal QR code image (authenticated users only)
+app.get('/api/payments/qr-image', authenticateToken, (req, res) => {
+  try {
+    const s = getSafePaymentSettings();
+    if (!s.has_qr_image || !s.qr_image_data) {
+      return res.status(404).json({ error: 'Official Admin PayPal QR image has not been uploaded yet.' });
+    }
+    return res.json({
+      qr_image_data: s.qr_image_data,
+      qr_filename: s.qr_filename,
+      qr_updated_at: s.qr_updated_at
+    });
+  } catch (err) {
+    console.error('Get QR image error:', err);
+    return res.status(500).json({ error: 'Failed to retrieve PayPal QR image.' });
+  }
+});
+
+// Secure proof-of-payment screenshot retrieval (strict owner student or admin only)
+app.get('/api/payments/proof/:paymentId', authenticateToken, (req, res) => {
+  try {
+    const paymentId = parseInt(req.params.paymentId, 10);
+    const payment = db.prepare('SELECT * FROM paypal_payments WHERE id = ?').get(paymentId);
+    if (!payment) {
+      return res.status(404).json({ error: 'Payment proof record not found.' });
+    }
+    if (req.user.role !== 'admin' && payment.student_id !== req.user.id) {
+      return res.status(403).json({ error: 'Access denied. You are not authorized to view this proof of payment.' });
+    }
+    return res.json({
+      payment_id: payment.id,
+      transaction_code: payment.transaction_code,
+      invoice_number: payment.invoice_number,
+      proof_image_data: payment.proof_image_data,
+      proof_filename: payment.proof_filename,
+      proof_mime_type: payment.proof_mime_type
+    });
+  } catch (err) {
+    console.error('Get proof screenshot error:', err);
+    return res.status(500).json({ error: 'Failed to load proof of payment screenshot.' });
+  }
+});
+
+// Student: Create server-calculated Invoice (server-derived exact amount; rejects tampering)
+app.post('/api/student/invoices', authenticateToken, requireRole('student'), (req, res) => {
+  try {
+    const studentId = req.user.id;
+    const computed = computeInvoiceDetails(studentId, req.body);
+    const invoiceNumber = generateUniquePaymentCode('INV', 'invoices', 'invoice_number');
+
+    const ins = db.prepare(`
+      INSERT INTO invoices (
+        invoice_number, student_id, item_type, title, description,
+        currency_code, currency_symbol, amount, base_amount_usd,
+        voucher_code, discount_percent, discount_amount, metadata_json, status
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'unpaid')
+    `).run(
+      invoiceNumber,
+      studentId,
+      computed.itemType,
+      computed.title,
+      computed.description,
+      computed.currencyCode,
+      computed.currencySymbol,
+      computed.amount,
+      computed.baseAmountUsd,
+      computed.voucherCode,
+      computed.discountPercent,
+      computed.discountAmount,
+      JSON.stringify(computed.metadata)
+    );
+
+    const invoice = db.prepare('SELECT * FROM invoices WHERE id = ?').get(ins.lastInsertRowid);
+    logPaymentAudit({
+      invoiceId: invoice.id,
+      actor: req.user,
+      action: 'invoice_created',
+      previousStatus: null,
+      newStatus: 'unpaid',
+      amount: invoice.amount,
+      currencyCode: invoice.currency_code,
+      notes: `${invoice.invoice_number}: ${invoice.title}`
+    });
+
+    const settings = getSafePaymentSettings();
+    const directPreview = buildDirectPayPalTransferUrl(invoice, settings);
+
+    return res.status(201).json({
+      message: `Invoice ${invoice.invoice_number} generated for ${formatExactMoney(invoice.amount, invoice.currency_code, invoice.currency_symbol)}.`,
+      invoice: {
+        ...invoice,
+        formatted_amount: formatExactMoney(invoice.amount, invoice.currency_code, invoice.currency_symbol),
+        paypal_redirect_url: directPreview.redirectUrl
+      },
+      settings
+    });
+  } catch (err) {
+    console.error('Create student invoice error:', err);
+    return res.status(err.statusCode || 500).json({ error: err.message || 'Failed to generate invoice.' });
+  }
+});
+
+// Student: Get own invoices & PayPal payment history
+app.get('/api/student/payments', authenticateToken, requireRole('student'), (req, res) => {
+  try {
+    const studentId = req.user.id;
+    const invoices = db.prepare(`
+      SELECT * FROM invoices WHERE student_id = ? ORDER BY datetime(created_at) DESC, id DESC
+    `).all(studentId);
+
+    const payments = db.prepare(`
+      SELECT id, transaction_code, invoice_id, invoice_number, student_id, payment_channel,
+             amount, currency_code, currency_symbol, recipient_name, recipient_contact,
+             paypal_order_id, paypal_capture_id, paypal_reference_number, payment_date,
+             proof_filename, proof_mime_type, proof_file_size, status, admin_notes,
+             verified_by_name, verified_at, submitted_at, updated_at
+      FROM paypal_payments
+      WHERE student_id = ?
+      ORDER BY datetime(submitted_at) DESC, id DESC
+    `).all(studentId);
+
+    const byInvoice = new Map();
+    for (const p of payments) {
+      if (!byInvoice.has(p.invoice_id)) byInvoice.set(p.invoice_id, []);
+      byInvoice.get(p.invoice_id).push(p);
+    }
+
+    const enrichedInvoices = invoices.map(inv => {
+      const invPayments = byInvoice.get(inv.id) || [];
+      return {
+        ...inv,
+        formatted_amount: formatExactMoney(inv.amount, inv.currency_code, inv.currency_symbol),
+        payments: invPayments,
+        latest_payment: invPayments[0] || null
+      };
+    });
+
+    return res.json({
+      invoices: enrichedInvoices,
+      payments,
+      settings: getSafePaymentSettings()
+    });
+  } catch (err) {
+    console.error('Get student payments error:', err);
+    return res.status(500).json({ error: 'Failed to retrieve student invoices and payment history.' });
+  }
+});
+
+// Student: Build exact-amount PayPal redirect URL (PayPal Orders v2 when configured, or Admin PayPal direct transfer)
+app.post('/api/student/payments/paypal/redirect', authenticateToken, requireRole('student'), async (req, res) => {
+  try {
+    const { invoice_id } = req.body || {};
+    const invoice = db.prepare('SELECT * FROM invoices WHERE id = ? AND student_id = ?').get(invoice_id, req.user.id);
+    if (!invoice) {
+      return res.status(404).json({ error: 'Invoice not found for your account.' });
+    }
+    if (!['unpaid', 'not_received'].includes(invoice.status)) {
+      return res.status(409).json({ error: `Cannot open PayPal checkout while invoice status is "${invoice.status}".` });
+    }
+    const existingPendingOrAccepted = db.prepare("SELECT id, status FROM paypal_payments WHERE invoice_id = ? AND status IN ('pending', 'accepted')").get(invoice.id);
+    if (existingPendingOrAccepted) {
+      return res.status(409).json({ error: 'A payment submission for this invoice is already pending or accepted.' });
+    }
+
+    const redirectData = await buildPayPalRedirectData(invoice, req);
+    logPaymentAudit({
+      invoiceId: invoice.id,
+      actor: req.user,
+      action: 'paypal_redirect_initiated',
+      previousStatus: invoice.status,
+      newStatus: invoice.status,
+      amount: invoice.amount,
+      currencyCode: invoice.currency_code,
+      notes: `PayPal ${redirectData.mode} launched for ${formatExactMoney(invoice.amount, invoice.currency_code, invoice.currency_symbol)}${redirectData.orderId ? ' (Order: ' + redirectData.orderId + ')' : ''}`
+    });
+
+    return res.json(redirectData);
+  } catch (err) {
+    console.error('PayPal redirect error:', err);
+    return res.status(500).json({ error: err.message || 'Failed to prepare PayPal redirect.' });
+  }
+});
+
+// Student: Dynamic PayPal REST API v2 Create Order (uses exact invoice amount & server secrets)
+app.post('/api/student/payments/paypal/create-order', authenticateToken, requireRole('student'), async (req, res) => {
+  try {
+    const { invoice_id } = req.body || {};
+    const invoice = db.prepare('SELECT * FROM invoices WHERE id = ? AND student_id = ?').get(invoice_id, req.user.id);
+    if (!invoice) {
+      return res.status(404).json({ error: 'Invoice not found for your account.' });
+    }
+    if (!['unpaid', 'not_received'].includes(invoice.status)) {
+      return res.status(409).json({ error: `Cannot start PayPal checkout while invoice status is "${invoice.status}".` });
+    }
+    const existingPendingOrAccepted = db.prepare("SELECT id, status FROM paypal_payments WHERE invoice_id = ? AND status IN ('pending', 'accepted')").get(invoice.id);
+    if (existingPendingOrAccepted) {
+      return res.status(409).json({ error: 'A payment submission for this invoice is already pending or accepted.' });
+    }
+    const accessToken = await getPayPalOAuthToken();
+    if (!accessToken) {
+      return res.status(501).json({
+        supported: false,
+        error: 'Direct PayPal Business Checkout API credentials are not configured on this server. Please complete payment via the official Admin PayPal QR code or account details (Stephanie Nicole Debo Manalo — 09945586658) using the exact invoice amount and upload your confirmation screenshot.'
+      });
+    }
+
+    const s = getSafePaymentSettings();
+    const orderPayload = {
+      intent: 'CAPTURE',
+      purchase_units: [{
+        reference_id: invoice.invoice_number,
+        invoice_id: invoice.invoice_number,
+        description: invoice.title,
+        amount: {
+          currency_code: invoice.currency_code,
+          value: Number(invoice.amount).toFixed(2)
+        },
+        ...(s.paypal_business_email ? { payee: { email_address: s.paypal_business_email } } : {})
+      }]
+    };
+
+    const orderRes = await fetch(`${PAYPAL_API_BASE}/v2/checkout/orders`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(orderPayload)
+    });
+    const orderData = await orderRes.json();
+    if (!orderRes.ok) {
+      throw new Error(orderData.message || 'Failed to create PayPal order.');
+    }
+
+    const approveLink = (orderData.links || []).find(l => l.rel === 'approve')?.href || null;
+    logPaymentAudit({
+      invoiceId: invoice.id,
+      actor: req.user,
+      action: 'paypal_order_created',
+      previousStatus: invoice.status,
+      newStatus: invoice.status,
+      amount: invoice.amount,
+      currencyCode: invoice.currency_code,
+      notes: `PayPal Order ${orderData.id} created for ${formatExactMoney(invoice.amount, invoice.currency_code, invoice.currency_symbol)}`
+    });
+
+    return res.json({ supported: true, orderId: orderData.id, approveUrl: approveLink, status: orderData.status, invoice });
+  } catch (err) {
+    console.error('PayPal create-order error:', err);
+    return res.status(500).json({ error: err.message || 'Failed to create dynamic PayPal order.' });
+  }
+});
+
+// Student: Capture dynamic PayPal v2 order (records order/capture ref; proof & admin verification remain enforceable)
+app.post('/api/student/payments/paypal/capture-order', authenticateToken, requireRole('student'), async (req, res) => {
+  try {
+    const { invoice_id, order_id } = req.body || {};
+    const invoice = db.prepare('SELECT * FROM invoices WHERE id = ? AND student_id = ?').get(invoice_id, req.user.id);
+    if (!invoice) {
+      return res.status(404).json({ error: 'Invoice not found for your account.' });
+    }
+    const accessToken = await getPayPalOAuthToken();
+    if (!accessToken) {
+      return res.status(501).json({ supported: false, error: 'Dynamic PayPal API is not configured on this server.' });
+    }
+    const capRes = await fetch(`${PAYPAL_API_BASE}/v2/checkout/orders/${encodeURIComponent(order_id)}/capture`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' }
+    });
+    const capData = await capRes.json();
+    if (!capRes.ok) {
+      return res.status(400).json({ error: capData.message || 'PayPal capture could not be completed.' });
+    }
+    const captureId = capData.purchase_units?.[0]?.payments?.captures?.[0]?.id || null;
+    return res.json({ orderId: order_id, captureId, status: capData.status });
+  } catch (err) {
+    console.error('PayPal capture-order error:', err);
+    return res.status(500).json({ error: err.message || 'Failed to capture PayPal order.' });
+  }
+});
+
+// Student: Submit required Proof of Payment screenshot (strict invoice match, JPG/JPEG/PNG, always Pending)
+app.post('/api/student/invoices/:invoiceId/submit-proof', authenticateToken, requireRole('student'), (req, res) => {
+  paypalImageUpload.single('proof')(req, res, (uploadErr) => {
+    if (uploadErr) {
+      return res.status(400).json({ error: uploadErr.message || 'Invalid screenshot upload.' });
+    }
+
+    try {
+      const invoiceId = parseInt(req.params.invoiceId, 10);
+      const invoice = db.prepare('SELECT * FROM invoices WHERE id = ?').get(invoiceId);
+      if (!invoice) {
+        return res.status(404).json({ error: 'Invoice not found.' });
+      }
+      if (invoice.student_id !== req.user.id) {
+        return res.status(403).json({ error: 'Access denied. You cannot submit proof for another student\'s invoice.' });
+      }
+      if (invoice.status === 'accepted') {
+        return res.status(409).json({ error: 'This invoice has already been accepted. Duplicate submissions are not permitted.' });
+      }
+
+      const activePayment = db.prepare("SELECT id, status FROM paypal_payments WHERE invoice_id = ? AND status IN ('pending', 'accepted')").get(invoice.id);
+      if (activePayment) {
+        return res.status(409).json({
+          error: activePayment.status === 'accepted'
+            ? 'This invoice already has an accepted payment.'
+            : 'A proof of payment for this invoice is already pending Administrator verification.'
+        });
+      }
+
+      const imgCheck = validateUploadedImageBuffer(req.file);
+      if (!imgCheck.valid) {
+        return res.status(400).json({ error: imgCheck.error });
+      }
+
+      // Enforce exact invoice amount if client sent submitted_amount or amount
+      const clientSubmittedAmt = req.body.submitted_amount !== undefined && req.body.submitted_amount !== ''
+        ? Number(req.body.submitted_amount)
+        : (req.body.amount !== undefined && req.body.amount !== '' ? Number(req.body.amount) : invoice.amount);
+      if (!Number.isFinite(clientSubmittedAmt) || Math.abs(clientSubmittedAmt - Number(invoice.amount)) > 0.01) {
+        return res.status(400).json({
+          error: `Payment amount mismatch. Exact invoice amount required is ${formatExactMoney(invoice.amount, invoice.currency_code, invoice.currency_symbol)}.`
+        });
+      }
+
+      const channelRaw = String(req.body.payment_channel || 'paypal_qr').trim();
+      const paymentChannel = ['paypal_qr', 'paypal_direct', 'paypal_checkout', 'paypal_manual'].includes(channelRaw) ? channelRaw : 'paypal_qr';
+      const refNum = req.body.paypal_reference_number ? String(req.body.paypal_reference_number).trim().slice(0, 100) : null;
+      const paypalOrderId = req.body.paypal_order_id ? String(req.body.paypal_order_id).trim().slice(0, 100) : null;
+      const paypalCaptureId = req.body.paypal_capture_id ? String(req.body.paypal_capture_id).trim().slice(0, 100) : null;
+      const paymentDate = (req.body.payment_date && String(req.body.payment_date).trim()) || new Date().toISOString().slice(0, 10);
+
+      const proofSha256 = crypto.createHash('sha256').update(req.file.buffer).digest('hex');
+      const dataUrl = `data:${imgCheck.mimeType};base64,${req.file.buffer.toString('base64')}`;
+      const settings = getSafePaymentSettings();
+      const txCode = generateUniquePaymentCode('PAY', 'paypal_payments', 'transaction_code');
+      const isRetry = invoice.status === 'not_received';
+
+      const createTx = db.transaction(() => {
+        const payIns = db.prepare(`
+          INSERT INTO paypal_payments (
+            transaction_code, invoice_id, invoice_number, student_id, payment_channel,
+            amount, currency_code, currency_symbol, recipient_name, recipient_contact,
+            paypal_order_id, paypal_capture_id, paypal_reference_number, payment_date,
+            proof_image_data, proof_filename, proof_mime_type, proof_file_size, proof_sha256,
+            status
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')
+        `).run(
+          txCode,
+          invoice.id,
+          invoice.invoice_number,
+          req.user.id,
+          paymentChannel,
+          invoice.amount,
+          invoice.currency_code,
+          invoice.currency_symbol,
+          settings.paypal_holder_name,
+          settings.paypal_contact,
+          paypalOrderId,
+          paypalCaptureId,
+          refNum,
+          paymentDate,
+          dataUrl,
+          String(req.file.originalname || 'proof.png').slice(0, 180),
+          imgCheck.mimeType,
+          req.file.buffer.length,
+          proofSha256
+        );
+
+        db.prepare(`
+          UPDATE invoices
+          SET status = 'pending_verification', updated_at = CURRENT_TIMESTAMP
+          WHERE id = ?
+        `).run(invoice.id);
+
+        logPaymentAudit({
+          paymentId: payIns.lastInsertRowid,
+          invoiceId: invoice.id,
+          actor: req.user,
+          action: isRetry ? 'payment_retry_submitted' : 'proof_submitted',
+          previousStatus: invoice.status,
+          newStatus: 'pending',
+          amount: invoice.amount,
+          currencyCode: invoice.currency_code,
+          notes: `Submitted via ${paymentChannel}${refNum ? ' (Ref: ' + refNum + ')' : ''}`
+        });
+
+        return payIns.lastInsertRowid;
+      });
+
+      const paymentId = createTx();
+
+      sendNotification(
+        req.user.id,
+        'Proof of Payment Submitted (Pending Verification)',
+        `Your proof of payment (${txCode}) for Invoice ${invoice.invoice_number} (${formatExactMoney(invoice.amount, invoice.currency_code, invoice.currency_symbol)}) was submitted and is now Pending Administrator verification.`,
+        'payment',
+        '#student-payments'
+      );
+
+      const admins = db.prepare("SELECT id FROM users WHERE role = 'admin'").all();
+      admins.forEach(adm => {
+        sendNotification(
+          adm.id,
+          'PayPal Proof Pending Verification',
+          `${req.user.name} submitted proof of payment (${formatExactMoney(invoice.amount, invoice.currency_code, invoice.currency_symbol)}) for Invoice ${invoice.invoice_number}. Please verify funds in Stephanie Nicole Debo Manalo (09945586658).`,
+          'payment',
+          '#admin-portal?section=paypal-payments'
+        );
+      });
+
+      const savedPayment = db.prepare(`
+        SELECT id, transaction_code, invoice_id, invoice_number, student_id, payment_channel,
+               amount, currency_code, currency_symbol, recipient_name, recipient_contact,
+               paypal_order_id, paypal_capture_id, paypal_reference_number, payment_date,
+               proof_filename, proof_mime_type, proof_file_size, status, submitted_at
+        FROM paypal_payments WHERE id = ?
+      `).get(paymentId);
+
+      return res.status(201).json({
+        message: `Proof of payment submitted! Status is Pending Administrator verification (${txCode}).`,
+        payment: savedPayment,
+        invoice: db.prepare('SELECT * FROM invoices WHERE id = ?').get(invoice.id)
+      });
+    } catch (err) {
+      console.error('Submit proof of payment error:', err);
+      return res.status(500).json({ error: err.message || 'Failed to submit proof of payment.' });
+    }
+  });
+});
+
+// Admin: Get all PayPal payments for verification + audit logs
+app.get('/api/admin/paypal-payments', authenticateToken, requireRole('admin'), (req, res) => {
+  try {
+    const statusFilter = String(req.query.status || 'all').toLowerCase();
+    const search = String(req.query.search || '').trim().toLowerCase();
+
+    const rows = db.prepare(`
+      SELECT
+        p.id, p.transaction_code, p.invoice_id, p.invoice_number, p.student_id, p.payment_channel,
+        p.amount, p.currency_code, p.currency_symbol, p.recipient_name, p.recipient_contact,
+        p.paypal_order_id, p.paypal_capture_id, p.paypal_reference_number, p.payment_date,
+        p.proof_filename, p.proof_mime_type, p.proof_file_size, p.status, p.admin_notes,
+        p.verified_by, p.verified_by_name, p.verified_at, p.submitted_at, p.updated_at,
+        i.title as invoice_title, i.description as invoice_description, i.item_type, i.status as invoice_status, i.fulfilled,
+        u.name as student_name, u.email as student_email, u.phone as student_phone, u.country as student_country
+      FROM paypal_payments p
+      JOIN invoices i ON p.invoice_id = i.id
+      JOIN users u ON p.student_id = u.id
+      ORDER BY
+        CASE p.status WHEN 'pending' THEN 0 WHEN 'not_received' THEN 1 ELSE 2 END,
+        datetime(p.submitted_at) DESC, p.id DESC
+    `).all();
+
+    const logs = db.prepare(`
+      SELECT * FROM payment_audit_logs ORDER BY id DESC LIMIT 400
+    `).all();
+    const logsByInvoice = new Map();
+    for (const l of logs) {
+      if (!logsByInvoice.has(l.invoice_id)) logsByInvoice.set(l.invoice_id, []);
+      logsByInvoice.get(l.invoice_id).push(l);
+    }
+
+    const counts = { all: rows.length, pending: 0, accepted: 0, not_received: 0 };
+    for (const r of rows) {
+      if (counts[r.status] !== undefined) counts[r.status]++;
+    }
+
+    const filtered = rows
+      .filter(r => statusFilter === 'all' || r.status === statusFilter)
+      .filter(r => !search
+        || (r.student_name || '').toLowerCase().includes(search)
+        || (r.student_email || '').toLowerCase().includes(search)
+        || (r.invoice_number || '').toLowerCase().includes(search)
+        || (r.transaction_code || '').toLowerCase().includes(search)
+        || (r.paypal_reference_number || '').toLowerCase().includes(search))
+      .map(r => ({
+        ...r,
+        formatted_amount: formatExactMoney(r.amount, r.currency_code, r.currency_symbol),
+        audit_logs: logsByInvoice.get(r.invoice_id) || []
+      }));
+
+    return res.json({
+      payments: filtered,
+      counts,
+      settings: getSafePaymentSettings()
+    });
+  } catch (err) {
+    console.error('Admin get paypal payments error:', err);
+    return res.status(500).json({ error: 'Failed to load PayPal payments for verification.' });
+  }
+});
+
+// Admin Action A: Accept Payment (only after verifying actual funds received in PayPal)
+app.post('/api/admin/payments/:paymentId/accept', authenticateToken, requireRole('admin'), (req, res) => {
+  try {
+    const paymentId = parseInt(req.params.paymentId, 10);
+    const { admin_notes } = req.body || {};
+    const payment = db.prepare('SELECT * FROM paypal_payments WHERE id = ?').get(paymentId);
+    if (!payment) {
+      return res.status(404).json({ error: 'Payment record not found.' });
+    }
+    const invoice = db.prepare('SELECT * FROM invoices WHERE id = ?').get(payment.invoice_id);
+    if (!invoice) {
+      return res.status(404).json({ error: 'Associated invoice not found.' });
+    }
+    if (payment.status === 'accepted' || invoice.status === 'accepted') {
+      return res.status(409).json({ error: 'This invoice payment has already been accepted.' });
+    }
+
+    const txResult = db.transaction(() => {
+      db.prepare(`
+        UPDATE paypal_payments
+        SET status = 'accepted',
+            admin_notes = ?,
+            verified_by = ?,
+            verified_by_name = ?,
+            verified_at = CURRENT_TIMESTAMP,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+      `).run(
+        (admin_notes && String(admin_notes).trim()) || 'Funds verified in Admin PayPal account (Stephanie Nicole Debo Manalo).',
+        req.user.id,
+        req.user.name,
+        payment.id
+      );
+
+      db.prepare(`
+        UPDATE invoices
+        SET status = 'accepted', updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+      `).run(invoice.id);
+
+      const refId = fulfillAcceptedInvoice(invoice);
+
+      logPaymentAudit({
+        paymentId: payment.id,
+        invoiceId: invoice.id,
+        actor: req.user,
+        action: 'admin_accepted',
+        previousStatus: payment.status,
+        newStatus: 'accepted',
+        amount: payment.amount,
+        currencyCode: payment.currency_code,
+        notes: (admin_notes && String(admin_notes).trim()) || 'Accepted after confirming PayPal funds receipt.'
+      });
+
+      return refId;
+    })();
+
+    sendNotification(
+      payment.student_id,
+      'PayPal Payment Accepted',
+      `Your payment (${payment.transaction_code}) of ${formatExactMoney(payment.amount, payment.currency_code, payment.currency_symbol)} for Invoice ${invoice.invoice_number} has been verified and ACCEPTED by the Administrator. Your lessons are now active!`,
+      'payment',
+      '#student-payments'
+    );
+
+    return res.json({
+      message: `Payment ${payment.transaction_code} marked as Accepted and student booking activated.`,
+      fulfilled_ref_id: txResult
+    });
+  } catch (err) {
+    console.error('Admin accept payment error:', err);
+    return res.status(500).json({ error: err.message || 'Failed to accept payment.' });
+  }
+});
+
+// Admin Action B: Mark as Not Received (student notified and can retry)
+app.post('/api/admin/payments/:paymentId/reject', authenticateToken, requireRole('admin'), (req, res) => {
+  try {
+    const paymentId = parseInt(req.params.paymentId, 10);
+    const { admin_notes } = req.body || {};
+    const payment = db.prepare('SELECT * FROM paypal_payments WHERE id = ?').get(paymentId);
+    if (!payment) {
+      return res.status(404).json({ error: 'Payment record not found.' });
+    }
+    if (payment.status === 'accepted') {
+      return res.status(409).json({ error: 'Accepted payments cannot be marked as Not Received.' });
+    }
+    const invoice = db.prepare('SELECT * FROM invoices WHERE id = ?').get(payment.invoice_id);
+    if (!invoice) {
+      return res.status(404).json({ error: 'Associated invoice not found.' });
+    }
+
+    const noteText = (admin_notes && String(admin_notes).trim()) || 'Payment not received or screenshot verification insufficient. Please check your PayPal transfer and upload a clearer confirmation screenshot.';
+
+    db.transaction(() => {
+      db.prepare(`
+        UPDATE paypal_payments
+        SET status = 'not_received',
+            admin_notes = ?,
+            verified_by = ?,
+            verified_by_name = ?,
+            verified_at = CURRENT_TIMESTAMP,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+      `).run(noteText, req.user.id, req.user.name, payment.id);
+
+      db.prepare(`
+        UPDATE invoices
+        SET status = 'not_received', updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+      `).run(invoice.id);
+
+      logPaymentAudit({
+        paymentId: payment.id,
+        invoiceId: invoice.id,
+        actor: req.user,
+        action: 'admin_marked_not_received',
+        previousStatus: payment.status,
+        newStatus: 'not_received',
+        amount: payment.amount,
+        currencyCode: payment.currency_code,
+        notes: noteText
+      });
+    })();
+
+    sendNotification(
+      payment.student_id,
+      'Payment Marked as Not Received',
+      `Your payment proof (${payment.transaction_code}) for Invoice ${invoice.invoice_number} was marked as Not Received: "${noteText}". Please verify your PayPal transfer and submit a new proof screenshot.`,
+      'payment',
+      `#student-payments?invoice=${encodeURIComponent(invoice.invoice_number)}`
+    );
+
+    return res.json({
+      message: `Payment ${payment.transaction_code} marked as Not Received and student notified.`
+    });
+  } catch (err) {
+    console.error('Admin reject payment error:', err);
+    return res.status(500).json({ error: err.message || 'Failed to update payment status.' });
+  }
+});
+
+// Admin Action C: Request Additional Payment Verification (keeps Pending & notifies student)
+app.post('/api/admin/payments/:paymentId/request-verification', authenticateToken, requireRole('admin'), (req, res) => {
+  try {
+    const paymentId = parseInt(req.params.paymentId, 10);
+    const { message } = req.body || {};
+    const payment = db.prepare('SELECT * FROM paypal_payments WHERE id = ?').get(paymentId);
+    if (!payment) {
+      return res.status(404).json({ error: 'Payment record not found.' });
+    }
+    const noteText = (message && String(message).trim()) || 'Additional PayPal transaction verification details are required. Please provide your PayPal Transaction ID or check your transfer.';
+    db.prepare(`UPDATE paypal_payments SET admin_notes = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`).run(noteText, payment.id);
+    logPaymentAudit({
+      paymentId: payment.id,
+      invoiceId: payment.invoice_id,
+      actor: req.user,
+      action: 'admin_requested_verification',
+      previousStatus: payment.status,
+      newStatus: payment.status,
+      amount: payment.amount,
+      currencyCode: payment.currency_code,
+      notes: noteText
+    });
+    sendNotification(
+      payment.student_id,
+      'Additional Payment Verification Required',
+      `Administrator requested additional verification for Invoice ${payment.invoice_number} (${payment.transaction_code}): "${noteText}"`,
+      'payment',
+      `#student-payments?invoice=${encodeURIComponent(payment.invoice_number)}`
+    );
+    return res.json({ message: 'Additional verification notification sent to the student.' });
+  } catch (err) {
+    console.error('Request verification error:', err);
+    return res.status(500).json({ error: 'Failed to request additional verification.' });
+  }
+});
+
+// Admin: Update PayPal Recipient Settings (Official Name & Phone Number)
+app.put('/api/admin/payment-settings', authenticateToken, requireRole('admin'), (req, res) => {
+  try {
+    ensurePaymentSettings();
+    const { paypal_holder_name, paypal_contact } = req.body || {};
+    const holder = (paypal_holder_name && String(paypal_holder_name).trim()) || 'Stephanie Nicole Debo Manalo';
+    const contact = (paypal_contact && String(paypal_contact).trim()) || '09945586658';
+
+    db.prepare(`
+      UPDATE payment_settings
+      SET paypal_holder_name = ?,
+          paypal_contact = ?,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = 1
+    `).run(holder, contact);
+
+    return res.json({
+      message: 'Admin PayPal recipient details updated.',
+      settings: getSafePaymentSettings()
+    });
+  } catch (err) {
+    console.error('Update payment settings error:', err);
+    return res.status(500).json({ error: 'Failed to update PayPal payment settings.' });
+  }
+});
+
+// Admin: Upload or update real PayPal QR Code image (JPG/JPEG/PNG validated by magic bytes)
+app.post('/api/admin/payment-settings/qr', authenticateToken, requireRole('admin'), (req, res) => {
+  paypalImageUpload.single('qr_image')(req, res, (uploadErr) => {
+    if (uploadErr) {
+      return res.status(400).json({ error: uploadErr.message || 'Invalid QR image upload.' });
+    }
+    try {
+      ensurePaymentSettings();
+      const check = validateUploadedImageBuffer(req.file);
+      if (!check.valid) {
+        return res.status(400).json({ error: check.error });
+      }
+      const dataUrl = `data:${check.mimeType};base64,${req.file.buffer.toString('base64')}`;
+      const filename = String(req.file.originalname || 'admin-paypal-qr.png').slice(0, 180);
+
+      db.prepare(`
+        UPDATE payment_settings
+        SET paypal_qr_image = ?,
+            paypal_qr_filename = ?,
+            paypal_qr_mime_type = ?,
+            paypal_qr_updated_at = CURRENT_TIMESTAMP,
+            paypal_qr_updated_by = ?,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = 1
+      `).run(dataUrl, filename, check.mimeType, req.user.id);
+
+      return res.json({
+        message: 'Official Admin PayPal QR code uploaded and saved.',
+        settings: getSafePaymentSettings()
+      });
+    } catch (err) {
+      console.error('Upload Admin PayPal QR error:', err);
+      return res.status(500).json({ error: 'Failed to save PayPal QR code.' });
+    }
+  });
+});
+
+// Catch-all for SPA client routing (Express 5 compatible)
+app.use((req, res, next) => {
+  if (req.method === 'GET' && !req.path.startsWith('/api') && !req.path.startsWith('/uploads')) {
+    return res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  }
+  next();
+});
+
+// Global error handler
+app.use((err, req, res, next) => {
+  console.error('Unhandled server error:', err);
+  res.status(500).json({ error: err.message || 'An internal server error occurred.' });
+});
+
+// Start Server locally if run directly
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`===============================================`);
+    console.log(`🌟 Aviora Education Server is Live & Running!`);
+    console.log(`📡 URL: http://localhost:${PORT}`);
+    console.log(`🎓 Role Credentials Demo:`);
+    console.log(`   - Administrator: adminaviorastephanie@gmail.com / adminstephanieavioraeducation2026`);
+    console.log(`   - Student Demo:  student@aviora.edu / student123`);
+    console.log(`   - Teacher Demo:  elena.vance@aviora.edu / teacher123`);
+    console.log(`===============================================`);
+  });
+}
+
+module.exports = app;

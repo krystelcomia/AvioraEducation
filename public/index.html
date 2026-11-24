@@ -2041,14 +2041,14 @@
                   <polyline points="22,6 12,13 2,6"></polyline>
                 </svg>
                 <div style="font-size: 0.84rem; color: var(--charcoal-800); line-height: 1.45;">
-                  We sent a 6-digit verification code to <strong id="forgot-sent-email-display" style="color: var(--charcoal-900);">your email</strong>. Please enter it below.
+                  We sent a 6-digit verification code to <strong id="forgot-sent-email-display" style="color: var(--charcoal-900);">your email</strong>. Please check your Primary inbox and enter it below within 10 minutes. Aviora notifications are also sent to this address.
                 </div>
               </div>
 
               <form id="forgot-code-form">
                 <div class="form-group">
                   <label class="form-label" for="page-forgot-code" style="color: var(--charcoal-900); font-weight: 700;">6-Digit Verification Code</label>
-                  <input type="text" id="page-forgot-code" class="form-control" placeholder="123456" maxlength="6" pattern="[0-9]{6}" required autocomplete="one-time-code" style="letter-spacing: 0.35rem; font-size: 1.25rem; text-align: center; font-weight: 700; font-family: monospace;" />
+                  <input type="text" id="page-forgot-code" class="form-control" placeholder="123456" maxlength="6" inputmode="numeric" pattern="[0-9]{6}" required autocomplete="one-time-code" style="letter-spacing: 0.35rem; font-size: 1.25rem; text-align: center; font-weight: 700; font-family: monospace;" />
                   <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem; font-size: 0.8rem;">
                     <span id="forgot-resend-timer" style="color: var(--text-secondary);">Resend available in <strong id="forgot-countdown-sec">45</strong>s</span>
                     <a href="#" id="forgot-resend-btn" style="color: var(--gold-800); font-weight: 600; text-decoration: underline; display: none;" onclick="event.preventDefault(); Auth.resendVerificationCode();">Resend Code</a>
@@ -6570,7 +6570,7 @@
               </div>
               <!-- Modal "Forgot password?" link -->
               <div style="display: flex; justify-content: flex-end; margin-top: 0.4rem;">
-                <a href="#login" id="modal-forgot-password-link" style="font-size: 0.82rem; color: var(--gold-400); font-weight: 600; text-decoration: underline;" onclick="event.preventDefault(); Auth.closeModal(); window.location.hash = '#login'; setTimeout(() => { const em = document.getElementById('login-email'); Auth.showForgotPassword(em ? em.value : ''); }, 50);">Forgot password?</a>
+                <a href="#login" id="modal-forgot-password-link" style="font-size: 0.82rem; color: var(--gold-400); font-weight: 600; text-decoration: underline;" onclick="event.preventDefault(); Auth.openForgotPasswordFromModal();">Forgot password?</a>
               </div>
             </div>
             <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">Sign In to Aviora</button>

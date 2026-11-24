@@ -85,7 +85,8 @@ const NotificationsUI = {
 
       this.saveGmailDispatchedId(user.id, nid);
 
-      if ((!isInitialSeed || isFresh) && typeof Auth !== 'undefined' && typeof Auth.sendEmailJSNotification === 'function') {
+      const alreadySentByServer = Boolean(notif.email_sent) && notif.email_provider && !['none', 'gmail_free_api'].includes(notif.email_provider);
+      if (!alreadySentByServer && (!isInitialSeed || isFresh) && typeof Auth !== 'undefined' && typeof Auth.sendEmailJSNotification === 'function') {
         Auth.sendEmailJSNotification(notif, emailToUse).catch(() => {});
       }
     }

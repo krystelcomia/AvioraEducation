@@ -847,6 +847,13 @@ const Auth = {
     if (forgotCodeForm) {
       forgotCodeForm.addEventListener('submit', (e) => this.handleForgotCodeSubmit(e));
     }
+    const forgotCodeInput = document.getElementById('page-forgot-code');
+    if (forgotCodeInput) {
+      forgotCodeInput.addEventListener('input', () => {
+        const cleaned = forgotCodeInput.value.replace(/\D/g, '').slice(0, 6);
+        if (forgotCodeInput.value !== cleaned) forgotCodeInput.value = cleaned;
+      });
+    }
     const forgotResetForm = document.getElementById('forgot-reset-form');
     if (forgotResetForm) {
       forgotResetForm.addEventListener('submit', (e) => this.handleForgotResetSubmit(e));
@@ -2023,11 +2030,12 @@ const Auth = {
   },
 
   // ==========================================
-  // FORGOT PASSWORD / EMAILJS VERIFICATION FLOW
+  // FORGOT PASSWORD / EMAIL VERIFICATION FLOW
   // ==========================================
   forgotPasswordEmail: '',
   forgotPasswordCode: '',
   forgotPasswordToken: '',
+  forgotChallengeToken: '',
   forgotCountdownTimer: null,
   forgotCountdownSec: 45,
   emailjsConfig: null,
@@ -2051,50 +2059,55 @@ const Auth = {
     }
     if (!this.emailjsConfig) {
       this.emailjsConfig = {
-        serviceId: window.EMAILJS_SERVICE_ID || 'service_aviora',
-        templateId: window.EMAILJS_TEMPLATE_ID || 'template_aviora_reset',
+        serviceId: window.EMAILJS_SERVICE_ID || '',
+        templateId: window.EMAILJS_RESET_TEMPLATE_ID || window.EMAILJS_TEMPLATE_ID || '',
         publicKey: window.EMAILJS_PUBLIC_KEY || ''
       };
     }
     return this.emailjsConfig;
   },
 
-  async sendEmailJSCode(email, code, userName) {
+  async sendEmailJSCode(email, code, userName, options = {}) {
+    if (options.sentByServer) {
+      showToast(`Verification code sent to ${email}. Please check your inbox.`, 'success');
+      return true;
+    }
+
     const cfg = await this.getOrInitEmailJS();
+    const tplId = cfg?.resetTemplateId || cfg?.templateId;
     let sent = false;
 
-    if (typeof emailjs !== 'undefined' && cfg && cfg.serviceId && cfg.templateId && cfg.publicKey) {
+    if (code && typeof emailjs !== 'undefined' && cfg && cfg.serviceId && tplId && cfg.publicKey) {
       try {
         await emailjs.send(
           cfg.serviceId,
-          cfg.templateId,
+          tplId,
           {
             to_email: email,
             recipient_email: email,
-            to_name: userName || 'Aviora Member',
+            email,
+            to_name: userName || 'Student',
             verification_code: code,
             passcode: code,
-            code: code,
-            message: `Your Aviora Education password reset verification code is: ${code}. It expires in 10 minutes.`,
+            code,
+            subject: `Your Aviora Education verification code: ${code}`,
+            message: `Your Aviora Education password reset verification code is ${code}. Enter this code within 10 minutes to reset your password.`,
             app_name: 'Aviora Education'
           },
           cfg.publicKey
         );
         sent = true;
-        console.info('[EmailJS] Verification code email sent to:', email);
       } catch (err) {
-        console.warn('[EmailJS] Send failed via API (falling back to secure notice):', err);
+        console.warn('[EmailJS] Verification send failed:', err);
       }
     }
 
     if (sent) {
       showToast(`Verification code sent to ${email}. Please check your inbox.`, 'success');
-    } else {
-      // Graceful fallback for local development or when API keys are being setup
-      showToast(`Verification code sent to ${email}! (Code: ${code})`, 'info');
-      console.info(`[Aviora Security] Verification code for ${email}: ${code}`);
+      return true;
     }
-    return true;
+
+    throw new Error('Could not deliver the verification email right now. Please ask the administrator to configure Gmail SMTP or EmailJS.');
   },
 
   async sendEmailJSNotification(notif, recipientEmail) {
@@ -2144,6 +2157,22 @@ const Auth = {
     return true;
   },
 
+  openForgotPasswordFromModal() {
+    const modalEmail = document.getElementById('login-email')?.value?.trim() || '';
+    this.closeModal();
+    this._openingForgotPassword = true;
+    const isAlreadyLogin = (window.location.hash || '').split('?')[0] === '#login';
+    if (!isAlreadyLogin) {
+      window.location.hash = '#login';
+      if (typeof Router !== 'undefined' && Router.handleRoute) {
+        Router.handleRoute();
+      }
+    } else {
+      this._openingForgotPassword = false;
+    }
+    this.showForgotPassword(modalEmail);
+  },
+
   showForgotPassword(prefillEmail = '') {
     const loginSection = document.getElementById('page-login-section');
     const forgotSection = document.getElementById('page-forgot-section');
@@ -2158,7 +2187,15 @@ const Auth = {
     if (heading) heading.textContent = 'Reset Your Password';
     if (subheading) subheading.textContent = 'Enter your registered email to receive a verification code';
 
-    // Reset steps
+    // Reset state & steps
+    if (this.forgotCountdownTimer) {
+      clearInterval(this.forgotCountdownTimer);
+      this.forgotCountdownTimer = null;
+    }
+    this.forgotPasswordCode = '';
+    this.forgotPasswordToken = '';
+    this.forgotChallengeToken = '';
+
     const step1 = document.getElementById('forgot-step-1');
     const step2 = document.getElementById('forgot-step-2');
     const step3 = document.getElementById('forgot-step-3');
@@ -2168,6 +2205,9 @@ const Auth = {
     if (step2) step2.style.display = 'none';
     if (step3) step3.style.display = 'none';
     if (step4) step4.style.display = 'none';
+
+    const codeInp = document.getElementById('page-forgot-code');
+    if (codeInp) codeInp.value = '';
 
     // Populate email
     const emailInput = document.getElementById('page-forgot-email');
@@ -2251,6 +2291,38 @@ const Auth = {
     }, 1000);
   },
 
+  async syncEphemeralAccountIfNeeded(email) {
+    const cleanEmail = String(email || '').toLowerCase().trim();
+    const saved = cleanEmail ? this.getSavedCreatedAccount(cleanEmail) : null;
+    if (!saved || !saved.password) return false;
+    try {
+      const backup = this.getSavedProfileBackup ? this.getSavedProfileBackup(cleanEmail) : {};
+      const res = await fetch('/api/auth/sync-account', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: saved.name,
+          email: cleanEmail,
+          password: saved.password,
+          role: saved.role || 'student',
+          phone: backup.phone || saved.phone || null,
+          avatar_url: backup.avatar_url || saved.avatar_url || null,
+          country: saved.country,
+          timezone: saved.timezone,
+          language: saved.language,
+          theme: saved.theme || 'light',
+          grade_level: saved.grade_level,
+          school: backup.school || saved.school,
+          learning_goals: backup.learning_goals || saved.learning_goals,
+          target_subjects: backup.target_subjects || saved.target_subjects
+        })
+      });
+      return res.ok;
+    } catch (e) {
+      return false;
+    }
+  },
+
   async resendVerificationCode() {
     if (!this.forgotPasswordEmail) {
       showToast('Please re-enter your registered email address.', 'error');
@@ -2263,8 +2335,12 @@ const Auth = {
       if (btn) btn.textContent = 'Sending...';
 
       const res = await API.forgotPasswordRequest({ email: this.forgotPasswordEmail });
+      this.forgotChallengeToken = res.challengeToken || '';
       const deliveryEmail = res.recoveryEmail || res.email;
-      await this.sendEmailJSCode(deliveryEmail, res.code, res.userName);
+      await this.sendEmailJSCode(deliveryEmail, res.code, res.userName, {
+        sentByServer: Boolean(res.emailDelivered),
+        provider: res.provider
+      });
 
       this.startResendCountdown();
     } catch (err) {
@@ -2292,12 +2368,31 @@ const Auth = {
         submitBtn.textContent = 'Checking Account & Sending...';
       }
 
-      const res = await API.forgotPasswordRequest({ email });
+      let res;
+      try {
+        res = await API.forgotPasswordRequest({ email });
+      } catch (reqErr) {
+        if (String(reqErr.message || '').includes('No account registered')) {
+          const restored = await this.syncEphemeralAccountIfNeeded(email);
+          if (restored) {
+            res = await API.forgotPasswordRequest({ email });
+          } else {
+            throw reqErr;
+          }
+        } else {
+          throw reqErr;
+        }
+      }
+
       const deliveryEmail = res.recoveryEmail || res.email;
       this.forgotPasswordEmail = res.email;
+      this.forgotChallengeToken = res.challengeToken || '';
 
-      // Dispatch code to linked Google / recovery email via EmailJS
-      await this.sendEmailJSCode(deliveryEmail, res.code, res.userName);
+      // Notify or complete client-only EmailJS relay only when server requested it
+      await this.sendEmailJSCode(deliveryEmail, res.code, res.userName, {
+        sentByServer: Boolean(res.emailDelivered),
+        provider: res.provider
+      });
 
       // Update email label in step 2
       const emailDisplay = document.getElementById('forgot-sent-email-display');
@@ -2330,10 +2425,11 @@ const Auth = {
     e.preventDefault();
     const codeInput = document.getElementById('page-forgot-code');
     const submitBtn = document.getElementById('btn-forgot-verify-code');
-    const code = codeInput ? codeInput.value.trim() : '';
+    const code = codeInput ? codeInput.value.replace(/\D/g, '').trim() : '';
+    if (codeInput && codeInput.value !== code) codeInput.value = code;
 
     if (!code || code.length !== 6) {
-      showToast('Please enter the complete 6-digit verification code.', 'error');
+      showToast('Please enter the exact 6-digit verification code sent to your email.', 'error');
       return;
     }
 
@@ -2345,7 +2441,8 @@ const Auth = {
 
       const res = await API.forgotPasswordVerify({
         email: this.forgotPasswordEmail,
-        code
+        code,
+        challengeToken: this.forgotChallengeToken
       });
 
       this.forgotPasswordCode = code;
@@ -2417,8 +2514,13 @@ const Auth = {
         email: this.forgotPasswordEmail,
         code: this.forgotPasswordCode,
         resetToken: this.forgotPasswordToken,
+        challengeToken: this.forgotChallengeToken,
         newPassword
       });
+
+      this.forgotPasswordCode = '';
+      this.forgotPasswordToken = '';
+      this.forgotChallengeToken = '';
 
       // Update local storage account store if existing
       const accounts = this.getCreatedAccounts();

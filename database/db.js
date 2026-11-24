@@ -539,6 +539,20 @@ function initSchema() {
     CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id);
     CREATE INDEX IF NOT EXISTS idx_subscriptions_user ON student_subscriptions(user_id);
     CREATE INDEX IF NOT EXISTS idx_oauth_linked_user ON oauth_linked_accounts(user_id);
+
+    CREATE TABLE IF NOT EXISTS password_reset_codes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      email TEXT NOT NULL,
+      recovery_email TEXT NOT NULL,
+      user_id INTEGER,
+      code_hash TEXT NOT NULL,
+      reset_token TEXT,
+      attempts INTEGER DEFAULT 0,
+      verified INTEGER DEFAULT 0,
+      expires_at INTEGER NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE INDEX IF NOT EXISTS idx_password_reset_email ON password_reset_codes(email);
   `);
 
   // Ensure existing paypal_payments tables also allow 'paypal_direct'

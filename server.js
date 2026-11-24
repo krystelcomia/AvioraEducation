@@ -6,6 +6,12 @@ const jwt = require('jsonwebtoken');
 const multer = require('multer');
 const fs = require('fs');
 const crypto = require('crypto');
+let nodemailer = null;
+try {
+  nodemailer = require('nodemailer');
+} catch (e) {
+  nodemailer = null;
+}
 const { db, ensureAdminAccount, ensureKrystelAccount, ensureJoshuaAccount, ensurePaymentSettings, getUserPreferences, saveUserPreferences } = require('./database/db');
 const { inspectDocument } = require('./utils/documentDetector');
 
@@ -865,6 +871,134 @@ function getLinkedGmailForUser(userId) {
   }
 }
 
+function getMailTransportConfig() {
+  const gmailUser = (process.env.GMAIL_USER || process.env.SMTP_EMAIL || '').trim();
+  const gmailPass = (process.env.GMAIL_APP_PASSWORD || '').trim();
+  const smtpHost = (process.env.SMTP_HOST || '').trim();
+  const smtpPort = Number(process.env.SMTP_PORT || 587);
+  const smtpSecure = process.env.SMTP_SECURE === 'true' || smtpPort === 465;
+  const smtpUser = (process.env.SMTP_USER || gmailUser).trim();
+  const smtpPass = (process.env.SMTP_PASS || gmailPass).trim();
+  const rawFrom = (process.env.EMAIL_FROM || process.env.SMTP_FROM || smtpUser || '').trim();
+  const fromAddress = rawFrom.includes('<') ? rawFrom : (rawFrom ? `Aviora Education <${rawFrom}>` : '');
+
+  return {
+    gmailUser,
+    gmailPass,
+    smtpHost,
+    smtpPort,
+    smtpSecure,
+    smtpUser,
+    smtpPass,
+    rawFrom,
+    fromAddress,
+    configured: Boolean(nodemailer && smtpUser && smtpPass && (smtpHost || gmailUser))
+  };
+}
+
+let cachedSmtpTransporter = null;
+let cachedSmtpSignature = '';
+
+function getMailTransporter() {
+  const cfg = getMailTransportConfig();
+  if (!cfg.configured || !nodemailer) return null;
+  const sig = `${cfg.smtpHost}|${cfg.smtpPort}|${cfg.smtpSecure}|${cfg.smtpUser}|${cfg.smtpPass}`;
+  if (cachedSmtpTransporter && cachedSmtpSignature === sig) {
+    return { transporter: cachedSmtpTransporter, config: cfg };
+  }
+  const transportOpts = cfg.smtpHost
+    ? {
+        host: cfg.smtpHost,
+        port: cfg.smtpPort,
+        secure: cfg.smtpSecure,
+        auth: { user: cfg.smtpUser, pass: cfg.smtpPass }
+      }
+    : {
+        service: 'gmail',
+        auth: { user: cfg.smtpUser, pass: cfg.smtpPass }
+      };
+  cachedSmtpTransporter = nodemailer.createTransport(transportOpts);
+  cachedSmtpSignature = sig;
+  return { transporter: cachedSmtpTransporter, config: cfg };
+}
+
+function buildVerificationCodeEmail({ userName, recipientEmail, code, expiresInMinutes = 10 }) {
+  const safeName = String(userName || 'Student').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const safeEmail = String(recipientEmail || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const safeCode = String(code || '').replace(/[^0-9A-Za-z]/g, '');
+  const subject = `Your Aviora Education verification code: ${safeCode}`;
+
+  const text = [
+    `Hello ${userName || 'Student'},`,
+    '',
+    `We received a password reset request for your Aviora Education account (${recipientEmail}).`,
+    '',
+    `Your verification code is: ${safeCode}`,
+    '',
+    `Enter this 6-digit code in the password reset form within ${expiresInMinutes} minutes to set a new password.`,
+    'If you did not request a password reset, you can safely ignore this message.',
+    '',
+    'Aviora Education Support'
+  ].join('\n');
+
+  const html = `
+    <!DOCTYPE html>
+    <html lang="en">
+    <body style="margin:0;padding:24px 16px;background-color:#F7F5F0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#1F2937;">
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:540px;margin:0 auto;background:#FFFFFF;border-radius:12px;border:1px solid #E5DEC9;overflow:hidden;">
+        <tr>
+          <td style="padding:22px 24px;border-bottom:2px solid #C68A28;background:#FFFFFF;">
+            <div style="font-size:18px;font-weight:700;color:#14171E;">Aviora Education</div>
+            <div style="font-size:13px;color:#6B7280;margin-top:4px;">Account Password Verification</div>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:24px;">
+            <p style="margin:0 0 12px 0;font-size:15px;line-height:1.5;color:#1F2937;">Hello ${safeName},</p>
+            <p style="margin:0 0 18px 0;font-size:14px;line-height:1.6;color:#374151;">
+              We received a request to reset the password for your Aviora Education account (<strong>${safeEmail}</strong>). Enter this 6-digit verification code on the password reset page:
+            </p>
+            <div style="margin:18px 0;padding:16px;text-align:center;background:#FAF7F0;border:1px solid #D8B467;border-radius:10px;">
+              <span style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:30px;font-weight:700;letter-spacing:8px;color:#14171E;">${safeCode}</span>
+            </div>
+            <p style="margin:0 0 10px 0;font-size:13px;line-height:1.55;color:#4B5563;">
+              This code remains valid for ${expiresInMinutes} minutes.
+            </p>
+            <p style="margin:0;font-size:13px;line-height:1.55;color:#6B7280;">
+              If you did not initiate this request, you can safely ignore this email and your password will remain unchanged.
+            </p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:14px 24px;background:#FAF8F3;border-top:1px solid #ECE7DA;font-size:12px;color:#6B7280;">
+            Sent to ${safeEmail} by Aviora Education. You will also receive important account updates and lesson notifications at this address.
+          </td>
+        </tr>
+      </table>
+    </body>
+    </html>
+  `.trim();
+
+  return { subject, text, html };
+}
+
+function buildNotificationEmailText({ userName, recipientEmail, title, message, link }) {
+  const portalUrl = link && link.startsWith('http')
+    ? link
+    : `https://avioraeducation.vercel.app/${link ? (link.startsWith('#') ? link : '#' + link.replace(/^\//, '')) : '#student-portal'}`;
+  return [
+    `Hello ${userName || 'Aviora Member'},`,
+    '',
+    title || 'Aviora Education Notification',
+    '',
+    message || '',
+    '',
+    `View in Aviora Education: ${portalUrl}`,
+    '',
+    `This account notification was sent to ${recipientEmail}.`
+  ].join('\n');
+}
+
 function buildNotificationEmailHtml({ userName, recipientEmail, title, message, type, link }) {
   const safeName = String(userName || 'Aviora Member').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   const safeTitle = String(title || 'Aviora Notification').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -873,70 +1007,167 @@ function buildNotificationEmailHtml({ userName, recipientEmail, title, message, 
   const categoryMap = {
     lesson_reminder: 'Upcoming Class Reminder',
     reminder: 'Class Reminder',
-    lesson_alert: 'Live Class Alert',
+    lesson_alert: 'Live Class Update',
     message: 'New Direct Message',
-    chat: 'Live Chat Alert',
+    chat: 'Direct Message Update',
     booking: 'Session Booking Update',
     booking_update: 'Schedule Update',
-    schedule: 'Schedule Notification',
-    calendar: 'Calendar Sync Alert',
-    refund: 'Wallet & Refund Notice',
-    wallet: 'Wallet Validity & Credit Notice',
-    wallet_support: 'Wallet Support Chat',
-    approval: 'Account & Credential Update'
+    schedule: 'Schedule Update',
+    calendar: 'Calendar Update',
+    refund: 'Wallet Update',
+    wallet: 'Wallet Balance Notice',
+    wallet_support: 'Wallet Support',
+    approval: 'Account Update',
+    security: 'Account Security Notice'
   };
   const badgeLabel = categoryMap[type] || 'Aviora Account Notification';
   const portalUrl = link && link.startsWith('http') ? link : `https://avioraeducation.vercel.app/${link ? (link.startsWith('#') ? link : '#' + link.replace(/^\//, '')) : '#student-portal'}`;
 
   return `
-    <div style="font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #FAF6F0; padding: 28px 16px; color: #1A202C;">
-      <div style="max-width: 560px; margin: 0 auto; background: #FFFFFF; border-radius: 16px; border: 1px solid rgba(198, 138, 40, 0.28); overflow: hidden; box-shadow: 0 10px 28px rgba(0,0,0,0.06);">
-        <div style="background: linear-gradient(135deg, #1E1B18 0%, #2D261E 100%); padding: 20px 24px; border-bottom: 3px solid #C68A28;">
-          <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: #E6B566; font-weight: 700; margin-bottom: 4px;">
-            AVIORA EDUCATION • REAL-TIME GMAIL ALERT
+    <!DOCTYPE html>
+    <html lang="en">
+    <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #FAF6F0; margin: 0; padding: 24px 16px; color: #1A202C;">
+      <div style="max-width: 560px; margin: 0 auto; background: #FFFFFF; border-radius: 14px; border: 1px solid #E5DEC9; overflow: hidden;">
+        <div style="background: #1E1B18; padding: 18px 24px; border-bottom: 3px solid #C68A28;">
+          <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #E6B566; font-weight: 700; margin-bottom: 4px;">
+            Aviora Education
           </div>
           <div style="font-size: 18px; font-weight: 700; color: #FFFFFF;">
             ${safeTitle}
           </div>
         </div>
         <div style="padding: 24px;">
-          <div style="display: inline-block; background: rgba(198, 138, 40, 0.14); color: #975A16; border: 1px solid rgba(198, 138, 40, 0.3); border-radius: 999px; padding: 4px 12px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 16px;">
+          <div style="display: inline-block; background: #FAF3E3; color: #8A5A12; border: 1px solid #E3C98F; border-radius: 999px; padding: 4px 12px; font-size: 11px; font-weight: 700; margin-bottom: 14px;">
             ${badgeLabel}
           </div>
           <p style="font-size: 14px; color: #2D3748; margin: 0 0 12px 0;">
             Hello <strong>${safeName}</strong>,
           </p>
-          <div style="background: #FDFBF7; border-left: 4px solid #C68A28; padding: 14px 16px; border-radius: 6px; font-size: 14px; line-height: 1.6; color: #1A202C; margin-bottom: 20px;">
+          <div style="background: #FDFBF7; border-left: 4px solid #C68A28; padding: 14px 16px; border-radius: 6px; font-size: 14px; line-height: 1.6; color: #1A202C; margin-bottom: 18px;">
             ${safeMsg}
           </div>
-          <div style="margin-top: 20px; margin-bottom: 8px;">
+          <div style="margin-top: 18px;">
             <a href="${portalUrl}" style="display: inline-block; background: #C68A28; color: #FFFFFF; text-decoration: none; font-weight: 700; font-size: 13px; padding: 11px 22px; border-radius: 8px;">
-              Open in Aviora Education
+              View in Aviora Education
             </a>
           </div>
         </div>
-        <div style="background: #F7F3EB; padding: 14px 24px; font-size: 11px; color: #718096; border-top: 1px solid rgba(0,0,0,0.06);">
-          Delivered in real-time to your linked Gmail account (<strong>${safeEmail}</strong>) so you never miss an upcoming class or update even when the website is closed.
+        <div style="background: #F7F3EB; padding: 14px 24px; font-size: 11px; color: #6B7280; border-top: 1px solid #ECE7DA;">
+          Sent to <strong>${safeEmail}</strong> for your Aviora Education account notifications. You can manage email notification preferences in Settings.
         </div>
       </div>
-    </div>
+    </body>
+    </html>
   `.trim();
 }
 
-async function dispatchRealTimeGmailAPI({ notificationId, userId, userName, recipientEmail, title, message, type, link }) {
-  if (!recipientEmail || !recipientEmail.includes('@')) return { sent: false };
-  const subject = `[Aviora Education] ${title}`;
-  const htmlContent = buildNotificationEmailHtml({ userName, recipientEmail, title, message, type, link });
-  let providerUsed = 'gmail_free_api';
+async function dispatchRealTimeGmailAPI({ notificationId, userId, userName, recipientEmail, title, message, type, link, subject: customSubject, html: customHtml, text: customText, code = null }) {
+  if (!recipientEmail || !recipientEmail.includes('@')) {
+    return { sent: false, delivered: false, reason: 'invalid_email' };
+  }
+  const subject = customSubject || (type === 'security' ? `Aviora Education — ${title}` : `Aviora Education: ${title}`);
+  const htmlContent = customHtml || buildNotificationEmailHtml({ userName, recipientEmail, title, message, type, link });
+  const textContent = customText || buildNotificationEmailText({ userName, recipientEmail, title, message, link });
+  let providerUsed = 'none';
+  let delivered = false;
 
   try {
-    // 1. EmailJS Free REST API (Real-time transactional email API)
-    const emailjsServiceId = process.env.EMAILJS_SERVICE_ID || '';
-    const emailjsTemplateId = process.env.EMAILJS_NOTIFICATION_TEMPLATE_ID || process.env.EMAILJS_TEMPLATE_ID || '';
-    const emailjsPublicKey = process.env.EMAILJS_PUBLIC_KEY || '';
-    const emailjsPrivateKey = process.env.EMAILJS_PRIVATE_KEY || '';
+    // 1. Primary Authenticated SMTP via Nodemailer (Gmail App Password / Custom SMTP -> Primary Inbox)
+    const mailSetup = getMailTransporter();
+    if (mailSetup && mailSetup.transporter && mailSetup.config.fromAddress) {
+      try {
+        await mailSetup.transporter.sendMail({
+          from: mailSetup.config.fromAddress,
+          replyTo: mailSetup.config.rawFrom,
+          to: recipientEmail,
+          subject,
+          text: textContent,
+          html: htmlContent,
+          headers: {
+            'Auto-Submitted': 'auto-generated',
+            'X-Auto-Response-Suppress': 'All'
+          }
+        });
+        providerUsed = 'nodemailer_smtp';
+        delivered = true;
+      } catch (smtpErr) {
+        console.warn('Nodemailer SMTP send warning:', smtpErr.message);
+      }
+    }
 
-    if (emailjsServiceId && emailjsTemplateId && emailjsPublicKey && typeof fetch === 'function') {
+    // 2. Resend Transactional Email API (if RESEND_API_KEY configured)
+    const resendKey = (process.env.RESEND_API_KEY || '').trim();
+    const resendFrom = (process.env.RESEND_FROM || process.env.EMAIL_FROM || '').trim();
+    if (!delivered && resendKey && resendFrom && typeof fetch === 'function') {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      try {
+        const resp = await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${resendKey}`
+          },
+          body: JSON.stringify({
+            from: resendFrom,
+            to: [recipientEmail],
+            subject,
+            text: textContent,
+            html: htmlContent
+          }),
+          signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+        if (resp.ok) {
+          providerUsed = 'resend_api';
+          delivered = true;
+        }
+      } catch (e) {
+        clearTimeout(timeoutId);
+      }
+    }
+
+    // 3. Brevo (Sendinblue) Transactional Email API (if BREVO_API_KEY configured)
+    const brevoKey = (process.env.BREVO_API_KEY || '').trim();
+    const brevoSender = (process.env.BREVO_SENDER_EMAIL || process.env.EMAIL_FROM || '').trim();
+    if (!delivered && brevoKey && brevoSender && typeof fetch === 'function') {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      try {
+        const resp = await fetch('https://api.brevo.com/v3/smtp/email', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'api-key': brevoKey
+          },
+          body: JSON.stringify({
+            sender: { name: 'Aviora Education', email: brevoSender.replace(/^.*<([^>]+)>.*$/, '$1') },
+            to: [{ email: recipientEmail, name: userName || 'Aviora Member' }],
+            subject,
+            textContent,
+            htmlContent
+          }),
+          signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+        if (resp.ok) {
+          providerUsed = 'brevo_api';
+          delivered = true;
+        }
+      } catch (e) {
+        clearTimeout(timeoutId);
+      }
+    }
+
+    // 4. EmailJS Transactional REST API
+    const emailjsServiceId = (process.env.EMAILJS_SERVICE_ID || '').trim();
+    const emailjsTemplateId = code
+      ? (process.env.EMAILJS_RESET_TEMPLATE_ID || process.env.EMAILJS_TEMPLATE_ID || '').trim()
+      : (process.env.EMAILJS_NOTIFICATION_TEMPLATE_ID || process.env.EMAILJS_TEMPLATE_ID || '').trim();
+    const emailjsPublicKey = (process.env.EMAILJS_PUBLIC_KEY || '').trim();
+    const emailjsPrivateKey = (process.env.EMAILJS_PRIVATE_KEY || '').trim();
+
+    if (!delivered && emailjsServiceId && emailjsTemplateId && emailjsPublicKey && typeof fetch === 'function') {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 5000);
       try {
@@ -956,6 +1187,7 @@ async function dispatchRealTimeGmailAPI({ notificationId, userId, userName, reci
               subject,
               title,
               message,
+              ...(code ? { verification_code: code, passcode: code, code } : {}),
               notification_type: type || 'info',
               action_url: link || '#student-portal',
               app_name: 'Aviora Education'
@@ -965,16 +1197,17 @@ async function dispatchRealTimeGmailAPI({ notificationId, userId, userName, reci
         });
         clearTimeout(timeoutId);
         if (resp.ok) {
-          providerUsed = 'emailjs_free_api';
+          providerUsed = 'emailjs_api';
+          delivered = true;
         }
       } catch (e) {
         clearTimeout(timeoutId);
       }
     }
 
-    // 2. Optional Google Apps Script / Gmail Webhook or Resend / Brevo Free API
-    const gmailWebhookUrl = process.env.GMAIL_WEBHOOK_URL || process.env.GOOGLE_SCRIPT_EMAIL_URL || '';
-    if (gmailWebhookUrl && typeof fetch === 'function') {
+    // 5. Google Apps Script / Gmail Webhook (sends directly from Google account to Inbox)
+    const gmailWebhookUrl = (process.env.GMAIL_WEBHOOK_URL || process.env.GOOGLE_SCRIPT_EMAIL_URL || '').trim();
+    if (!delivered && gmailWebhookUrl && typeof fetch === 'function') {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 5000);
       try {
@@ -985,8 +1218,9 @@ async function dispatchRealTimeGmailAPI({ notificationId, userId, userName, reci
             to: recipientEmail,
             toName: userName,
             subject,
-            text: message,
+            text: textContent,
             html: htmlContent,
+            ...(code ? { code } : {}),
             type,
             link
           }),
@@ -995,16 +1229,17 @@ async function dispatchRealTimeGmailAPI({ notificationId, userId, userName, reci
         clearTimeout(timeoutId);
         if (resp.ok) {
           providerUsed = 'google_script_gmail_api';
+          delivered = true;
         }
       } catch (e) {
         clearTimeout(timeoutId);
       }
     }
 
-    // 3. FormSubmit.co Free Zero-Key Email Relay API for Gmail accounts
-    if (providerUsed === 'gmail_free_api' && recipientEmail.toLowerCase().endsWith('@gmail.com') && typeof fetch === 'function' && process.env.DISABLE_EXTERNAL_EMAIL_RELAY !== 'true') {
+    // 6. Optional FormSubmit Fallback only when no authenticated SMTP/API provider is active
+    if (!delivered && typeof fetch === 'function' && process.env.DISABLE_EXTERNAL_EMAIL_RELAY !== 'true') {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 4000);
+      const timeoutId = setTimeout(() => controller.abort(), 4500);
       try {
         const resp = await fetch(`https://formsubmit.co/ajax/${encodeURIComponent(recipientEmail)}`, {
           method: 'POST',
@@ -1016,19 +1251,24 @@ async function dispatchRealTimeGmailAPI({ notificationId, userId, userName, reci
           },
           body: JSON.stringify({
             _subject: subject,
-            _template: 'box',
+            _template: 'basic',
             _captcha: 'false',
-            Platform: 'Aviora Education',
-            Recipient: `${userName} (${recipientEmail})`,
-            Notification: title,
-            Details: message,
-            Category: type || 'info'
+            Service: 'Aviora Education',
+            Recipient: userName || recipientEmail,
+            Subject: title,
+            ...(code ? { Verification_Code: code } : {}),
+            Message: message
           }),
           signal: controller.signal
         });
         clearTimeout(timeoutId);
         if (resp.ok) {
-          providerUsed = 'formsubmit_gmail_api';
+          const json = await resp.json().catch(() => null);
+          const fsOk = json && (json.success === true || json.success === 'true');
+          if (fsOk) {
+            providerUsed = 'formsubmit_relay';
+            delivered = true;
+          }
         }
       } catch (e) {
         clearTimeout(timeoutId);
@@ -1039,19 +1279,26 @@ async function dispatchRealTimeGmailAPI({ notificationId, userId, userName, reci
       if (notificationId) {
         db.prepare(`
           UPDATE notifications
-          SET email_sent = 1,
+          SET email_sent = ?,
               email_recipient = ?,
               email_sent_at = CURRENT_TIMESTAMP,
               email_provider = ?,
               email_subject = ?
           WHERE id = ?
-        `).run(recipientEmail, providerUsed, subject, notificationId);
+        `).run(delivered ? 1 : 0, recipientEmail, providerUsed, subject, notificationId);
+        db.prepare(`
+          UPDATE email_notifications_log
+          SET api_provider = ?,
+              delivery_status = ?
+          WHERE notification_id = ?
+        `).run(providerUsed, delivered ? 'delivered' : 'pending_configuration', notificationId);
       }
     } catch (e) { }
 
-    return { sent: true, recipientEmail, provider: providerUsed, subject };
+    const needsClientEmailJS = !delivered && Boolean(emailjsServiceId && emailjsTemplateId && emailjsPublicKey && !emailjsPrivateKey);
+    return { sent: delivered, delivered, recipientEmail, provider: providerUsed, subject, needsClientEmailJS };
   } catch (err) {
-    return { sent: true, recipientEmail, provider: providerUsed, subject };
+    return { sent: false, delivered: false, recipientEmail, provider: providerUsed, subject, needsClientEmailJS: false };
   }
 }
 
@@ -2911,13 +3158,31 @@ app.get('/api/auth/emailjs-config', (req, res) => {
   return res.json({
     serviceId: process.env.EMAILJS_SERVICE_ID || '',
     templateId: process.env.EMAILJS_TEMPLATE_ID || '',
+    resetTemplateId: process.env.EMAILJS_RESET_TEMPLATE_ID || process.env.EMAILJS_TEMPLATE_ID || '',
     publicKey: process.env.EMAILJS_PUBLIC_KEY || ''
   });
 });
 
-// In-memory store for active password reset verification codes
-// Map: email -> { code: '123456', expiresAt: timestamp, attempts: 0, verified: boolean, userName: string }
+// In-memory cache + persistent SQLite store + HMAC challenge tokens for serverless password resets
 const passwordResetStore = new Map();
+
+function hashResetCode(email, code) {
+  return crypto
+    .createHmac('sha256', JWT_SECRET)
+    .update(`${String(email || '').toLowerCase().trim()}:${String(code || '').trim()}`)
+    .digest('hex');
+}
+
+function timingSafeEqualHex(a, b) {
+  const sA = String(a || '');
+  const sB = String(b || '');
+  if (!sA || !sB || sA.length !== sB.length) return false;
+  try {
+    return crypto.timingSafeEqual(Buffer.from(sA, 'utf8'), Buffer.from(sB, 'utf8'));
+  } catch (e) {
+    return false;
+  }
+}
 
 // Helper: find user either by primary account email or linked Google / Gmail / OAuth email
 function findUserByEmailOrLinkedGoogle(rawEmail) {
@@ -2972,30 +3237,48 @@ function findUserByEmailOrLinkedGoogle(rawEmail) {
   return user || null;
 }
 
-// 1. Request verification code for password reset (supports primary email OR linked Google account)
+// 1. Request verification code for password reset (sends code to the provided email & enables inbox notifications)
 app.post('/api/auth/forgot-password/request', async (req, res) => {
   try {
     const { email } = req.body;
     if (!email || typeof email !== 'string' || !email.trim()) {
-      return res.status(400).json({ error: 'Please enter your registered email or linked Google address.' });
+      return res.status(400).json({ error: 'Please enter your registered email address.' });
     }
     const cleanEmail = email.toLowerCase().trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+      return res.status(400).json({ error: 'Please enter a valid email address.' });
+    }
 
     const user = findUserByEmailOrLinkedGoogle(cleanEmail);
     if (!user) {
-      return res.status(404).json({ error: 'No account registered with this email or linked Google account. Please check your spelling or create an account.' });
+      return res.status(404).json({ error: 'No account registered with this email address. Please check your spelling or sign up.' });
     }
 
+    // Deliver verification code directly to the provided email (and ensure notifications remain enabled on this email)
     const linkedInfo = getLinkedGmailForUser(user.id);
-    const recoveryEmail = ((linkedInfo && linkedInfo.linkedEmail) || user.email || cleanEmail).toLowerCase().trim();
+    const recoveryEmail = cleanEmail.includes('@')
+      ? cleanEmail
+      : (((linkedInfo && linkedInfo.linkedEmail) || user.email).toLowerCase().trim());
     const userName = user.name || recoveryEmail.split('@')[0];
 
-    // Generate secure 6-digit numeric verification code
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
-    const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes expiry
+    try {
+      const existingPrefs = getUserPreferences(user.id);
+      if (!existingPrefs || !existingPrefs.linked_gmail || existingPrefs.notif_gmail === 0) {
+        saveUserPreferences(user.id, {
+          linked_gmail: existingPrefs?.linked_gmail || recoveryEmail,
+          notif_gmail: 1
+        });
+      }
+    } catch (prefErr) { }
+
+    // Generate cryptographically random 6-digit numeric verification code
+    const code = crypto.randomInt(100000, 1000000).toString();
+    const expiresInMinutes = 10;
+    const expiresAt = Date.now() + expiresInMinutes * 60 * 1000;
+    const codeHash = hashResetCode(cleanEmail, code);
 
     const resetEntry = {
-      code,
+      codeHash,
       expiresAt,
       attempts: 0,
       verified: false,
@@ -3010,16 +3293,48 @@ app.post('/api/auth/forgot-password/request', async (req, res) => {
       passwordResetStore.set(recoveryEmail, resetEntry);
     }
 
-    console.log(`[Aviora Security] Password reset code generated for user ${user.id} (${recoveryEmail}): ${code}`);
-
     try {
-      await dispatchRealTimeGmailAPI({
+      db.prepare('DELETE FROM password_reset_codes WHERE LOWER(email) = LOWER(?) OR user_id = ?').run(cleanEmail, user.id);
+      db.prepare(`
+        INSERT INTO password_reset_codes (email, recovery_email, user_id, code_hash, expires_at)
+        VALUES (?, ?, ?, ?, ?)
+      `).run(cleanEmail, recoveryEmail, user.id, codeHash, expiresAt);
+    } catch (dbErr) {
+      console.warn('Password reset SQLite store notice:', dbErr.message);
+    }
+
+    const challengeToken = jwt.sign(
+      {
+        purpose: 'pw_reset_challenge',
+        email: cleanEmail,
+        recoveryEmail,
+        userId: user.id,
+        codeHash
+      },
+      JWT_SECRET,
+      { expiresIn: `${expiresInMinutes}m` }
+    );
+
+    const emailContent = buildVerificationCodeEmail({
+      userName,
+      recipientEmail: recoveryEmail,
+      code,
+      expiresInMinutes
+    });
+
+    let dispatchResult = { sent: false, delivered: false, provider: 'none', needsClientEmailJS: false };
+    try {
+      dispatchResult = await dispatchRealTimeGmailAPI({
         notificationId: null,
         userId: user.id,
         userName,
         recipientEmail: recoveryEmail,
-        title: 'Password Recovery Verification Code',
-        message: `Your Aviora Education password reset verification code is ${code}. This code expires in 10 minutes. Never share this code with anyone.`,
+        title: 'Password Reset Verification Code',
+        message: `Your Aviora Education password reset verification code is ${code}. Valid for ${expiresInMinutes} minutes.`,
+        subject: emailContent.subject,
+        text: emailContent.text,
+        html: emailContent.html,
+        code,
         type: 'security',
         link: '#login'
       });
@@ -3027,14 +3342,44 @@ app.post('/api/auth/forgot-password/request', async (req, res) => {
       console.warn('Recovery code email relay warning:', dispatchErr.message);
     }
 
+    try {
+      db.prepare(`
+        INSERT INTO email_notifications_log (
+          notification_id, user_id, recipient_email, recipient_name,
+          subject, message, html_content, type, link, api_provider, delivery_status
+        )
+        VALUES (NULL, ?, ?, ?, ?, ?, NULL, 'security', '#login', ?, ?)
+      `).run(
+        user.id,
+        recoveryEmail,
+        userName,
+        'Password Reset Verification Code',
+        `6-digit password reset verification code requested for ${recoveryEmail}.`,
+        dispatchResult.provider || 'none',
+        dispatchResult.delivered ? 'delivered' : (dispatchResult.needsClientEmailJS ? 'client_relay' : 'not_configured')
+      );
+    } catch (logErr) { }
+
+    if (!dispatchResult.delivered && !dispatchResult.needsClientEmailJS) {
+      return res.status(503).json({
+        error: 'We could not deliver the verification email because no mail sender is currently configured on the server. Please configure GMAIL_USER & GMAIL_APP_PASSWORD (or SMTP/Resend/EmailJS credentials) in environment settings.',
+        code: 'EMAIL_DELIVERY_UNAVAILABLE',
+        emailConfigRequired: true
+      });
+    }
+
     return res.json({
       success: true,
-      message: 'Verification code generated.',
+      message: `A 6-digit verification code has been sent to ${recoveryEmail}.`,
       email: cleanEmail,
       recoveryEmail,
       userName,
-      code, // Returned to client to power client-side EmailJS dispatch when configured
-      expiresInMinutes: 10
+      emailDelivered: Boolean(dispatchResult.delivered),
+      needsClientEmailJS: Boolean(dispatchResult.needsClientEmailJS),
+      provider: dispatchResult.provider,
+      challengeToken,
+      ...(dispatchResult.needsClientEmailJS ? { code } : {}),
+      expiresInMinutes
     });
   } catch (error) {
     console.error('Forgot password request error:', error);
@@ -3045,44 +3390,107 @@ app.post('/api/auth/forgot-password/request', async (req, res) => {
 // 2. Verify submitted 6-digit code
 app.post('/api/auth/forgot-password/verify', (req, res) => {
   try {
-    const { email, code } = req.body;
+    const { email, code, challengeToken } = req.body;
     if (!email || !code) {
-      return res.status(400).json({ error: 'Email and verification code are required.' });
+      return res.status(400).json({ error: 'Email and 6-digit verification code are required.' });
     }
     const cleanEmail = email.toLowerCase().trim();
-    const cleanCode = String(code).trim();
-
-    const record = passwordResetStore.get(cleanEmail);
-    if (!record) {
-      return res.status(400).json({ error: 'No verification code was requested for this email, or it has expired. Please request a new code.' });
+    const cleanCode = String(code).replace(/\D/g, '').trim();
+    if (cleanCode.length !== 6) {
+      return res.status(400).json({ error: 'Please enter the exact 6-digit numeric verification code sent to your email.' });
     }
 
-    if (Date.now() > record.expiresAt) {
+    const candidateHash = hashResetCode(cleanEmail, cleanCode);
+
+    let dbRow = null;
+    try {
+      dbRow = db.prepare(`
+        SELECT * FROM password_reset_codes
+        WHERE LOWER(email) = LOWER(?) OR LOWER(recovery_email) = LOWER(?)
+        ORDER BY id DESC LIMIT 1
+      `).get(cleanEmail, cleanEmail);
+    } catch (e) { }
+
+    const memRecord = passwordResetStore.get(cleanEmail);
+    let tokenChallenge = null;
+    if (challengeToken) {
+      try {
+        const decoded = jwt.verify(challengeToken, JWT_SECRET);
+        if (decoded && decoded.purpose === 'pw_reset_challenge' && String(decoded.email || '').toLowerCase().trim() === cleanEmail) {
+          tokenChallenge = decoded;
+        }
+      } catch (jwtErr) {
+        if (jwtErr.name === 'TokenExpiredError') {
+          return res.status(400).json({ error: 'Verification code has expired. Please request a new code.' });
+        }
+      }
+    }
+
+    const activeSource = dbRow || memRecord || tokenChallenge;
+    if (!activeSource) {
+      return res.status(400).json({ error: 'No active verification code found for this email, or it has expired. Please request a new code.' });
+    }
+
+    const expiresAt = dbRow ? Number(dbRow.expires_at) : (memRecord ? memRecord.expiresAt : (tokenChallenge.exp * 1000));
+    if (Date.now() > expiresAt) {
       passwordResetStore.delete(cleanEmail);
-      if (record.recoveryEmail) passwordResetStore.delete(record.recoveryEmail);
+      try { db.prepare('DELETE FROM password_reset_codes WHERE LOWER(email) = LOWER(?)').run(cleanEmail); } catch (e) { }
       return res.status(400).json({ error: 'Verification code has expired. Please request a new code.' });
     }
 
-    if (record.code !== cleanCode) {
-      record.attempts = (record.attempts || 0) + 1;
-      if (record.attempts >= 5) {
-        passwordResetStore.delete(cleanEmail);
-        if (record.recoveryEmail) passwordResetStore.delete(record.recoveryEmail);
-        return res.status(400).json({ error: 'Too many incorrect attempts. Please request a new code.' });
-      }
-      return res.status(400).json({ error: 'Incorrect verification code. Please check your inbox and try again.' });
+    const attempts = dbRow ? Number(dbRow.attempts || 0) : (memRecord ? (memRecord.attempts || 0) : 0);
+    if (attempts >= 5) {
+      passwordResetStore.delete(cleanEmail);
+      try { db.prepare('DELETE FROM password_reset_codes WHERE LOWER(email) = LOWER(?)').run(cleanEmail); } catch (e) { }
+      return res.status(400).json({ error: 'Too many incorrect attempts. Please request a new verification code.' });
     }
 
-    // Mark as verified
-    record.verified = true;
-    const resetToken = crypto.randomBytes(24).toString('hex');
-    record.resetToken = resetToken;
+    const expectedHash = (dbRow && dbRow.code_hash) || (memRecord && memRecord.codeHash) || (tokenChallenge && tokenChallenge.codeHash);
+    if (!timingSafeEqualHex(expectedHash, candidateHash)) {
+      if (memRecord) memRecord.attempts = attempts + 1;
+      if (dbRow) {
+        try {
+          db.prepare('UPDATE password_reset_codes SET attempts = attempts + 1 WHERE id = ?').run(dbRow.id);
+        } catch (e) { }
+      }
+      if (attempts + 1 >= 5) {
+        passwordResetStore.delete(cleanEmail);
+        try { db.prepare('DELETE FROM password_reset_codes WHERE LOWER(email) = LOWER(?)').run(cleanEmail); } catch (e) { }
+        return res.status(400).json({ error: 'Too many incorrect attempts. Please request a new verification code.' });
+      }
+      return res.status(400).json({ error: 'Incorrect verification code. Please check your email inbox and enter the exact 6-digit code.' });
+    }
+
+    const resolvedRecovery = (dbRow && dbRow.recovery_email) || (memRecord && memRecord.recoveryEmail) || (tokenChallenge && tokenChallenge.recoveryEmail) || cleanEmail;
+    const resolvedUserId = (dbRow && dbRow.user_id) || (memRecord && memRecord.userId) || (tokenChallenge && tokenChallenge.userId) || null;
+    const resetToken = jwt.sign(
+      {
+        purpose: 'pw_reset_verified',
+        email: cleanEmail,
+        recoveryEmail: resolvedRecovery,
+        userId: resolvedUserId,
+        codeHash: expectedHash,
+        nonce: crypto.randomBytes(12).toString('hex')
+      },
+      JWT_SECRET,
+      { expiresIn: '15m' }
+    );
+
+    if (memRecord) {
+      memRecord.verified = true;
+      memRecord.resetToken = resetToken;
+    }
+    if (dbRow) {
+      try {
+        db.prepare('UPDATE password_reset_codes SET verified = 1, reset_token = ? WHERE id = ?').run(resetToken, dbRow.id);
+      } catch (e) { }
+    }
 
     return res.json({
       success: true,
       message: 'Verification code confirmed. You may now set your new password.',
       resetToken,
-      recoveryEmail: record.recoveryEmail || cleanEmail
+      recoveryEmail: resolvedRecovery
     });
   } catch (error) {
     console.error('Verify code error:', error);
@@ -3094,17 +3502,29 @@ app.post('/api/auth/forgot-password/verify', (req, res) => {
 app.post('/api/auth/forgot-password/reset', (req, res) => {
   try {
     const { email, code, resetToken, newPassword } = req.body;
-    if (!email || !newPassword) {
-      return res.status(400).json({ error: 'Email and new password are required.' });
+    if (!email || !newPassword || !resetToken) {
+      return res.status(400).json({ error: 'Email, verified session token, and new password are required.' });
     }
     const cleanEmail = email.toLowerCase().trim();
-    const cleanCode = code ? String(code).trim() : '';
+    const cleanCode = code ? String(code).replace(/\D/g, '').trim() : '';
+    if (cleanCode.length !== 6) {
+      return res.status(400).json({ error: 'A verified 6-digit code is required to complete password reset.' });
+    }
+    const candidateHash = hashResetCode(cleanEmail, cleanCode);
 
-    const record = passwordResetStore.get(cleanEmail);
-    const isTokenValid = record && record.verified && (record.resetToken === resetToken || record.code === cleanCode);
-
-    if (!record || !isTokenValid || Date.now() > record.expiresAt) {
+    let decodedReset = null;
+    try {
+      decodedReset = jwt.verify(resetToken, JWT_SECRET);
+    } catch (jwtErr) {
       return res.status(400).json({ error: 'Verification session expired. Please restart the password reset process.' });
+    }
+    if (
+      !decodedReset
+      || decodedReset.purpose !== 'pw_reset_verified'
+      || String(decodedReset.email || '').toLowerCase().trim() !== cleanEmail
+      || !timingSafeEqualHex(decodedReset.codeHash, candidateHash)
+    ) {
+      return res.status(400).json({ error: 'Verification session is invalid. Please request a new code.' });
     }
 
     // Strict Strong Password Requirements (same as registration):
@@ -3129,12 +3549,24 @@ app.post('/api/auth/forgot-password/reset', (req, res) => {
     const passwordHash = bcrypt.hashSync(newPassword, salt);
 
     // Update target user resolved from primary email OR linked Google account
-    let user = record.userId
-      ? db.prepare('SELECT id, name, email, role FROM users WHERE id = ?').get(record.userId)
+    let user = decodedReset.userId
+      ? db.prepare('SELECT id, name, email, role FROM users WHERE id = ?').get(decodedReset.userId)
       : findUserByEmailOrLinkedGoogle(cleanEmail);
+
+    if (!user) {
+      user = findUserByEmailOrLinkedGoogle(cleanEmail);
+    }
 
     if (user) {
       db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(passwordHash, user.id);
+      const notifyAddr = decodedReset.recoveryEmail || cleanEmail || user.email;
+      try {
+        const curPrefs = getUserPreferences(user.id);
+        saveUserPreferences(user.id, {
+          linked_gmail: curPrefs?.linked_gmail || notifyAddr,
+          notif_gmail: 1
+        });
+      } catch (pErr) { }
       sendNotification(
         user.id,
         'Password Updated Successfully',
@@ -3143,21 +3575,15 @@ app.post('/api/auth/forgot-password/reset', (req, res) => {
         '#settings'
       );
     } else {
-      const isJoshua = cleanEmail === 'joshuagarcia@gmail.com';
-      const designatedRole = isJoshua ? 'teacher' : 'student';
-      const name = isJoshua ? 'Joshua Garcia' : 'Krystel Comia';
-      const defaultAvatar = isJoshua
-        ? 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=300&q=80'
-        : 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=300&q=80';
-      db.prepare(`
-        INSERT INTO users (name, email, password_hash, role, status, avatar_url)
-        VALUES (?, ?, ?, ?, 'active', ?)
-      `).run(name, cleanEmail, passwordHash, designatedRole, defaultAvatar);
+      return res.status(404).json({ error: 'Account not found. Please sign up or contact support.' });
     }
 
-    // Clean up reset session
+    // Clean up single-use reset session
     passwordResetStore.delete(cleanEmail);
-    if (record.recoveryEmail) passwordResetStore.delete(record.recoveryEmail);
+    if (decodedReset.recoveryEmail) passwordResetStore.delete(decodedReset.recoveryEmail);
+    try {
+      db.prepare('DELETE FROM password_reset_codes WHERE LOWER(email) = LOWER(?) OR user_id = ?').run(cleanEmail, user.id);
+    } catch (e) { }
 
     return res.json({
       success: true,

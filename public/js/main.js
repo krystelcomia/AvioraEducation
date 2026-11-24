@@ -314,6 +314,13 @@ const Router = {
       const view = document.getElementById('view-login');
       if (view) view.style.display = 'block';
       window.scrollTo(0, 0);
+      if (typeof Auth !== 'undefined') {
+        if (Auth._openingForgotPassword) {
+          Auth._openingForgotPassword = false;
+        } else if (typeof Auth.hideForgotPassword === 'function') {
+          Auth.hideForgotPassword(false);
+        }
+      }
       const queryStr = hash.includes('?') ? hash.split('?')[1] : '';
       const params = new URLSearchParams(queryStr);
       if (params.get('error')) {

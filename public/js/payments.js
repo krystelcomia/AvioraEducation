@@ -247,6 +247,7 @@ const AvioraPayments = {
     const isAccepted = inv.status === 'accepted';
     const canSubmitProof = !hasPendingPayment && !isAccepted && ['unpaid', 'not_received'].includes(inv.status);
     const isConfirmedSent = Boolean(this.confirmedSentInvoices[inv.id]);
+    const showProofSection = isConfirmedSent || hasPendingPayment || isAccepted;
     const latestRejection = Array.isArray(inv.payments) ? inv.payments.find(p => p.status === 'not_received') : null;
     const todayIso = new Date().toISOString().slice(0, 10);
     const chosenMethodText = this.selectedChannel === 'paypal_qr' ? 'Pay via QR Code' : 'Send Payment Directly';
@@ -257,18 +258,18 @@ const AvioraPayments = {
           <span class="paypal-step-num">1</span>
           <span>Review Amount (${this.escapeHtml(exactAmountStr)})</span>
         </div>
-        <div class="paypal-process-step ${isConfirmedSent || hasPendingPayment || isAccepted ? 'active' : ''}">
+        <div class="paypal-process-step active">
           <span class="paypal-step-num">2</span>
           <span>Proceed to PayPal</span>
         </div>
-        <div class="paypal-process-step ${isConfirmedSent || hasPendingPayment || isAccepted ? 'active' : ''}">
+        <div class="paypal-process-step ${showProofSection ? 'active' : ''}">
           <span class="paypal-step-num">3</span>
           <span>Upload Proof Screenshot</span>
         </div>
       </div>
 
       <div class="paypal-checkout-shell ${isCompact ? 'is-compact' : ''}">
-        <!-- Payment Details, Direct PayPal Redirect / QR Option -->
+        <!-- Steps 1 & 2: Payment Details, Direct PayPal Redirect / QR Option -->
         <div class="paypal-panel-card">
           <div class="paypal-panel-header">
             <div>
@@ -279,7 +280,7 @@ const AvioraPayments = {
             </div>
             <div style="text-align: right;">
               <span class="paypal-status-badge ${stMeta.cls}">${stMeta.label}</span>
-              <div class="paypal-amount-label" style="margin-top: 0.55rem;">Exact Amount Due</div>
+              <div class="paypal-amount-label" style="margin-top: 0.45rem;">Exact Amount Due</div>
               <div class="paypal-exact-amount" id="paypal-locked-invoice-amount">${this.escapeHtml(exactAmountStr)}</div>
               <div class="paypal-amount-lock-note">Locked to invoice • Do not alter</div>
             </div>
@@ -291,7 +292,14 @@ const AvioraPayments = {
             </div>
           ` : ''}
 
-          <!-- Admin Designated PayPal Account Details (Already Displayed — No Separate Account Needed) -->
+          ${latestRejection && canSubmitProof && !isConfirmedSent ? `
+            <div class="paypal-rejection-banner">
+              <strong>Previous Submission Marked as Not Received:</strong>
+              <div>${this.escapeHtml(latestRejection.admin_notes || 'Please verify your PayPal transfer and retry payment below.')}</div>
+            </div>
+          ` : ''}
+
+          <!-- Admin Designated PayPal Account Details -->
           <div class="paypal-recipient-card">
             <div class="paypal-recipient-badge">Official Admin PayPal Recipient Account</div>
             <div class="paypal-recipient-grid">
@@ -335,7 +343,7 @@ const AvioraPayments = {
                 ` : `
                   <div class="paypal-qr-missing-box">
                     <strong>Admin PayPal QR Image Not Yet Uploaded</strong>
-                    <p>Switch to <strong>Send Payment Directly (PayPal)</strong> above to redirect straight to PayPal with your exact invoice amount.</p>
+                    <p style="margin: 0.35rem 0 0 0;">Switch to <strong>Send Payment Directly (PayPal)</strong> above to redirect straight to PayPal with your exact invoice amount.</p>
                   </div>
                 `}
               </div>
@@ -360,7 +368,7 @@ const AvioraPayments = {
               <ol class="paypal-steps-list" style="margin-bottom: 0.8rem;">
                 <li>Click <strong>Proceed to Payment (${this.escapeHtml(exactAmountStr)})</strong> below to redirect directly to your PayPal account pre-filled with recipient <strong>${this.escapeHtml(holderName)}</strong> (<code>${this.escapeHtml(holderContact)}</code>) and the exact amount <strong>${this.escapeHtml(exactAmountStr)}</strong>.</li>
                 <li>Complete the real-money transfer inside your PayPal account.</li>
-                <li>Return here and upload a screenshot of your PayPal confirmation receipt (Step 3 unlocks automatically).</li>
+                <li>Return here once paid to upload your PayPal confirmation receipt screenshot below.</li>
               </ol>
 
               ${canSubmitProof ? `
@@ -380,82 +388,85 @@ const AvioraPayments = {
           `}
         </div>
 
-        <!-- Step 3: Required Proof of Payment Upload (Revealed once payment redirect / sent confirmed) -->
-        <div class="paypal-panel-card" id="paypal-proof-upload-section">
-          <div class="paypal-eyebrow" style="margin-bottom: 0.25rem;">Step 3 • Proof of Payment Required</div>
-          <h3 style="margin: 0 0 0.35rem 0;">Upload Confirmation Screenshot</h3>
-
-          ${latestRejection && canSubmitProof ? `
-            <div class="paypal-rejection-banner">
-              <strong>Previous Submission Marked as Not Received:</strong>
-              <div>${this.escapeHtml(latestRejection.admin_notes || 'Please verify your PayPal transfer and submit a new proof screenshot.')}</div>
-            </div>
-          ` : ''}
-
-          ${isAccepted ? `
-            <div class="paypal-accepted-banner">
-              <strong>Payment Accepted &amp; Verified</strong>
-              <p>The Administrator verified funds receipt for ${this.escapeHtml(exactAmountStr)} and activated your lesson/package.</p>
-            </div>
-          ` : hasPendingPayment ? `
-            <div class="paypal-pending-banner">
-              <strong>Pending Admin Review</strong>
-              <p>Your proof of payment for <strong>${this.escapeHtml(inv.invoice_number)}</strong> (${this.escapeHtml(exactAmountStr)}) has been submitted! Status is <strong>Pending Admin Review</strong> until the Administrator verifies real funds arrived in ${this.escapeHtml(holderName)} (${this.escapeHtml(holderContact)}).</p>
-              <a href="#student-portal" class="btn btn-primary btn-sm" style="margin-top: 0.6rem;" onclick="AvioraPayments.finishInlineFlowToDashboard()">View Live Status in Student Dashboard →</a>
-            </div>
-          ` : !isConfirmedSent ? `
-            <div class="paypal-proof-locked-box">
-              <div class="paypal-locked-icon">🔒</div>
-              <h4 style="margin: 0 0 0.4rem 0;">Upload Option Appears After Clicking Proceed</h4>
-              <p style="font-size: 0.8rem; color: var(--text-secondary); line-height: 1.5; margin: 0;">
-                Click <strong>"Proceed to Payment (${this.escapeHtml(exactAmountStr)})"</strong> (or send via <strong>QR Code</strong>) first. Once redirected/sent, this proof upload form unlocks automatically so you can submit your screenshot for Admin verification.
-              </p>
-            </div>
-          ` : `
-            <p style="font-size: 0.8rem; color: var(--text-secondary); margin: 0 0 0.85rem 0; line-height: 1.45;">
-              Upload your PayPal payment confirmation screenshot (<strong>${this.escapeHtml(chosenMethodText)}</strong>). Status starts as <strong>Pending Admin Review</strong> and is never marked paid until real funds are verified.
-            </p>
-            <form id="paypal-proof-submit-form" onsubmit="event.preventDefault(); AvioraPayments.submitProofForm(${inv.id});">
-              <div class="paypal-readonly-amount-pill">
-                <span>Locked Exact Amount:</span>
-                <strong>${this.escapeHtml(exactAmountStr)} (${this.escapeHtml(inv.invoice_number)})</strong>
+        ${showProofSection ? `
+          <!-- Step 3: Required Proof of Payment Upload (Appears downward only once payment has been initiated/made) -->
+          <div class="paypal-panel-card" id="paypal-proof-upload-section">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 0.35rem;">
+              <div>
+                <div class="paypal-eyebrow" style="margin-bottom: 0.2rem;">Step 3 • Proof of Payment Required</div>
+                <h3 style="margin: 0;">Upload Confirmation Screenshot</h3>
               </div>
+              ${canSubmitProof ? `
+                <button type="button" class="btn btn-outline-gold btn-sm" style="padding: 0.25rem 0.65rem; font-size: 0.74rem;" onclick="AvioraPayments.resetPaymentSentStep(${inv.id})">
+                  ← Hide Proof Upload
+                </button>
+              ` : ''}
+            </div>
 
-              <div class="form-group" style="margin-bottom: 0.85rem;">
-                <label class="form-label" for="proof-screenshot-input">Proof Screenshot (JPG, JPEG, PNG — Max 5MB) *</label>
-                <input type="file" id="proof-screenshot-input" accept=".jpg,.jpeg,.png,image/jpeg,image/png" style="display: none;" onchange="AvioraPayments.onProofFileSelected(this)" />
-                <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
-                  <button type="button" class="btn btn-outline-gold btn-sm" id="btn-trigger-proof-upload" onclick="document.getElementById('proof-screenshot-input').click()">
-                    Upload Screenshot
-                  </button>
-                  <span id="proof-selected-filename" style="font-size: 0.78rem; color: var(--text-secondary);">No screenshot selected yet (required)</span>
+            ${latestRejection && canSubmitProof ? `
+              <div class="paypal-rejection-banner">
+                <strong>Previous Submission Marked as Not Received:</strong>
+                <div>${this.escapeHtml(latestRejection.admin_notes || 'Please verify your PayPal transfer and submit a new proof screenshot.')}</div>
+              </div>
+            ` : ''}
+
+            ${isAccepted ? `
+              <div class="paypal-accepted-banner">
+                <strong>Payment Accepted &amp; Verified</strong>
+                <p>The Administrator verified funds receipt for ${this.escapeHtml(exactAmountStr)} and activated your lesson/package.</p>
+              </div>
+            ` : hasPendingPayment ? `
+              <div class="paypal-pending-banner">
+                <strong>Pending Admin Review</strong>
+                <p>Your proof of payment for <strong>${this.escapeHtml(inv.invoice_number)}</strong> (${this.escapeHtml(exactAmountStr)}) has been submitted! Status is <strong>Pending Admin Review</strong> until the Administrator verifies real funds arrived in ${this.escapeHtml(holderName)} (${this.escapeHtml(holderContact)}).</p>
+                <a href="#student-portal" class="btn btn-primary btn-sm" style="margin-top: 0.6rem;" onclick="AvioraPayments.finishInlineFlowToDashboard()">View Live Status in Student Dashboard →</a>
+              </div>
+            ` : `
+              <p style="font-size: 0.8rem; color: var(--text-secondary); margin: 0 0 0.85rem 0; line-height: 1.45;">
+                Upload your PayPal payment confirmation screenshot (<strong>${this.escapeHtml(chosenMethodText)}</strong>). Status starts as <strong>Pending Admin Review</strong> and is never marked paid until real funds are verified.
+              </p>
+              <form id="paypal-proof-submit-form" onsubmit="event.preventDefault(); AvioraPayments.submitProofForm(${inv.id});">
+                <div class="paypal-readonly-amount-pill">
+                  <span>Locked Exact Amount:</span>
+                  <strong>${this.escapeHtml(exactAmountStr)} (${this.escapeHtml(inv.invoice_number)})</strong>
                 </div>
-                <div id="proof-preview-wrap" class="paypal-proof-preview-wrap" style="display: none;">
-                  <img id="proof-preview-img" src="" alt="Proof of Payment Preview" class="paypal-proof-preview-img" />
-                  <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.45rem;">
-                    <span id="proof-preview-meta" style="font-size: 0.74rem; color: var(--text-secondary);"></span>
-                    <button type="button" class="btn btn-secondary btn-sm" style="padding: 0.18rem 0.55rem; font-size: 0.72rem;" onclick="AvioraPayments.clearProofSelection()">Remove</button>
+
+                <div class="form-group" style="margin-bottom: 0.85rem;">
+                  <label class="form-label" for="proof-screenshot-input">Proof Screenshot (JPG, JPEG, PNG — Max 5MB) *</label>
+                  <input type="file" id="proof-screenshot-input" accept=".jpg,.jpeg,.png,image/jpeg,image/png" style="display: none;" onchange="AvioraPayments.onProofFileSelected(this)" />
+                  <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+                    <button type="button" class="btn btn-outline-gold btn-sm" id="btn-trigger-proof-upload" onclick="document.getElementById('proof-screenshot-input').click()">
+                      Upload Screenshot
+                    </button>
+                    <span id="proof-selected-filename" style="font-size: 0.78rem; color: var(--text-secondary);">No screenshot selected yet (required)</span>
+                  </div>
+                  <div id="proof-preview-wrap" class="paypal-proof-preview-wrap" style="display: none;">
+                    <img id="proof-preview-img" src="" alt="Proof of Payment Preview" class="paypal-proof-preview-img" />
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.45rem;">
+                      <span id="proof-preview-meta" style="font-size: 0.74rem; color: var(--text-secondary);"></span>
+                      <button type="button" class="btn btn-secondary btn-sm" style="padding: 0.18rem 0.55rem; font-size: 0.72rem;" onclick="AvioraPayments.clearProofSelection()">Remove</button>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 1rem;">
-                <div class="form-group" style="margin-bottom: 0;">
-                  <label class="form-label" for="paypal-ref-input">PayPal Transaction ID (Optional)</label>
-                  <input type="text" id="paypal-ref-input" class="form-control" maxlength="100" placeholder="e.g. 8AB12345XYZ" value="${this.escapeHtml(this.pendingOrderIds[inv.id] || '')}" />
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 1rem;">
+                  <div class="form-group" style="margin-bottom: 0;">
+                    <label class="form-label" for="paypal-ref-input">PayPal Transaction ID (Optional)</label>
+                    <input type="text" id="paypal-ref-input" class="form-control" maxlength="100" placeholder="e.g. 8AB12345XYZ" value="${this.escapeHtml(this.pendingOrderIds[inv.id] || '')}" />
+                  </div>
+                  <div class="form-group" style="margin-bottom: 0;">
+                    <label class="form-label" for="paypal-date-input">Payment Date</label>
+                    <input type="date" id="paypal-date-input" class="form-control" value="${todayIso}" />
+                  </div>
                 </div>
-                <div class="form-group" style="margin-bottom: 0;">
-                  <label class="form-label" for="paypal-date-input">Payment Date</label>
-                  <input type="date" id="paypal-date-input" class="form-control" value="${todayIso}" />
-                </div>
-              </div>
 
-              <button type="submit" id="btn-submit-paypal-proof" class="btn btn-primary" style="width: 100%; justify-content: center; padding: 0.85rem; font-weight: 700;">
-                ${inv.status === 'not_received' ? 'Submit New Proof &amp; Retry Verification →' : 'Submit Proof of Payment for Admin Review →'}
-              </button>
-            </form>
-          `}
-        </div>
+                <button type="submit" id="btn-submit-paypal-proof" class="btn btn-primary" style="width: 100%; justify-content: center; padding: 0.85rem; font-weight: 700;">
+                  ${inv.status === 'not_received' ? 'Submit New Proof &amp; Retry Verification →' : 'Submit Proof of Payment for Admin Review →'}
+                </button>
+              </form>
+            `}
+          </div>
+        ` : ''}
       </div>
     `;
   },

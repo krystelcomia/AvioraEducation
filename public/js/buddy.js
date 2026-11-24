@@ -2072,16 +2072,33 @@ const AvioraBuddy = {
       const balEl = document.getElementById('buddy-modal-wallet-balance');
       const useWrap = document.getElementById('buddy-modal-use-wallet-wrap');
       const useChk = document.getElementById('buddy-peer-use-wallet');
+      const paypalChk = document.getElementById('buddy-peer-use-paypal');
+      const submitBtn = document.getElementById('btn-submit-buddy-peer');
       if (balEl) balEl.textContent = fmt;
+
+      const syncBuddyPayState = () => {
+        const usingWallet = Boolean(useChk && useChk.checked);
+        if (paypalChk) paypalChk.checked = !usingWallet;
+        if (submitBtn) {
+          submitBtn.textContent = usingWallet
+            ? 'Pay $6.00 with Buddy Wallet & Submit Booking →'
+            : 'Proceed to PayPal Payment ($6) →';
+        }
+      };
+
       if (useWrap) {
         if (buddyBal >= 6.00) {
           useWrap.style.display = 'flex';
-          if (useChk) useChk.checked = true;
+          if (useChk) {
+            useChk.checked = true;
+            useChk.onchange = syncBuddyPayState;
+          }
         } else {
           useWrap.style.display = 'none';
           if (useChk) useChk.checked = false;
         }
       }
+      syncBuddyPayState();
     }
 
     // Populate peers dropdown
@@ -2118,8 +2135,7 @@ const AvioraBuddy = {
     const dateInp = document.getElementById('buddy-peer-date');
     const timeInp = document.getElementById('buddy-peer-time');
     const useWalletChk = document.getElementById('buddy-peer-use-wallet');
-    const usePayPalChk = document.getElementById('buddy-peer-use-paypal');
-    const usePayPal = Boolean(usePayPalChk && usePayPalChk.checked && !(useWalletChk && useWalletChk.checked));
+    const usePayPal = !(useWalletChk && useWalletChk.checked);
 
     const payload = {
       student2_id: peerSelect && peerSelect.value ? peerSelect.value : null,
@@ -2127,7 +2143,7 @@ const AvioraBuddy = {
       topic: topicInp && topicInp.value.trim() ? topicInp.value.trim() : 'Quiz Bee, Math Duel & Conversational Questions',
       scheduled_date: dateInp && dateInp.value ? dateInp.value : 'Pending Admin Scheduling',
       scheduled_time: timeInp && timeInp.value ? timeInp.value : 'Pending Admin Scheduling',
-      payment_method: (useWalletChk && useWalletChk.checked) ? 'wallet' : (usePayPal ? 'paypal' : 'card')
+      payment_method: usePayPal ? 'paypal' : 'wallet'
     };
 
     try {

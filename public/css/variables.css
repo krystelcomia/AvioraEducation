@@ -1908,3 +1908,148 @@ body {
 [data-theme="dark"] .paypal-status-pending { color: #FCD34D !important; }
 [data-theme="dark"] .paypal-status-rejected { color: #FCA5A5 !important; }
 [data-theme="dark"] .paypal-status-unpaid { color: #CBD5E1 !important; }
+
+.paypal-process-bar {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.65rem;
+  margin-bottom: 1rem;
+}
+
+@media (max-width: 720px) {
+  .paypal-process-bar {
+    grid-template-columns: 1fr;
+  }
+}
+
+.paypal-process-step {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.6rem 0.85rem;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(198, 138, 40, 0.22);
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.paypal-process-step.active {
+  border-color: rgba(198, 138, 40, 0.55);
+  background: linear-gradient(135deg, #FFFDF8 0%, #FAF2E1 100%);
+  color: var(--charcoal-950);
+}
+
+.paypal-step-num {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: rgba(198, 138, 40, 0.2);
+  color: var(--gold-800);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.72rem;
+  font-weight: 900;
+  flex-shrink: 0;
+}
+
+.paypal-process-step.active .paypal-step-num {
+  background: var(--gold-600);
+  color: #FFFFFF;
+}
+
+.paypal-direct-copy-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.65rem;
+}
+
+@media (max-width: 600px) {
+  .paypal-direct-copy-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.paypal-direct-copy-item {
+  background: #FAF8F5;
+  border: 1px solid rgba(198, 138, 40, 0.26);
+  border-radius: var(--radius-sm);
+  padding: 0.55rem 0.75rem;
+  font-size: 0.84rem;
+}
+
+.paypal-send-checkpoint-box {
+  margin-top: 1rem;
+  padding: 0.9rem 1rem;
+  border-radius: var(--radius-md);
+  border: 1.5px solid rgba(198, 138, 40, 0.38);
+  background: rgba(198, 138, 40, 0.08);
+}
+
+.paypal-proof-locked-box {
+  border: 1.5px dashed rgba(198, 138, 40, 0.42);
+  border-radius: var(--radius-md);
+  background: rgba(250, 247, 242, 0.85);
+  padding: 1.65rem 1.25rem;
+  text-align: center;
+}
+
+.paypal-locked-icon {
+  font-size: 1.85rem;
+  margin-bottom: 0.45rem;
+}
+
+.paypal-admin-kv-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.48rem;
+  margin-top: 0.75rem;
+}
+
+.paypal-admin-kv-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  font-size: 0.82rem;
+}
+
+.paypal-admin-kv-key {
+  color: #94A3B8;
+}
+
+.paypal-admin-kv-val {
+  color: #F8FAFC;
+  text-align: right;
+}
+
+[data-theme="dark"] .paypal-process-step {
+  background: #12141B !important;
+  color: #94A3B8 !important;
+  border-color: rgba(216, 170, 60, 0.25) !important;
+}
+
+[data-theme="dark"] .paypal-process-step.active {
+  background: #181B24 !important;
+  color: #F8FAFC !important;
+  border-color: rgba(216, 170, 60, 0.6) !important;
+}
+
+[data-theme="dark"] .paypal-direct-copy-item,
+[data-theme="dark"] .paypal-proof-locked-box {
+  background: #12141B !important;
+  border-color: rgba(216, 170, 60, 0.32) !important;
+  color: #E2E8F0 !important;
+}
+
+[data-theme="dark"] .paypal-send-checkpoint-box {
+  background: rgba(216, 170, 60, 0.1) !important;
+  border-color: rgba(216, 170, 60, 0.4) !important;
+}
+
+[data-theme="dark"] .paypal-send-checkpoint-box p {
+  color: #E2E8F0 !important;
+}

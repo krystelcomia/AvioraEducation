@@ -6587,6 +6587,12 @@ app.post('/api/student/subscription/purchase', authenticateToken, requireRole('s
         : 0;
       const finalCalculatedPrice = Math.max(0, Math.round((subtotalCalculatedPrice - discountAmount) * 100) / 100);
 
+      if (finalCalculatedPrice > 0) {
+        return res.status(400).json({
+          error: 'Paid packages and trial sessions require Official PayPal payment (QR Code or Direct Transfer) and Administrator verification before activation. Please submit via /api/student/invoices instead.'
+        });
+      }
+
       if (appliedVoucher && subtotalCalculatedPrice > 0) {
         let allocatedDiscountedSum = 0;
         for (let idx = 0; idx < validatedLessons.length; idx++) {
@@ -6812,6 +6818,12 @@ app.post('/api/student/subscription/purchase', authenticateToken, requireRole('s
       ? (tutorProfile.hourly_rate * selectedPkg.lessons)
       : selectedPkg.price;
 
+    if (calculatedPrice > 0) {
+      return res.status(400).json({
+        error: 'Paid packages require Official PayPal payment and Administrator verification before activation. Please generate an invoice via /api/student/invoices.'
+      });
+    }
+
     // Insert new subscription
     const insertSub = db.prepare(`
       INSERT INTO student_subscriptions (
@@ -6910,7 +6922,13 @@ app.post('/api/student/requests', authenticateToken, requireRole('student'), (re
     const subjectRate = getRateForTutorSubject(tutorProfile, subject);
     const calculatedAmount = Math.round(duration * subjectRate * 100) / 100;
 
-    let finalPaymentMethod = payment_method === 'subscription' ? 'subscription' : (payment_method === 'wallet' ? 'wallet' : 'card');
+    if (!['subscription', 'wallet'].includes(String(payment_method || '').toLowerCase())) {
+      return res.status(400).json({
+        error: 'Paid sessions cannot be marked paid without real PayPal payment and Administrator verification. Please generate an invoice via Official PayPal (QR Code or Direct Transfer) and upload your proof screenshot.'
+      });
+    }
+
+    let finalPaymentMethod = payment_method === 'subscription' ? 'subscription' : 'wallet';
     let remainingCreditsAfter = null;
 
     if (finalPaymentMethod === 'subscription') {
@@ -10326,6 +10344,12 @@ app.post('/api/buddy/create', authenticateToken, (req, res) => {
     let s2 = student2_id ? parseInt(student2_id, 10) : null;
     const useBuddyWallet = payment_method === 'wallet';
 
+    if (!useBuddyWallet) {
+      return res.status(400).json({
+        error: 'Aviora Buddy bookings ($6.00) require Official PayPal payment and Administrator verification (or available Buddy wallet credit). Please pay via /api/student/invoices with item_type "buddy_session".'
+      });
+    }
+
     if (useBuddyWallet) {
       const walletState = reconcileStudentWallet(userId);
       if ((walletState.buddy_balance || 0) < 6.00) {
@@ -13256,7 +13280,7 @@ app.post('/api/student/invoices/:invoiceId/submit-proof', authenticateToken, req
       }
 
       const channelRaw = String(req.body.payment_channel || 'paypal_qr').trim();
-      const paymentChannel = ['paypal_qr', 'paypal_checkout', 'paypal_manual'].includes(channelRaw) ? channelRaw : 'paypal_qr';
+      const paymentChannel = ['paypal_qr', 'paypal_direct', 'paypal_checkout', 'paypal_manual'].includes(channelRaw) ? channelRaw : 'paypal_qr';
       const refNum = req.body.paypal_reference_number ? String(req.body.paypal_reference_number).trim().slice(0, 100) : null;
       const paypalOrderId = req.body.paypal_order_id ? String(req.body.paypal_order_id).trim().slice(0, 100) : null;
       const paypalCaptureId = req.body.paypal_capture_id ? String(req.body.paypal_capture_id).trim().slice(0, 100) : null;
@@ -13601,26 +13625,24 @@ app.post('/api/admin/payments/:paymentId/request-verification', authenticateToke
   }
 });
 
-// Admin: Update PayPal Recipient Settings
+// Admin: Update PayPal Recipient Settings (Official Name & Phone Number)
 app.put('/api/admin/payment-settings', authenticateToken, requireRole('admin'), (req, res) => {
   try {
     ensurePaymentSettings();
-    const { paypal_holder_name, paypal_contact, paypal_business_email } = req.body || {};
+    const { paypal_holder_name, paypal_contact } = req.body || {};
     const holder = (paypal_holder_name && String(paypal_holder_name).trim()) || 'Stephanie Nicole Debo Manalo';
     const contact = (paypal_contact && String(paypal_contact).trim()) || '09945586658';
-    const bizEmail = paypal_business_email !== undefined ? String(paypal_business_email).trim() : '';
 
     db.prepare(`
       UPDATE payment_settings
       SET paypal_holder_name = ?,
           paypal_contact = ?,
-          paypal_business_email = ?,
           updated_at = CURRENT_TIMESTAMP
       WHERE id = 1
-    `).run(holder, contact, bizEmail);
+    `).run(holder, contact);
 
     return res.json({
-      message: 'Admin PayPal payment settings updated.',
+      message: 'Admin PayPal recipient details updated.',
       settings: getSafePaymentSettings()
     });
   } catch (err) {

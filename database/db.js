@@ -473,7 +473,7 @@ function initSchema() {
       invoice_id INTEGER NOT NULL REFERENCES invoices(id) ON DELETE CASCADE,
       invoice_number TEXT NOT NULL,
       student_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      payment_channel TEXT NOT NULL DEFAULT 'paypal_qr' CHECK(payment_channel IN ('paypal_qr', 'paypal_checkout', 'paypal_manual')),
+      payment_channel TEXT NOT NULL DEFAULT 'paypal_qr' CHECK(payment_channel IN ('paypal_qr', 'paypal_direct', 'paypal_checkout', 'paypal_manual')),
       amount REAL NOT NULL,
       currency_code TEXT NOT NULL,
       currency_symbol TEXT NOT NULL,
@@ -540,6 +540,59 @@ function initSchema() {
     CREATE INDEX IF NOT EXISTS idx_subscriptions_user ON student_subscriptions(user_id);
     CREATE INDEX IF NOT EXISTS idx_oauth_linked_user ON oauth_linked_accounts(user_id);
   `);
+
+  // Ensure existing paypal_payments tables also allow 'paypal_direct'
+  try {
+    const ppTbl = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='paypal_payments'").get();
+    if (ppTbl && ppTbl.sql && !ppTbl.sql.includes('paypal_direct')) {
+      db.pragma('foreign_keys = OFF');
+      try {
+        db.transaction(() => {
+          db.exec(`
+            CREATE TABLE paypal_payments_migrated (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              transaction_code TEXT UNIQUE NOT NULL,
+              invoice_id INTEGER NOT NULL REFERENCES invoices(id) ON DELETE CASCADE,
+              invoice_number TEXT NOT NULL,
+              student_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+              payment_channel TEXT NOT NULL DEFAULT 'paypal_qr' CHECK(payment_channel IN ('paypal_qr', 'paypal_direct', 'paypal_checkout', 'paypal_manual')),
+              amount REAL NOT NULL,
+              currency_code TEXT NOT NULL,
+              currency_symbol TEXT NOT NULL,
+              recipient_name TEXT NOT NULL,
+              recipient_contact TEXT NOT NULL,
+              paypal_order_id TEXT DEFAULT NULL,
+              paypal_capture_id TEXT DEFAULT NULL,
+              paypal_reference_number TEXT DEFAULT NULL,
+              payment_date TEXT,
+              proof_image_data TEXT NOT NULL,
+              proof_filename TEXT NOT NULL,
+              proof_mime_type TEXT NOT NULL,
+              proof_file_size INTEGER NOT NULL,
+              proof_sha256 TEXT NOT NULL,
+              status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending', 'accepted', 'not_received')),
+              admin_notes TEXT DEFAULT NULL,
+              verified_by INTEGER REFERENCES users(id),
+              verified_by_name TEXT DEFAULT NULL,
+              verified_at DATETIME DEFAULT NULL,
+              submitted_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+              updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            );
+            INSERT INTO paypal_payments_migrated SELECT * FROM paypal_payments;
+            DROP TABLE paypal_payments;
+            ALTER TABLE paypal_payments_migrated RENAME TO paypal_payments;
+            CREATE INDEX IF NOT EXISTS idx_paypal_payments_invoice ON paypal_payments(invoice_id);
+            CREATE INDEX IF NOT EXISTS idx_paypal_payments_student ON paypal_payments(student_id);
+            CREATE INDEX IF NOT EXISTS idx_paypal_payments_status ON paypal_payments(status);
+          `);
+        })();
+      } finally {
+        db.pragma('foreign_keys = ON');
+      }
+    }
+  } catch (e) {
+    console.warn('paypal_payments migration warning:', e.message);
+  }
 
   try {
     const userCols = db.prepare("PRAGMA table_info(users)").all();

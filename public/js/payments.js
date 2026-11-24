@@ -7,6 +7,7 @@ const AvioraPayments = {
   paymentSettings: null,
   activeInvoiceId: null,
   selectedChannel: 'paypal_qr',
+  confirmedSentInvoices: {},
   pendingProofFile: null,
   pendingProofPreviewUrl: null,
   adminPayments: [],
@@ -45,9 +46,17 @@ const AvioraPayments = {
   statusMeta(status) {
     const s = String(status || 'unpaid').toLowerCase();
     if (s === 'accepted') return { label: 'Accepted', cls: 'paypal-status-accepted' };
-    if (s === 'pending' || s === 'pending_verification') return { label: 'Pending Verification', cls: 'paypal-status-pending' };
+    if (s === 'pending' || s === 'pending_verification') return { label: 'Pending Admin Review', cls: 'paypal-status-pending' };
     if (s === 'not_received') return { label: 'Not Received', cls: 'paypal-status-rejected' };
     return { label: 'Awaiting Payment', cls: 'paypal-status-unpaid' };
+  },
+
+  channelLabel(channel) {
+    const c = String(channel || 'paypal_qr').toLowerCase();
+    if (c === 'paypal_direct' || c === 'paypal_checkout' || c === 'paypal_manual') {
+      return 'PayPal — Direct Transfer';
+    }
+    return 'PayPal — QR Code';
   },
 
   async createInvoiceAndGoToPayments(invoicePayload) {
@@ -99,6 +108,7 @@ const AvioraPayments = {
 
   selectInvoiceForPayment(invoiceId) {
     this.activeInvoiceId = Number(invoiceId);
+    this.confirmedSentInvoices[this.activeInvoiceId] = false;
     this.clearProofSelection();
     this.renderStudentCheckout();
     const box = document.getElementById('student-paypal-checkout-box');
@@ -106,7 +116,20 @@ const AvioraPayments = {
   },
 
   selectChannel(channel) {
-    this.selectedChannel = channel;
+    this.selectedChannel = (channel === 'paypal_direct') ? 'paypal_direct' : 'paypal_qr';
+    this.renderStudentCheckout();
+  },
+
+  confirmPaymentSent(invoiceId) {
+    this.confirmedSentInvoices[Number(invoiceId)] = true;
+    this.renderStudentCheckout();
+    const proofBox = document.getElementById('paypal-proof-upload-section');
+    if (proofBox) proofBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  },
+
+  resetPaymentSentStep(invoiceId) {
+    this.confirmedSentInvoices[Number(invoiceId)] = false;
+    this.clearProofSelection();
     this.renderStudentCheckout();
   },
 
@@ -121,14 +144,28 @@ const AvioraPayments = {
 
     if (!inv) {
       box.innerHTML = `
-        <div class="dash-section-box" style="text-align: center; padding: 2.5rem 1.5rem;">
+        <div class="dash-section-box" style="text-align: center; padding: 2.25rem 1.5rem;">
           <h3 style="margin-bottom: 0.45rem;">No Active Unpaid Invoice Selected</h3>
-          <p style="color: var(--text-secondary); font-size: 0.9rem; max-width: 520px; margin: 0 auto 1.25rem;">
-            Book a 1-on-1 lesson, subscription package, or Aviora Buddy session using <strong>PayPal</strong> to automatically generate an exact invoice for verification.
+          <p style="color: var(--text-secondary); font-size: 0.9rem; max-width: 560px; margin: 0 auto 1.15rem;">
+            Book a 1-on-1 lesson, subscription package, or Aviora Buddy session using <strong>PayPal</strong> to automatically generate an invoice for your exact amount. Transactions are never marked paid until real payment and proof are verified by Admin.
           </p>
+          <div class="paypal-recipient-card" style="max-width: 560px; margin: 0 auto 1.25rem; text-align: left;">
+            <div class="paypal-recipient-badge">Official Admin PayPal Account</div>
+            <div class="paypal-recipient-grid">
+              <div>
+                <div class="paypal-field-label">Full Name</div>
+                <div class="paypal-field-value">${this.escapeHtml(holderName)}</div>
+              </div>
+              <div>
+                <div class="paypal-field-label">Phone Number</div>
+                <div class="paypal-field-value">${this.escapeHtml(holderContact)}</div>
+              </div>
+            </div>
+          </div>
           <div style="display: flex; justify-content: center; gap: 0.75rem; flex-wrap: wrap;">
             <a href="#tutors" class="btn btn-primary btn-sm">Browse Tutors →</a>
             <a href="#subscriptions" class="btn btn-outline-gold btn-sm">View Lesson Packages</a>
+            <a href="#aviora-buddy" class="btn btn-outline-gold btn-sm">Aviora Buddy ($6)</a>
           </div>
         </div>
       `;
@@ -140,16 +177,33 @@ const AvioraPayments = {
     const hasPendingPayment = Array.isArray(inv.payments) && inv.payments.some(p => p.status === 'pending');
     const isAccepted = inv.status === 'accepted';
     const canSubmitProof = !hasPendingPayment && !isAccepted && ['unpaid', 'not_received'].includes(inv.status);
+    const isConfirmedSent = Boolean(this.confirmedSentInvoices[inv.id]);
     const latestRejection = Array.isArray(inv.payments) ? inv.payments.find(p => p.status === 'not_received') : null;
     const todayIso = new Date().toISOString().slice(0, 10);
+    const chosenMethodText = this.selectedChannel === 'paypal_direct' ? 'Send Payment Directly' : 'Pay via QR Code';
 
     box.innerHTML = `
+      <div class="paypal-process-bar">
+        <div class="paypal-process-step active">
+          <span class="paypal-step-num">1</span>
+          <span>Choose PayPal Method &amp; Follow Steps</span>
+        </div>
+        <div class="paypal-process-step ${isConfirmedSent || hasPendingPayment || isAccepted ? 'active' : ''}">
+          <span class="paypal-step-num">2</span>
+          <span>Send ${this.escapeHtml(exactAmountStr)} &amp; Confirm</span>
+        </div>
+        <div class="paypal-process-step ${isConfirmedSent ? 'active' : ''} ${hasPendingPayment || isAccepted ? 'active' : ''}">
+          <span class="paypal-step-num">3</span>
+          <span>Upload Proof Screenshot (Admin Review)</span>
+        </div>
+      </div>
+
       <div class="paypal-checkout-shell">
-        <!-- Left Column: Invoice Lock & Official Recipient + QR / Checkout -->
+        <!-- Left Column: Invoice Lock + Official Admin PayPal + Steps for Chosen Method -->
         <div class="paypal-panel-card">
           <div class="paypal-panel-header">
             <div>
-              <div class="paypal-eyebrow">Official Aviora PayPal Invoice</div>
+              <div class="paypal-eyebrow">Step 1 &amp; 2 • Official Aviora PayPal Invoice</div>
               <h2 class="paypal-inv-num">${this.escapeHtml(inv.invoice_number)}</h2>
               <div class="paypal-inv-title">${this.escapeHtml(inv.title)}</div>
               <div class="paypal-inv-sub">${this.escapeHtml(inv.description || '')} • Issued ${this.formatDateTime(inv.created_at)}</div>
@@ -158,7 +212,7 @@ const AvioraPayments = {
               <span class="paypal-status-badge ${stMeta.cls}">${stMeta.label}</span>
               <div class="paypal-amount-label" style="margin-top: 0.65rem;">Exact Amount Due</div>
               <div class="paypal-exact-amount" id="paypal-locked-invoice-amount">${this.escapeHtml(exactAmountStr)}</div>
-              <div class="paypal-amount-lock-note">Locked to invoice • Not editable</div>
+              <div class="paypal-amount-lock-note">Locked to invoice • Do not change amount</div>
             </div>
           </div>
 
@@ -168,34 +222,37 @@ const AvioraPayments = {
             </div>
           ` : ''}
 
-          <!-- Admin Designated PayPal Recipient Card -->
+          <!-- Admin Designated PayPal Recipient Details -->
           <div class="paypal-recipient-card">
-            <div class="paypal-recipient-badge">Designated Official PayPal Recipient</div>
+            <div class="paypal-recipient-badge">Official Admin PayPal Recipient Account</div>
             <div class="paypal-recipient-grid">
               <div>
-                <div class="paypal-field-label">Account Holder Name</div>
-                <div class="paypal-field-value">${this.escapeHtml(holderName)}</div>
+                <div class="paypal-field-label">Full Name</div>
+                <div class="paypal-field-value" style="display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap;">
+                  <span>${this.escapeHtml(holderName)}</span>
+                  <button type="button" class="btn btn-outline-gold btn-sm" style="padding: 0.15rem 0.5rem; font-size: 0.7rem;" onclick="AvioraPayments.copyText('${this.escapeHtml(holderName)}', 'Admin full name copied')">Copy</button>
+                </div>
               </div>
               <div>
-                <div class="paypal-field-label">Registered PayPal Account / Contact</div>
-                <div class="paypal-field-value" style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                <div class="paypal-field-label">Phone Number (PayPal Account)</div>
+                <div class="paypal-field-value" style="display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap;">
                   <span>${this.escapeHtml(holderContact)}</span>
-                  <button type="button" class="btn btn-outline-gold btn-sm" style="padding: 0.18rem 0.55rem; font-size: 0.72rem;" onclick="AvioraPayments.copyText('${this.escapeHtml(holderContact)}', 'PayPal contact copied')">Copy</button>
+                  <button type="button" class="btn btn-outline-gold btn-sm" style="padding: 0.15rem 0.5rem; font-size: 0.7rem;" onclick="AvioraPayments.copyText('${this.escapeHtml(holderContact)}', 'Admin PayPal phone number copied')">Copy</button>
                 </div>
               </div>
             </div>
             <p class="paypal-recipient-note">
-              Verify the exact recipient name (<strong>${this.escapeHtml(holderName)}</strong>) and PayPal contact (<strong>${this.escapeHtml(holderContact)}</strong>) in PayPal before confirming your transfer.
+              Send your real PayPal payment only to the Admin account displayed above (<strong>${this.escapeHtml(holderName)}</strong> • <strong>${this.escapeHtml(holderContact)}</strong>). Choose either option below and follow every step.
             </p>
           </div>
 
-          <!-- Payment Channel Selector -->
+          <!-- Two Payment Options Only: Pay via QR Code OR Send Payment Directly -->
           <div class="paypal-channel-tabs">
             <button type="button" class="paypal-channel-tab ${this.selectedChannel === 'paypal_qr' ? 'active' : ''}" onclick="AvioraPayments.selectChannel('paypal_qr')">
-              PayPal QR Code Payment (Scan to Pay)
+              Pay via QR Code
             </button>
-            <button type="button" class="paypal-channel-tab ${this.selectedChannel === 'paypal_checkout' ? 'active' : ''}" onclick="AvioraPayments.selectChannel('paypal_checkout')">
-              Direct PayPal Checkout
+            <button type="button" class="paypal-channel-tab ${this.selectedChannel === 'paypal_direct' ? 'active' : ''}" onclick="AvioraPayments.selectChannel('paypal_direct')">
+              Send Payment Directly
             </button>
           </div>
 
@@ -204,75 +261,138 @@ const AvioraPayments = {
               <div class="paypal-qr-preview-col">
                 ${s.has_qr_image && s.qr_image_data ? `
                   <div class="paypal-qr-frame">
-                    <img id="student-official-paypal-qr" src="${s.qr_image_data}" alt="Official Admin PayPal QR Code" class="paypal-qr-img" onclick="AvioraPayments.openImageModal(AvioraPayments.paymentSettings.qr_image_data, 'Official Admin PayPal QR Code — Stephanie Nicole Debo Manalo (09945586658)')" />
+                    <img id="student-official-paypal-qr" src="${s.qr_image_data}" alt="Official Admin PayPal QR Code" class="paypal-qr-img" onclick="AvioraPayments.openImageModal(AvioraPayments.paymentSettings.qr_image_data, 'Official Admin PayPal QR Code — ${this.escapeHtml(holderName)} (${this.escapeHtml(holderContact)})')" />
                   </div>
-                  <button type="button" class="btn btn-outline-gold btn-sm" style="width: 100%; justify-content: center; margin-top: 0.55rem;" onclick="AvioraPayments.openImageModal(AvioraPayments.paymentSettings.qr_image_data, 'Official Admin PayPal QR Code — Stephanie Nicole Debo Manalo (09945586658)')">
+                  <button type="button" class="btn btn-outline-gold btn-sm" style="width: 100%; justify-content: center; margin-top: 0.55rem;" onclick="AvioraPayments.openImageModal(AvioraPayments.paymentSettings.qr_image_data, 'Official Admin PayPal QR Code — ${this.escapeHtml(holderName)} (${this.escapeHtml(holderContact)})')">
                     Enlarge / View Full QR Code
                   </button>
                 ` : `
                   <div class="paypal-qr-missing-box">
-                    <strong>Official Admin PayPal QR Code Pending Upload</strong>
-                    <p>The Administrator has not uploaded the official PayPal QR image yet. Please contact support or transfer directly to <strong>${this.escapeHtml(holderName)}</strong> (${this.escapeHtml(holderContact)}) in PayPal.</p>
+                    <strong>Admin PayPal QR Image Not Yet Uploaded</strong>
+                    <p>No QR code image is currently uploaded by the Admin. Please switch to <strong>Send Payment Directly</strong> to pay <strong>${this.escapeHtml(holderName)}</strong> (<strong>${this.escapeHtml(holderContact)}</strong>).</p>
                   </div>
                 `}
               </div>
               <div class="paypal-qr-instructions-col">
-                <h4 style="margin: 0 0 0.45rem 0;">Scan to Pay via PayPal App</h4>
+                <h4 style="margin: 0 0 0.45rem 0;">Follow These Steps to Pay via QR Code</h4>
                 <ol class="paypal-steps-list">
                   <li>Open your <strong>PayPal</strong> mobile app and tap <strong>Scan / Pay</strong>.</li>
-                  <li>Scan the Admin PayPal QR code displayed on the left and confirm recipient: <strong>${this.escapeHtml(holderName)}</strong> (<code>${this.escapeHtml(holderContact)}</code>).</li>
-                  <li>Enter the exact invoice amount shown above: <strong>${this.escapeHtml(exactAmountStr)}</strong>.</li>
-                  <li>Complete your payment and save a clear <strong>JPG or PNG screenshot</strong> of the PayPal confirmation screen.</li>
+                  <li>Scan the Admin PayPal QR code on the left and verify recipient details match <strong>${this.escapeHtml(holderName)}</strong> (<code>${this.escapeHtml(holderContact)}</code>).</li>
+                  <li>Enter the exact invoice amount: <strong>${this.escapeHtml(exactAmountStr)}</strong>.</li>
+                  <li>Complete the transfer in PayPal and save a <strong>JPG or PNG screenshot</strong> of your confirmation receipt.</li>
+                  <li>Click <strong>"I Have Sent the Payment"</strong> below to unlock proof upload.</li>
                 </ol>
                 <div class="paypal-qr-limitation-alert">
-                  <strong>Static QR Verification Notice:</strong> Because this official PayPal QR code does not automatically embed your invoice total inside the QR payload, the system requires you to transfer exactly <strong>${this.escapeHtml(exactAmountStr)}</strong> and upload your payment confirmation screenshot for Administrator verification before your booking becomes Accepted.
+                  <strong>Static QR Amount Check:</strong> This QR code directs to the Admin's PayPal account and does not lock the amount automatically. Ensure you send exact <strong>${this.escapeHtml(exactAmountStr)}</strong> so Admin verification succeeds.
                 </div>
               </div>
             </div>
           ` : `
             <div class="paypal-direct-box">
-              <h4 style="margin: 0 0 0.4rem 0;">Dynamic PayPal Business Checkout</h4>
-              <p style="font-size: 0.84rem; color: var(--text-secondary); line-height: 1.5; margin-bottom: 0.85rem;">
-                When enabled with PayPal Business API credentials on the server, PayPal creates a locked order for <strong>${this.escapeHtml(exactAmountStr)}</strong> (${this.escapeHtml(inv.currency_code)}) referencing Invoice <strong>${this.escapeHtml(inv.invoice_number)}</strong>.
-              </p>
-              ${s.paypal_checkout_supported ? `
-                <button type="button" class="btn btn-primary" onclick="AvioraPayments.startDynamicPayPalOrder(${inv.id})">
-                  Create Dynamic PayPal Order (${this.escapeHtml(exactAmountStr)}) →
+              <h4 style="margin: 0 0 0.55rem 0;">Follow These Steps to Send Payment Directly</h4>
+              <div class="paypal-direct-copy-grid">
+                <div class="paypal-direct-copy-item">
+                  <span class="paypal-field-label">Recipient Full Name</span>
+                  <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;">
+                    <strong>${this.escapeHtml(holderName)}</strong>
+                    <button type="button" class="btn btn-outline-gold btn-sm" style="padding: 0.15rem 0.5rem; font-size: 0.7rem;" onclick="AvioraPayments.copyText('${this.escapeHtml(holderName)}', 'Name copied')">Copy</button>
+                  </div>
+                </div>
+                <div class="paypal-direct-copy-item">
+                  <span class="paypal-field-label">Recipient Phone Number</span>
+                  <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;">
+                    <strong>${this.escapeHtml(holderContact)}</strong>
+                    <button type="button" class="btn btn-outline-gold btn-sm" style="padding: 0.15rem 0.5rem; font-size: 0.7rem;" onclick="AvioraPayments.copyText('${this.escapeHtml(holderContact)}', 'Phone number copied')">Copy</button>
+                  </div>
+                </div>
+                <div class="paypal-direct-copy-item">
+                  <span class="paypal-field-label">Exact Amount to Send</span>
+                  <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;">
+                    <strong style="color: var(--gold-700);">${this.escapeHtml(exactAmountStr)}</strong>
+                    <button type="button" class="btn btn-outline-gold btn-sm" style="padding: 0.15rem 0.5rem; font-size: 0.7rem;" onclick="AvioraPayments.copyText('${this.escapeHtml(String(inv.amount))}', 'Amount copied')">Copy</button>
+                  </div>
+                </div>
+                <div class="paypal-direct-copy-item">
+                  <span class="paypal-field-label">Invoice Reference Note</span>
+                  <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;">
+                    <code>${this.escapeHtml(inv.invoice_number)}</code>
+                    <button type="button" class="btn btn-outline-gold btn-sm" style="padding: 0.15rem 0.5rem; font-size: 0.7rem;" onclick="AvioraPayments.copyText('${this.escapeHtml(inv.invoice_number)}', 'Invoice number copied')">Copy</button>
+                  </div>
+                </div>
+              </div>
+              <ol class="paypal-steps-list" style="margin-top: 0.75rem;">
+                <li>Open your <strong>PayPal app</strong> or click <strong>Open PayPal Send Money →</strong> below.</li>
+                <li>Tap <strong>Send</strong> and enter recipient phone number <strong>${this.escapeHtml(holderContact)}</strong> (Full Name: <strong>${this.escapeHtml(holderName)}</strong>).</li>
+                <li>Send the exact invoice amount: <strong>${this.escapeHtml(exactAmountStr)}</strong> (include <code>${this.escapeHtml(inv.invoice_number)}</code> in the note).</li>
+                <li>Save a clear <strong>JPG or PNG screenshot</strong> of your completed PayPal transfer confirmation.</li>
+                <li>Click <strong>"I Have Sent the Payment"</strong> below to unlock proof upload.</li>
+              </ol>
+              <a href="https://www.paypal.com/myaccount/transfer/homepage/pay" target="_blank" rel="noopener noreferrer" class="btn btn-outline-gold btn-sm" style="margin-top: 0.25rem;">
+                Open PayPal Send Money ↗
+              </a>
+            </div>
+          `}
+
+          ${canSubmitProof ? `
+            <div class="paypal-send-checkpoint-box">
+              ${!isConfirmedSent ? `
+                <p style="font-size: 0.78rem; margin: 0 0 0.6rem 0; color: var(--charcoal-700); line-height: 1.45;">
+                  <strong>Confirmation Required:</strong> Do not proceed without sending real money first. Clicking below confirms you followed the steps under <strong>${this.escapeHtml(chosenMethodText)}</strong> and reveals the required proof screenshot upload.
+                </p>
+                <button type="button" id="btn-confirm-paypal-sent" class="btn btn-primary" style="width: 100%; justify-content: center; font-weight: 700;" onclick="AvioraPayments.confirmPaymentSent(${inv.id})">
+                  I Have Sent ${this.escapeHtml(exactAmountStr)} via PayPal — Upload Proof Screenshot →
                 </button>
               ` : `
-                <div class="paypal-qr-limitation-alert">
-                  <strong>PayPal Business API Not Configured on Server:</strong> Dynamic PayPal order checkout requires server PayPal API keys (never exposed on the client). Please use the <strong>PayPal QR Code Payment (Scan to Pay)</strong> tab or send exact <strong>${this.escapeHtml(exactAmountStr)}</strong> to <strong>${this.escapeHtml(holderName)} (${this.escapeHtml(holderContact)})</strong>, then upload your confirmation screenshot right here.
+                <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+                  <span style="font-size: 0.82rem; font-weight: 700; color: #059669;">
+                    ✓ Payment sent confirmed (${this.escapeHtml(chosenMethodText)}). Complete Step 3 on the right to upload your screenshot.
+                  </span>
+                  <button type="button" class="btn btn-secondary btn-sm" onclick="AvioraPayments.resetPaymentSentStep(${inv.id})" style="font-size: 0.74rem; padding: 0.2rem 0.55rem;">
+                    Change Method / Back
+                  </button>
                 </div>
               `}
             </div>
-          `}
+          ` : ''}
         </div>
 
-        <!-- Right Column: Required Proof of Payment Upload & Status -->
-        <div class="paypal-panel-card">
-          <h3 style="margin: 0 0 0.35rem 0;">Required Proof of Payment</h3>
-          <p style="font-size: 0.83rem; color: var(--text-secondary); margin: 0 0 1rem 0; line-height: 1.45;">
-            After sending <strong>${this.escapeHtml(exactAmountStr)}</strong> via PayPal, upload a screenshot of your confirmation receipt. Your status starts as <strong>Pending</strong> until the Administrator verifies funds receipt.
-          </p>
+        <!-- Right Column: Step 3 Proof of Payment Upload (Appears ONLY AFTER payment sent is confirmed) -->
+        <div class="paypal-panel-card" id="paypal-proof-upload-section">
+          <div class="paypal-eyebrow" style="margin-bottom: 0.25rem;">Step 3 • Screenshot Proof Verification</div>
+          <h3 style="margin: 0 0 0.35rem 0;">Proof of Payment Upload</h3>
 
           ${latestRejection && canSubmitProof ? `
             <div class="paypal-rejection-banner">
               <strong>Previous Submission Marked as Not Received:</strong>
-              <div>${this.escapeHtml(latestRejection.admin_notes || 'Please verify your PayPal payment and submit a new proof screenshot.')}</div>
+              <div>${this.escapeHtml(latestRejection.admin_notes || 'Please verify your PayPal transfer and submit a new proof screenshot.')}</div>
             </div>
           ` : ''}
 
           ${isAccepted ? `
             <div class="paypal-accepted-banner">
               <strong>Payment Accepted &amp; Verified</strong>
-              <p>This invoice has been verified by the Administrator and your sessions/package are active. No duplicate submission needed.</p>
+              <p>The Administrator confirmed receipt of ${this.escapeHtml(exactAmountStr)} in ${this.escapeHtml(holderName)} (${this.escapeHtml(holderContact)}) and activated your booking.</p>
             </div>
           ` : hasPendingPayment ? `
             <div class="paypal-pending-banner">
-              <strong>Pending Administrator Verification</strong>
-              <p>Your proof of payment for <strong>${this.escapeHtml(inv.invoice_number)}</strong> (${this.escapeHtml(exactAmountStr)}) has been submitted and is currently awaiting Administrator review. Duplicate uploads are disabled while under review.</p>
+              <strong>Pending Admin Review</strong>
+              <p>Your proof of payment for <strong>${this.escapeHtml(inv.invoice_number)}</strong> (${this.escapeHtml(exactAmountStr)}) has been submitted and is currently <strong>Pending Admin Review</strong>. Transactions are never marked Paid until the Administrator verifies real funds arrival.</p>
+            </div>
+          ` : !isConfirmedSent ? `
+            <div class="paypal-proof-locked-box">
+              <div class="paypal-locked-icon">🔒</div>
+              <h4 style="margin: 0 0 0.4rem 0;">Upload Proof Appears After Sending Payment</h4>
+              <p style="font-size: 0.82rem; color: var(--text-secondary); line-height: 1.5; margin: 0 0 0.75rem 0;">
+                Follow the steps under <strong>Pay via QR Code</strong> or <strong>Send Payment Directly</strong> on the left to send <strong>${this.escapeHtml(exactAmountStr)}</strong> to <strong>${this.escapeHtml(holderName)} (${this.escapeHtml(holderContact)})</strong>.
+              </p>
+              <p style="font-size: 0.78rem; color: var(--text-secondary); margin: 0;">
+                Once you have sent the real PayPal payment, click <strong>"I Have Sent ... via PayPal"</strong> and this section will unlock so you can upload your screenshot (JPG, JPEG, PNG).
+              </p>
             </div>
           ` : `
+            <p style="font-size: 0.82rem; color: var(--text-secondary); margin: 0 0 0.9rem 0; line-height: 1.45;">
+              Upload a screenshot of your completed PayPal transfer (<strong>${this.escapeHtml(chosenMethodText)}</strong>). Your submission starts as <strong>Pending Admin Review</strong> until verified.
+            </p>
             <form id="paypal-proof-submit-form" onsubmit="event.preventDefault(); AvioraPayments.submitProofForm(${inv.id});">
               <div class="paypal-readonly-amount-pill">
                 <span>Locked Invoice Amount:</span>
@@ -299,8 +419,8 @@ const AvioraPayments = {
 
               <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 1rem;">
                 <div class="form-group" style="margin-bottom: 0;">
-                  <label class="form-label" for="paypal-ref-input">PayPal Reference # (Optional)</label>
-                  <input type="text" id="paypal-ref-input" class="form-control" maxlength="100" placeholder="e.g. 9AB12345CD678901E" />
+                  <label class="form-label" for="paypal-ref-input">PayPal Transaction ID (Optional)</label>
+                  <input type="text" id="paypal-ref-input" class="form-control" maxlength="100" placeholder="e.g. 8AB12345XYZ" />
                 </div>
                 <div class="form-group" style="margin-bottom: 0;">
                   <label class="form-label" for="paypal-date-input">Payment Date</label>
@@ -309,7 +429,7 @@ const AvioraPayments = {
               </div>
 
               <button type="submit" id="btn-submit-paypal-proof" class="btn btn-primary" style="width: 100%; justify-content: center; padding: 0.85rem; font-weight: 700;">
-                ${inv.status === 'not_received' ? 'Submit New Proof &amp; Retry Verification →' : 'Submit Proof of Payment for Verification →'}
+                ${inv.status === 'not_received' ? 'Submit New Proof &amp; Retry Verification →' : 'Submit Proof of Payment for Admin Review →'}
               </button>
             </form>
           `}
@@ -635,56 +755,87 @@ const AvioraPayments = {
       const st = this.statusMeta(p.status);
       const amtStr = p.formatted_amount || this.formatMoney(p.amount, p.currency_code, p.currency_symbol);
       const logs = Array.isArray(p.audit_logs) ? p.audit_logs.slice(0, 4) : [];
+      const chanText = this.channelLabel(p.payment_channel);
+      const verifySummary = p.status === 'accepted'
+        ? `Verified received by ${this.escapeHtml(p.verified_by_name || 'Admin')}`
+        : (p.status === 'not_received'
+          ? 'Not Received / Discrepancy Reported'
+          : 'Awaiting Admin PayPal Funds Verification');
       return `
         <div class="paypal-admin-verify-card" id="admin-paypal-card-${p.id}">
-          <div class="paypal-admin-verify-top">
+          <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 0.45rem;">
+            <span style="font-size: 0.82rem; font-weight: 800; color: #F8FAFC; letter-spacing: 0.01em;">Student Payment Details</span>
+            <span style="font-size: 0.74rem; color: #94A3B8;">Tx: ${this.escapeHtml(p.transaction_code)}</span>
+          </div>
+
+          <div class="paypal-admin-verify-top" style="padding-bottom: 0.85rem; border-bottom: 1px solid rgba(255,255,255,0.1);">
             <div>
-              <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
-                <strong style="font-size: 1.02rem; color: #FFFFFF;">${this.escapeHtml(p.invoice_number)}</strong>
-                <span class="paypal-status-badge ${st.cls}">${st.label}</span>
-                <span style="font-size: 0.74rem; color: #CBD5E1;">Tx: ${this.escapeHtml(p.transaction_code)}</span>
-              </div>
-              <div style="font-size: 0.9rem; font-weight: 700; color: #F8FAFC; margin-top: 0.25rem;">
-                ${this.escapeHtml(p.student_name)} <span style="font-weight: 400; color: #94A3B8;">(${this.escapeHtml(p.student_email)} • ID #${p.student_id}${p.student_phone ? ' • ' + this.escapeHtml(p.student_phone) : ''})</span>
-              </div>
-              <div style="font-size: 0.82rem; color: #CBD5E1; margin-top: 0.15rem;">
-                ${this.escapeHtml(p.invoice_title)} — ${this.escapeHtml(p.invoice_description || '')}
+              <div style="font-size: 1.55rem; font-weight: 900; color: #F0B84A; font-family: var(--font-heading); line-height: 1.15;">${this.escapeHtml(amtStr)}</div>
+              <div style="font-size: 0.82rem; color: #CBD5E1; margin-top: 0.25rem;">
+                ${this.escapeHtml(p.invoice_title)} ${p.invoice_description ? '— ' + this.escapeHtml(p.invoice_description) : ''}
               </div>
             </div>
-            <div style="text-align: right;">
-              <div style="font-size: 1.35rem; font-weight: 900; color: #F0B84A; font-family: var(--font-heading);">${this.escapeHtml(amtStr)}</div>
-              <div style="font-size: 0.74rem; color: #94A3B8;">Recipient: ${this.escapeHtml(p.recipient_name)} (${this.escapeHtml(p.recipient_contact)})</div>
+            <span class="paypal-status-badge ${st.cls}">${st.label}</span>
+          </div>
+
+          <div class="paypal-admin-kv-list">
+            <div class="paypal-admin-kv-row">
+              <span class="paypal-admin-kv-key">Student</span>
+              <strong class="paypal-admin-kv-val">${this.escapeHtml(p.student_name)} <span style="font-weight: 400; color: #94A3B8;">(${this.escapeHtml(p.student_email)} • ID #${p.student_id}${p.student_phone ? ' • ' + this.escapeHtml(p.student_phone) : ''})</span></strong>
+            </div>
+            <div class="paypal-admin-kv-row">
+              <span class="paypal-admin-kv-key">Payment Method</span>
+              <strong class="paypal-admin-kv-val">${this.escapeHtml(chanText)}</strong>
+            </div>
+            <div class="paypal-admin-kv-row">
+              <span class="paypal-admin-kv-key">Admin Recipient</span>
+              <strong class="paypal-admin-kv-val">${this.escapeHtml(p.recipient_name)} (${this.escapeHtml(p.recipient_contact)})</strong>
+            </div>
+            <div class="paypal-admin-kv-row">
+              <span class="paypal-admin-kv-key">Invoice Number</span>
+              <strong class="paypal-admin-kv-val">${this.escapeHtml(p.invoice_number)}</strong>
+            </div>
+            <div class="paypal-admin-kv-row">
+              <span class="paypal-admin-kv-key">PayPal Transaction ID</span>
+              <strong class="paypal-admin-kv-val">${this.escapeHtml(p.paypal_reference_number || p.paypal_order_id || 'Uploaded via Screenshot Proof')}</strong>
+            </div>
+            <div class="paypal-admin-kv-row">
+              <span class="paypal-admin-kv-key">Payment &amp; Submission Date</span>
+              <strong class="paypal-admin-kv-val">${this.escapeHtml(p.payment_date || '—')} • Submitted ${this.formatDateTime(p.submitted_at)}</strong>
+            </div>
+            <div class="paypal-admin-kv-row">
+              <span class="paypal-admin-kv-key">Proof Verification Status</span>
+              <span class="paypal-status-badge ${st.cls}" style="font-size: 0.72rem;">${verifySummary}</span>
             </div>
           </div>
 
-          <div class="paypal-admin-meta-grid">
-            <div><span>Pay Date:</span> <strong>${this.escapeHtml(p.payment_date || '—')}</strong></div>
-            <div><span>Submitted:</span> <strong>${this.formatDateTime(p.submitted_at)}</strong></div>
-            <div><span>PayPal Ref / Order:</span> <strong>${this.escapeHtml(p.paypal_reference_number || p.paypal_order_id || 'N/A (QR Upload)')}</strong></div>
-            <div><span>Verified By:</span> <strong>${p.verified_by_name ? `${this.escapeHtml(p.verified_by_name)} (${this.formatDateTime(p.verified_at)})` : 'Pending Admin Verification'}</strong></div>
-          </div>
-
-          <div style="display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-top: 0.85rem; padding-top: 0.85rem; border-top: 1px solid rgba(255,255,255,0.1);">
-            <div style="display: flex; align-items: center; gap: 0.65rem; flex-wrap: wrap;">
+          <div style="margin-top: 0.85rem; padding-top: 0.85rem; border-top: 1px solid rgba(255,255,255,0.1);">
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap; margin-bottom: ${p.status === 'pending' ? '0.9rem' : '0'};">
               <button type="button" class="btn btn-outline-gold btn-sm" onclick="AvioraPayments.viewProofScreenshot(${p.id})">
                 View &amp; Enlarge Proof Screenshot (${this.escapeHtml(p.proof_filename)})
               </button>
               ${p.admin_notes ? `<span style="font-size: 0.78rem; color: #FDE68A;">Note: ${this.escapeHtml(p.admin_notes)}</span>` : ''}
             </div>
 
-            <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
-              ${p.status === 'pending' ? `
-                <button type="button" class="btn btn-sm" style="background: #10B981; color: #FFFFFF; border: none; font-weight: 700;" onclick="AvioraPayments.acceptAdminPaymentFlow(${p.id}, '${this.escapeHtml(amtStr)}', '${this.escapeHtml(p.invoice_number)}')">
-                  ✓ Accept Payment
-                </button>
-                <button type="button" class="btn btn-sm" style="background: #DC2626; color: #FFFFFF; border: none; font-weight: 700;" onclick="AvioraPayments.rejectAdminPaymentFlow(${p.id}, '${this.escapeHtml(p.invoice_number)}')">
-                  ✕ Mark as Not Received
-                </button>
-                <button type="button" class="btn btn-secondary btn-sm" onclick="AvioraPayments.requestMoreInfoFlow(${p.id}, '${this.escapeHtml(p.invoice_number)}')">
-                  Request Verification Info
-                </button>
-              ` : ''}
-            </div>
+            ${p.status === 'pending' ? `
+              <div style="padding-top: 0.85rem; border-top: 1px dashed rgba(255,255,255,0.12);">
+                <div style="font-size: 0.9rem; font-weight: 800; color: #FFFFFF; margin-bottom: 0.25rem;">Admin Verification</div>
+                <p style="font-size: 0.78rem; color: #CBD5E1; margin: 0 0 0.85rem 0; line-height: 1.45;">
+                  Verify that exact PayPal funds of <strong>${this.escapeHtml(amtStr)}</strong> actually arrived in <strong>${this.escapeHtml(p.recipient_name)} (${this.escapeHtml(p.recipient_contact)})</strong> and match the uploaded screenshot before accepting.
+                </p>
+                <div style="display: flex; flex-direction: column; gap: 0.55rem;">
+                  <button type="button" class="btn" style="width: 100%; justify-content: center; background: #16A34A; color: #FFFFFF; border: none; font-weight: 700; padding: 0.7rem 1rem;" onclick="AvioraPayments.acceptAdminPaymentFlow(${p.id}, '${this.escapeHtml(amtStr)}', '${this.escapeHtml(p.invoice_number)}')">
+                    Accept Payment
+                  </button>
+                  <button type="button" class="btn" style="width: 100%; justify-content: center; background: transparent; color: #F8FAFC; border: 1px solid rgba(255,255,255,0.22); font-weight: 600; padding: 0.65rem 1rem;" onclick="AvioraPayments.rejectAdminPaymentFlow(${p.id}, '${this.escapeHtml(p.invoice_number)}')">
+                    Mark as Not Received / Report Discrepancy
+                  </button>
+                  <button type="button" class="btn btn-secondary btn-sm" style="width: 100%; justify-content: center;" onclick="AvioraPayments.requestMoreInfoFlow(${p.id}, '${this.escapeHtml(p.invoice_number)}')">
+                    Request Additional Verification Info
+                  </button>
+                </div>
+              </div>
+            ` : ''}
           </div>
 
           ${logs.length > 0 ? `
@@ -755,17 +906,11 @@ const AvioraPayments = {
 
       const holderInp = document.getElementById('admin-paypal-holder-name');
       const contactInp = document.getElementById('admin-paypal-contact');
-      const bizEmailInp = document.getElementById('admin-paypal-business-email');
-      const apiBadge = document.getElementById('admin-paypal-api-status-badge');
       const qrPreview = document.getElementById('admin-paypal-qr-preview');
       const qrEmpty = document.getElementById('admin-paypal-qr-empty');
 
       if (holderInp) holderInp.value = s.paypal_holder_name || 'Stephanie Nicole Debo Manalo';
       if (contactInp) contactInp.value = s.paypal_contact || '09945586658';
-      if (bizEmailInp) bizEmailInp.value = s.paypal_business_email || '';
-      if (apiBadge) {
-        apiBadge.textContent = s.paypal_checkout_supported ? 'PayPal Business REST API Connected' : 'Server API Keys Not Set (QR & Proof Verification Active)';
-      }
 
       if (s.has_qr_image && s.qr_image_data) {
         if (qrPreview) {
@@ -786,12 +931,10 @@ const AvioraPayments = {
     if (e && e.preventDefault) e.preventDefault();
     const holder = document.getElementById('admin-paypal-holder-name')?.value.trim();
     const contact = document.getElementById('admin-paypal-contact')?.value.trim();
-    const bizEmail = document.getElementById('admin-paypal-business-email')?.value.trim();
     try {
       const res = await API.updateAdminPaymentSettings({
         paypal_holder_name: holder,
-        paypal_contact: contact,
-        paypal_business_email: bizEmail
+        paypal_contact: contact
       });
       this.paymentSettings = res.settings;
       showToast(res.message || 'Admin PayPal recipient settings updated.', 'success');

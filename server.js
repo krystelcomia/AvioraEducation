@@ -1172,15 +1172,16 @@ async function dispatchRealTimeGmailAPI({ notificationId, userId, userName, reci
       }
     }
 
-    // 4. EmailJS Transactional REST API
+    // 4. EmailJS Transactional REST API (server-side when accessToken/private key is set; otherwise hand off cleanly to browser @emailjs/browser SDK)
     const emailjsServiceId = (process.env.EMAILJS_SERVICE_ID || '').trim();
     const emailjsTemplateId = code
       ? (process.env.EMAILJS_RESET_TEMPLATE_ID || process.env.EMAILJS_TEMPLATE_ID || '').trim()
       : (process.env.EMAILJS_NOTIFICATION_TEMPLATE_ID || process.env.EMAILJS_TEMPLATE_ID || '').trim();
     const emailjsPublicKey = (process.env.EMAILJS_PUBLIC_KEY || '').trim();
     const emailjsPrivateKey = (process.env.EMAILJS_PRIVATE_KEY || '').trim();
+    const hasEmailJSBase = Boolean(emailjsServiceId && emailjsTemplateId && emailjsPublicKey);
 
-    if (!delivered && emailjsServiceId && emailjsTemplateId && emailjsPublicKey && typeof fetch === 'function') {
+    if (!delivered && hasEmailJSBase && emailjsPrivateKey && typeof fetch === 'function') {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 5000);
       try {
@@ -1191,16 +1192,19 @@ async function dispatchRealTimeGmailAPI({ notificationId, userId, userName, reci
             service_id: emailjsServiceId,
             template_id: emailjsTemplateId,
             user_id: emailjsPublicKey,
-            ...(emailjsPrivateKey ? { accessToken: emailjsPrivateKey } : {}),
+            accessToken: emailjsPrivateKey,
             template_params: {
               to_email: recipientEmail,
               recipient_email: recipientEmail,
+              user_email: recipientEmail,
               email: recipientEmail,
               to_name: userName || 'Aviora Member',
+              user_name: userName || 'Aviora Member',
+              name: userName || 'Aviora Member',
               subject,
               title,
               message,
-              ...(code ? { verification_code: code, passcode: code, code } : {}),
+              ...(code ? { verification_code: code, passcode: code, code, otp: code } : {}),
               notification_type: type || 'info',
               action_url: link || '#student-portal',
               app_name: 'Aviora Education'
@@ -1249,8 +1253,11 @@ async function dispatchRealTimeGmailAPI({ notificationId, userId, userName, reci
       }
     }
 
-    // 6. Optional FormSubmit Fallback only when no authenticated SMTP/API provider is active
-    if (!delivered && typeof fetch === 'function' && process.env.DISABLE_EXTERNAL_EMAIL_RELAY !== 'true') {
+    // Skip FormSubmit fallback when client EmailJS is configured so browser @emailjs/browser sends directly
+    const needsClientEmailJS = !delivered && hasEmailJSBase && !emailjsPrivateKey;
+
+    // 6. Optional FormSubmit Fallback only when no authenticated SMTP/EmailJS/API provider is active
+    if (!delivered && !needsClientEmailJS && typeof fetch === 'function' && process.env.DISABLE_EXTERNAL_EMAIL_RELAY !== 'true') {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 4500);
       try {
@@ -1304,11 +1311,10 @@ async function dispatchRealTimeGmailAPI({ notificationId, userId, userName, reci
           SET api_provider = ?,
               delivery_status = ?
           WHERE notification_id = ?
-        `).run(providerUsed, delivered ? 'delivered' : 'pending_configuration', notificationId);
+        `).run(providerUsed, delivered ? 'delivered' : (needsClientEmailJS ? 'client_relay' : 'pending_configuration'), notificationId);
       }
     } catch (e) { }
 
-    const needsClientEmailJS = !delivered && Boolean(emailjsServiceId && emailjsTemplateId && emailjsPublicKey && !emailjsPrivateKey);
     return { sent: delivered, delivered, recipientEmail, provider: providerUsed, subject, needsClientEmailJS };
   } catch (err) {
     return { sent: false, delivered: false, recipientEmail, provider: providerUsed, subject, needsClientEmailJS: false };
@@ -3204,6 +3210,10 @@ function findUserByEmailOrLinkedGoogle(rawEmail) {
   const canonEmail = normalizeCanonicalEmail(cleanEmail);
 
   let user = db.prepare('SELECT id, name, email, role FROM users WHERE LOWER(email) = LOWER(?)').get(cleanEmail);
+  if (!user && cleanEmail === 'adminaviorastephanie@gmail.com') {
+    ensureAdminAccount();
+    user = db.prepare('SELECT id, name, email, role FROM users WHERE LOWER(email) = LOWER(?)').get(cleanEmail);
+  }
   if (!user && cleanEmail === 'joshuagarcia@gmail.com') {
     ensureJoshuaAccount();
     user = db.prepare('SELECT id, name, email, role FROM users WHERE LOWER(email) = LOWER(?)').get(cleanEmail);

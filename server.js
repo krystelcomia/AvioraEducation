@@ -2168,39 +2168,135 @@ function requireRole(...roles) {
 
 // Register
 const COUNTRY_DEFAULTS_MAP = {
-  'United States': { timezone: 'America/New_York', language: 'en-US' },
-  'United Kingdom': { timezone: 'Europe/London', language: 'en-US' },
-  'Canada': { timezone: 'America/Toronto', language: 'en-US' },
-  'Australia': { timezone: 'Australia/Sydney', language: 'en-US' },
-  'Philippines': { timezone: 'Asia/Manila', language: 'fil-PH' },
-  'Singapore': { timezone: 'Asia/Singapore', language: 'en-US' },
-  'Japan': { timezone: 'Asia/Tokyo', language: 'ja-JP' },
-  'South Korea': { timezone: 'Asia/Seoul', language: 'ko-KR' },
-  'China': { timezone: 'Asia/Shanghai', language: 'zh-CN' },
-  'India': { timezone: 'Asia/Kolkata', language: 'hi-IN' },
-  'France': { timezone: 'Europe/Paris', language: 'fr-FR' },
-  'Germany': { timezone: 'Europe/Berlin', language: 'de-DE' },
-  'Spain': { timezone: 'Europe/Madrid', language: 'es-ES' },
-  'Italy': { timezone: 'Europe/Rome', language: 'it-IT' },
-  'Brazil': { timezone: 'America/Sao_Paulo', language: 'pt-BR' },
-  'Mexico': { timezone: 'America/Mexico_City', language: 'es-ES' },
-  'United Arab Emirates': { timezone: 'Asia/Dubai', language: 'ar-SA' },
-  'Saudi Arabia': { timezone: 'Asia/Riyadh', language: 'ar-SA' },
-  'Indonesia': { timezone: 'Asia/Jakarta', language: 'id-ID' },
-  'Vietnam': { timezone: 'Asia/Ho_Chi_Minh', language: 'vi-VN' },
-  'Turkey': { timezone: 'Europe/Istanbul', language: 'tr-TR' },
-  'Netherlands': { timezone: 'Europe/Amsterdam', language: 'nl-NL' },
-  'Poland': { timezone: 'Europe/Warsaw', language: 'pl-PL' },
-  'Sweden': { timezone: 'Europe/Stockholm', language: 'sv-SE' },
-  'Thailand': { timezone: 'Asia/Bangkok', language: 'th-TH' },
-  'Switzerland': { timezone: 'Europe/Zurich', language: 'de-DE' },
-  'South Africa': { timezone: 'Africa/Johannesburg', language: 'en-US' },
-  'New Zealand': { timezone: 'Pacific/Auckland', language: 'en-US' }
+  'United States': { timezone: 'America/New_York', language: 'en-US', currency: 'USD', symbol: '$', abbr: 'EST' },
+  'United Kingdom': { timezone: 'Europe/London', language: 'en-US', currency: 'GBP', symbol: '£', abbr: 'GMT' },
+  'Canada': { timezone: 'America/Toronto', language: 'en-US', currency: 'CAD', symbol: 'CA$', abbr: 'EST' },
+  'Australia': { timezone: 'Australia/Sydney', language: 'en-US', currency: 'AUD', symbol: 'A$', abbr: 'AEST' },
+  'Philippines': { timezone: 'Asia/Manila', language: 'fil-PH', currency: 'PHP', symbol: '₱', abbr: 'PHT' },
+  'Singapore': { timezone: 'Asia/Singapore', language: 'en-US', currency: 'SGD', symbol: 'S$', abbr: 'SGT' },
+  'Japan': { timezone: 'Asia/Tokyo', language: 'ja-JP', currency: 'JPY', symbol: '¥', abbr: 'JST' },
+  'South Korea': { timezone: 'Asia/Seoul', language: 'ko-KR', currency: 'KRW', symbol: '₩', abbr: 'KST' },
+  'China': { timezone: 'Asia/Shanghai', language: 'zh-CN', currency: 'CNY', symbol: '¥', abbr: 'CST' },
+  'India': { timezone: 'Asia/Kolkata', language: 'hi-IN', currency: 'INR', symbol: '₹', abbr: 'IST' },
+  'France': { timezone: 'Europe/Paris', language: 'fr-FR', currency: 'EUR', symbol: '€', abbr: 'CET' },
+  'Germany': { timezone: 'Europe/Berlin', language: 'de-DE', currency: 'EUR', symbol: '€', abbr: 'CET' },
+  'Spain': { timezone: 'Europe/Madrid', language: 'es-ES', currency: 'EUR', symbol: '€', abbr: 'CET' },
+  'Italy': { timezone: 'Europe/Rome', language: 'it-IT', currency: 'EUR', symbol: '€', abbr: 'CET' },
+  'Brazil': { timezone: 'America/Sao_Paulo', language: 'pt-BR', currency: 'BRL', symbol: 'R$', abbr: 'BRT' },
+  'Mexico': { timezone: 'America/Mexico_City', language: 'es-ES', currency: 'MXN', symbol: 'MX$', abbr: 'CST' },
+  'United Arab Emirates': { timezone: 'Asia/Dubai', language: 'ar-SA', currency: 'AED', symbol: 'AED', abbr: 'GST' },
+  'Saudi Arabia': { timezone: 'Asia/Riyadh', language: 'ar-SA', currency: 'SAR', symbol: 'SAR', abbr: 'AST' },
+  'Indonesia': { timezone: 'Asia/Jakarta', language: 'id-ID', currency: 'IDR', symbol: 'Rp', abbr: 'WIB' },
+  'Vietnam': { timezone: 'Asia/Ho_Chi_Minh', language: 'vi-VN', currency: 'VND', symbol: '₫', abbr: 'ICT' },
+  'Turkey': { timezone: 'Europe/Istanbul', language: 'tr-TR', currency: 'TRY', symbol: '₺', abbr: 'TRT' },
+  'Netherlands': { timezone: 'Europe/Amsterdam', language: 'nl-NL', currency: 'EUR', symbol: '€', abbr: 'CET' },
+  'Poland': { timezone: 'Europe/Warsaw', language: 'pl-PL', currency: 'PLN', symbol: 'zł', abbr: 'CET' },
+  'Sweden': { timezone: 'Europe/Stockholm', language: 'sv-SE', currency: 'SEK', symbol: 'kr', abbr: 'CET' },
+  'Thailand': { timezone: 'Asia/Bangkok', language: 'th-TH', currency: 'THB', symbol: '฿', abbr: 'ICT' },
+  'Switzerland': { timezone: 'Europe/Zurich', language: 'de-DE', currency: 'CHF', symbol: 'CHF', abbr: 'CET' },
+  'South Africa': { timezone: 'Africa/Johannesburg', language: 'en-US', currency: 'ZAR', symbol: 'R', abbr: 'SAST' },
+  'New Zealand': { timezone: 'Pacific/Auckland', language: 'en-US', currency: 'NZD', symbol: 'NZ$', abbr: 'NZST' }
 };
+
+function getCountryDefaults(countryName) {
+  const clean = String(countryName || '').trim();
+  if (clean && COUNTRY_DEFAULTS_MAP[clean]) return COUNTRY_DEFAULTS_MAP[clean];
+  const lower = clean.toLowerCase();
+  const matchedKey = Object.keys(COUNTRY_DEFAULTS_MAP).find(k => k.toLowerCase() === lower);
+  return matchedKey ? COUNTRY_DEFAULTS_MAP[matchedKey] : COUNTRY_DEFAULTS_MAP['United States'];
+}
+
+function getCurrencyForCountry(countryName) {
+  return getCountryDefaults(countryName).currency || 'USD';
+}
+
+function normalizePersonName(rawName) {
+  return String(rawName || '').trim().replace(/\s+/g, ' ').toLowerCase();
+}
+
+function normalizeCanonicalEmail(rawEmail) {
+  const clean = String(rawEmail || '').toLowerCase().trim();
+  const atIdx = clean.indexOf('@');
+  if (atIdx <= 0) return clean;
+  const local = clean.slice(0, atIdx);
+  let domain = clean.slice(atIdx + 1);
+  if (domain === 'googlemail.com') domain = 'gmail.com';
+  if (domain === 'gmail.com') {
+    return `${local.replace(/\./g, '')}@gmail.com`;
+  }
+  return `${local}@${domain}`;
+}
+
+/**
+ * Checks whether a full name or email/Gmail address is already used by any existing account
+ * across users, user_preferences.linked_gmail, or oauth_linked_accounts.email.
+ */
+function findUsedIdentityConflict({ name, email, linkedGmail, excludeUserId = null } = {}) {
+  const emailsToCheck = [email, linkedGmail]
+    .map(v => String(v || '').toLowerCase().trim())
+    .filter(v => v && v.includes('@'));
+
+  if (emailsToCheck.length > 0) {
+    const usersRows = db.prepare('SELECT id, email FROM users').all();
+    const prefRows = db.prepare("SELECT user_id, linked_gmail FROM user_preferences WHERE linked_gmail IS NOT NULL AND linked_gmail != ''").all();
+    const oauthRows = db.prepare("SELECT user_id, email FROM oauth_linked_accounts WHERE email IS NOT NULL AND email != ''").all();
+
+    for (const candidate of emailsToCheck) {
+      const candCanon = normalizeCanonicalEmail(candidate);
+      const userConflict = usersRows.find(r => (!excludeUserId || Number(r.id) !== Number(excludeUserId)) && (String(r.email || '').toLowerCase().trim() === candidate || normalizeCanonicalEmail(r.email) === candCanon));
+      if (userConflict) {
+        return {
+          conflict: true,
+          field: 'email',
+          reason: 'email_in_use',
+          ownerUserId: userConflict.id,
+          error: 'This email / Gmail address is already registered on Aviora. Please use a different email address or log in.'
+        };
+      }
+      const prefConflict = prefRows.find(r => (!excludeUserId || Number(r.user_id) !== Number(excludeUserId)) && (String(r.linked_gmail || '').toLowerCase().trim() === candidate || normalizeCanonicalEmail(r.linked_gmail) === candCanon));
+      if (prefConflict) {
+        return {
+          conflict: true,
+          field: 'email',
+          reason: 'linked_gmail_in_use',
+          ownerUserId: prefConflict.user_id,
+          error: 'This Gmail address is already linked to another Aviora account. Please use a different email address.'
+        };
+      }
+      const oauthConflict = oauthRows.find(r => (!excludeUserId || Number(r.user_id) !== Number(excludeUserId)) && (String(r.email || '').toLowerCase().trim() === candidate || normalizeCanonicalEmail(r.email) === candCanon));
+      if (oauthConflict) {
+        return {
+          conflict: true,
+          field: 'email',
+          reason: 'oauth_email_in_use',
+          ownerUserId: oauthConflict.user_id,
+          error: 'This Gmail / social email is already linked to another Aviora account. Please use a different email address.'
+        };
+      }
+    }
+  }
+
+  const normName = normalizePersonName(name);
+  if (normName) {
+    const allUsers = db.prepare('SELECT id, name FROM users').all();
+    const nameConflict = allUsers.find(u => (!excludeUserId || Number(u.id) !== Number(excludeUserId)) && normalizePersonName(u.name) === normName);
+    if (nameConflict) {
+      return {
+        conflict: true,
+        field: 'name',
+        reason: 'name_in_use',
+        ownerUserId: nameConflict.id,
+        error: 'This name is already registered on Aviora. Names that have already been used cannot be registered again.'
+      };
+    }
+  }
+
+  return null;
+}
 
 function resolveLocationPreferences(country, timezone, language) {
   const cleanCountry = (country && String(country).trim()) || 'United States';
-  const def = COUNTRY_DEFAULTS_MAP[cleanCountry] || { timezone: 'America/New_York', language: 'en-US' };
+  const def = getCountryDefaults(cleanCountry);
   return {
     country: cleanCountry,
     timezone: (timezone && String(timezone).trim()) || def.timezone,
@@ -2286,9 +2382,13 @@ app.post('/api/auth/register', (req, res) => {
     }
 
     const cleanEmail = email.toLowerCase().trim();
-    const existing = db.prepare('SELECT id FROM users WHERE LOWER(email) = LOWER(?)').get(cleanEmail);
-    if (existing) {
-      return res.status(409).json({ error: 'An account with this email address already exists. Please sign in instead.' });
+    const identityConflict = findUsedIdentityConflict({ name, email: cleanEmail });
+    if (identityConflict) {
+      return res.status(409).json({
+        error: identityConflict.error,
+        field: identityConflict.field,
+        reason: identityConflict.reason
+      });
     }
 
     const salt = bcrypt.genSaltSync(10);
@@ -2433,6 +2533,30 @@ app.post('/api/auth/register', (req, res) => {
   }
 });
 
+// Pre-step validation: verify that full name and email / Gmail have not already been used on Aviora
+app.post('/api/auth/check-availability', (req, res) => {
+  try {
+    const { name, email, linked_gmail } = req.body || {};
+    const conflict = findUsedIdentityConflict({
+      name,
+      email,
+      linkedGmail: linked_gmail
+    });
+    if (conflict) {
+      return res.status(409).json({
+        available: false,
+        field: conflict.field,
+        reason: conflict.reason,
+        error: conflict.error
+      });
+    }
+    return res.json({ available: true });
+  } catch (error) {
+    console.error('Availability check error:', error);
+    return res.status(500).json({ error: 'Failed to validate account details.' });
+  }
+});
+
 // Login
 app.post('/api/auth/login', (req, res) => {
   try {
@@ -2547,6 +2671,18 @@ app.post('/api/auth/sync-account', (req, res) => {
     const { country: userCountry, timezone: userTimezone, language: userLanguage } = resolveLocationPreferences(country, timezone, language);
 
     if (!user) {
+      const syncConflict = findUsedIdentityConflict({
+        name: name ? name.trim() : null,
+        email: cleanEmail
+      });
+      if (syncConflict) {
+        return res.status(409).json({
+          error: syncConflict.error,
+          field: syncConflict.field,
+          reason: syncConflict.reason
+        });
+      }
+
       const defaultAvatar = (designatedRole === 'teacher' || designatedRole === 'tutor')
         ? 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=300&q=80'
         : 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=300&q=80';
@@ -2652,10 +2788,11 @@ app.get('/api/auth/emailjs-config', (req, res) => {
 // Map: email -> { code: '123456', expiresAt: timestamp, attempts: 0, verified: boolean, userName: string }
 const passwordResetStore = new Map();
 
-// Helper: find user either by primary account email or linked Google / Gmail email
+// Helper: find user either by primary account email or linked Google / Gmail / OAuth email
 function findUserByEmailOrLinkedGoogle(rawEmail) {
   const cleanEmail = String(rawEmail || '').toLowerCase().trim();
   if (!cleanEmail) return null;
+  const canonEmail = normalizeCanonicalEmail(cleanEmail);
 
   let user = db.prepare('SELECT id, name, email, role FROM users WHERE LOWER(email) = LOWER(?)').get(cleanEmail);
   if (!user && cleanEmail === 'joshuagarcia@gmail.com') {
@@ -2667,27 +2804,38 @@ function findUserByEmailOrLinkedGoogle(rawEmail) {
     user = db.prepare('SELECT id, name, email, role FROM users WHERE LOWER(email) = LOWER(?)').get(cleanEmail);
   }
   if (!user) {
+    const allUsers = db.prepare('SELECT id, name, email, role FROM users').all();
+    user = allUsers.find(u => normalizeCanonicalEmail(u.email) === canonEmail) || null;
+  }
+  if (!user) {
     try {
-      user = db.prepare(`
-        SELECT u.id, u.name, u.email, u.role
+      const oauthRows = db.prepare(`
+        SELECT u.id, u.name, u.email, u.role, ola.email as linked_email, ola.provider
         FROM oauth_linked_accounts ola
         JOIN users u ON u.id = ola.user_id
-        WHERE ola.provider = 'google' AND LOWER(ola.email) = LOWER(?)
-        ORDER BY ola.linked_at DESC
-        LIMIT 1
-      `).get(cleanEmail);
+        ORDER BY CASE WHEN ola.provider = 'google' THEN 0 ELSE 1 END, ola.linked_at DESC
+      `).all();
+      const matched = oauthRows.find(r =>
+        String(r.linked_email || '').toLowerCase().trim() === cleanEmail
+        || normalizeCanonicalEmail(r.linked_email) === canonEmail
+      );
+      if (matched) user = { id: matched.id, name: matched.name, email: matched.email, role: matched.role };
     } catch (e) {}
   }
   if (!user) {
     try {
-      user = db.prepare(`
-        SELECT u.id, u.name, u.email, u.role
+      const prefRows = db.prepare(`
+        SELECT u.id, u.name, u.email, u.role, up.linked_gmail
         FROM user_preferences up
         JOIN users u ON u.id = up.user_id
-        WHERE LOWER(up.linked_gmail) = LOWER(?)
+        WHERE up.linked_gmail IS NOT NULL AND up.linked_gmail != ''
         ORDER BY up.updated_at DESC
-        LIMIT 1
-      `).get(cleanEmail);
+      `).all();
+      const matched = prefRows.find(r =>
+        String(r.linked_gmail || '').toLowerCase().trim() === cleanEmail
+        || normalizeCanonicalEmail(r.linked_gmail) === canonEmail
+      );
+      if (matched) user = { id: matched.id, name: matched.name, email: matched.email, role: matched.role };
     } catch (e) {}
   }
   return user || null;
@@ -2933,6 +3081,13 @@ function linkOrRegisterOAuthUser(provider, profile) {
   let isNewUser = false;
 
   if (!user) {
+    const oauthConflict = findUsedIdentityConflict({ name, email });
+    if (oauthConflict) {
+      const err = new Error(oauthConflict.error);
+      err.statusCode = 409;
+      throw err;
+    }
+
     isNewUser = true;
     // Auto-register user from Google / Facebook
     const salt = bcrypt.genSaltSync(10);
@@ -3462,7 +3617,7 @@ app.all('/api/auth/google/callback', async (req, res) => {
     }
 
     const email = (q.email || profile?.email || `google.user.${Date.now().toString().slice(-6)}@gmail.com`).toLowerCase().trim();
-    const name = q.name || profile?.name || 'Krystel Comia';
+    const name = q.name || profile?.name || `Google Scholar ${Date.now().toString().slice(-4)}`;
     const avatar = q.avatar || profile?.picture || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=300&q=80';
     const role = parsedState.role || 'student';
 
@@ -3874,7 +4029,7 @@ app.post('/api/auth/oauth', (req, res) => {
     });
   } catch (error) {
     console.error('Social OAuth error:', error);
-    return res.status(500).json({ error: error.message || 'An error occurred during social authentication.' });
+    return res.status(error.statusCode || 500).json({ error: error.message || 'An error occurred during social authentication.' });
   }
 });
 
@@ -3888,6 +4043,18 @@ app.post('/api/auth/link-account', authenticateToken, (req, res) => {
     const email = profile?.email ? profile.email.toLowerCase().trim() : req.user.email;
     const name = profile?.name ? profile.name.trim() : req.user.name;
     const avatar = profile?.picture || profile?.avatar || req.user.avatar_url;
+
+    const existingEmailConflict = findUsedIdentityConflict({
+      email,
+      excludeUserId: req.user.id
+    });
+    if (existingEmailConflict) {
+      return res.status(409).json({
+        error: existingEmailConflict.error,
+        field: 'email',
+        reason: existingEmailConflict.reason
+      });
+    }
 
     db.prepare(`
       INSERT INTO oauth_linked_accounts (user_id, provider, provider_user_id, email, name, avatar_url)
@@ -4105,7 +4272,7 @@ app.put('/api/auth/profile', authenticateToken, (req, res) => {
       }
 
       const newBaseRate = parseFloat(tutorData.hourly_rate) || existingProf.hourly_rate || 45;
-      const newRateCurr = tutorData.rate_currency || (String(effectiveCountry).toLowerCase() === 'philippines' ? 'PHP' : (existingProf.rate_currency || 'USD'));
+      const newRateCurr = tutorData.rate_currency || getCurrencyForCountry(effectiveCountry) || existingProf.rate_currency || 'USD';
       const finalHeadline = lockedFields.headline ? existingHeadline : (tutorData.headline || existingHeadline || null);
       const finalBio = lockedFields.bio ? existingBio : (tutorData.bio || existingBio || null);
 
@@ -4277,8 +4444,20 @@ app.put('/api/user/preferences', authenticateToken, (req, res) => {
       params.push(parseBool(notif_gmail));
     }
     if (linked_gmail !== undefined && String(linked_gmail).includes('@')) {
+      const cleanLinkedGmail = String(linked_gmail).toLowerCase().trim();
+      const gmailConflict = findUsedIdentityConflict({
+        email: cleanLinkedGmail,
+        excludeUserId: userId
+      });
+      if (gmailConflict) {
+        return res.status(409).json({
+          error: gmailConflict.error,
+          field: 'email',
+          reason: gmailConflict.reason
+        });
+      }
       updates.push('linked_gmail = ?');
-      params.push(String(linked_gmail).toLowerCase().trim());
+      params.push(cleanLinkedGmail);
     }
 
     if (updates.length > 0) {
@@ -5065,7 +5244,7 @@ app.get('/api/tutors', (req, res) => {
         tp.subject_rates,
         tp.grade_levels,
         tp.hourly_rate,
-        COALESCE(tp.rate_currency, ta.rate_currency, CASE WHEN LOWER(COALESCE(tp.country, u.country, '')) = 'philippines' THEN 'PHP' ELSE 'USD' END) as rate_currency,
+        COALESCE(tp.rate_currency, ta.rate_currency) as rate_currency,
         tp.rating,
         tp.reviews_count,
         tp.total_sessions,
@@ -5133,6 +5312,7 @@ app.get('/api/tutors', (req, res) => {
       const norm = normalizeSubjectRates(r.subjects, r.subject_rates || r.app_subject_rates, r.hourly_rate);
       return {
         ...r,
+        rate_currency: r.rate_currency || getCurrencyForCountry(r.country),
         is_online: isUserOnline(r.user_id) ? 1 : 0,
         subjects: norm.subjects,
         subject_rates: norm.subject_rates,
@@ -5225,7 +5405,7 @@ app.get('/api/tutors/:id', (req, res) => {
     const normTutor = normalizeSubjectRates(tutor.subjects, tutor.subject_rates, tutor.hourly_rate);
     tutor.subjects = normTutor.subjects;
     tutor.subject_rates = normTutor.subject_rates;
-    tutor.rate_currency = tutor.rate_currency || (String(tutor.country || '').toLowerCase() === 'philippines' ? 'PHP' : 'USD');
+    tutor.rate_currency = tutor.rate_currency || getCurrencyForCountry(tutor.country);
     tutor.grade_levels = safeParseArray(tutor.grade_levels);
     const liveAvail = getTutorLiveAvailability(tutor.user_id, tutor.availability_schedule);
     tutor.availability_schedule = liveAvail.availability_schedule;
@@ -7550,11 +7730,18 @@ app.post('/api/teacher/apply', authenticateToken, requireRole('teacher'), teache
       return res.status(400).json({ error: 'Applicants are required to upload both a Resume (CV) and a Degree Diploma before submitting for review.' });
     }
 
+    const applicantUser = db.prepare('SELECT country FROM users WHERE id = ?').get(userId);
+    const applicantPrefs = getUserPreferences(userId) || {};
+    const appCountry = existingApp?.country || applicantPrefs.country || applicantUser?.country || req.body.country || 'United States';
+    const appTimezone = existingApp?.timezone || applicantPrefs.timezone || req.body.timezone || getCountryDefaults(appCountry).timezone || 'America/New_York';
+    const appCurrency = req.body.rate_currency || existingApp?.rate_currency || getCurrencyForCountry(appCountry);
+
     if (existingApp) {
       db.prepare(`
         UPDATE teacher_applications
         SET headline = ?, highest_degree = ?, institution = ?, graduation_year = ?,
             years_experience = ?, subjects = ?, grade_levels = ?, hourly_rate = ?,
+            rate_currency = COALESCE(?, rate_currency), country = COALESCE(?, country), timezone = COALESCE(?, timezone),
             bio = ?, teaching_philosophy = ?,
             credentials_file = COALESCE(?, credentials_file),
             credentials_filename = COALESCE(?, credentials_filename),
@@ -7572,6 +7759,9 @@ app.post('/api/teacher/apply', authenticateToken, requireRole('teacher'), teache
         JSON.stringify(subjectsArr),
         JSON.stringify(gradeLevelsArr),
         parseFloat(hourly_rate) || existingApp.hourly_rate,
+        appCurrency,
+        appCountry,
+        appTimezone,
         bio || existingApp.bio,
         teaching_philosophy || existingApp.teaching_philosophy,
         diplomaFile,
@@ -7587,11 +7777,12 @@ app.post('/api/teacher/apply', authenticateToken, requireRole('teacher'), teache
       db.prepare(`
         INSERT INTO teacher_applications (
           user_id, headline, highest_degree, institution, graduation_year,
-          years_experience, subjects, grade_levels, hourly_rate, bio,
+          years_experience, subjects, grade_levels, hourly_rate, rate_currency,
+          country, timezone, bio,
           teaching_philosophy, credentials_file, credentials_filename,
           resume_file, resume_filename, diploma_file, diploma_filename,
           interview_status, availability_schedule, status
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, 'pending')
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, 'pending')
       `).run(
         userId,
         headline,
@@ -7602,6 +7793,9 @@ app.post('/api/teacher/apply', authenticateToken, requireRole('teacher'), teache
         JSON.stringify(subjectsArr),
         JSON.stringify(gradeLevelsArr),
         parseFloat(hourly_rate) || 45.0,
+        appCurrency,
+        appCountry,
+        appTimezone,
         bio,
         teaching_philosophy,
         diplomaFile,
@@ -8321,7 +8515,7 @@ app.put('/api/teacher/subjects', authenticateToken, requireRole('teacher'), (req
     );
 
     const { action, subject, new_subject, rate, rate_currency, category, level, qualification, subjects: fullSubjects, subject_rates: fullSubjectRates } = req.body;
-    const effectiveRateCurr = rate_currency || tutorProfile?.rate_currency || appRecord?.rate_currency || (String(tutorProfile?.country || appRecord?.country || '').toLowerCase() === 'philippines' ? 'PHP' : 'USD');
+    const effectiveRateCurr = rate_currency || tutorProfile?.rate_currency || appRecord?.rate_currency || getCurrencyForCountry(tutorProfile?.country || appRecord?.country);
 
     let updatedSubjects = [...currentNorm.subjects];
     let updatedRates = { ...currentNorm.subject_rates };
@@ -10932,13 +11126,21 @@ app.post('/api/admin/teacher-applications/:id/review', authenticateToken, requir
       db.prepare(`UPDATE teacher_applications SET interview_status = 'completed' WHERE id = ? AND interview_status = 'scheduled'`).run(appId);
       // Upsert into tutor_profiles so they immediately appear in the public directory!
       const normApp = normalizeSubjectRates(application.subjects, application.subject_rates, application.hourly_rate);
+      const appUserRow = db.prepare('SELECT country FROM users WHERE id = ?').get(application.user_id) || {};
+      const appUserPrefs = getUserPreferences(application.user_id) || {};
+      const resolvedCountry = application.country || appUserPrefs.country || appUserRow.country || 'United States';
+      const resolvedTimezone = application.timezone || appUserPrefs.timezone || getCountryDefaults(resolvedCountry).timezone || 'America/New_York';
+      const resolvedRateCurrency = application.rate_currency || getCurrencyForCountry(resolvedCountry);
+
       const existingTutor = db.prepare('SELECT id FROM tutor_profiles WHERE user_id = ?').get(application.user_id);
       if (existingTutor) {
         db.prepare(`
           UPDATE tutor_profiles
           SET application_id = ?, headline = ?, bio = ?, highest_degree = ?,
               institution = ?, years_experience = ?, subjects = ?, subject_rates = ?, grade_levels = ?,
-              hourly_rate = ?, availability_schedule = ?, is_active = 1, updated_at = CURRENT_TIMESTAMP
+              hourly_rate = ?, rate_currency = COALESCE(?, rate_currency),
+              country = COALESCE(?, country), timezone = COALESCE(?, timezone),
+              availability_schedule = ?, is_active = 1, updated_at = CURRENT_TIMESTAMP
           WHERE user_id = ?
         `).run(
           appId,
@@ -10951,6 +11153,9 @@ app.post('/api/admin/teacher-applications/:id/review', authenticateToken, requir
           JSON.stringify(normApp.subject_rates),
           application.grade_levels,
           application.hourly_rate,
+          resolvedRateCurrency,
+          resolvedCountry,
+          resolvedTimezone,
           application.availability_schedule,
           application.user_id
         );
@@ -10959,9 +11164,10 @@ app.post('/api/admin/teacher-applications/:id/review', authenticateToken, requir
           INSERT INTO tutor_profiles (
             user_id, application_id, headline, bio, highest_degree,
             institution, years_experience, subjects, subject_rates, grade_levels,
-            hourly_rate, rating, reviews_count, total_sessions,
+            hourly_rate, rate_currency, country, timezone,
+            rating, reviews_count, total_sessions,
             availability_schedule, is_featured, is_active
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 5.0, 0, 0, ?, 0, 1)
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 5.0, 0, 0, ?, 0, 1)
         `).run(
           application.user_id,
           appId,
@@ -10974,6 +11180,9 @@ app.post('/api/admin/teacher-applications/:id/review', authenticateToken, requir
           JSON.stringify(normApp.subject_rates),
           application.grade_levels,
           application.hourly_rate,
+          resolvedRateCurrency,
+          resolvedCountry,
+          resolvedTimezone,
           application.availability_schedule
         );
       }

@@ -831,6 +831,19 @@ const Teacher = {
         this.setupApplicationFormListeners();
         this.populateApplicationForm();
 
+        const rateInputEl = document.getElementById('app-hourly-rate');
+        if (rateInputEl && !this.application?.hourly_rate && typeof AvioraCurrency !== 'undefined') {
+          const activeCurr = AvioraCurrency.getActiveCurrency();
+          if (activeCurr && activeCurr.code !== 'USD' && rateInputEl.value === '55') {
+            rateInputEl.value = activeCurr.code === 'JPY' || activeCurr.code === 'KRW' || activeCurr.code === 'IDR' || activeCurr.code === 'VND'
+              ? String(Math.round(55 * activeCurr.rate))
+              : String(Math.round(55 * activeCurr.rate * 100) / 100);
+          }
+        }
+        if (typeof AvioraCurrency !== 'undefined' && AvioraCurrency.updateDOM) AvioraCurrency.updateDOM();
+        if (typeof AvioraGeo !== 'undefined' && AvioraGeo.updateLiveClocks) AvioraGeo.updateLiveClocks();
+        if (typeof I18n !== 'undefined' && I18n.applyLanguage) I18n.applyLanguage(I18n.currentLanguage, false);
+
         const proceedBtn = document.getElementById('btn-proceed-dashboard');
         if (proceedBtn) {
           proceedBtn.style.display = hasSubmitted ? 'inline-flex' : 'none';
@@ -1011,7 +1024,7 @@ const Teacher = {
           <div>
             <div style="font-size: 0.76rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase;">Preferred Hourly Rate</div>
             <div style="font-size: 0.95rem; font-weight: 700; color: var(--gold-600); margin-top: 0.25rem;">
-              ${(typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.format(app.hourly_rate || 45, { perHour: true, showCode: true }) : `$${Number(app.hourly_rate || 45).toFixed(2)} USD / hr`}
+              ${(typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.format(app.hourly_rate || 45, { from: app.rate_currency || AvioraCurrency.getCurrencyForCountry(app.country || (typeof AvioraGeo !== 'undefined' ? AvioraGeo.getViewerCountry() : 'United States')).code, perHour: true, showCode: true }) : `$${Number(app.hourly_rate || 45).toFixed(2)} USD / hr`}
             </div>
           </div>
 
@@ -1801,10 +1814,11 @@ const Teacher = {
     }
 
     const curr = (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.getActiveCurrency() : { symbol: '$', code: 'USD' };
+    const effectiveRateCurr = this.tutorProfile?.rate_currency || this.application?.rate_currency || curr.code;
 
     grid.innerHTML = subjectsList.map((subj, idx) => {
       const baseRate = ratesMap[subj] !== undefined ? Number(ratesMap[subj]) : defaultRate;
-      const formattedRatePill = (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.format(baseRate, { from: curr.code, to: curr.code, perHour: true }) : `${curr.symbol}${baseRate.toFixed(2)}/hr`;
+      const formattedRatePill = (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.format(baseRate, { from: effectiveRateCurr, to: curr.code, perHour: true }) : `${curr.symbol}${baseRate.toFixed(2)}/hr`;
       const safeSubj = this.escapeSubjectAttr(subj);
       return `
         <div class="teacher-subject-rate-card" data-subject="${safeSubj}">
@@ -3896,11 +3910,11 @@ const Teacher = {
       </div>
       <div style="margin-top: 0.75rem; margin-bottom: 1.25rem; padding: 0.75rem 1rem; background: rgba(198, 138, 40, 0.08); border: 1px solid rgba(198, 138, 40, 0.25); border-radius: 8px; font-size: 0.83rem; color: var(--gold-800); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.6rem;">
         <div style="display: flex; align-items: center; gap: 0.5rem;">
-          <span style="font-size: 1.2rem;">${typeof AvioraGeo !== 'undefined' ? AvioraGeo.getCountryFlag(this.tutorProfile?.country || localStorage.getItem('aviora_country') || 'United States') : '🌐'}</span>
-          <span><strong>Your Operating Country & Timezone:</strong> ${this.tutorProfile?.country || localStorage.getItem('aviora_country') || 'United States'} (${this.tutorProfile?.timezone || localStorage.getItem('aviora_timezone') || 'America/New_York'} • ${typeof AvioraGeo !== 'undefined' ? AvioraGeo.getTimezoneAbbr(this.tutorProfile?.timezone || localStorage.getItem('aviora_timezone')) : 'EST'})</span>
+          <span style="font-size: 1.2rem;">${typeof AvioraGeo !== 'undefined' ? AvioraGeo.getCountryFlag(this.tutorProfile?.country || (typeof Profile !== 'undefined' && Profile.getCountry ? Profile.getCountry() : null) || (typeof AvioraGeo !== 'undefined' ? AvioraGeo.getViewerCountry() : 'United States')) : '🌐'}</span>
+          <span><strong>Your Operating Country & Timezone:</strong> ${this.tutorProfile?.country || (typeof Profile !== 'undefined' && Profile.getCountry ? Profile.getCountry() : null) || (typeof AvioraGeo !== 'undefined' ? AvioraGeo.getViewerCountry() : 'United States')} (${this.tutorProfile?.timezone || (typeof Profile !== 'undefined' && Profile.getTimezone ? Profile.getTimezone() : null) || (typeof AvioraGeo !== 'undefined' ? AvioraGeo.getViewerTimezone() : 'America/New_York')} • ${typeof AvioraGeo !== 'undefined' ? AvioraGeo.getTimezoneAbbr(this.tutorProfile?.timezone || (typeof Profile !== 'undefined' && Profile.getTimezone ? Profile.getTimezone() : null) || (typeof AvioraGeo !== 'undefined' ? AvioraGeo.getViewerTimezone() : null)) : 'EST'})</span>
         </div>
         <div style="display: flex; align-items: center; gap: 0.4rem; font-weight: 600;">
-          <span id="teacher-live-clock" data-tz="${this.tutorProfile?.timezone || localStorage.getItem('aviora_timezone') || 'America/New_York'}">🕒 ${typeof AvioraGeo !== 'undefined' ? AvioraGeo.getCurrentTimeInZone(this.tutorProfile?.timezone || localStorage.getItem('aviora_timezone')) : ''} local</span>
+          <span id="teacher-live-clock" data-tz="${this.tutorProfile?.timezone || (typeof Profile !== 'undefined' && Profile.getTimezone ? Profile.getTimezone() : null) || (typeof AvioraGeo !== 'undefined' ? AvioraGeo.getViewerTimezone() : 'America/New_York')}">🕒 ${typeof AvioraGeo !== 'undefined' ? AvioraGeo.getCurrentTimeInZone(this.tutorProfile?.timezone || (typeof Profile !== 'undefined' && Profile.getTimezone ? Profile.getTimezone() : null) || (typeof AvioraGeo !== 'undefined' ? AvioraGeo.getViewerTimezone() : null)) : ''} local</span>
           <span style="font-weight: 400; opacity: 0.8; font-size: 0.76rem;">• Availability is set in your local time; students see automatically converted slots</span>
         </div>
       </div>
@@ -5718,6 +5732,9 @@ const Teacher = {
         if (typeof Profile.applyCountry === 'function') Profile.applyCountry(country, false, true);
         if (typeof Profile.applyTimezone === 'function') Profile.applyTimezone(timezone, false, true);
       }
+      if (typeof AvioraGeo !== 'undefined' && AvioraGeo.updateLiveClocks) AvioraGeo.updateLiveClocks();
+      if (typeof AvioraCurrency !== 'undefined' && AvioraCurrency.updateDOM) AvioraCurrency.updateDOM();
+      if (typeof I18n !== 'undefined' && I18n.applyLanguage) I18n.applyLanguage(I18n.currentLanguage, false);
       await this.ensureTeacherStatus();
       if (window.location.hash === '#teacher-profile') {
         await this.loadProfilePage();
@@ -5997,12 +6014,13 @@ const Teacher = {
       }[tag] || tag));
     };
 
+    const backupCurrCode = creds.rate_currency || profile.rate_currency || (typeof AvioraCurrency !== 'undefined' ? AvioraCurrency.getCurrencyForCountry(profile.country || 'United States').code : 'USD');
     let subjectsHtml = '';
     if (subjectsList.length > 0) {
       subjectsHtml = subjectsList.map(s => {
         const rate = ratesMap[s]
-          ? ((typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.format(ratesMap[s], { perHour: true }) : `$${ratesMap[s]}/hr`)
-          : (creds.hourly_rate ? ((typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.format(creds.hourly_rate, { perHour: true }) : `$${creds.hourly_rate}/hr`) : '');
+          ? ((typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.format(ratesMap[s], { from: backupCurrCode, perHour: true }) : `$${ratesMap[s]}/hr`)
+          : (creds.hourly_rate ? ((typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.format(creds.hourly_rate, { from: backupCurrCode, perHour: true }) : `$${creds.hourly_rate}/hr`) : '');
         return `<span style="display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.2rem 0.55rem; border-radius: 9999px; background: rgba(198, 138, 40, 0.12); color: var(--gold-600); border: 1px solid rgba(198, 138, 40, 0.25); font-size: 0.72rem; font-weight: 600;">
           ${escapeHTML(s)} ${rate ? `<span style="opacity: 0.75; font-size: 0.68rem;">(${rate})</span>` : ''}
         </span>`;
@@ -6046,7 +6064,7 @@ const Teacher = {
             <div>Headline: <strong style="color: var(--text-primary);">${escapeHTML(creds.headline || 'Not specified')}</strong></div>
             <div>Degree: <strong style="color: var(--text-primary);">${escapeHTML(creds.highest_degree || 'None')}</strong></div>
             <div>Institution: <strong style="color: var(--text-primary);">${escapeHTML(creds.institution || 'None')}</strong></div>
-            <div>Base Rate: <strong style="color: #10B981;">${(typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.format(creds.hourly_rate || 45, { perHour: true }) : `$${escapeHTML(String(creds.hourly_rate || 45))}/hr`}</strong></div>
+            <div>Base Rate: <strong style="color: #10B981;">${(typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.format(creds.hourly_rate || 45, { from: backupCurrCode, perHour: true }) : `$${escapeHTML(String(creds.hourly_rate || 45))}/hr`}</strong></div>
           </div>
         </div>
 

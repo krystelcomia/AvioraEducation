@@ -325,10 +325,16 @@ const Profile = {
 
 
   updateTimezoneClockDisplays(tz) {
-    const activeTz = tz || (typeof localStorage !== 'undefined' ? (localStorage.getItem('aviora_timezone' + (this.getUserKey ? this.getUserKey() : '')) || localStorage.getItem('aviora_timezone')) : null) || 'America/New_York';
+    const geo = (typeof AvioraGeo !== 'undefined' ? AvioraGeo : (typeof window !== 'undefined' ? window.AvioraGeo : null));
+    const u = (typeof Auth !== 'undefined' && Auth.currentUser) || (typeof Storage !== 'undefined' ? Storage.getUser() : null);
+    const activeTz = tz
+      || this.userPreferences?.timezone
+      || u?.timezone
+      || (u?.id && typeof localStorage !== 'undefined' ? localStorage.getItem(`aviora_timezone_${u.id}`) : null)
+      || (geo && typeof geo.getViewerTimezone === 'function' ? geo.getViewerTimezone() : null)
+      || 'America/New_York';
     let timeStr = '--:-- --';
     let abbr = 'EST';
-    const geo = (typeof AvioraGeo !== 'undefined' ? AvioraGeo : (typeof window !== 'undefined' ? window.AvioraGeo : null));
     if (geo) {
       timeStr = geo.getCurrentTimeInZone(activeTz);
       abbr = geo.getTimezoneAbbr(activeTz);
@@ -392,8 +398,12 @@ const Profile = {
     });
 
     const key = this.getUserKey();
-    if (key) localStorage.setItem(`aviora_timezone${key}`, activeTz);
-    localStorage.setItem('aviora_timezone', activeTz);
+    if (key) {
+      localStorage.setItem(`aviora_timezone${key}`, activeTz);
+      localStorage.removeItem('aviora_timezone');
+    } else {
+      localStorage.removeItem('aviora_timezone');
+    }
 
     if (typeof AvioraGeo !== 'undefined' && typeof AvioraGeo.updateLiveClocks === 'function') {
       AvioraGeo.updateLiveClocks();

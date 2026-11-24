@@ -190,7 +190,8 @@
     },
 
     getTimezoneAbbr(tz) {
-      const activeTz = tz || (typeof localStorage !== 'undefined' ? localStorage.getItem('aviora_timezone') : null) || 'America/New_York';
+      const viewerTz = typeof this.getViewerTimezone === 'function' ? this.getViewerTimezone() : null;
+      const activeTz = tz || viewerTz || 'America/New_York';
       if (TIMEZONE_ABBRS[activeTz]) return TIMEZONE_ABBRS[activeTz];
       try {
         const parts = new Intl.DateTimeFormat('en-US', { timeZone: activeTz, timeZoneName: 'short' }).formatToParts(new Date());
@@ -434,7 +435,7 @@
       // 3. Teacher schedule live clock
       const teacherClock = document.getElementById('teacher-live-clock');
       if (teacherClock) {
-        const teacherTz = teacherClock.getAttribute('data-tz') || localStorage.getItem('aviora_timezone') || 'America/New_York';
+        const teacherTz = teacherClock.getAttribute('data-tz') || viewerTz || 'America/New_York';
         const time = this.getCurrentTimeInZone(teacherTz);
         const abbr = this.getTimezoneAbbr(teacherTz);
         teacherClock.textContent = `${time} (${abbr})`;
@@ -443,7 +444,7 @@
       // 4. Teacher profile page hero live clock
       const teacherProfClock = document.getElementById('teacher-profile-live-clock');
       if (teacherProfClock) {
-        const tTz = teacherProfClock.getAttribute('data-tz') || localStorage.getItem('aviora_timezone') || 'America/New_York';
+        const tTz = teacherProfClock.getAttribute('data-tz') || viewerTz || 'America/New_York';
         const time = this.getCurrentTimeInZone(tTz);
         const abbr = this.getTimezoneAbbr(tTz);
         teacherProfClock.textContent = `${time} (${abbr})`;
@@ -452,7 +453,7 @@
       // 5. Teacher dashboard hero live clock
       const teacherDashClock = document.getElementById('teacher-dashboard-live-clock');
       if (teacherDashClock) {
-        const tTz = teacherDashClock.getAttribute('data-tz') || localStorage.getItem('aviora_timezone') || 'America/New_York';
+        const tTz = teacherDashClock.getAttribute('data-tz') || viewerTz || 'America/New_York';
         const time = this.getCurrentTimeInZone(tTz);
         const abbr = this.getTimezoneAbbr(tTz);
         teacherDashClock.textContent = `${time} (${abbr})`;
@@ -464,7 +465,7 @@
         const textEl = document.getElementById(`${prefix}-timezone-time-text`);
         const abbrEl = document.getElementById(`${prefix}-timezone-time-abbr`);
         if (box && textEl) {
-          const tz = box.getAttribute('data-tz') || localStorage.getItem('aviora_timezone') || 'America/New_York';
+          const tz = box.getAttribute('data-tz') || viewerTz || 'America/New_York';
           textEl.textContent = this.getCurrentTimeInZone(tz);
           if (abbrEl) abbrEl.textContent = this.getTimezoneAbbr(tz);
         }

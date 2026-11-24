@@ -1236,11 +1236,12 @@ const Auth = {
     }
   },
 
-  goToSignupStep2() {
+  async goToSignupStep2() {
     const nameEl = document.getElementById('page-reg-name');
     const emailEl = document.getElementById('page-reg-email');
     const passEl = document.getElementById('page-reg-password');
     const confirmEl = document.getElementById('page-reg-confirm');
+    const nextBtn = document.getElementById('page-reg-next-btn');
 
     const name = nameEl ? nameEl.value.trim() : '';
     const email = emailEl ? emailEl.value.trim() : '';
@@ -1273,6 +1274,31 @@ const Auth = {
       showToast(!confirmPassword ? 'Please confirm your password.' : 'Passwords do not match. Please verify.', 'error');
       if (confirmEl) confirmEl.focus();
       return;
+    }
+
+    // Verify full name and email/Gmail have not already been used on Aviora before advancing to Step 2
+    if (typeof API !== 'undefined' && typeof API.checkAvailability === 'function') {
+      const origHtml = nextBtn ? nextBtn.innerHTML : 'Next →';
+      try {
+        if (nextBtn) {
+          nextBtn.disabled = true;
+          nextBtn.textContent = 'Checking availability...';
+        }
+        await API.checkAvailability({ name, email });
+      } catch (availErr) {
+        showToast(availErr.message || 'This name or email address is already in use.', 'error');
+        if (availErr.field === 'name' && nameEl) {
+          nameEl.focus();
+        } else if (availErr.field === 'email' && emailEl) {
+          emailEl.focus();
+        }
+        return;
+      } finally {
+        if (nextBtn) {
+          nextBtn.disabled = false;
+          nextBtn.innerHTML = origHtml;
+        }
+      }
     }
 
     const roleRadio = document.querySelector('input[name="page_register_role"]:checked');
@@ -1543,18 +1569,25 @@ const Auth = {
       submitBtn.disabled = true;
       submitBtn.textContent = 'Creating Account...';
 
-      // Always save created account to persistent local store
-      this.saveCreatedAccount(payload);
-
       const res = await API.register(payload);
+
+      // Save created account to persistent local store ONLY after server accepts registration
+      this.saveCreatedAccount({
+        ...payload,
+        id: res.user?.id,
+        avatar_url: res.user?.avatar_url
+      });
+
       Storage.setToken(res.token);
       Storage.setUser(res.user);
       this.currentUser = res.user;
       if (res.tutorDraftProfile && typeof Teacher !== 'undefined') {
         Teacher.tutorDraftProfile = res.tutorDraftProfile;
       }
-      if (res.studentProfile && typeof Profile !== 'undefined') {
-        Profile.studentProfile = res.studentProfile;
+      if (typeof Profile !== 'undefined') {
+        Profile.currentUser = res.user;
+        if (res.studentProfile) Profile.studentProfile = res.studentProfile;
+        if (res.preferences) Profile.userPreferences = res.preferences;
       }
       if (res.preferences) {
         this.syncUserPreferences(res.preferences);
@@ -1567,6 +1600,12 @@ const Auth = {
       this.updateNavUI(res.user);
       if (typeof AvioraGeo !== 'undefined' && typeof AvioraGeo.updateLiveClocks === 'function') {
         AvioraGeo.updateLiveClocks();
+      }
+      if (typeof AvioraCurrency !== 'undefined' && typeof AvioraCurrency.updateDOM === 'function') {
+        AvioraCurrency.updateDOM();
+      }
+      if (typeof I18n !== 'undefined' && typeof I18n.applyLanguage === 'function') {
+        I18n.applyLanguage(I18n.currentLanguage, false);
       }
       
       if (res.user.role === 'teacher' || res.user.role === 'tutor') {
@@ -1586,6 +1625,11 @@ const Auth = {
       }
     } catch (err) {
       showToast(err.message, 'error');
+      if (isPage && (err.field === 'name' || err.field === 'email')) {
+        this.backToSignupStep1();
+        const conflictEl = document.getElementById(err.field === 'name' ? 'page-reg-name' : 'page-reg-email');
+        if (conflictEl) conflictEl.focus();
+      }
     } finally {
       submitBtn.disabled = false;
       submitBtn.textContent = isPage ? 'Create Aviora Account' : 'Create My Account';

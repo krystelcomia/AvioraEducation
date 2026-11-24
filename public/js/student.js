@@ -408,8 +408,8 @@ const Student = {
               <h4 style="font-size: 1.15rem; color: var(--charcoal-900); font-weight: 800; margin-bottom: 0.3rem;">No Upcoming Classes Scheduled Right Now</h4>
               <p style="color: var(--text-secondary); font-size: 0.88rem; margin: 0 0 0.65rem 0;">Ready for your next academic breakthrough? Explore faculty in Calculus, Physics, Coding, and Languages for tailored 50-minute instruction.</p>
               <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-                <a href="#tutors" class="btn btn-primary btn-sm">Find a Tutor</a>
-                <a href="#buddy" class="btn btn-outline-gold btn-sm">Explore Aviora Buddy ($6)</a>
+                <a href="#tutors" class="btn btn-primary btn-sm" data-i18n="Find a Tutor">Find a Tutor</a>
+                <a href="#buddy" class="btn btn-outline-gold btn-sm">Explore Aviora Buddy (${(typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.format(6) : '$6'})</a>
               </div>
             </div>
           </div>
@@ -1534,6 +1534,12 @@ const Student = {
       if (typeof Profile !== 'undefined' && Profile.applyRegistrationLocks) {
         Profile.applyRegistrationLocks(data.preferences, u, sp);
       }
+      if (typeof this.updateStudentClock === 'function') {
+        this.updateStudentClock();
+      }
+      if (typeof AvioraGeo !== 'undefined' && AvioraGeo.updateLiveClocks) AvioraGeo.updateLiveClocks();
+      if (typeof AvioraCurrency !== 'undefined' && AvioraCurrency.updateDOM) AvioraCurrency.updateDOM();
+      if (typeof I18n !== 'undefined' && I18n.applyLanguage) I18n.applyLanguage(I18n.currentLanguage, false);
     } catch (e) {
       console.warn('Could not load student profile form data:', e);
     }
@@ -2636,7 +2642,7 @@ const Student = {
             <span class="contact-info-item-icon">✉️</span>
             <div class="contact-info-item-content">
               <div class="contact-info-item-label">Rate & Verification</div>
-              <div class="contact-info-item-val">$${activeConv.tutor_rate || 45}/hr • Verified Educator</div>
+              <div class="contact-info-item-val">${(typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.formatTutorRate(activeConv.tutor_rate || 45, { country: activeConv.tutor_country, rate_currency: activeConv.tutor_currency }, { perHour: true }) : `$${activeConv.tutor_rate || 45}/hr`} • Verified Educator</div>
             </div>
           </div>
 

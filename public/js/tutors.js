@@ -1858,7 +1858,8 @@ const Tutors = {
       if (cardCardBox) cardCardBox.classList.remove('selected');
 
       if (subDesc) {
-        subDesc.textContent = `Deduct 1 lesson from your active plan (${remaining} lessons remaining) — $0.00 due today`;
+        const zeroFmt = (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.format(0) : '$0.00';
+        subDesc.textContent = `Deduct 1 lesson from your active plan (${remaining} lessons remaining) — ${zeroFmt} due today`;
       }
       if (cardInputs) cardInputs.style.display = 'none';
       if (payText) payText.textContent = 'Confirm Booking (Use 1 Lesson Credit)';
@@ -1878,7 +1879,10 @@ const Tutors = {
 
       if (subDesc) subDesc.textContent = 'No subscription lesson credits remaining on your account.';
       if (cardInputs) cardInputs.style.display = 'block';
-      if (payText) payText.textContent = `Pay ${activeRate.toFixed(2)} & Confirm Lesson`;
+      const fmtActiveRate = (typeof AvioraCurrency !== 'undefined')
+        ? AvioraCurrency.formatTutorRate(activeRate, this.selectedTutor)
+        : `$${activeRate.toFixed(2)}`;
+      if (payText) payText.textContent = `Pay ${fmtActiveRate} & Confirm Lesson`;
     }
 
     // Configure Wallet Option (Display balance specifically associated with the selected tutor)
@@ -1899,7 +1903,9 @@ const Tutors = {
       }
     }
 
-    if (walletBalLabel) walletBalLabel.textContent = `${tutorWalletBal.toFixed(2)}`;
+    const fmtBal = (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.format(tutorWalletBal) : `$${tutorWalletBal.toFixed(2)}`;
+    const fmtZero = (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.format(0) : '$0.00';
+    if (walletBalLabel) walletBalLabel.textContent = fmtBal;
 
     const otherCreditTutor = (Auth.walletDetails?.tutor_credits || []).find(tc => tc.balance > 0);
     const eligibleTutorName = (otherCreditTutor && otherCreditTutor.name) || (Auth.walletTutor && Auth.walletTutor.name) || 'another tutor';
@@ -1907,9 +1913,9 @@ const Tutors = {
     if (tutorWalletBal <= 0 && totalWalletBal <= 0) {
       if (walletCardBox) walletCardBox.style.opacity = '0.55';
       if (walletOption) walletOption.disabled = true;
-      if (walletDesc) walletDesc.textContent = `Balance with ${this.selectedTutor.name}: $0.00. A new lesson can only be booked with wallet credit if you have a balance for this tutor.`;
+      if (walletDesc) walletDesc.textContent = `Balance with ${this.selectedTutor.name}: ${fmtZero}. A new lesson can only be booked with wallet credit if you have a balance for this tutor.`;
       if (walletStatusSub) {
-        walletStatusSub.textContent = '$0.00 Tutor Balance';
+        walletStatusSub.textContent = `${fmtZero} Tutor Balance`;
         walletStatusSub.style.color = 'var(--charcoal-500)';
       }
     } else if (tutorWalletBal <= 0 && totalWalletBal > 0) {

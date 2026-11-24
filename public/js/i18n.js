@@ -3036,7 +3036,14 @@ const PHRASE_DICTIONARY = {
     "Tutor": "講師",
     "Date & Time": "日時",
     "Duration": "所要時間",
-    "Hourly Rate": "Hourly Rate",
+    "Hourly Rate": "時給",
+    "Explore Aviora Buddy ($6)": "Aviora Buddyを見る",
+    "Upcoming Confirmed": "予約確定済み",
+    "Pending Tutor Acceptance": "講師承認待ち",
+    "Completed Lessons": "完了レッスン",
+    "Plan Balance": "プラン残高",
+    "All booked classes on track": "すべての予約クラスは順調です",
+    "Academic Overview & Learning Metrics": "学習の概要と進捗指標",
     "Book Lesson": "レッスンを予約",
     "Book a Lesson": "レッスンを予約",
     "View Profile": "プロフィール",
@@ -5561,10 +5568,11 @@ const I18n = {
     let saved = 'en-US';
     let user = null;
     try {
-      user = (typeof Auth !== 'undefined' && Auth.currentUser) || ((typeof Storage !== 'undefined' && Storage.getUser) ? Storage.getUser() : null);
+      user = (typeof Auth !== 'undefined' && Auth.currentUser) || ((typeof Storage !== 'undefined' && typeof Storage.getUser === 'function') ? Storage.getUser() : null);
       if (user && user.id) {
-        const userPrefs = (typeof Storage !== 'undefined') ? Storage.getUserPreferences(user.id) : null;
-        saved = (userPrefs && userPrefs.language) || localStorage.getItem('aviora_language_' + user.id) || 'en-US';
+        const userPrefs = (typeof Storage !== 'undefined' && typeof Storage.getUserPreferences === 'function') ? Storage.getUserPreferences(user.id) : null;
+        const profLang = (typeof Profile !== 'undefined' && Profile.userPreferences) ? Profile.userPreferences.language : null;
+        saved = (userPrefs && userPrefs.language) || profLang || user.language || localStorage.getItem('aviora_language_' + user.id) || 'en-US';
       } else {
         saved = 'en-US';
         try { localStorage.removeItem('aviora_language'); } catch(e){}

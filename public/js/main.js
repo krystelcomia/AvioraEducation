@@ -116,6 +116,15 @@ const Router = {
   routes: ['#home', '#about', '#tutors', '#aviora-buddy', '#buddy', '#aviora-buddy-studio', '#how-it-works', '#book-now', '#book-lesson', '#subscriptions', '#subscription', '#student-subscriptions', '#login', '#signup', '#student-portal', '#dashboard', '#student-lessons', '#student-tutors', '#student-history', '#student-schedule', '#student-payments', '#student-messages', '#messages', '#student-profile', '#student-settings', '#settings', '#teacher-portal', '#teacher-classes', '#teacher-class', '#teacher-students', '#teacher-schedule', '#teacher-ratings', '#teacher-messages', '#teacher-dashboard', '#teacher-profile', '#teacher-application', '#admin-portal', '#admin-profile'],
 
   init() {
+    if (!this._subNavResetBound) {
+      this._subNavResetBound = true;
+      document.addEventListener('click', (e) => {
+        const link = e.target.closest('a[href="#subscriptions"], a[href="#subscription"], a[href="#student-subscriptions"]');
+        if (link && typeof StudentSub !== 'undefined' && typeof StudentSub.clearSelectedBookingTutor === 'function') {
+          StudentSub.clearSelectedBookingTutor(true);
+        }
+      });
+    }
     window.addEventListener('hashchange', () => this.handleRoute());
     this.handleRoute();
   },

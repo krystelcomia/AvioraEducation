@@ -1399,10 +1399,12 @@ const Tutors = {
 
     if (tutorId) {
       sessionStorage.setItem('preferred_booking_tutor_id', tutorId);
+      sessionStorage.setItem('booking_tutor_source', 'find_tutor');
     }
 
-    if (tutor && typeof StudentSub !== 'undefined') {
-      StudentSub.selectedTutor = tutor;
+    if (typeof StudentSub !== 'undefined') {
+      if (tutor) StudentSub.selectedTutor = tutor;
+      StudentSub.tutorSelectionLocked = true;
     }
 
     if (tutor && typeof Auth !== 'undefined' && Auth.selectWalletEntity && Auth.isTutorBookedInWallet) {
@@ -1418,7 +1420,7 @@ const Tutors = {
       Router.handleRoute();
     }
     if (typeof StudentSub !== 'undefined' && StudentSub.highlightBookingWithTutor) {
-      StudentSub.highlightBookingWithTutor(tutorId);
+      StudentSub.highlightBookingWithTutor(tutorId, true);
     }
     return;
   },

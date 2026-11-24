@@ -312,6 +312,7 @@
 [data-theme="dark"] .inquiry-card,
 [data-theme="dark"] .payment-summary-box,
 [data-theme="dark"] #sub-enroll-tutor-preview,
+[data-theme="dark"] #sub-enroll-tutor-select,
 [data-theme="dark"] #inq-modal-message {
   background-color: #000000 !important;
   background-image: none !important;

@@ -6,6 +6,7 @@ const StudentSub = {
   activePackageKey: 'trial',
   allTutors: [],
   selectedTutor: null,
+  tutorSelectionLocked: false,
   allocatedLessons: 1,
   calYear: new Date().getFullYear(),
   calMonth: new Date().getMonth(),
@@ -17,12 +18,16 @@ const StudentSub = {
   appliedVoucher: null,
 
 
-  highlightBookingWithTutor(tutorId) {
+  highlightBookingWithTutor(tutorId, fromFindTutor = false) {
     if (tutorId) {
       sessionStorage.setItem('preferred_booking_tutor_id', tutorId);
+      if (fromFindTutor) {
+        sessionStorage.setItem('booking_tutor_source', 'find_tutor');
+      }
     }
     const resolvedId = tutorId || sessionStorage.getItem('preferred_booking_tutor_id');
     if (!resolvedId) return;
+    this.tutorSelectionLocked = sessionStorage.getItem('booking_tutor_source') === 'find_tutor';
 
     const findTutor = () => {
       if (this.allTutors && this.allTutors.length > 0) {
@@ -117,14 +122,19 @@ const StudentSub = {
 
   checkVisitorBookingTutor() {
     const stored = sessionStorage.getItem('preferred_booking_tutor_id');
-    if (stored) {
-      this.highlightBookingWithTutor(stored);
+    const fromFindTutor = sessionStorage.getItem('booking_tutor_source') === 'find_tutor';
+    if (stored && fromFindTutor) {
+      this.highlightBookingWithTutor(stored, true);
+    } else if (stored && !fromFindTutor) {
+      this.clearSelectedBookingTutor(true);
     }
   },
 
-  clearSelectedBookingTutor() {
+  clearSelectedBookingTutor(silent = false) {
     sessionStorage.removeItem('preferred_booking_tutor_id');
+    sessionStorage.removeItem('booking_tutor_source');
     this.selectedTutor = null;
+    this.tutorSelectionLocked = false;
 
     const sBanner = document.getElementById('sub-selected-tutor-banner');
     if (sBanner) sBanner.style.display = 'none';
@@ -158,7 +168,9 @@ const StudentSub = {
     if (vb16) vb16.textContent = 'Enroll in 16 Lessons';
     const vb20 = document.getElementById('btn-visitor-buy-20');
     if (vb20) vb20.textContent = 'Enroll in 20 Lessons (Suggested)';
-    showToast('Educator filter cleared. You may select any faculty specialist.', 'info');
+    if (!silent) {
+      showToast('Educator filter cleared. You may select any faculty specialist.', 'info');
+    }
   },
 
   setTrialDuration(mins) {
@@ -474,7 +486,12 @@ const StudentSub = {
       this.data = res;
       this.renderHub(res);
       const storedTutor = sessionStorage.getItem('preferred_booking_tutor_id');
-      if (storedTutor) this.highlightBookingWithTutor(storedTutor);
+      const fromFindTutor = sessionStorage.getItem('booking_tutor_source') === 'find_tutor';
+      if (storedTutor && fromFindTutor) {
+        this.highlightBookingWithTutor(storedTutor, true);
+      } else {
+        this.clearSelectedBookingTutor(true);
+      }
 
       if (typeof API !== 'undefined' && API.getStudentScheduleCalendar) {
         this.studentScheduleData = await API.getStudentScheduleCalendar();
@@ -876,7 +893,10 @@ const StudentSub = {
     }
 
     const storedTutor = sessionStorage.getItem('preferred_booking_tutor_id');
-    if (storedTutor && this.allTutors.length > 0) {
+    const isFromFindTutor = sessionStorage.getItem('booking_tutor_source') === 'find_tutor' && Boolean(storedTutor);
+    this.tutorSelectionLocked = isFromFindTutor;
+
+    if (isFromFindTutor && this.allTutors.length > 0) {
       const m = this.allTutors.find(t => t.id == storedTutor || t.user_id == storedTutor);
       if (m) this.selectedTutor = m;
     }
@@ -884,7 +904,7 @@ const StudentSub = {
     // Default educator (or sync selectedTutor with fresh tutor object)
     if (this.selectedTutor && this.allTutors.length > 0) {
       this.selectedTutor = this.allTutors.find(t => t.id == this.selectedTutor.id || t.user_id == this.selectedTutor.user_id) || this.allTutors[0];
-    } else if (!this.selectedTutor && this.allTutors.length > 0) {
+    } else if (this.allTutors.length > 0) {
       this.selectedTutor = this.allTutors[0];
     }
 
@@ -986,6 +1006,9 @@ const StudentSub = {
       schedSection.style.display = 'none';
     }
 
+    // Render tutor picker (visible when enrolling under Subscription, locked when initiated from Find Tutors)
+    this.renderTutorSelector();
+
     // Update educator preview card
     this.updateTutorPreview(this.selectedTutor);
 
@@ -998,6 +1021,43 @@ const StudentSub = {
 
     modal.classList.add('active');
     document.body.style.overflow = 'hidden';
+  },
+
+  renderTutorSelector() {
+    const selectorWrap = document.getElementById('sub-enroll-tutor-selector-wrap');
+    const selectEl = document.getElementById('sub-enroll-tutor-select');
+    const titleEl = document.getElementById('sub-enroll-tutor-section-title');
+    const subtitleEl = document.getElementById('sub-enroll-tutor-section-subtitle');
+    const lockedBadge = document.getElementById('sub-enroll-tutor-locked-badge');
+
+    const isLocked = Boolean(this.tutorSelectionLocked);
+    if (titleEl) {
+      titleEl.textContent = isLocked ? '1. Assigned Faculty Educator' : '1. Choose Your Tutor';
+    }
+    if (subtitleEl) {
+      subtitleEl.textContent = isLocked
+        ? 'Associated from the tutor profile you clicked on Find Tutors • pick topic per lesson below'
+        : 'Choose your preferred faculty educator • pick topic per lesson below';
+    }
+    if (lockedBadge) {
+      lockedBadge.style.display = isLocked ? 'inline-flex' : 'none';
+    }
+    if (selectorWrap) {
+      selectorWrap.style.display = isLocked ? 'none' : 'block';
+    }
+    if (selectEl && Array.isArray(this.allTutors) && this.allTutors.length > 0) {
+      selectEl.innerHTML = this.allTutors.map(t => {
+        const specialty = t.headline || (Array.isArray(t.subjects) ? t.subjects[0] : t.subject) || 'Faculty Specialist';
+        const fmtRate = (typeof AvioraCurrency !== 'undefined')
+          ? AvioraCurrency.formatTutorRate(t.hourly_rate || 58, t, { perHour: true })
+          : `$${Number(t.hourly_rate || 58).toFixed(2)}/hr`;
+        return `<option value="${t.id}">${t.name} — ${specialty} (${fmtRate})</option>`;
+      }).join('');
+      if (this.selectedTutor && this.selectedTutor.id !== undefined) {
+        selectEl.value = String(this.selectedTutor.id);
+      }
+      selectEl.disabled = isLocked;
+    }
   },
 
   closeEnrollmentModal() {
@@ -1016,27 +1076,35 @@ const StudentSub = {
     const headlineEl = document.getElementById('sub-enroll-tutor-headline');
     const ratingEl = document.getElementById('sub-enroll-tutor-rating');
     const rateEl = document.getElementById('sub-enroll-tutor-rate-display');
+    const selectEl = document.getElementById('sub-enroll-tutor-select');
 
     if (avatarEl) avatarEl.src = tutor.avatar_url || tutor.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80';
     if (nameEl) nameEl.textContent = tutor.name;
     if (headlineEl) headlineEl.textContent = tutor.headline || tutor.subject || 'Verified Faculty Specialist';
     if (ratingEl) ratingEl.innerHTML = `<span style="display: inline-flex; align-items: center; gap: 0.25rem;">${Icons.star(13)} ${tutor.rating ? Number(tutor.rating).toFixed(1) : '5.0'} (${tutor.reviews_count || 42})</span>`;
-    if (rateEl) rateEl.textContent = `$${Number(tutor.hourly_rate || 58).toFixed(2)} / hr`;
+    if (rateEl) {
+      rateEl.textContent = (typeof AvioraCurrency !== 'undefined')
+        ? AvioraCurrency.formatTutorRate(tutor.hourly_rate || 58, tutor, { perHour: true })
+        : `$${Number(tutor.hourly_rate || 58).toFixed(2)} / hr`;
+    }
+    if (selectEl && tutor.id !== undefined) {
+      selectEl.value = String(tutor.id);
+    }
   },
 
   onTutorSelected(tutorId) {
-    const tutor = this.allTutors.find(t => t.id == tutorId) || this.allTutors[0];
+    if (this.tutorSelectionLocked) return;
+    const tutor = this.allTutors.find(t => t.id == tutorId || t.user_id == tutorId) || this.allTutors[0];
     if (!tutor) return;
     this.selectedTutor = tutor;
 
     this.updateTutorPreview(tutor);
     this.updateTutorDisciplines(tutor);
 
-    const planConfig = this.getPlanConfig(this.activePackageKey);
     const subjects = this.getTutorSubjects(tutor);
     const distributedTopics = this.distributeSubjectsForLessons(subjects, this.selectedLessons.length);
 
-    // Apply this tutor & subject-specific rate to all lessons in the plan
+    // Apply this tutor & subject-specific rate to all lessons in the plan (resetting stale schedule slots)
     const tutorIdToSet = tutor.user_id || tutor.id;
     this.selectedLessons.forEach((l, idx) => {
       const subj = distributedTopics[idx] || subjects[0] || 'General Tutoring';
@@ -1045,8 +1113,12 @@ const StudentSub = {
       l.tutor_avatar = tutor.avatar_url || tutor.avatar;
       l.subject = subj;
       l.hourly_rate = this.getTutorSubjectRate(tutor, subj);
+      l.scheduled_date = null;
+      l.scheduled_time = null;
     });
 
+    this.selectedDate = null;
+    this.selectedTime = null;
     if (this.isSchedulerOpen && this.activeLessonIndex >= 0) {
       this.updateActiveLessonBanner();
       this.syncActiveLessonCalendar();
@@ -1245,7 +1317,7 @@ const StudentSub = {
     const lesson = this.selectedLessons[this.activeLessonIndex];
     if (!lesson) return;
 
-    const tutor = this.allTutors.find(t => t.id == lesson.tutor_id) || this.selectedTutor;
+    const tutor = this.allTutors.find(t => t.user_id == lesson.tutor_id || t.id == lesson.tutor_id) || this.selectedTutor;
     if (tutor) this.selectedTutor = tutor;
 
     this.renderCalendar();
@@ -1980,6 +2052,9 @@ const StudentSub = {
   resetState() {
     this.data = null;
     this.selectedTutor = null;
+    this.tutorSelectionLocked = false;
+    sessionStorage.removeItem('preferred_booking_tutor_id');
+    sessionStorage.removeItem('booking_tutor_source');
     this.removeVoucherCode(true);
     const studentTrialCard = document.getElementById('card-trial-student');
     const visitorTrialCard = document.getElementById('card-trial-visitor');

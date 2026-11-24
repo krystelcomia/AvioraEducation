@@ -261,11 +261,17 @@ const BookLesson = {
     const subjSummary = document.getElementById('page-pay-summary-subject');
     const summaryAmount = document.getElementById('page-pay-summary-amount');
     const cardAmount = document.getElementById('page-pay-card-amount');
+    const paypalAmount = document.getElementById('page-pay-paypal-amount');
     const calTutorLabel = document.getElementById('page-cal-tutor-label');
 
     if (subjSummary) subjSummary.textContent = `${this.selectedSubject || 'Tutoring Session'} ($${activeRate.toFixed(2)}/hr)`;
     if (summaryAmount) summaryAmount.textContent = `$${activeRate.toFixed(2)}`;
     if (cardAmount) cardAmount.textContent = `$${activeRate.toFixed(2)}`;
+    if (paypalAmount) {
+      paypalAmount.textContent = (typeof AvioraCurrency !== 'undefined')
+        ? AvioraCurrency.formatTutorRate(activeRate, this.selectedTutor)
+        : `$${activeRate.toFixed(2)}`;
+    }
     if (calTutorLabel) calTutorLabel.textContent = `Showing live schedule for ${this.selectedTutor.name} • $${activeRate.toFixed(2)}/hour (${this.selectedSubject})`;
 
     this.updateButtonText();
@@ -316,11 +322,17 @@ const BookLesson = {
     const summarySubj = document.getElementById('page-pay-summary-subject');
     const summaryAmount = document.getElementById('page-pay-summary-amount');
     const cardAmount = document.getElementById('page-pay-card-amount');
+    const paypalAmount = document.getElementById('page-pay-paypal-amount');
 
     if (summaryTutor) summaryTutor.textContent = `${tutor.name} (${tutor.highest_degree || 'Specialist'})`;
     if (summarySubj) summarySubj.textContent = `${this.selectedSubject || (tutor.subjects && tutor.subjects[0]) || 'Tutoring Session'} ($${activeRate.toFixed(2)}/hr)`;
     if (summaryAmount) summaryAmount.textContent = `$${activeRate.toFixed(2)}`;
     if (cardAmount) cardAmount.textContent = `$${activeRate.toFixed(2)}`;
+    if (paypalAmount) {
+      paypalAmount.textContent = (typeof AvioraCurrency !== 'undefined')
+        ? AvioraCurrency.formatTutorRate(activeRate, tutor)
+        : `$${activeRate.toFixed(2)}`;
+    }
 
     // Configure payment radio availability
     this.configurePaymentOptions();
@@ -716,19 +728,23 @@ const BookLesson = {
     const subCardBox = document.getElementById('page-pay-method-sub');
     const cardCardBox = document.getElementById('page-pay-method-card');
     const walletCardBox = document.getElementById('page-pay-method-wallet');
+    const paypalCardBox = document.getElementById('page-pay-method-paypal');
     const cardInputs = document.getElementById('page-payment-card-inputs');
 
     const subRadio = document.getElementById('page-pay-opt-sub');
     const cardRadio = document.getElementById('page-pay-opt-card');
     const walletRadio = document.getElementById('page-pay-opt-wallet');
+    const paypalRadio = document.getElementById('page-pay-opt-paypal');
 
     if (subRadio) subRadio.checked = (method === 'subscription');
     if (cardRadio) cardRadio.checked = (method === 'card');
     if (walletRadio) walletRadio.checked = (method === 'wallet');
+    if (paypalRadio) paypalRadio.checked = (method === 'paypal');
 
     if (subCardBox) subCardBox.classList.toggle('selected', method === 'subscription');
     if (cardCardBox) cardCardBox.classList.toggle('selected', method === 'card');
     if (walletCardBox) walletCardBox.classList.toggle('selected', method === 'wallet');
+    if (paypalCardBox) paypalCardBox.classList.toggle('selected', method === 'paypal');
 
     if (cardInputs) cardInputs.style.display = (method === 'card') ? 'block' : 'none';
 
@@ -749,6 +765,10 @@ const BookLesson = {
     } else if (this.paymentMethod === 'wallet') {
       const price = this.getTutorSubjectRate(this.selectedTutor, this.selectedSubject);
       btnText.textContent = `Pay $${price.toFixed(2)} with Wallet Credit & Confirm`;
+    } else if (this.paymentMethod === 'paypal') {
+      const price = this.getTutorSubjectRate(this.selectedTutor, this.selectedSubject);
+      const disp = (typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.formatTutorRate(price, this.selectedTutor) : `$${price.toFixed(2)}`;
+      btnText.textContent = `Proceed to PayPal Payment (${disp}) →`;
     } else {
       const price = this.getTutorSubjectRate(this.selectedTutor, this.selectedSubject);
       btnText.textContent = `Pay $${price.toFixed(2)} & Confirm Booking`;
@@ -783,6 +803,19 @@ const BookLesson = {
       if (submitBtn) {
         submitBtn.disabled = true;
         submitBtn.innerHTML = '<span>Processing Payment &amp; Confirmation...</span>';
+      }
+
+      if (this.paymentMethod === 'paypal' && typeof AvioraPayments !== 'undefined' && AvioraPayments.createInvoiceAndGoToPayments) {
+        await AvioraPayments.createInvoiceAndGoToPayments({
+          item_type: 'single_lesson',
+          tutor_user_id: this.selectedTutor.user_id,
+          subject,
+          requested_date: this.selectedDate,
+          requested_time: this.selectedTime,
+          duration_hours: 1.0,
+          notes
+        });
+        return;
       }
 
       const payload = {

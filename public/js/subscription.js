@@ -1829,7 +1829,8 @@ const StudentSub = {
           ? ` — ${discountPercent}% off (${this.appliedVoucher.code})`
           : '';
         if (planConfig.isTrial) {
-          calcFormulaEl.textContent = `1-on-1 ${this.trialDuration}-Minute Trial Session with ${this.selectedTutor?.name || 'Educator'} (${fmtAmount(subtotalCost)}${voucherSuffix})`;
+          const trialTutorName = this.selectedLessons[0]?.tutor_name || this.selectedTutor?.name || 'Educator';
+          calcFormulaEl.textContent = `1-on-1 ${this.trialDuration}-Minute Trial Session with ${trialTutorName} (${fmtAmount(subtotalCost)}${voucherSuffix})`;
         } else {
           calcFormulaEl.textContent = `Sum of ${totalCount} lessons: ${this.selectedLessons.map((l, idx) => `Lesson ${idx + 1} (${fmtAmount(l.hourly_rate)})`).join(' + ')}${voucherSuffix}`;
         }
@@ -1913,6 +1914,15 @@ const StudentSub = {
         })),
         notes: notes
       };
+
+      if (totalCost > 0 && typeof AvioraPayments !== 'undefined' && AvioraPayments.createInvoiceAndGoToPayments) {
+        this.closeEnrollmentModal();
+        await AvioraPayments.createInvoiceAndGoToPayments({
+          item_type: planConfig.isTrial ? 'trial_lesson' : 'subscription_package',
+          ...payload
+        });
+        return;
+      }
 
       const res = await API.purchaseSubscription(payload);
       if (res && res.popularityStats) {

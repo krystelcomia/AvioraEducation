@@ -456,6 +456,18 @@ const NotificationsUI = {
       return;
     }
 
+    // 3b. PayPal Payments & Verification Notifications
+    if (notif?.type === 'payment' || link.includes('student-payments') || link.includes('paypal-payments')) {
+      if (typeof Auth !== 'undefined' && Auth.currentUser && Auth.currentUser.role === 'admin') {
+        const targetAdminHash = link && link.includes('paypal-payments') ? link : '#admin-portal?section=paypal-payments';
+        window.location.hash = targetAdminHash;
+        if (typeof Admin !== 'undefined' && Admin.switchSection) Admin.switchSection('paypal-payments');
+      } else {
+        window.location.hash = link && link.includes('student-payments') ? link : '#student-payments';
+      }
+      return;
+    }
+
     // 4. Academic task assigned / graded
     if (title.includes('task') || notif?.type === 'assignment') {
       const taskTarget = '#student-portal?action=tasks';

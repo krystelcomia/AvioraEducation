@@ -2118,6 +2118,8 @@ const AvioraBuddy = {
     const dateInp = document.getElementById('buddy-peer-date');
     const timeInp = document.getElementById('buddy-peer-time');
     const useWalletChk = document.getElementById('buddy-peer-use-wallet');
+    const usePayPalChk = document.getElementById('buddy-peer-use-paypal');
+    const usePayPal = Boolean(usePayPalChk && usePayPalChk.checked && !(useWalletChk && useWalletChk.checked));
 
     const payload = {
       student2_id: peerSelect && peerSelect.value ? peerSelect.value : null,
@@ -2125,7 +2127,7 @@ const AvioraBuddy = {
       topic: topicInp && topicInp.value.trim() ? topicInp.value.trim() : 'Quiz Bee, Math Duel & Conversational Questions',
       scheduled_date: dateInp && dateInp.value ? dateInp.value : 'Pending Admin Scheduling',
       scheduled_time: timeInp && timeInp.value ? timeInp.value : 'Pending Admin Scheduling',
-      payment_method: (useWalletChk && useWalletChk.checked) ? 'wallet' : 'card'
+      payment_method: (useWalletChk && useWalletChk.checked) ? 'wallet' : (usePayPal ? 'paypal' : 'card')
     };
 
     try {
@@ -2133,6 +2135,19 @@ const AvioraBuddy = {
       if (!token) {
         showToast('Please log in with your student account to book Aviora Buddy ($6).', 'info');
         window.location.hash = '#login';
+        return;
+      }
+
+      if (usePayPal && typeof AvioraPayments !== 'undefined' && AvioraPayments.createInvoiceAndGoToPayments) {
+        this.closeModal('modal-create-buddy-peer');
+        await AvioraPayments.createInvoiceAndGoToPayments({
+          item_type: 'buddy_session',
+          student2_id: payload.student2_id,
+          subject: payload.subject,
+          topic: payload.topic,
+          requested_date: payload.scheduled_date,
+          requested_time: payload.scheduled_time
+        });
         return;
       }
 

@@ -251,6 +251,9 @@ const Student = {
       this.renderRequestsList();
       this.renderHistory();
       this.renderConnectedTutors();
+      if (typeof AvioraPayments !== 'undefined' && AvioraPayments.renderStudentDashboardBillingSummary) {
+        AvioraPayments.renderStudentDashboardBillingSummary();
+      }
       this.loadProfileForm();
       this.setupRealTimeRoomPolling();
       if (typeof Auth !== 'undefined' && Auth.loadNotifications) {

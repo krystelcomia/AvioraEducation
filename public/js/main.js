@@ -113,7 +113,7 @@ function showConfirm(title, message, onConfirm, options = {}) {
 
 // Router
 const Router = {
-  routes: ['#home', '#about', '#tutors', '#aviora-buddy', '#buddy', '#aviora-buddy-studio', '#how-it-works', '#book-now', '#book-lesson', '#subscriptions', '#subscription', '#student-subscriptions', '#login', '#signup', '#student-portal', '#dashboard', '#student-lessons', '#student-tutors', '#student-history', '#student-schedule', '#student-messages', '#messages', '#student-profile', '#student-settings', '#settings', '#teacher-portal', '#teacher-classes', '#teacher-class', '#teacher-students', '#teacher-schedule', '#teacher-ratings', '#teacher-messages', '#teacher-dashboard', '#teacher-profile', '#teacher-application', '#admin-portal', '#admin-profile'],
+  routes: ['#home', '#about', '#tutors', '#aviora-buddy', '#buddy', '#aviora-buddy-studio', '#how-it-works', '#book-now', '#book-lesson', '#subscriptions', '#subscription', '#student-subscriptions', '#login', '#signup', '#student-portal', '#dashboard', '#student-lessons', '#student-tutors', '#student-history', '#student-schedule', '#student-payments', '#student-messages', '#messages', '#student-profile', '#student-settings', '#settings', '#teacher-portal', '#teacher-classes', '#teacher-class', '#teacher-students', '#teacher-schedule', '#teacher-ratings', '#teacher-messages', '#teacher-dashboard', '#teacher-profile', '#teacher-application', '#admin-portal', '#admin-profile'],
 
   init() {
     window.addEventListener('hashchange', () => this.handleRoute());
@@ -126,7 +126,7 @@ const Router = {
     document.querySelectorAll('.nav-link').forEach(link => {
       const href = link.getAttribute('href');
       let isActive = (href === hash);
-      if (!isActive && (href === '#student-portal' || href === '#dashboard') && ['#student-portal', '#dashboard', '#student-lessons', '#student-schedule', '#student-history', '#student-tutors'].includes(hash)) {
+      if (!isActive && (href === '#student-portal' || href === '#dashboard') && ['#student-portal', '#dashboard', '#student-lessons', '#student-schedule', '#student-history', '#student-tutors', '#student-payments'].includes(hash)) {
         isActive = true;
       }
       if (!isActive && (href === '#student-messages' || href === '#messages' || link.id === 'nav-link-student-messages') && (hash === '#student-messages' || hash === '#messages')) {
@@ -447,6 +447,19 @@ const Router = {
       if (params.toString() && typeof Student !== 'undefined' && Student.handleNotificationNavigation) {
         Student.handleNotificationNavigation(params);
       }
+    } else if (hash === '#student-payments') {
+      const user = Auth.currentUser;
+      if (!user || user.role !== 'student') {
+        showToast('Please sign in with a student account to view PayPal payments & invoices.', 'info');
+        window.location.hash = '#login';
+        return;
+      }
+      const view = document.getElementById('view-student-payments');
+      if (view) view.style.display = 'block';
+      window.scrollTo(0, 0);
+      if (typeof AvioraPayments !== 'undefined' && AvioraPayments.loadStudentPaymentsPage) {
+        await AvioraPayments.loadStudentPaymentsPage(params);
+      }
     } else if (hash === '#student-messages' || hash === '#messages') {
       const user = Auth.currentUser;
       if (user && (user.role === 'teacher' || user.role === 'tutor')) {
@@ -523,6 +536,10 @@ const Router = {
       if (view) view.style.display = 'block';
       window.scrollTo(0, 0);
       await Admin.loadDashboardMetrics();
+      const targetAdminSection = params.get('section');
+      if (targetAdminSection && typeof Admin !== 'undefined' && Admin.switchSection) {
+        Admin.switchSection(targetAdminSection);
+      }
     } else {
       // Default to Home
       const view = document.getElementById('view-home');

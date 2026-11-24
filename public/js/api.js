@@ -246,5 +246,20 @@ const API = {
   getStudentLiveClass: () => apiRequest('/student/live-class'),
   saveRoomTranscript: (id, body) => apiRequest(`/sessions/${id}/transcript`, { method: 'POST', body }),
   sendRoomTranscriptToStudent: (id, body) => apiRequest(`/sessions/${id}/transcript/send-to-student`, { method: 'POST', body }),
-  getRoomTranscript: (id) => apiRequest(`/sessions/${id}/transcript`)
+  getRoomTranscript: (id) => apiRequest(`/sessions/${id}/transcript`),
+
+  // PayPal Payment System, Invoices & Verification
+  getPaymentSettings: () => apiRequest('/payments/settings'),
+  getPaymentProofImage: (paymentId) => apiRequest(`/payments/proof/${paymentId}`),
+  createStudentInvoice: (body) => apiRequest('/student/invoices', { method: 'POST', body }),
+  getStudentPayments: () => apiRequest('/student/payments'),
+  createPayPalOrder: (invoiceId) => apiRequest('/student/payments/paypal/create-order', { method: 'POST', body: { invoice_id: invoiceId } }),
+  capturePayPalOrder: (invoiceId, orderId) => apiRequest('/student/payments/paypal/capture-order', { method: 'POST', body: { invoice_id: invoiceId, order_id: orderId } }),
+  submitInvoiceProof: (invoiceId, formData) => apiRequest(`/student/invoices/${invoiceId}/submit-proof`, { method: 'POST', body: formData }),
+  getAdminPayPalPayments: (status = 'all', search = '') => apiRequest(`/admin/paypal-payments?status=${encodeURIComponent(status)}&search=${encodeURIComponent(search)}`),
+  acceptAdminPayment: (paymentId, body = {}) => apiRequest(`/admin/payments/${paymentId}/accept`, { method: 'POST', body }),
+  rejectAdminPayment: (paymentId, body = {}) => apiRequest(`/admin/payments/${paymentId}/reject`, { method: 'POST', body }),
+  requestAdminPaymentVerification: (paymentId, body = {}) => apiRequest(`/admin/payments/${paymentId}/request-verification`, { method: 'POST', body }),
+  updateAdminPaymentSettings: (body) => apiRequest('/admin/payment-settings', { method: 'PUT', body }),
+  uploadAdminPayPalQR: (formData) => apiRequest('/admin/payment-settings/qr', { method: 'POST', body: formData })
 };

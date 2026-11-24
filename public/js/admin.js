@@ -172,6 +172,36 @@ const Admin = {
     if (createUserForm) {
       createUserForm.addEventListener('submit', (e) => this.handleCreateUserSubmit(e));
     }
+
+    // PayPal Verification Filters & Search
+    document.querySelectorAll('.paypal-admin-filter').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.paypal-admin-filter').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        if (typeof AvioraPayments !== 'undefined' && AvioraPayments.loadAdminPayments) {
+          AvioraPayments.loadAdminPayments(btn.dataset.status || 'all');
+        }
+      });
+    });
+
+    const paypalSearchInput = document.getElementById('admin-paypal-search');
+    if (paypalSearchInput) {
+      paypalSearchInput.addEventListener('input', (e) => {
+        if (typeof AvioraPayments !== 'undefined') {
+          AvioraPayments.adminSearch = e.target.value;
+          AvioraPayments.loadAdminPayments(AvioraPayments.adminFilter || 'all');
+        }
+      });
+    }
+
+    const adminPayPalSettingsForm = document.getElementById('admin-paypal-settings-form');
+    if (adminPayPalSettingsForm) {
+      adminPayPalSettingsForm.addEventListener('submit', (e) => {
+        if (typeof AvioraPayments !== 'undefined' && AvioraPayments.saveAdminPaymentSettings) {
+          AvioraPayments.saveAdminPaymentSettings(e);
+        }
+      });
+    }
   },
 
   switchSection(section) {
@@ -211,6 +241,14 @@ const Admin = {
       this.loadInquiries(this.currentInquiryFilter || 'all');
     } else if (section === 'wallet-chats') {
       this.loadWalletChats(true);
+    } else if (section === 'paypal-payments') {
+      if (typeof AvioraPayments !== 'undefined' && AvioraPayments.loadAdminPayments) {
+        AvioraPayments.loadAdminPayments(AvioraPayments.adminFilter || 'all');
+      }
+    } else if (section === 'payment-settings') {
+      if (typeof AvioraPayments !== 'undefined' && AvioraPayments.loadAdminPaymentSettings) {
+        AvioraPayments.loadAdminPaymentSettings();
+      }
     }
   },
 
@@ -308,6 +346,9 @@ const Admin = {
 
       this.renderCharts(data.charts || {});
       this.renderRecentActivity(data.recentActivity || []);
+      if (typeof AvioraPayments !== 'undefined' && AvioraPayments.loadAdminPayments) {
+        AvioraPayments.loadAdminPayments(AvioraPayments.adminFilter || 'all');
+      }
     } catch (err) {
       console.error('Failed to load admin metrics:', err);
     }

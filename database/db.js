@@ -432,12 +432,98 @@ function initSchema() {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
+    CREATE TABLE IF NOT EXISTS payment_settings (
+      id INTEGER PRIMARY KEY CHECK(id = 1),
+      paypal_holder_name TEXT NOT NULL DEFAULT 'Stephanie Nicole Debo Manalo',
+      paypal_contact TEXT NOT NULL DEFAULT '09945586658',
+      paypal_business_email TEXT DEFAULT '',
+      paypal_qr_image TEXT DEFAULT NULL,
+      paypal_qr_filename TEXT DEFAULT NULL,
+      paypal_qr_mime_type TEXT DEFAULT NULL,
+      paypal_qr_updated_at DATETIME,
+      paypal_qr_updated_by INTEGER REFERENCES users(id),
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS invoices (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      invoice_number TEXT UNIQUE NOT NULL,
+      student_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      item_type TEXT NOT NULL CHECK(item_type IN ('single_lesson', 'subscription_package', 'trial_lesson', 'buddy_session')),
+      title TEXT NOT NULL,
+      description TEXT,
+      currency_code TEXT NOT NULL DEFAULT 'USD',
+      currency_symbol TEXT NOT NULL DEFAULT '$',
+      amount REAL NOT NULL,
+      base_amount_usd REAL NOT NULL DEFAULT 0,
+      voucher_code TEXT DEFAULT NULL,
+      discount_percent REAL DEFAULT 0,
+      discount_amount REAL DEFAULT 0,
+      metadata_json TEXT,
+      status TEXT NOT NULL DEFAULT 'unpaid' CHECK(status IN ('unpaid', 'pending_verification', 'accepted', 'not_received', 'cancelled')),
+      fulfilled INTEGER DEFAULT 0,
+      fulfilled_ref_id INTEGER DEFAULT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS paypal_payments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      transaction_code TEXT UNIQUE NOT NULL,
+      invoice_id INTEGER NOT NULL REFERENCES invoices(id) ON DELETE CASCADE,
+      invoice_number TEXT NOT NULL,
+      student_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      payment_channel TEXT NOT NULL DEFAULT 'paypal_qr' CHECK(payment_channel IN ('paypal_qr', 'paypal_checkout', 'paypal_manual')),
+      amount REAL NOT NULL,
+      currency_code TEXT NOT NULL,
+      currency_symbol TEXT NOT NULL,
+      recipient_name TEXT NOT NULL,
+      recipient_contact TEXT NOT NULL,
+      paypal_order_id TEXT DEFAULT NULL,
+      paypal_capture_id TEXT DEFAULT NULL,
+      paypal_reference_number TEXT DEFAULT NULL,
+      payment_date TEXT,
+      proof_image_data TEXT NOT NULL,
+      proof_filename TEXT NOT NULL,
+      proof_mime_type TEXT NOT NULL,
+      proof_file_size INTEGER NOT NULL,
+      proof_sha256 TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending', 'accepted', 'not_received')),
+      admin_notes TEXT DEFAULT NULL,
+      verified_by INTEGER REFERENCES users(id),
+      verified_by_name TEXT DEFAULT NULL,
+      verified_at DATETIME DEFAULT NULL,
+      submitted_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS payment_audit_logs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      payment_id INTEGER REFERENCES paypal_payments(id) ON DELETE CASCADE,
+      invoice_id INTEGER NOT NULL REFERENCES invoices(id) ON DELETE CASCADE,
+      actor_id INTEGER REFERENCES users(id),
+      actor_name TEXT,
+      actor_role TEXT,
+      action TEXT NOT NULL,
+      previous_status TEXT,
+      new_status TEXT,
+      amount REAL,
+      currency_code TEXT,
+      notes TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
     -- Enforce case-insensitive uniqueness and relational indexes across the entire system
     CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email_nocase ON users(email COLLATE NOCASE);
     CREATE UNIQUE INDEX IF NOT EXISTS idx_vouchers_code_nocase ON vouchers(code COLLATE NOCASE);
     CREATE INDEX IF NOT EXISTS idx_tutor_payout_requests_tutor ON tutor_payout_requests(tutor_id);
     CREATE INDEX IF NOT EXISTS idx_wallet_support_student ON wallet_support_messages(student_id);
     CREATE INDEX IF NOT EXISTS idx_wallet_forfeitures_student ON wallet_forfeitures(student_id);
+    CREATE INDEX IF NOT EXISTS idx_invoices_student ON invoices(student_id);
+    CREATE INDEX IF NOT EXISTS idx_paypal_payments_invoice ON paypal_payments(invoice_id);
+    CREATE INDEX IF NOT EXISTS idx_paypal_payments_student ON paypal_payments(student_id);
+    CREATE INDEX IF NOT EXISTS idx_paypal_payments_status ON paypal_payments(status);
+    CREATE INDEX IF NOT EXISTS idx_payment_audit_invoice ON payment_audit_logs(invoice_id);
     CREATE INDEX IF NOT EXISTS idx_student_profiles_user_id ON student_profiles(user_id);
     CREATE INDEX IF NOT EXISTS idx_tutor_profiles_user_id ON tutor_profiles(user_id);
     CREATE INDEX IF NOT EXISTS idx_teacher_applications_user_id ON teacher_applications(user_id);
@@ -2335,6 +2421,27 @@ function ensureTutorSeedData() {
   }
 }
 
+function ensurePaymentSettings() {
+  try {
+    const existing = db.prepare('SELECT id FROM payment_settings WHERE id = 1').get();
+    if (!existing) {
+      db.prepare(`
+        INSERT INTO payment_settings (id, paypal_holder_name, paypal_contact, paypal_business_email)
+        VALUES (1, 'Stephanie Nicole Debo Manalo', '09945586658', '')
+      `).run();
+    } else {
+      db.prepare(`
+        UPDATE payment_settings
+        SET paypal_holder_name = COALESCE(NULLIF(paypal_holder_name, ''), 'Stephanie Nicole Debo Manalo'),
+            paypal_contact = COALESCE(NULLIF(paypal_contact, ''), '09945586658')
+        WHERE id = 1
+      `).run();
+    }
+  } catch (err) {
+    console.warn('ensurePaymentSettings warning:', err.message);
+  }
+}
+
 // Automatically ensure account and seed data on startup
 ensureAdminAccount();
 ensureKrystelAccount();
@@ -2343,6 +2450,7 @@ ensureBuddySeedData();
 ensureInquirySeedData();
 ensureTutorSeedData();
 ensureTutorLocations();
+ensurePaymentSettings();
 
 function ensureTutorLocations() {
   try {
@@ -2398,6 +2506,7 @@ module.exports = {
   ensureBuddySeedData,
   ensureInquirySeedData,
   ensureTutorSeedData,
+  ensurePaymentSettings,
   getUserPreferences,
   saveUserPreferences
 };

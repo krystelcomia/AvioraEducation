@@ -1450,3 +1450,461 @@ body {
   border-color: rgba(245, 158, 11, 0.4) !important;
   color: #FDE68A !important;
 }
+
+/* ========================================================
+   PAYPAL PAYMENT, QR CODE & ADMIN VERIFICATION SYSTEM
+   ======================================================== */
+.paypal-checkout-shell {
+  display: grid;
+  grid-template-columns: 1.25fr 0.95fr;
+  gap: 1.25rem;
+  align-items: start;
+}
+
+@media (max-width: 960px) {
+  .paypal-checkout-shell {
+    grid-template-columns: 1fr;
+  }
+}
+
+.paypal-panel-card {
+  background: #FFFFFF;
+  border: 1.5px solid rgba(198, 138, 40, 0.28);
+  border-radius: var(--radius-lg);
+  padding: 1.35rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.paypal-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding-bottom: 1rem;
+  margin-bottom: 1rem;
+  border-bottom: 1px dashed rgba(198, 138, 40, 0.25);
+}
+
+.paypal-eyebrow {
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--gold-700);
+}
+
+.paypal-inv-num {
+  font-size: 1.25rem;
+  font-weight: 800;
+  margin: 0.15rem 0;
+  color: var(--charcoal-950);
+}
+
+.paypal-inv-title {
+  font-weight: 700;
+  color: var(--charcoal-900);
+  font-size: 0.94rem;
+}
+
+.paypal-inv-sub,
+.paypal-amount-lock-note {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  margin-top: 0.15rem;
+}
+
+.paypal-amount-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.paypal-exact-amount {
+  font-size: 1.6rem;
+  font-weight: 900;
+  font-family: var(--font-heading);
+  color: var(--gold-700);
+  line-height: 1.15;
+}
+
+.paypal-voucher-strip {
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  color: #065F46;
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.8rem;
+  margin-bottom: 1rem;
+}
+
+.paypal-recipient-card {
+  background: linear-gradient(135deg, #FFFDF8 0%, #FAF5EC 100%);
+  border: 1.5px solid rgba(198, 138, 40, 0.38);
+  border-radius: var(--radius-md);
+  padding: 0.95rem 1.1rem;
+  margin-bottom: 1rem;
+}
+
+.paypal-recipient-badge {
+  display: inline-block;
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--gold-900);
+  background: rgba(198, 138, 40, 0.16);
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  margin-bottom: 0.55rem;
+}
+
+.paypal-recipient-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.85rem;
+}
+
+@media (max-width: 600px) {
+  .paypal-recipient-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.paypal-field-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+}
+
+.paypal-field-value {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--charcoal-950);
+  margin-top: 0.12rem;
+}
+
+.paypal-recipient-note {
+  font-size: 0.76rem;
+  color: var(--charcoal-700);
+  margin: 0.55rem 0 0 0;
+  line-height: 1.45;
+}
+
+.paypal-channel-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.paypal-channel-tab {
+  border: 1.5px solid rgba(198, 138, 40, 0.3);
+  background: #FAF8F5;
+  color: var(--charcoal-900);
+  border-radius: var(--radius-sm);
+  padding: 0.6rem 0.75rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.paypal-channel-tab.active {
+  background: linear-gradient(135deg, #E5A93C 0%, #C68A28 100%);
+  color: #FFFFFF;
+  border-color: transparent;
+}
+
+.paypal-qr-section {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  gap: 1rem;
+  align-items: start;
+}
+
+@media (max-width: 640px) {
+  .paypal-qr-section {
+    grid-template-columns: 1fr;
+  }
+}
+
+.paypal-qr-frame {
+  background: #FFFFFF;
+  border: 2px solid rgba(198, 138, 40, 0.35);
+  border-radius: var(--radius-md);
+  padding: 0.5rem;
+  text-align: center;
+}
+
+.paypal-qr-img {
+  width: 100%;
+  max-width: 185px;
+  height: auto;
+  display: block;
+  margin: 0 auto;
+  border-radius: 6px;
+  cursor: zoom-in;
+}
+
+.paypal-qr-missing-box {
+  border: 1.5px dashed rgba(217, 119, 6, 0.5);
+  background: rgba(245, 158, 11, 0.08);
+  padding: 0.9rem;
+  border-radius: var(--radius-md);
+  font-size: 0.78rem;
+  color: var(--charcoal-800);
+}
+
+.paypal-steps-list {
+  margin: 0 0 0.75rem 1.1rem;
+  padding: 0;
+  font-size: 0.81rem;
+  color: var(--charcoal-800);
+  line-height: 1.55;
+}
+
+.paypal-qr-limitation-alert {
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(217, 119, 6, 0.35);
+  border-radius: var(--radius-sm);
+  padding: 0.65rem 0.8rem;
+  font-size: 0.76rem;
+  line-height: 1.45;
+  color: #78350F;
+}
+
+.paypal-readonly-amount-pill {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(198, 138, 40, 0.1);
+  border: 1px solid rgba(198, 138, 40, 0.32);
+  border-radius: var(--radius-sm);
+  padding: 0.55rem 0.8rem;
+  font-size: 0.82rem;
+  margin-bottom: 0.9rem;
+}
+
+.paypal-proof-preview-wrap {
+  margin-top: 0.65rem;
+  border: 1px solid rgba(198, 138, 40, 0.3);
+  border-radius: var(--radius-sm);
+  padding: 0.5rem;
+  background: rgba(0, 0, 0, 0.02);
+}
+
+.paypal-proof-preview-img {
+  width: 100%;
+  max-height: 220px;
+  object-fit: contain;
+  display: block;
+  border-radius: 6px;
+}
+
+.paypal-status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.22rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.74rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.paypal-status-accepted {
+  background: rgba(16, 185, 129, 0.15);
+  color: #065F46;
+  border: 1px solid rgba(16, 185, 129, 0.38);
+}
+
+.paypal-status-pending {
+  background: rgba(245, 158, 11, 0.15);
+  color: #B45309;
+  border: 1px solid rgba(245, 158, 11, 0.4);
+}
+
+.paypal-status-rejected {
+  background: rgba(239, 68, 68, 0.15);
+  color: #B91C1C;
+  border: 1px solid rgba(239, 68, 68, 0.4);
+}
+
+.paypal-status-unpaid {
+  background: rgba(100, 116, 139, 0.14);
+  color: #334155;
+  border: 1px solid rgba(100, 116, 139, 0.35);
+}
+
+.paypal-pending-banner,
+.paypal-accepted-banner,
+.paypal-rejection-banner {
+  border-radius: var(--radius-md);
+  padding: 0.85rem 1rem;
+  font-size: 0.82rem;
+  margin-bottom: 0.85rem;
+  line-height: 1.45;
+}
+
+.paypal-pending-banner {
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  color: #92400E;
+}
+
+.paypal-accepted-banner {
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  color: #065F46;
+}
+
+.paypal-rejection-banner {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  color: #991B1B;
+}
+
+.paypal-history-card {
+  background: #FFFFFF;
+  border: 1px solid rgba(198, 138, 40, 0.25);
+  border-radius: var(--radius-md);
+  padding: 1rem 1.15rem;
+  margin-bottom: 0.9rem;
+}
+
+.paypal-history-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.paypal-attempts-list {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px dashed rgba(0, 0, 0, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.paypal-attempt-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  padding: 0.55rem 0.7rem;
+  border-radius: var(--radius-sm);
+  background: rgba(250, 247, 242, 0.75);
+  border: 1px solid rgba(198, 138, 40, 0.2);
+}
+
+.paypal-history-actions {
+  margin-top: 0.65rem;
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.paypal-admin-verify-card {
+  background: #111319;
+  border: 1px solid rgba(216, 170, 60, 0.32);
+  border-radius: 12px;
+  padding: 1.15rem;
+  margin-bottom: 1rem;
+}
+
+.paypal-admin-verify-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.paypal-admin-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 0.65rem;
+  margin-top: 0.8rem;
+  padding: 0.7rem 0.85rem;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  font-size: 0.78rem;
+  color: #CBD5E1;
+}
+
+.paypal-admin-meta-grid span {
+  color: #94A3B8;
+  display: block;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+}
+
+.paypal-audit-strip {
+  margin-top: 0.65rem;
+  font-size: 0.72rem;
+  color: #94A3B8;
+  line-height: 1.45;
+}
+
+/* Dark Mode support for PayPal Checkout & Student History */
+[data-theme="dark"] .paypal-panel-card,
+[data-theme="dark"] .paypal-history-card {
+  background: #0A0B0E !important;
+  border-color: rgba(216, 170, 60, 0.35) !important;
+  color: #F8FAFC !important;
+}
+
+[data-theme="dark"] .paypal-recipient-card {
+  background: #12141B !important;
+  border-color: rgba(216, 170, 60, 0.4) !important;
+}
+
+[data-theme="dark"] .paypal-inv-num,
+[data-theme="dark"] .paypal-inv-title,
+[data-theme="dark"] .paypal-field-value {
+  color: #FFFFFF !important;
+}
+
+[data-theme="dark"] .paypal-recipient-note,
+[data-theme="dark"] .paypal-steps-list {
+  color: #CBD5E1 !important;
+}
+
+[data-theme="dark"] .paypal-channel-tab {
+  background: #151720 !important;
+  color: #F8FAFC !important;
+  border-color: rgba(216, 170, 60, 0.35) !important;
+}
+
+[data-theme="dark"] .paypal-attempt-row,
+[data-theme="dark"] .paypal-proof-preview-wrap {
+  background: #12141B !important;
+  border-color: rgba(216, 170, 60, 0.25) !important;
+}
+
+[data-theme="dark"] .paypal-qr-limitation-alert,
+[data-theme="dark"] .paypal-pending-banner {
+  background: rgba(245, 158, 11, 0.14) !important;
+  color: #FDE68A !important;
+}
+
+[data-theme="dark"] .paypal-accepted-banner {
+  background: rgba(16, 185, 129, 0.16) !important;
+  color: #A7F3D0 !important;
+}
+
+[data-theme="dark"] .paypal-rejection-banner {
+  background: rgba(239, 68, 68, 0.16) !important;
+  color: #FECACA !important;
+}
+
+[data-theme="dark"] .paypal-status-accepted { color: #6EE7B7 !important; }
+[data-theme="dark"] .paypal-status-pending { color: #FCD34D !important; }
+[data-theme="dark"] .paypal-status-rejected { color: #FCA5A5 !important; }
+[data-theme="dark"] .paypal-status-unpaid { color: #CBD5E1 !important; }

@@ -1828,6 +1828,12 @@ const Tutors = {
     document.getElementById('pay-summary-datetime').textContent = `${dateFormatted} • ${this.selectedTime}`;
     document.getElementById('pay-summary-amount').textContent = `$${activeRate.toFixed(2)}`;
     document.getElementById('pay-card-amount-label').textContent = `$${activeRate.toFixed(2)}`;
+    const paypalAmtLbl = document.getElementById('pay-paypal-amount-label');
+    if (paypalAmtLbl) {
+      paypalAmtLbl.textContent = (typeof AvioraCurrency !== 'undefined')
+        ? AvioraCurrency.formatTutorRate(activeRate, this.selectedTutor)
+        : `$${activeRate.toFixed(2)}`;
+    }
 
     // Configure Payment Choices based on Subscription Status
     const subOption = document.getElementById('pay-opt-subscription');
@@ -1977,20 +1983,24 @@ const Tutors = {
     const subCardBox = document.getElementById('pay-method-sub-card');
     const cardCardBox = document.getElementById('pay-method-card-card');
     const walletCardBox = document.getElementById('pay-method-wallet-card');
+    const paypalCardBox = document.getElementById('pay-method-paypal-card');
     const cardInputs = document.getElementById('payment-card-inputs');
     const payText = document.getElementById('btn-pay-text');
 
     const subRadio = document.getElementById('pay-opt-subscription');
     const cardRadio = document.getElementById('pay-opt-card');
     const walletRadio = document.getElementById('pay-opt-wallet');
+    const paypalRadio = document.getElementById('pay-opt-paypal');
 
     if (subRadio) subRadio.checked = (method === 'subscription');
     if (cardRadio) cardRadio.checked = (method === 'card');
     if (walletRadio) walletRadio.checked = (method === 'wallet');
+    if (paypalRadio) paypalRadio.checked = (method === 'paypal');
 
     if (subCardBox) subCardBox.classList.toggle('selected', method === 'subscription');
     if (cardCardBox) cardCardBox.classList.toggle('selected', method === 'card');
     if (walletCardBox) walletCardBox.classList.toggle('selected', method === 'wallet');
+    if (paypalCardBox) paypalCardBox.classList.toggle('selected', method === 'paypal');
 
     if (cardInputs) cardInputs.style.display = (method === 'card') ? 'block' : 'none';
 
@@ -1999,6 +2009,8 @@ const Tutors = {
         payText.textContent = 'Confirm Booking (Use 1 Lesson Credit)';
       } else if (method === 'wallet') {
         payText.textContent = `Pay ${activeRate.toFixed(2)} with Wallet Credit & Confirm`;
+      } else if (method === 'paypal') {
+        payText.textContent = `Proceed to PayPal Payment (${(typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.formatTutorRate(activeRate, this.selectedTutor) : '$' + activeRate.toFixed(2)}) →`;
       } else {
         payText.textContent = `Pay ${activeRate.toFixed(2)} & Confirm Lesson`;
       }
@@ -2028,6 +2040,20 @@ const Tutors = {
       if (submitBtn) {
         submitBtn.disabled = true;
         submitBtn.innerHTML = '<span>Processing Payment &amp; Reservation...</span>';
+      }
+
+      if (this.paymentMethod === 'paypal' && typeof AvioraPayments !== 'undefined' && AvioraPayments.createInvoiceAndGoToPayments) {
+        this.closeBookingModal();
+        await AvioraPayments.createInvoiceAndGoToPayments({
+          item_type: 'single_lesson',
+          tutor_user_id: this.selectedTutor.user_id,
+          subject,
+          requested_date: this.selectedDate,
+          requested_time: this.selectedTime,
+          duration_hours: 1.0,
+          notes
+        });
+        return;
       }
 
       const payload = {

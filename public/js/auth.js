@@ -205,9 +205,19 @@ const Auth = {
     }
 
     try {
-      const data = await API.getMe();
+      let data = await API.getMe();
+      if (data.rehydrated && data.user && data.user.email && this.getSavedCreatedAccount(data.user.email)) {
+        const resynced = await this.tryAutoSyncCurrentUser();
+        if (resynced) {
+          try { data = await API.getMe(); } catch (e) {}
+        }
+      }
       this.currentUser = data.user;
       Storage.setUser(data.user);
+      if (typeof Profile !== 'undefined') {
+        Profile.currentUser = data.user;
+        if (data.studentProfile) Profile.studentProfile = data.studentProfile;
+      }
       if (data.preferences) {
         this.syncUserPreferences(data.preferences);
       } else {
@@ -265,6 +275,8 @@ const Auth = {
         const savedPrefs = Storage.getUserPreferences(storedUser.id) || {};
         const cleanSyncEmail = storedUser.email.toLowerCase().trim();
         const savedEmailTheme = localStorage.getItem(`aviora_theme_email_${cleanSyncEmail}`) || (storedUser.id ? localStorage.getItem(`aviora_theme_${storedUser.id}`) : null);
+        let savedEmailAvatar = null;
+        try { savedEmailAvatar = localStorage.getItem(`aviora_avatar_email_${cleanSyncEmail}`); } catch (e) {}
         const res = await fetch('/api/auth/sync-account', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -274,6 +286,7 @@ const Auth = {
             password: savedAccount.password,
             role: savedAccount.role || storedUser.role || 'student',
             phone: savedAccount.phone || storedUser.phone || null,
+            avatar_url: savedEmailAvatar || savedAccount.avatar_url || storedUser.avatar_url || null,
             country: savedAccount.country || savedPrefs.country || storedUser.country || 'United States',
             timezone: savedAccount.timezone || savedPrefs.timezone || storedUser.timezone,
             language: savedAccount.language || savedPrefs.language || storedUser.language,
@@ -399,6 +412,10 @@ const Auth = {
     try {
       const accounts = this.getCreatedAccounts();
       const email = account.email.toLowerCase().trim();
+      const chosenAvatar = account.avatar_url || account.avatar || accounts[email]?.avatar_url;
+      if (chosenAvatar && String(chosenAvatar).startsWith('data:')) {
+        try { localStorage.setItem(`aviora_avatar_email_${email}`, chosenAvatar); } catch (e) {}
+      }
       accounts[email] = {
         name: account.name || accounts[email]?.name || 'Aviora Member',
         email,
@@ -406,9 +423,9 @@ const Auth = {
         role: account.role || accounts[email]?.role || 'student',
         phone: account.phone !== undefined ? account.phone : (accounts[email]?.phone || null),
         grade_level: account.grade_level || accounts[email]?.grade_level,
-        school: account.school || accounts[email]?.school,
-        learning_goals: account.learning_goals || accounts[email]?.learning_goals,
-        target_subjects: account.target_subjects || accounts[email]?.target_subjects,
+        school: account.school !== undefined ? account.school : accounts[email]?.school,
+        learning_goals: account.learning_goals !== undefined ? account.learning_goals : accounts[email]?.learning_goals,
+        target_subjects: account.target_subjects !== undefined ? account.target_subjects : accounts[email]?.target_subjects,
         headline: account.headline || accounts[email]?.headline,
         subjects: account.subjects || accounts[email]?.subjects,
         country: account.country || accounts[email]?.country,
@@ -420,11 +437,21 @@ const Auth = {
         years_experience: account.years_experience || accounts[email]?.years_experience,
         hourly_rate: account.hourly_rate || accounts[email]?.hourly_rate,
         bio: account.bio || accounts[email]?.bio,
-        avatar_url: account.avatar_url || account.avatar || accounts[email]?.avatar_url,
+        avatar_url: chosenAvatar,
         created_at: accounts[email]?.created_at || new Date().toISOString(),
         updated_at: new Date().toISOString()
       };
-      localStorage.setItem('aviora_created_accounts', JSON.stringify(accounts));
+      try {
+        localStorage.setItem('aviora_created_accounts', JSON.stringify(accounts));
+      } catch (quotaErr) {
+        // Trim large inline data-URLs inside shared map while keeping per-email avatar backup
+        Object.keys(accounts).forEach(k => {
+          if (accounts[k]?.avatar_url && String(accounts[k].avatar_url).startsWith('data:')) {
+            delete accounts[k].avatar_url;
+          }
+        });
+        localStorage.setItem('aviora_created_accounts', JSON.stringify(accounts));
+      }
     } catch (e) {}
   },
 
@@ -1553,12 +1580,15 @@ const Auth = {
           try {
             const cleanLoginEmail = email.toLowerCase().trim();
             const savedEmailTheme = localStorage.getItem(`aviora_theme_email_${cleanLoginEmail}`);
+            let savedEmailAvatar = null;
+            try { savedEmailAvatar = localStorage.getItem(`aviora_avatar_email_${cleanLoginEmail}`); } catch (e) {}
             res = await API.syncAccount({
               name: (savedAccount && savedAccount.name) || (isJoshua ? 'Joshua Garcia' : 'Krystel Comia'),
               email: cleanLoginEmail,
               password: password,
               role: (savedAccount && savedAccount.role) || (isJoshua ? 'teacher' : 'student'),
               phone: savedAccount?.phone || null,
+              avatar_url: savedEmailAvatar || savedAccount?.avatar_url || null,
               country: savedAccount?.country,
               timezone: savedAccount?.timezone,
               language: savedAccount?.language,
@@ -1568,7 +1598,11 @@ const Auth = {
               learning_goals: savedAccount?.learning_goals,
               target_subjects: savedAccount?.target_subjects,
               headline: savedAccount?.headline,
-              subjects: savedAccount?.subjects
+              subjects: savedAccount?.subjects,
+              institution: savedAccount?.institution,
+              highest_degree: savedAccount?.highest_degree,
+              years_experience: savedAccount?.years_experience,
+              bio: savedAccount?.bio
             });
           } catch (syncErr) {
             throw loginErr;
@@ -1581,6 +1615,21 @@ const Auth = {
       Storage.setToken(res.token);
       Storage.setUser(res.user);
       this.currentUser = res.user;
+      if (typeof Profile !== 'undefined') Profile.currentUser = res.user;
+      if (res.user && res.user.email) {
+        this.saveCreatedAccount({
+          name: res.user.name,
+          email: res.user.email,
+          password,
+          role: res.user.role,
+          phone: res.user.phone,
+          avatar_url: res.user.avatar_url,
+          country: res.user.country,
+          timezone: res.user.timezone,
+          language: res.user.language,
+          theme: res.preferences?.theme
+        });
+      }
       if (res.preferences) {
         this.syncUserPreferences(res.preferences);
       }

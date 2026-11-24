@@ -1461,7 +1461,7 @@ function ensureAdminAccount(customPassword) {
               password_hash = ?,
               role = 'admin',
               phone = COALESCE(phone, '+1 (555) 839-2041'),
-              avatar_url = 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=300&q=80',
+              avatar_url = COALESCE(NULLIF(avatar_url, ''), 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=300&q=80'),
               status = 'active'
           WHERE id = ?
         `).run(email, passwordHash, legacyAdmin.id);

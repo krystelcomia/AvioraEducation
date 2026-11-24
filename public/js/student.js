@@ -1706,11 +1706,30 @@ const Student = {
         submitBtn.textContent = 'Saving Changes...';
       }
 
-      await API.updateProfile({
+      const res = await API.updateProfile({
         name,
         phone,
         studentData: { grade_level, school, learning_goals, target_subjects }
       });
+
+      if (res && res.user && typeof Auth !== 'undefined' && Auth.currentUser) {
+        Auth.currentUser = { ...Auth.currentUser, ...res.user };
+        Storage.setUser(Auth.currentUser);
+        if (typeof Auth.saveCreatedAccount === 'function' && Auth.currentUser.email) {
+          Auth.saveCreatedAccount({
+            name: Auth.currentUser.name,
+            email: Auth.currentUser.email,
+            phone: Auth.currentUser.phone,
+            school,
+            learning_goals,
+            target_subjects
+          });
+        }
+      }
+      if (typeof Profile !== 'undefined') {
+        if (res && res.user) Profile.currentUser = { ...(Profile.currentUser || {}), ...res.user };
+        if (res && res.studentProfile) Profile.studentProfile = res.studentProfile;
+      }
 
       showToast('Student profile updated successfully!', 'success');
       await Auth.restoreSession();

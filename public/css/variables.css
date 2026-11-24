@@ -1203,3 +1203,250 @@ body {
   border-color: rgba(216, 170, 60, 0.3) !important;
   color: #FFFFFF !important;
 }
+
+/* ========================================================
+   DIRECT EDUCATOR MESSENGER MODAL & MESSAGE FORMS DARK MODE
+   ======================================================== */
+[data-theme="dark"] .tutor-messenger-card {
+  background: #070709 !important;
+  border-color: rgba(216, 170, 60, 0.42) !important;
+  box-shadow: 0 28px 70px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(216, 170, 60, 0.16) !important;
+}
+
+[data-theme="dark"] .tutor-messenger-card .messenger-header {
+  background: #0D0E12 !important;
+  border-bottom: 1px solid rgba(216, 170, 60, 0.25) !important;
+}
+
+[data-theme="dark"] .tutor-messenger-card .messenger-tutor-name {
+  color: #FFFFFF !important;
+}
+
+[data-theme="dark"] .tutor-messenger-card .messenger-header-status,
+[data-theme="dark"] .tutor-messenger-card .messenger-headline-text,
+[data-theme="dark"] .tutor-messenger-card .messenger-status-sep {
+  color: #CBD5E1 !important;
+}
+
+[data-theme="dark"] .tutor-messenger-card .messenger-verified-badge {
+  color: #E5A93C !important;
+}
+
+[data-theme="dark"] .tutor-messenger-card .messenger-status-dot {
+  border-color: #0D0E12 !important;
+}
+
+[data-theme="dark"] .messenger-notice-bar {
+  background: rgba(216, 170, 60, 0.12) !important;
+  border-bottom: 1px solid rgba(216, 170, 60, 0.24) !important;
+  color: #F1F5F9 !important;
+}
+
+[data-theme="dark"] .messenger-notice-bar strong {
+  color: #FFFFFF !important;
+}
+
+[data-theme="dark"] .messenger-notice-bar svg {
+  color: #E5A93C !important;
+}
+
+[data-theme="dark"] .messenger-body {
+  background: #0A0B0E !important;
+  color: #F8FAFC !important;
+}
+
+[data-theme="dark"] .messenger-date-divider span {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border: 1px solid rgba(216, 170, 60, 0.22) !important;
+  color: #E2E8F0 !important;
+}
+
+[data-theme="dark"] .messenger-modal-empty-state,
+[data-theme="dark"] #messenger-messages-thread .messenger-modal-empty-desc,
+[data-theme="dark"] #messenger-messages-thread p {
+  color: #CBD5E1 !important;
+}
+
+[data-theme="dark"] .messenger-modal-empty-icon svg {
+  color: #E5A93C !important;
+}
+
+[data-theme="dark"] .messenger-modal-empty-title,
+[data-theme="dark"] #messenger-messages-thread h4 {
+  color: #FFFFFF !important;
+}
+
+[data-theme="dark"] #tutor-message-modal .messenger-message.incoming .messenger-bubble {
+  background: #181B22 !important;
+  color: #F8FAFC !important;
+  border: 1px solid rgba(216, 170, 60, 0.28) !important;
+}
+
+[data-theme="dark"] #tutor-message-modal .messenger-bubble-sender {
+  color: #E5A93C !important;
+}
+
+[data-theme="dark"] #tutor-message-modal .messenger-message.incoming .messenger-bubble-time {
+  color: #94A3B8 !important;
+}
+
+[data-theme="dark"] .typing-bubble {
+  background: #16181F !important;
+  border-color: rgba(216, 170, 60, 0.3) !important;
+}
+
+[data-theme="dark"] .typing-text {
+  color: #CBD5E1 !important;
+}
+
+[data-theme="dark"] .messenger-quick-prompts {
+  background: #0D0E12 !important;
+  border-top: 1px solid rgba(216, 170, 60, 0.22) !important;
+}
+
+[data-theme="dark"] .quick-prompt-chip {
+  background: #16181F !important;
+  border: 1px solid rgba(216, 170, 60, 0.4) !important;
+  color: #F8FAFC !important;
+}
+
+[data-theme="dark"] .quick-prompt-chip svg {
+  color: #E5A93C !important;
+}
+
+[data-theme="dark"] .quick-prompt-chip:hover {
+  background: rgba(216, 170, 60, 0.2) !important;
+  border-color: #E5A93C !important;
+  color: #FDE68A !important;
+}
+
+[data-theme="dark"] .messenger-footer {
+  background: #0D0E12 !important;
+  border-top: 1px solid rgba(216, 170, 60, 0.25) !important;
+}
+
+[data-theme="dark"] .messenger-tool-btn {
+  color: #E2E8F0 !important;
+  background: transparent !important;
+}
+
+[data-theme="dark"] .messenger-tool-btn svg {
+  color: #E5A93C !important;
+}
+
+[data-theme="dark"] .messenger-tool-btn:hover {
+  background: rgba(216, 170, 60, 0.16) !important;
+  color: #FDE68A !important;
+  border-color: rgba(216, 170, 60, 0.35) !important;
+}
+
+[data-theme="dark"] .messenger-input-wrap {
+  background: #14161D !important;
+  border: 1.5px solid rgba(216, 170, 60, 0.45) !important;
+}
+
+[data-theme="dark"] .messenger-input-wrap:focus-within {
+  background: #0A0B0E !important;
+  border-color: #E5A93C !important;
+  box-shadow: 0 0 0 3px rgba(216, 170, 60, 0.22) !important;
+}
+
+[data-theme="dark"] .messenger-input-wrap .messenger-textarea {
+  background: transparent !important;
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  color: #FFFFFF !important;
+}
+
+[data-theme="dark"] .messenger-input-wrap .messenger-textarea::placeholder {
+  color: #94A3B8 !important;
+}
+
+[data-theme="dark"] .messenger-footer-sub,
+[data-theme="dark"] .messenger-footer-sub span {
+  color: #94A3B8 !important;
+}
+
+[data-theme="dark"] .messenger-footer-sub strong {
+  color: #E2E8F0 !important;
+}
+
+[data-theme="dark"] .messenger-attachment-preview,
+[data-theme="dark"] #modal-composer-attachment-preview {
+  background: rgba(216, 170, 60, 0.14) !important;
+  border-color: rgba(216, 170, 60, 0.4) !important;
+  color: #F8FAFC !important;
+}
+
+[data-theme="dark"] .messenger-attachment-name {
+  color: #FFFFFF !important;
+}
+
+[data-theme="dark"] .messenger-attachment-meta,
+[data-theme="dark"] .messenger-attachment-remove {
+  color: #CBD5E1 !important;
+}
+
+/* Full-Page Messenger Hub & Wallet Support Chat Modal Dark Mode */
+[data-theme="dark"] .messenger-hub {
+  background: #070709 !important;
+  border-color: rgba(216, 170, 60, 0.32) !important;
+}
+
+[data-theme="dark"] .messenger-hub-sidebar,
+[data-theme="dark"] .messenger-hub-main,
+[data-theme="dark"] .messenger-hub-contact-info {
+  background: #0A0B0E !important;
+  border-color: rgba(216, 170, 60, 0.22) !important;
+}
+
+[data-theme="dark"] .messenger-sidebar-header,
+[data-theme="dark"] .messenger-active-header {
+  background: #0D0E12 !important;
+  border-bottom-color: rgba(216, 170, 60, 0.22) !important;
+}
+
+[data-theme="dark"] .messenger-search-input,
+[data-theme="dark"] .messenger-select-pill,
+[data-theme="dark"] .messenger-filter-pill:not(.active),
+[data-theme="dark"] .messenger-header-action-btn {
+  background: #14161D !important;
+  border-color: rgba(216, 170, 60, 0.32) !important;
+  color: #F8FAFC !important;
+}
+
+[data-theme="dark"] .messenger-conv-item {
+  border-bottom-color: rgba(255, 255, 255, 0.06) !important;
+}
+
+[data-theme="dark"] .messenger-conv-item:hover,
+[data-theme="dark"] .messenger-conv-item.active {
+  background: rgba(216, 170, 60, 0.12) !important;
+}
+
+[data-theme="dark"] .messenger-conv-name,
+[data-theme="dark"] .messenger-sidebar-title,
+[data-theme="dark"] .messenger-empty-state h3,
+[data-theme="dark"] .messenger-empty-state h4 {
+  color: #FFFFFF !important;
+}
+
+[data-theme="dark"] .messenger-conv-snippet,
+[data-theme="dark"] .messenger-conv-time,
+[data-theme="dark"] .messenger-empty-state {
+  color: #CBD5E1 !important;
+}
+
+[data-theme="dark"] #wallet-chat-summary-bar,
+[data-theme="dark"] #wallet-chat-messages-list {
+  background: #0A0B0E !important;
+  border-color: rgba(216, 170, 60, 0.3) !important;
+  color: #F8FAFC !important;
+}
+
+[data-theme="dark"] #wallet-chat-waiting-banner {
+  background: rgba(245, 158, 11, 0.14) !important;
+  border-color: rgba(245, 158, 11, 0.4) !important;
+  color: #FDE68A !important;
+}

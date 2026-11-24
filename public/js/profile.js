@@ -635,6 +635,7 @@ const Profile = {
         if (file) {
           this.handleAvatarUpload(file);
         }
+        e.target.value = '';
       });
     }
 
@@ -767,6 +768,7 @@ const Profile = {
         if (file) {
           this.handleAvatarUpload(file);
         }
+        e.target.value = '';
       });
     }
 
@@ -838,6 +840,7 @@ const Profile = {
         if (file) {
           this.handleAvatarUpload(file);
         }
+        e.target.value = '';
       });
     }
 
@@ -882,7 +885,7 @@ const Profile = {
     }
   },
 
-  compressImage(file, maxDimension = 500, quality = 0.88) {
+  compressImage(file, maxDimension = 420, quality = 0.84) {
     return new Promise((resolve) => {
       const reader = new FileReader();
       reader.onload = (e) => {
@@ -903,7 +906,11 @@ const Profile = {
           canvas.height = height;
           const ctx = canvas.getContext('2d');
           ctx.drawImage(img, 0, 0, width, height);
-          resolve(canvas.toDataURL('image/jpeg', quality));
+          let out = canvas.toDataURL('image/jpeg', quality);
+          if (out && out.length > 220000) {
+            out = canvas.toDataURL('image/jpeg', 0.72);
+          }
+          resolve(out);
         };
         img.onerror = () => resolve(e.target.result);
         img.src = e.target.result;
@@ -927,7 +934,7 @@ const Profile = {
     try {
       showToast('Saving profile picture...', 'info');
       // Compress image to ensure lightweight base64 storage in database
-      const compressedData = await this.compressImage(file, 500, 0.88);
+      const compressedData = await this.compressImage(file, 420, 0.84);
       const dataUrl = compressedData || await new Promise((resolve) => {
         const fr = new FileReader();
         fr.onload = ev => resolve(ev.target.result);
@@ -937,10 +944,12 @@ const Profile = {
       this.updateAllAvatars(dataUrl);
 
       let finalUrl = dataUrl;
+      let savedUser = null;
       try {
         const res = await API.updateProfile({ avatar_url: dataUrl });
-        if (res && res.user && res.user.avatar_url) {
-          finalUrl = res.user.avatar_url;
+        if (res && res.user) {
+          savedUser = res.user;
+          if (res.user.avatar_url) finalUrl = res.user.avatar_url;
         }
       } catch (saveErr) {
         console.warn('Profile avatar update error, trying uploadAvatar:', saveErr);
@@ -948,11 +957,28 @@ const Profile = {
         formData.append('avatar', file);
         const res = await API.uploadAvatar(formData);
         if (res && res.avatar_url) finalUrl = res.avatar_url;
+        if (res && res.user) savedUser = res.user;
       }
 
+      if (this.currentUser) {
+        this.currentUser = {
+          ...this.currentUser,
+          ...(savedUser || {}),
+          avatar_url: finalUrl
+        };
+      }
       if (typeof Auth !== 'undefined' && Auth.currentUser) {
-        Auth.currentUser.avatar_url = finalUrl;
+        Auth.currentUser = {
+          ...Auth.currentUser,
+          ...(savedUser || {}),
+          avatar_url: finalUrl
+        };
         if (typeof Storage !== 'undefined') Storage.setUser(Auth.currentUser);
+        if (Auth.currentUser.email) {
+          try {
+            localStorage.setItem('aviora_avatar_email_' + Auth.currentUser.email.toLowerCase().trim(), finalUrl);
+          } catch (e) {}
+        }
         if (typeof Auth.saveCreatedAccount === 'function') {
           Auth.saveCreatedAccount({
             name: Auth.currentUser.name,
@@ -1220,12 +1246,37 @@ const Profile = {
 
     try {
       this.setSaveStatus('saving', typeof I18n !== 'undefined' ? I18n.t('common.saving', 'Saving...') : 'Saving...');
-      await API.updateProfile(payload);
+      const res = await API.updateProfile(payload);
+
+      if (res && res.user) {
+        this.currentUser = { ...(this.currentUser || {}), ...res.user };
+      } else if (this.currentUser && phoneEl && !phoneEl.disabled) {
+        this.currentUser.phone = phone || null;
+      }
+      if (res && res.studentProfile) {
+        this.studentProfile = res.studentProfile;
+      } else if (this.studentProfile) {
+        if (studentData.school !== undefined) this.studentProfile.school = studentData.school;
+        if (studentData.learning_goals !== undefined) this.studentProfile.learning_goals = studentData.learning_goals;
+        if (studentData.target_subjects !== undefined) this.studentProfile.target_subjects = studentData.target_subjects;
+      }
 
       if (typeof Auth !== 'undefined' && Auth.currentUser) {
         Auth.currentUser.name = name;
-        Auth.currentUser.phone = phone;
+        if (phoneEl && !phoneEl.disabled) {
+          Auth.currentUser.phone = (res && res.user && res.user.phone !== undefined) ? res.user.phone : (phone || null);
+        }
         Storage.setUser(Auth.currentUser);
+        if (typeof Auth.saveCreatedAccount === 'function' && Auth.currentUser.email) {
+          Auth.saveCreatedAccount({
+            name: Auth.currentUser.name,
+            email: Auth.currentUser.email,
+            phone: Auth.currentUser.phone,
+            school: studentData.school,
+            learning_goals: studentData.learning_goals,
+            target_subjects: studentData.target_subjects
+          });
+        }
       }
 
       const heroName = document.getElementById('profile-hero-name');

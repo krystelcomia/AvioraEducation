@@ -100,8 +100,8 @@ const messageAttachmentUpload = multer({
 
 // Middleware
 app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '15mb' }));
+app.use(express.urlencoded({ extended: true, limit: '15mb' }));
 
 // --- Cross-Timezone & International Scheduling Helpers ---
 function getTimezoneOffsetMinutes(tz, date = new Date()) {
@@ -2117,6 +2117,41 @@ function processAllStudentSubscriptions() {
   }
 }
 
+function getRoleDefaultAvatar(role) {
+  return (role === 'tutor' || role === 'teacher')
+    ? 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=300&q=80'
+    : 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=300&q=80';
+}
+
+function isDefaultProfileAvatar(url) {
+  if (!url || !String(url).trim()) return true;
+  const s = String(url).trim();
+  return s.startsWith('https://images.unsplash.com/photo-1535713875002-d1d0cf377fde')
+    || s.startsWith('https://images.unsplash.com/photo-1500648767791-00dcc994a43e')
+    || s.startsWith('https://images.unsplash.com/photo-1494790108377-be9c29b29330')
+    || s.startsWith('https://images.unsplash.com/photo-1534528741775-53994a69daeb')
+    || s === '/assets/favicon.png';
+}
+
+function signUserToken(user, prefs = null) {
+  const country = user?.country || prefs?.country || 'United States';
+  const def = getCountryDefaults(country);
+  return jwt.sign(
+    {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      phone: user.phone || null,
+      country,
+      timezone: prefs?.timezone || def.timezone || 'America/New_York',
+      language: prefs?.language || def.language || 'en-US'
+    },
+    JWT_SECRET,
+    { expiresIn: '7d' }
+  );
+}
+
 // Authentication Middleware
 function authenticateToken(req, res, next) {
   const authHeader = req.headers['authorization'];
@@ -2141,13 +2176,11 @@ function authenticateToken(req, res, next) {
         const role = decoded.role === 'teacher' ? 'teacher' : (decoded.role === 'tutor' ? 'tutor' : 'student');
         const resolved = resolveLocationPreferences(decoded.country, decoded.timezone, decoded.language);
         const tempHash = bcrypt.hashSync('Rehydrated_' + Math.random().toString(36) + 'Aa1!', 8);
-        const defaultAvatar = role === 'student'
-          ? 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=300&q=80'
-          : 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=300&q=80';
+        const defaultAvatar = getRoleDefaultAvatar(role);
         const ins = db.prepare(`
-          INSERT INTO users (name, email, password_hash, role, avatar_url, country, status)
-          VALUES (?, ?, ?, ?, ?, ?, 'active')
-        `).run(decoded.name || cleanEmail.split('@')[0], cleanEmail, tempHash, role, defaultAvatar, resolved.country);
+          INSERT INTO users (name, email, password_hash, role, phone, avatar_url, country, status)
+          VALUES (?, ?, ?, ?, ?, ?, ?, 'active')
+        `).run(decoded.name || cleanEmail.split('@')[0], cleanEmail, tempHash, role, decoded.phone || null, defaultAvatar, resolved.country);
         const newId = ins.lastInsertRowid;
         saveUserPreferences(newId, {
           theme: 'light',
@@ -2160,6 +2193,7 @@ function authenticateToken(req, res, next) {
           db.prepare('INSERT INTO student_profiles (user_id, grade_level, school) VALUES (?, ?, ?)').run(newId, 'Grade 11 - High School', '');
         }
         user = db.prepare('SELECT id, name, email, role, phone, avatar_url, country, status, wallet_balance, wallet_tutor_id FROM users WHERE id = ?').get(newId);
+        req._rehydratedUser = true;
       } catch (rehydrateErr) {
         console.warn('Serverless user rehydrate notice:', rehydrateErr.message);
       }
@@ -2519,18 +2553,16 @@ app.post('/api/auth/register', (req, res) => {
       ...(tutorDraftProfile ? { tutor_signup_profile: tutorDraftProfile } : {})
     });
 
-    const token = jwt.sign(
+    const token = signUserToken(
       {
         id: userId,
         name: name.trim(),
         email: cleanEmail,
         role: designatedRole,
-        country: userCountry,
-        timezone: userTimezone,
-        language: userLanguage
+        phone: (phone && String(phone).trim()) || null,
+        country: userCountry
       },
-      JWT_SECRET,
-      { expiresIn: '7d' }
+      savedPrefs
     );
 
     const userObj = {
@@ -2538,7 +2570,7 @@ app.post('/api/auth/register', (req, res) => {
       name: name.trim(),
       email: cleanEmail,
       role: designatedRole,
-      phone: phone || null,
+      phone: (phone && String(phone).trim()) || null,
       avatar_url: defaultAvatar,
       country: userCountry,
       timezone: userTimezone,
@@ -2669,19 +2701,7 @@ app.post('/api/auth/login', (req, res) => {
       status: user.status
     };
 
-    const token = jwt.sign(
-      {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        country: sanitizedUser.country,
-        timezone: sanitizedUser.timezone,
-        language: sanitizedUser.language
-      },
-      JWT_SECRET,
-      { expiresIn: '7d' }
-    );
+    const token = signUserToken(sanitizedUser, userPrefs);
 
     return res.json({
       message: 'Logged in successfully.',
@@ -2699,7 +2719,7 @@ app.post('/api/auth/login', (req, res) => {
 app.post('/api/auth/sync-account', (req, res) => {
   try {
     const {
-      name, email, password, role, phone,
+      name, email, password, role, phone, avatar_url,
       grade_level, school, learning_goals, target_subjects,
       headline, subjects, institution, highest_degree, years_experience, bio,
       country, timezone, language
@@ -2714,6 +2734,8 @@ app.post('/api/auth/sync-account', (req, res) => {
     const passwordHash = bcrypt.hashSync(password, salt);
     const designatedRole = role === 'teacher' || role === 'tutor' ? 'teacher' : 'student';
     const { country: userCountry, timezone: userTimezone, language: userLanguage } = resolveLocationPreferences(country, timezone, language);
+    const cleanPhone = (phone && String(phone).trim()) || null;
+    const incomingAvatar = (avatar_url && String(avatar_url).trim()) || '';
 
     if (!user) {
       const syncConflict = findUsedIdentityConflict({
@@ -2728,14 +2750,13 @@ app.post('/api/auth/sync-account', (req, res) => {
         });
       }
 
-      const defaultAvatar = (designatedRole === 'teacher' || designatedRole === 'tutor')
-        ? 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=300&q=80'
-        : 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=300&q=80';
+      const defaultAvatar = getRoleDefaultAvatar(designatedRole);
+      const chosenAvatar = incomingAvatar || defaultAvatar;
 
       const result = db.prepare(`
         INSERT INTO users (name, email, password_hash, role, phone, avatar_url, country, status)
         VALUES (?, ?, ?, ?, ?, ?, ?, 'active')
-      `).run(name ? name.trim() : cleanEmail.split('@')[0], cleanEmail, passwordHash, designatedRole, phone || null, defaultAvatar, userCountry);
+      `).run(name ? name.trim() : cleanEmail.split('@')[0], cleanEmail, passwordHash, designatedRole, cleanPhone, chosenAvatar, userCountry);
 
       const userId = result.lastInsertRowid;
       let tutorDraftProfile = null;
@@ -2764,7 +2785,7 @@ app.post('/api/auth/sync-account', (req, res) => {
         };
       }
       const registrationImmutable = buildRegistrationImmutableSnapshot(designatedRole, {
-        phone,
+        phone: cleanPhone,
         school,
         target_subjects: (target_subjects !== undefined && target_subjects !== null) ? target_subjects : subjects,
         learning_goals,
@@ -2787,24 +2808,56 @@ app.post('/api/auth/sync-account', (req, res) => {
       });
       user = db.prepare('SELECT * FROM users WHERE id = ?').get(userId);
     } else {
-      db.prepare("UPDATE users SET password_hash = ?, status = 'active' WHERE id = ?").run(passwordHash, user.id);
-      user.password_hash = passwordHash;
+      const existingUpdates = ["password_hash = ?", "status = 'active'"];
+      const existingParams = [passwordHash];
+      if ((!user.phone || !String(user.phone).trim()) && cleanPhone) {
+        existingUpdates.push('phone = ?');
+        existingParams.push(cleanPhone);
+      }
+      if (incomingAvatar && !isDefaultProfileAvatar(incomingAvatar) && isDefaultProfileAvatar(user.avatar_url)) {
+        existingUpdates.push('avatar_url = ?');
+        existingParams.push(incomingAvatar);
+      }
+      existingParams.push(user.id);
+      db.prepare(`UPDATE users SET ${existingUpdates.join(', ')} WHERE id = ?`).run(...existingParams);
+      if (incomingAvatar && !isDefaultProfileAvatar(incomingAvatar) && isDefaultProfileAvatar(user.avatar_url)) {
+        try {
+          db.prepare('UPDATE tutor_profiles SET avatar_url = ? WHERE user_id = ?').run(incomingAvatar, user.id);
+        } catch (e) { }
+      }
+      if (user.role === 'student') {
+        const sp = db.prepare('SELECT * FROM student_profiles WHERE user_id = ?').get(user.id);
+        if (!sp) {
+          const resolvedGoals = (learning_goals && String(learning_goals).trim()) || 'Achieve academic excellence and master core coursework.';
+          const resolvedTargetSubjects = (target_subjects !== undefined && target_subjects !== null)
+            ? String(target_subjects).trim()
+            : (subjects ? String(subjects).trim() : '');
+          db.prepare(`
+            INSERT INTO student_profiles (user_id, grade_level, school, learning_goals, target_subjects)
+            VALUES (?, ?, ?, ?, ?)
+          `).run(user.id, grade_level || 'Grade 11 - High School', school || '', resolvedGoals, resolvedTargetSubjects);
+        } else {
+          const spUpdates = [];
+          const spParams = [];
+          if ((!sp.school || !String(sp.school).trim()) && school && String(school).trim()) {
+            spUpdates.push('school = ?');
+            spParams.push(String(school).trim());
+          }
+          if ((!sp.target_subjects || !String(sp.target_subjects).trim()) && target_subjects && String(target_subjects).trim()) {
+            spUpdates.push('target_subjects = ?');
+            spParams.push(String(target_subjects).trim());
+          }
+          if (spUpdates.length > 0) {
+            spParams.push(user.id);
+            db.prepare(`UPDATE student_profiles SET ${spUpdates.join(', ')} WHERE user_id = ?`).run(...spParams);
+          }
+        }
+      }
+      user = db.prepare('SELECT * FROM users WHERE id = ?').get(user.id);
     }
 
     const prefs = getUserPreferences(user.id);
-    const token = jwt.sign(
-      {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        country: user.country || prefs?.country || userCountry,
-        timezone: prefs?.timezone || userTimezone,
-        language: prefs?.language || userLanguage
-      },
-      JWT_SECRET,
-      { expiresIn: '7d' }
-    );
+    const token = signUserToken(user, prefs);
 
     return res.json({
       message: 'Account successfully authenticated.',
@@ -3687,11 +3740,8 @@ app.all('/api/auth/google/callback', async (req, res) => {
       role
     });
 
-    const token = jwt.sign(
-      { id: user.id, email: user.email, role: user.role },
-      JWT_SECRET,
-      { expiresIn: '7d' }
-    );
+    const googlePrefs = getUserPreferences(user.id);
+    const token = signUserToken(user, googlePrefs);
 
     return res.redirect(`/#auth-success?token=${token}&userId=${encodeURIComponent(user.id)}&provider=google&name=${encodeURIComponent(user.name)}&email=${encodeURIComponent(user.email)}&linkedGmail=${encodeURIComponent(email)}&role=${user.role}&avatar=${encodeURIComponent(user.avatar_url || '')}`);
   } catch (err) {
@@ -4029,11 +4079,8 @@ app.all('/api/auth/facebook/callback', async (req, res) => {
       role
     });
 
-    const token = jwt.sign(
-      { id: user.id, email: user.email, role: user.role },
-      JWT_SECRET,
-      { expiresIn: '7d' }
-    );
+    const googlePrefs = getUserPreferences(user.id);
+    const token = signUserToken(user, googlePrefs);
 
     return res.redirect(`/#auth-success?token=${token}&provider=facebook&name=${encodeURIComponent(user.name)}&email=${encodeURIComponent(user.email)}&role=${user.role}&avatar=${encodeURIComponent(user.avatar_url || '')}`);
   } catch (err) {
@@ -4057,19 +4104,7 @@ app.post('/api/auth/oauth', (req, res) => {
     }
 
     const oauthPrefs = getUserPreferences(user.id);
-    const token = jwt.sign(
-      {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        country: user.country || oauthPrefs?.country || 'United States',
-        timezone: oauthPrefs?.timezone || 'America/New_York',
-        language: oauthPrefs?.language || 'en-US'
-      },
-      JWT_SECRET,
-      { expiresIn: '7d' }
-    );
+    const token = signUserToken(user, oauthPrefs);
 
     let linkedAccounts = [];
     try {
@@ -4218,6 +4253,7 @@ app.get('/api/auth/me', authenticateToken, (req, res) => {
         linked_accounts: linkedAccounts,
         linked_google_email: extra.linkedGoogleEmail
       },
+      ...(req._rehydratedUser ? { rehydrated: true } : {}),
       ...extra
     });
   } catch (error) {
@@ -4274,12 +4310,13 @@ app.put('/api/auth/profile', authenticateToken, (req, res) => {
       } catch (e) { }
     }
     if (phone !== undefined && (isAdmin || !lockedFields.phone)) {
+      const cleanPhone = phone === null ? '' : String(phone).trim();
       updates.push('phone = ?');
-      params.push(phone || null);
+      params.push(cleanPhone || null);
     }
-    if (avatar_url !== undefined && avatar_url !== null) {
+    if (avatar_url !== undefined && avatar_url !== null && String(avatar_url).trim()) {
       updates.push('avatar_url = ?');
-      params.push(avatar_url);
+      params.push(String(avatar_url).trim());
     }
 
     if (updates.length > 0) {
@@ -4374,7 +4411,15 @@ app.put('/api/auth/profile', authenticateToken, (req, res) => {
 
     const updatedUser = db.prepare('SELECT id, name, email, role, phone, avatar_url, country, status, wallet_balance FROM users WHERE id = ?').get(userId);
     const updatedTutorProfile = db.prepare('SELECT * FROM tutor_profiles WHERE user_id = ?').get(userId);
-    return res.json({ message: 'Profile updated successfully.', user: updatedUser, tutorProfile: updatedTutorProfile });
+    const updatedStudentProfile = updatedUser && updatedUser.role === 'student'
+      ? db.prepare('SELECT * FROM student_profiles WHERE user_id = ?').get(userId)
+      : null;
+    return res.json({
+      message: 'Profile updated successfully.',
+      user: updatedUser,
+      tutorProfile: updatedTutorProfile,
+      ...(updatedStudentProfile ? { studentProfile: updatedStudentProfile } : {})
+    });
   } catch (error) {
     console.error('Profile update error:', error);
     return res.status(500).json({ error: 'Failed to update profile.' });

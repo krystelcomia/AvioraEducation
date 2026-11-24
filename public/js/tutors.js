@@ -1015,10 +1015,10 @@ const Tutors = {
 
     if (!thread || thread.length === 0) {
       threadContainer.innerHTML = `
-        <div style="text-align: center; padding: 2.5rem 1rem; color: var(--text-secondary);">
-          <div style="margin-bottom: 0.5rem; color: var(--gold-700);">${Icons.message(30)}</div>
-          <h4 style="font-size: 0.95rem; font-weight: 700; color: var(--charcoal-900); margin-bottom: 0.25rem;">Direct 1-on-1 Conversation</h4>
-          <p style="font-size: 0.82rem; max-width: 320px; margin: 0 auto; line-height: 1.45;">This thread is private between you and ${this.escapeHtml(tutor.name)}. Send a message below to connect.</p>
+        <div class="messenger-modal-empty-state" style="text-align: center; padding: 2.5rem 1rem; color: var(--text-secondary);">
+          <div class="messenger-modal-empty-icon" style="margin-bottom: 0.5rem; color: var(--gold-700);">${Icons.message(30)}</div>
+          <h4 class="messenger-modal-empty-title" style="font-size: 0.95rem; font-weight: 700; color: var(--charcoal-900); margin-bottom: 0.25rem;">Direct 1-on-1 Conversation</h4>
+          <p class="messenger-modal-empty-desc" style="font-size: 0.82rem; max-width: 320px; margin: 0 auto; line-height: 1.45;">This thread is private between you and ${this.escapeHtml(tutor.name)}. Send a message below to connect.</p>
         </div>
       `;
       return;

@@ -872,13 +872,19 @@ function getLinkedGmailForUser(userId) {
 }
 
 function getMailTransportConfig() {
-  const gmailUser = (process.env.GMAIL_USER || process.env.SMTP_EMAIL || '').trim();
-  const gmailPass = (process.env.GMAIL_APP_PASSWORD || '').trim();
+  const gmailUser = (process.env.GMAIL_USER || process.env.GMAIL_EMAIL || process.env.SMTP_EMAIL || process.env.EMAIL_USER || process.env.MAIL_USER || '').trim();
+  const rawGmailPass = (process.env.GMAIL_APP_PASSWORD || process.env.GMAIL_PASS || process.env.EMAIL_PASS || process.env.MAIL_PASS || '').trim();
+  const gmailPass = /^[a-z0-9]{4}(?:\s+[a-z0-9]{4}){3}$/i.test(rawGmailPass)
+    ? rawGmailPass.replace(/\s+/g, '')
+    : rawGmailPass;
   const smtpHost = (process.env.SMTP_HOST || '').trim();
   const smtpPort = Number(process.env.SMTP_PORT || 587);
   const smtpSecure = process.env.SMTP_SECURE === 'true' || smtpPort === 465;
-  const smtpUser = (process.env.SMTP_USER || gmailUser).trim();
-  const smtpPass = (process.env.SMTP_PASS || gmailPass).trim();
+  const smtpUser = (process.env.SMTP_USER || process.env.SMTP_USERNAME || gmailUser).trim();
+  const rawSmtpPass = (process.env.SMTP_PASS || process.env.SMTP_PASSWORD || gmailPass).trim();
+  const smtpPass = !smtpHost && /^[a-z0-9]{4}(?:\s+[a-z0-9]{4}){3}$/i.test(rawSmtpPass)
+    ? rawSmtpPass.replace(/\s+/g, '')
+    : rawSmtpPass;
   const rawFrom = (process.env.EMAIL_FROM || process.env.SMTP_FROM || smtpUser || '').trim();
   const fromAddress = rawFrom.includes('<') ? rawFrom : (rawFrom ? `Aviora Education <${rawFrom}>` : '');
 
@@ -906,14 +912,21 @@ function getMailTransporter() {
   if (cachedSmtpTransporter && cachedSmtpSignature === sig) {
     return { transporter: cachedSmtpTransporter, config: cfg };
   }
+  const baseTimeouts = {
+    connectionTimeout: 6000,
+    greetingTimeout: 6000,
+    socketTimeout: 8000
+  };
   const transportOpts = cfg.smtpHost
     ? {
+        ...baseTimeouts,
         host: cfg.smtpHost,
         port: cfg.smtpPort,
         secure: cfg.smtpSecure,
         auth: { user: cfg.smtpUser, pass: cfg.smtpPass }
       }
     : {
+        ...baseTimeouts,
         service: 'gmail',
         auth: { user: cfg.smtpUser, pass: cfg.smtpPass }
       };

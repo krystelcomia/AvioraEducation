@@ -52,7 +52,7 @@ const Profile = {
     }
 
     const key = `_${u.id}`;
-    const savedTheme = localStorage.getItem(`aviora_theme${key}`) || 'light';
+    const savedTheme = this.getSavedLocalThemeForUser(u) || localStorage.getItem(`aviora_theme${key}`) || 'light';
     this.applyTheme(savedTheme, false, false);
     document.documentElement.removeAttribute('data-font-size');
 
@@ -108,6 +108,39 @@ const Profile = {
     }
   },
 
+  getSavedLocalThemeForUser(user) {
+    const u = user || (typeof Auth !== 'undefined' && Auth.currentUser) || (typeof Storage !== 'undefined' ? Storage.getUser() : null);
+    if (!u) return null;
+    try {
+      const byId = u.id ? localStorage.getItem(`aviora_theme_${u.id}`) : null;
+      const cleanEmail = u.email ? String(u.email).toLowerCase().trim() : '';
+      const byEmail = cleanEmail ? localStorage.getItem(`aviora_theme_email_${cleanEmail}`) : null;
+      const storedPrefs = (u.id && typeof Storage !== 'undefined' && Storage.getUserPreferences) ? Storage.getUserPreferences(u.id) : null;
+      return byEmail || byId || (storedPrefs && storedPrefs.theme) || null;
+    } catch (e) {
+      return null;
+    }
+  },
+
+  resolveEffectiveTheme(prefs = null, user = null) {
+    const u = user || (typeof Auth !== 'undefined' && Auth.currentUser) || (typeof Storage !== 'undefined' ? Storage.getUser() : null);
+    if (!u || !u.id) return 'light';
+    const cleanEmail = u.email ? String(u.email).toLowerCase().trim() : '';
+    if (this._pendingThemeUpdate && (Date.now() - this._pendingThemeUpdate.ts) < 10000) {
+      if (this._pendingThemeUpdate.userId === u.id || (cleanEmail && this._pendingThemeUpdate.email === cleanEmail)) {
+        return this._pendingThemeUpdate.theme;
+      }
+    }
+    const localSaved = this.getSavedLocalThemeForUser(u);
+    if (localSaved === 'dark' || localSaved === 'light') {
+      return localSaved;
+    }
+    if (prefs && (prefs.theme === 'dark' || prefs.theme === 'light')) {
+      return prefs.theme;
+    }
+    return document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+  },
+
   applyTheme(theme, notify = true, persistToServer = true) {
     const u = (typeof Auth !== 'undefined' && Auth.currentUser) || (typeof Storage !== 'undefined' ? Storage.getUser() : null);
     if (!u || !u.id) {
@@ -117,16 +150,29 @@ const Profile = {
       return;
     }
 
-    const isDark = (theme === 'dark');
+    const activeTheme = (theme === 'dark') ? 'dark' : 'light';
+    const isDark = (activeTheme === 'dark');
     if (isDark) {
       document.documentElement.setAttribute('data-theme', 'dark');
     } else {
       document.documentElement.removeAttribute('data-theme');
     }
 
-    // Apply ONLY to this specific user's own account
-    localStorage.setItem(`aviora_theme_${u.id}`, isDark ? 'dark' : 'light');
+    // Apply and persist strictly to this specific user's own account (by ID and normalized email)
+    localStorage.setItem(`aviora_theme_${u.id}`, activeTheme);
+    if (u.email) {
+      localStorage.setItem(`aviora_theme_email_${String(u.email).toLowerCase().trim()}`, activeTheme);
+    }
     localStorage.removeItem('aviora_theme');
+
+    if (!this.userPreferences) this.userPreferences = {};
+    this.userPreferences.theme = activeTheme;
+    if (typeof Storage !== 'undefined' && Storage.setUserPreferences) {
+      Storage.setUserPreferences(u.id, { ...(Storage.getUserPreferences(u.id) || {}), ...this.userPreferences, theme: activeTheme });
+    }
+    if (typeof Auth !== 'undefined' && typeof Auth.saveCreatedAccount === 'function' && u.email) {
+      Auth.saveCreatedAccount({ email: u.email, theme: activeTheme });
+    }
 
     const lightCard = document.getElementById('theme-card-light');
     const darkCard = document.getElementById('theme-card-dark');
@@ -144,12 +190,18 @@ const Profile = {
     if (aDarkCard) aDarkCard.classList.toggle('active', isDark);
 
     if (persistToServer && typeof API !== 'undefined') {
+      this._pendingThemeUpdate = {
+        userId: u.id,
+        email: u.email ? String(u.email).toLowerCase().trim() : '',
+        theme: activeTheme,
+        ts: Date.now()
+      };
       this.setSaveStatus('saving');
-      API.updateUserPreferences({ theme: isDark ? 'dark' : 'light' })
+      API.updateUserPreferences({ theme: activeTheme })
         .then(res => {
           if (res && res.preferences) {
-            this.userPreferences = res.preferences;
-            Storage.setUserPreferences(u.id, res.preferences);
+            this.userPreferences = { ...res.preferences, theme: activeTheme };
+            Storage.setUserPreferences(u.id, this.userPreferences);
           }
           this.setSaveStatus('saved');
         })
@@ -487,15 +539,22 @@ const Profile = {
 
   syncAllPreferences(prefs, notify = false) {
     if (!prefs) return;
-    this.userPreferences = prefs;
-
     const user = (typeof Auth !== 'undefined' && Auth.currentUser) || (typeof Storage !== 'undefined' ? Storage.getUser() : null);
+    const activeTheme = this.resolveEffectiveTheme(prefs, user);
+    const mergedPrefs = { ...prefs, theme: activeTheme };
+    this.userPreferences = mergedPrefs;
+
     if (user && user.id && typeof Storage !== 'undefined') {
-      Storage.setUserPreferences(user.id, prefs);
+      Storage.setUserPreferences(user.id, mergedPrefs);
     }
 
-    const activeTheme = prefs.theme || (user && user.id && localStorage.getItem(`aviora_theme_${user.id}`)) || (document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light');
     this.applyTheme(activeTheme, notify, false);
+    if (user && user.id && prefs.theme && prefs.theme !== activeTheme && typeof API !== 'undefined' && !this._themeResyncInFlight) {
+      this._themeResyncInFlight = true;
+      API.updateUserPreferences({ theme: activeTheme })
+        .catch(() => {})
+        .finally(() => { this._themeResyncInFlight = false; });
+    }
     if (prefs.font_size) {
       this.applyFontSize(prefs.font_size, notify, false);
     }

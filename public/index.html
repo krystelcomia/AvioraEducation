@@ -18,7 +18,8 @@
 
         if (activeUser && activeUser.id) {
           // Dark mode applies ONLY to the specific user's own account
-          var t = localStorage.getItem('aviora_theme_' + activeUser.id);
+          var tByEmail = activeUser.email ? localStorage.getItem('aviora_theme_email_' + String(activeUser.email).toLowerCase().trim()) : null;
+          var t = tByEmail || localStorage.getItem('aviora_theme_' + activeUser.id);
           if (t === 'dark') {
             document.documentElement.setAttribute('data-theme', 'dark');
           } else {

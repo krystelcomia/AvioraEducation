@@ -2771,13 +2771,18 @@ app.post('/api/auth/sync-account', (req, res) => {
         headline,
         bio
       });
+      const syncTheme = req.body.theme === 'dark' ? 'dark' : 'light';
       saveUserPreferences(userId, {
-        theme: 'light',
+        theme: syncTheme,
         country: userCountry,
         timezone: userTimezone,
         language: userLanguage,
         linked_gmail: cleanEmail,
         registration_immutable: registrationImmutable,
+        ...(req.body.notif_lessons !== undefined ? { notif_lessons: req.body.notif_lessons ? 1 : 0 } : {}),
+        ...(req.body.notif_calendar !== undefined ? { notif_calendar: req.body.notif_calendar ? 1 : 0 } : {}),
+        ...(req.body.notif_messages !== undefined ? { notif_messages: req.body.notif_messages ? 1 : 0 } : {}),
+        ...(req.body.notif_reports !== undefined ? { notif_reports: req.body.notif_reports ? 1 : 0 } : {}),
         ...(tutorDraftProfile ? { tutor_signup_profile: tutorDraftProfile } : {})
       });
       user = db.prepare('SELECT * FROM users WHERE id = ?').get(userId);
@@ -4051,8 +4056,17 @@ app.post('/api/auth/oauth', (req, res) => {
       return res.status(403).json({ error: 'This account has been deactivated or suspended.' });
     }
 
+    const oauthPrefs = getUserPreferences(user.id);
     const token = jwt.sign(
-      { id: user.id, email: user.email, role: user.role },
+      {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        country: user.country || oauthPrefs?.country || 'United States',
+        timezone: oauthPrefs?.timezone || 'America/New_York',
+        language: oauthPrefs?.language || 'en-US'
+      },
       JWT_SECRET,
       { expiresIn: '7d' }
     );
@@ -4069,6 +4083,9 @@ app.post('/api/auth/oauth', (req, res) => {
       role: user.role,
       phone: user.phone || null,
       avatar_url: user.avatar_url,
+      country: user.country || oauthPrefs?.country || 'United States',
+      timezone: oauthPrefs?.timezone || 'America/New_York',
+      language: oauthPrefs?.language || 'en-US',
       status: user.status,
       auth_provider: provider,
       linked_accounts: linkedAccounts
@@ -4078,6 +4095,7 @@ app.post('/api/auth/oauth', (req, res) => {
       message: `Signed in successfully with ${provider === 'google' ? 'Google' : 'Facebook'}.`,
       token,
       user: sanitizedUser,
+      preferences: oauthPrefs,
       linkedAccounts
     });
   } catch (error) {

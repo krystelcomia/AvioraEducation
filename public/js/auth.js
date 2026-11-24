@@ -263,18 +263,25 @@ const Auth = {
         if (!savedAccount || !savedAccount.password) return false;
 
         const savedPrefs = Storage.getUserPreferences(storedUser.id) || {};
+        const cleanSyncEmail = storedUser.email.toLowerCase().trim();
+        const savedEmailTheme = localStorage.getItem(`aviora_theme_email_${cleanSyncEmail}`) || (storedUser.id ? localStorage.getItem(`aviora_theme_${storedUser.id}`) : null);
         const res = await fetch('/api/auth/sync-account', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             name: savedAccount.name || storedUser.name,
-            email: storedUser.email.toLowerCase().trim(),
+            email: cleanSyncEmail,
             password: savedAccount.password,
             role: savedAccount.role || storedUser.role || 'student',
             phone: savedAccount.phone || storedUser.phone || null,
             country: savedAccount.country || savedPrefs.country || storedUser.country || 'United States',
             timezone: savedAccount.timezone || savedPrefs.timezone || storedUser.timezone,
             language: savedAccount.language || savedPrefs.language || storedUser.language,
+            theme: savedEmailTheme || savedPrefs.theme || savedAccount.theme || 'light',
+            notif_lessons: savedPrefs.notif_lessons,
+            notif_calendar: savedPrefs.notif_calendar,
+            notif_messages: savedPrefs.notif_messages,
+            notif_reports: savedPrefs.notif_reports,
             grade_level: savedAccount.grade_level,
             school: savedAccount.school,
             learning_goals: savedAccount.learning_goals,
@@ -332,12 +339,21 @@ const Auth = {
       console.warn('Could not sync all preferences via Profile:', e);
     }
     if (true) {
-      if (prefs && prefs.theme === 'dark') {
+      const effectiveTheme = (typeof Profile !== 'undefined' && typeof Profile.resolveEffectiveTheme === 'function')
+        ? Profile.resolveEffectiveTheme(prefs, this.currentUser)
+        : ((this.currentUser.email && localStorage.getItem('aviora_theme_email_' + String(this.currentUser.email).toLowerCase().trim()))
+          || localStorage.getItem('aviora_theme_' + uid)
+          || (prefs && prefs.theme)
+          || 'light');
+
+      if (effectiveTheme === 'dark') {
         document.documentElement.setAttribute('data-theme', 'dark');
         localStorage.setItem('aviora_theme_' + uid, 'dark');
+        if (this.currentUser.email) localStorage.setItem('aviora_theme_email_' + String(this.currentUser.email).toLowerCase().trim(), 'dark');
       } else {
         document.documentElement.removeAttribute('data-theme');
         localStorage.setItem('aviora_theme_' + uid, 'light');
+        if (this.currentUser.email) localStorage.setItem('aviora_theme_email_' + String(this.currentUser.email).toLowerCase().trim(), 'light');
       }
       localStorage.removeItem('aviora_theme');
       document.documentElement.removeAttribute('data-font-size');
@@ -398,6 +414,7 @@ const Auth = {
         country: account.country || accounts[email]?.country,
         timezone: account.timezone || accounts[email]?.timezone,
         language: account.language || accounts[email]?.language,
+        theme: account.theme || accounts[email]?.theme,
         institution: account.institution || accounts[email]?.institution,
         highest_degree: account.highest_degree || accounts[email]?.highest_degree,
         years_experience: account.years_experience || accounts[email]?.years_experience,
@@ -1088,6 +1105,14 @@ const Auth = {
       Storage.setToken(res.token);
       Storage.setUser(res.user);
       this.currentUser = res.user;
+      if (res.preferences) {
+        this.syncUserPreferences(res.preferences);
+      } else {
+        const fallbackTheme = (typeof Profile !== 'undefined' && Profile.getSavedLocalThemeForUser)
+          ? (Profile.getSavedLocalThemeForUser(res.user) || 'light')
+          : 'light';
+        this.syncUserPreferences({ theme: fallbackTheme });
+      }
 
       this.updateNavUI(res.user);
       if (res.user && res.user.role === 'student') {
@@ -1526,14 +1551,22 @@ const Auth = {
 
         if (savedAccount || isJoshua || isKrystel) {
           try {
+            const cleanLoginEmail = email.toLowerCase().trim();
+            const savedEmailTheme = localStorage.getItem(`aviora_theme_email_${cleanLoginEmail}`);
             res = await API.syncAccount({
               name: (savedAccount && savedAccount.name) || (isJoshua ? 'Joshua Garcia' : 'Krystel Comia'),
-              email: email.toLowerCase().trim(),
+              email: cleanLoginEmail,
               password: password,
               role: (savedAccount && savedAccount.role) || (isJoshua ? 'teacher' : 'student'),
               phone: savedAccount?.phone || null,
+              country: savedAccount?.country,
+              timezone: savedAccount?.timezone,
+              language: savedAccount?.language,
+              theme: savedEmailTheme || savedAccount?.theme,
               grade_level: savedAccount?.grade_level,
               school: savedAccount?.school,
+              learning_goals: savedAccount?.learning_goals,
+              target_subjects: savedAccount?.target_subjects,
               headline: savedAccount?.headline,
               subjects: savedAccount?.subjects
             });

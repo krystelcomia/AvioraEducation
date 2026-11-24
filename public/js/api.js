@@ -253,6 +253,7 @@ const API = {
   getPaymentProofImage: (paymentId) => apiRequest(`/payments/proof/${paymentId}`),
   createStudentInvoice: (body) => apiRequest('/student/invoices', { method: 'POST', body }),
   getStudentPayments: () => apiRequest('/student/payments'),
+  getPayPalRedirectUrl: (invoiceId) => apiRequest('/student/payments/paypal/redirect', { method: 'POST', body: { invoice_id: invoiceId } }),
   createPayPalOrder: (invoiceId) => apiRequest('/student/payments/paypal/create-order', { method: 'POST', body: { invoice_id: invoiceId } }),
   capturePayPalOrder: (invoiceId, orderId) => apiRequest('/student/payments/paypal/capture-order', { method: 'POST', body: { invoice_id: invoiceId, order_id: orderId } }),
   submitInvoiceProof: (invoiceId, formData) => apiRequest(`/student/invoices/${invoiceId}/submit-proof`, { method: 'POST', body: formData }),

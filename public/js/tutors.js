@@ -1607,19 +1607,23 @@ const Tutors = {
   showStep(step) {
     const step1 = document.getElementById('booking-step-schedule');
     const step2 = document.getElementById('booking-step-payment');
+    const step3 = document.getElementById('booking-step-paypal');
     const title = document.getElementById('booking-modal-title');
     const subtitle = document.getElementById('booking-step-subtitle');
 
+    if (step1) step1.style.display = (step === 1) ? 'block' : 'none';
+    if (step2) step2.style.display = (step === 2) ? 'block' : 'none';
+    if (step3) step3.style.display = (step === 3) ? 'block' : 'none';
+
     if (step === 1) {
-      if (step1) step1.style.display = 'block';
-      if (step2) step2.style.display = 'none';
       if (title) title.textContent = 'Book Tutoring Session';
-      if (subtitle) subtitle.textContent = 'Step 1 of 2: Select Date & Available 50-Min Slot';
+      if (subtitle) subtitle.textContent = 'Step 1 of 3: Select Date & Available 50-Min Slot';
+    } else if (step === 3) {
+      if (title) title.textContent = 'Pay via PayPal & Upload Proof';
+      if (subtitle) subtitle.textContent = 'Step 3 of 3: Redirect to PayPal for exact amount & submit confirmation';
     } else {
-      if (step1) step1.style.display = 'none';
-      if (step2) step2.style.display = 'block';
-      if (title) title.textContent = 'Complete Payment & Confirmation';
-      if (subtitle) subtitle.textContent = 'Step 2 of 2: Review Booking & Select Payment Method';
+      if (title) title.textContent = 'Select Payment Method';
+      if (subtitle) subtitle.textContent = 'Step 2 of 3: Review Booking & Continue to Payment';
     }
   },
 
@@ -1878,7 +1882,7 @@ const Tutors = {
       if (paypalCardBox) paypalCardBox.classList.add('selected');
 
       if (subDesc) subDesc.textContent = 'No subscription lesson credits remaining on your account.';
-      if (payText) payText.textContent = `Proceed to PayPal Payment (QR / Direct) — ${fmtRateDisp} →`;
+      if (payText) payText.textContent = `Continue to Payment Step (${fmtRateDisp}) →`;
     }
 
     // Configure Wallet Option (Display balance specifically associated with the selected tutor)
@@ -1994,7 +1998,7 @@ const Tutors = {
       } else if (method === 'wallet') {
         payText.textContent = `Pay ${fmtRateDisp} with Wallet Credit & Confirm`;
       } else {
-        payText.textContent = `Proceed to PayPal Payment (QR / Direct) — ${fmtRateDisp} →`;
+        payText.textContent = `Continue to Payment Step (${fmtRateDisp}) →`;
       }
     }
   },
@@ -2015,17 +2019,20 @@ const Tutors = {
         submitBtn.innerHTML = '<span>Processing Booking &amp; Invoice...</span>';
       }
 
-      if (this.paymentMethod === 'paypal' && typeof AvioraPayments !== 'undefined' && AvioraPayments.createInvoiceAndGoToPayments) {
-        this.closeBookingModal();
-        await AvioraPayments.createInvoiceAndGoToPayments({
-          item_type: 'single_lesson',
-          tutor_user_id: this.selectedTutor.user_id,
-          subject,
-          requested_date: this.selectedDate,
-          requested_time: this.selectedTime,
-          duration_hours: 1.0,
-          notes
+      if (this.paymentMethod === 'paypal' && typeof AvioraPayments !== 'undefined' && AvioraPayments.startInlinePaymentFlow) {
+        await AvioraPayments.startInlinePaymentFlow({
+          containerId: 'booking-paypal-inline-container',
+          invoicePayload: {
+            item_type: 'single_lesson',
+            tutor_user_id: this.selectedTutor.user_id,
+            subject,
+            requested_date: this.selectedDate,
+            requested_time: this.selectedTime,
+            duration_hours: 1.0,
+            notes
+          }
         });
+        this.showStep(3);
         return;
       }
 

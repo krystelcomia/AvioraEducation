@@ -450,15 +450,22 @@ const Router = {
     } else if (hash === '#student-payments') {
       const user = Auth.currentUser;
       if (!user || user.role !== 'student') {
-        showToast('Please sign in with a student account to view PayPal payments & invoices.', 'info');
+        showToast('Please sign in with a student account to view your PayPal invoices & payment status.', 'info');
         window.location.hash = '#login';
         return;
       }
-      const view = document.getElementById('view-student-payments');
+      const view = document.getElementById('view-student-portal');
       if (view) view.style.display = 'block';
       window.scrollTo(0, 0);
-      if (typeof AvioraPayments !== 'undefined' && AvioraPayments.loadStudentPaymentsPage) {
-        await AvioraPayments.loadStudentPaymentsPage(params);
+      if (typeof Student !== 'undefined' && Student.loadDashboard) {
+        await Student.loadDashboard();
+      }
+      const invParam = params.get('invoice');
+      if (invParam && typeof AvioraPayments !== 'undefined' && AvioraPayments.openInvoicePaymentModalByNumber) {
+        await AvioraPayments.openInvoicePaymentModalByNumber(invParam);
+      } else {
+        const dashPaySec = document.getElementById('student-paypal-dash-section');
+        if (dashPaySec) dashPaySec.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
     } else if (hash === '#student-messages' || hash === '#messages') {
       const user = Auth.currentUser;

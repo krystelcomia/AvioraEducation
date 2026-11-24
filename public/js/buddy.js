@@ -2082,7 +2082,7 @@ const AvioraBuddy = {
         if (submitBtn) {
           submitBtn.textContent = usingWallet
             ? 'Pay $6.00 with Buddy Wallet & Submit Booking →'
-            : 'Proceed to PayPal Payment ($6) →';
+            : 'Continue to Payment Step ($6.00) →';
         }
       };
 
@@ -2115,7 +2115,15 @@ const AvioraBuddy = {
       dateInp.value = new Date().toISOString().split('T')[0];
     }
 
+    this.showPeerStep(1);
     modal.classList.add('active');
+  },
+
+  showPeerStep(step = 1) {
+    const s1 = document.getElementById('buddy-step-setup');
+    const s2 = document.getElementById('buddy-step-payment');
+    if (s1) s1.style.display = (step === 2) ? 'none' : 'block';
+    if (s2) s2.style.display = (step === 2) ? 'block' : 'none';
   },
 
   openJoinCodeModal() {
@@ -2154,16 +2162,19 @@ const AvioraBuddy = {
         return;
       }
 
-      if (usePayPal && typeof AvioraPayments !== 'undefined' && AvioraPayments.createInvoiceAndGoToPayments) {
-        this.closeModal('modal-create-buddy-peer');
-        await AvioraPayments.createInvoiceAndGoToPayments({
-          item_type: 'buddy_session',
-          student2_id: payload.student2_id,
-          subject: payload.subject,
-          topic: payload.topic,
-          requested_date: payload.scheduled_date,
-          requested_time: payload.scheduled_time
+      if (usePayPal && typeof AvioraPayments !== 'undefined' && AvioraPayments.startInlinePaymentFlow) {
+        await AvioraPayments.startInlinePaymentFlow({
+          containerId: 'buddy-paypal-inline-container',
+          invoicePayload: {
+            item_type: 'buddy_session',
+            student2_id: payload.student2_id,
+            subject: payload.subject,
+            topic: payload.topic,
+            requested_date: payload.scheduled_date,
+            requested_time: payload.scheduled_time
+          }
         });
+        this.showPeerStep(2);
         return;
       }
 

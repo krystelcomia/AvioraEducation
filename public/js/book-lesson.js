@@ -269,6 +269,7 @@ const BookLesson = {
     this.selectedTutor = tutor;
     this.selectedDate = null;
     this.selectedTime = null;
+    this.showCheckoutStep('review');
 
     // Update active highlight in picker list
     document.querySelectorAll('.tutor-picker-item').forEach(item => {
@@ -748,7 +749,19 @@ const BookLesson = {
     } else if (this.paymentMethod === 'wallet') {
       btnText.textContent = `Pay ${disp} with Wallet Credit & Confirm`;
     } else {
-      btnText.textContent = `Proceed to PayPal Payment (QR / Direct) — ${disp} →`;
+      btnText.textContent = `Continue to Payment Step (${disp}) →`;
+    }
+  },
+
+  showCheckoutStep(step = 'review') {
+    const revEl = document.getElementById('page-checkout-review-body');
+    const ppEl = document.getElementById('page-checkout-paypal-body');
+    if (step === 'paypal') {
+      if (revEl) revEl.style.display = 'none';
+      if (ppEl) ppEl.style.display = 'block';
+    } else {
+      if (revEl) revEl.style.display = 'block';
+      if (ppEl) ppEl.style.display = 'none';
     }
   },
 
@@ -773,16 +786,20 @@ const BookLesson = {
         submitBtn.innerHTML = '<span>Processing Booking &amp; Invoice...</span>';
       }
 
-      if (this.paymentMethod === 'paypal' && typeof AvioraPayments !== 'undefined' && AvioraPayments.createInvoiceAndGoToPayments) {
-        await AvioraPayments.createInvoiceAndGoToPayments({
-          item_type: 'single_lesson',
-          tutor_user_id: this.selectedTutor.user_id,
-          subject,
-          requested_date: this.selectedDate,
-          requested_time: this.selectedTime,
-          duration_hours: 1.0,
-          notes
+      if (this.paymentMethod === 'paypal' && typeof AvioraPayments !== 'undefined' && AvioraPayments.startInlinePaymentFlow) {
+        await AvioraPayments.startInlinePaymentFlow({
+          containerId: 'page-booking-paypal-inline-container',
+          invoicePayload: {
+            item_type: 'single_lesson',
+            tutor_user_id: this.selectedTutor.user_id,
+            subject,
+            requested_date: this.selectedDate,
+            requested_time: this.selectedTime,
+            duration_hours: 1.0,
+            notes
+          }
         });
+        this.showCheckoutStep('paypal');
         return;
       }
 

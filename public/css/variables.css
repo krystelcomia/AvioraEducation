@@ -1461,6 +1461,10 @@ body {
   align-items: start;
 }
 
+.paypal-checkout-shell.is-compact {
+  grid-template-columns: 1fr;
+}
+
 @media (max-width: 960px) {
   .paypal-checkout-shell {
     grid-template-columns: 1fr;

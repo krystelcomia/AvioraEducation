@@ -850,6 +850,9 @@ const StudentSub = {
     const modal = document.getElementById('sub-enrollment-modal');
     if (!modal) return;
 
+    // Always reset modal back to Step 1 (Schedule & Summary) on open
+    this.showEnrollStep(1);
+
     // Fetch latest student calendar schedule to enforce strict conflict prevention
     try {
       if (typeof API !== 'undefined' && API.getStudentScheduleCalendar) {
@@ -1847,8 +1850,8 @@ const StudentSub = {
         submitBtn.disabled = false;
         if (btnLabel) {
           btnLabel.textContent = planConfig.isTrial 
-            ? `Confirm ${this.trialDuration}-Min Trial Lesson & Pay ${fmtAmount(totalCost)}` 
-            : `Confirm ${totalCount} Lessons & Pay ${fmtAmount(totalCost)}`;
+            ? `Continue to Payment Step (${this.trialDuration}-Min Trial • ${fmtAmount(totalCost)})` 
+            : `Continue to Payment Step (${totalCount} Lessons • ${fmtAmount(totalCost)})`;
         }
       } else {
         submitBtn.disabled = true;
@@ -1856,6 +1859,26 @@ const StudentSub = {
           btnLabel.textContent = `Please Schedule All ${totalCount} Lesson${totalCount > 1 ? 's' : ''} to View Total (${scheduledCount}/${totalCount} Scheduled)`;
         }
       }
+    }
+  },
+
+  showEnrollStep(step) {
+    const step1El = document.getElementById('sub-step-schedule');
+    const step2El = document.getElementById('sub-step-payment');
+    const stepTag = document.getElementById('sub-enroll-step-tag');
+    const titleEl = document.getElementById('sub-enroll-modal-title');
+    if (step === 2) {
+      if (step1El) step1El.style.display = 'none';
+      if (step2El) step2El.style.display = 'block';
+      if (stepTag) stepTag.textContent = 'Step 2 of 2: Complete PayPal Payment & Upload Proof';
+      if (titleEl) titleEl.textContent = 'Complete PayPal Payment';
+      const bodyEl = step2El && step2El.closest('.modal-body');
+      if (bodyEl) bodyEl.scrollTop = 0;
+    } else {
+      if (step1El) step1El.style.display = 'block';
+      if (step2El) step2El.style.display = 'none';
+      if (stepTag) stepTag.textContent = 'Step 1 of 2: Tutor & Schedule Selection';
+      if (titleEl) titleEl.textContent = 'Subscription Enrollment & Tutor Scheduling';
     }
   },
 
@@ -1915,12 +1938,15 @@ const StudentSub = {
         notes: notes
       };
 
-      if (totalCost > 0 && typeof AvioraPayments !== 'undefined' && AvioraPayments.createInvoiceAndGoToPayments) {
-        this.closeEnrollmentModal();
-        await AvioraPayments.createInvoiceAndGoToPayments({
-          item_type: planConfig.isTrial ? 'trial_lesson' : 'subscription_package',
-          ...payload
+      if (totalCost > 0 && typeof AvioraPayments !== 'undefined' && AvioraPayments.startInlinePaymentFlow) {
+        await AvioraPayments.startInlinePaymentFlow({
+          containerId: 'sub-paypal-inline-container',
+          invoicePayload: {
+            item_type: planConfig.isTrial ? 'trial_lesson' : 'subscription_package',
+            ...payload
+          }
         });
+        this.showEnrollStep(2);
         return;
       }
 

@@ -499,14 +499,14 @@ const Profile = {
     if (prefs.font_size) {
       this.applyFontSize(prefs.font_size, notify, false);
     }
-    if (prefs.language) {
-      this.applyLanguage(prefs.language, notify, false);
-    }
     if (prefs.country) {
       this.applyCountry(prefs.country, notify, false);
     }
     if (prefs.timezone) {
       this.applyTimezone(prefs.timezone, notify, false);
+    }
+    if (prefs.language) {
+      this.applyLanguage(prefs.language, notify, false);
     }
 
     const notifMap = {

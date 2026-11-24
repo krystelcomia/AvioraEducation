@@ -78,10 +78,19 @@ async function apiRequest(endpoint, options = {}) {
 
     if (!response.ok) {
       if (response.status === 401 || (response.status === 404 && data && data.error === 'User account not found.')) {
-        Storage.clearSession();
-        if (typeof Auth !== 'undefined') {
-          Auth.currentUser = null;
-          Auth.updateNavUI(null);
+        const isAuthEndpoint = String(endpoint || '').startsWith('/auth/login') || String(endpoint || '').startsWith('/auth/register') || String(endpoint || '').startsWith('/auth/sync-account');
+        if (!isAuthEndpoint && !options._retriedAfterSync && typeof Auth !== 'undefined' && typeof Auth.tryAutoSyncCurrentUser === 'function') {
+          const synced = await Auth.tryAutoSyncCurrentUser();
+          if (synced) {
+            return await apiRequest(endpoint, { ...options, _retriedAfterSync: true });
+          }
+        }
+        if (!isAuthEndpoint) {
+          Storage.clearSession();
+          if (typeof Auth !== 'undefined') {
+            Auth.currentUser = null;
+            Auth.updateNavUI(null);
+          }
         }
       }
       throw new Error(data.error || 'A network error occurred. Please try again.');

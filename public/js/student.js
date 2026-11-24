@@ -219,18 +219,25 @@ const Student = {
       const statSubHours = document.getElementById('student-stat-sub-hours');
       const statSubLabel = document.getElementById('student-stat-sub-label');
 
+      const curLang = (typeof I18n !== 'undefined' && I18n.currentLanguage) || 'en-US';
+      const hrsUnit = (typeof I18n !== 'undefined' && curLang !== 'en-US' && I18n.translatePhrase) ? I18n.translatePhrase('hrs', curLang) : 'hrs';
+      const lessonsWord = (typeof I18n !== 'undefined' && curLang !== 'en-US' && I18n.translatePhrase) ? I18n.translatePhrase('lessons', curLang) : 'lessons';
+      const lessonWord = (typeof I18n !== 'undefined' && curLang !== 'en-US' && I18n.translatePhrase) ? I18n.translatePhrase('lesson', curLang) : 'lesson';
+      const noActivePlanText = (typeof I18n !== 'undefined' && curLang !== 'en-US' && I18n.translatePhrase) ? I18n.translatePhrase('No Active Plan', curLang) : 'No Active Plan';
+      const activeWord = (typeof I18n !== 'undefined' && curLang !== 'en-US' && I18n.translatePhrase) ? I18n.translatePhrase('Active', curLang) : 'Active';
+
       if (statUpcoming) statUpcoming.textContent = data.stats.upcoming || 0;
       if (statPending) statPending.textContent = data.stats.pending || 0;
       if (statCompleted) statCompleted.textContent = data.stats.completed || 0;
-      if (statHours) statHours.textContent = `${data.stats.total_hours || 0} hrs`;
+      if (statHours) statHours.textContent = `${data.stats.total_hours || 0} ${hrsUnit}`;
 
       if (this.subscription) {
         const remaining = (this.subscription.lessons_remaining !== undefined ? this.subscription.lessons_remaining : this.subscription.hours_remaining) || 0;
-        if (statSubHours) statSubHours.textContent = `${remaining} lesson${remaining === 1 ? '' : 's'}`;
-        if (statSubLabel) statSubLabel.textContent = `${this.subscription.plan_name} (Active)`;
+        if (statSubHours) statSubHours.textContent = curLang === 'en-US' ? `${remaining} ${remaining === 1 ? lessonWord : lessonsWord}` : `${remaining} ${lessonsWord}`;
+        if (statSubLabel) statSubLabel.textContent = `${this.subscription.plan_name} (${activeWord})`;
       } else {
-        if (statSubHours) statSubHours.textContent = '0 lessons';
-        if (statSubLabel) statSubLabel.textContent = 'No Active Plan';
+        if (statSubHours) statSubHours.textContent = `0 ${lessonsWord}`;
+        if (statSubLabel) statSubLabel.textContent = noActivePlanText;
       }
 
       // Update micro-visuals and progress meters
@@ -409,7 +416,7 @@ const Student = {
               <p style="color: var(--text-secondary); font-size: 0.88rem; margin: 0 0 0.65rem 0;">Ready for your next academic breakthrough? Explore faculty in Calculus, Physics, Coding, and Languages for tailored 50-minute instruction.</p>
               <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
                 <a href="#tutors" class="btn btn-primary btn-sm" data-i18n="Find a Tutor">Find a Tutor</a>
-                <a href="#buddy" class="btn btn-outline-gold btn-sm">Explore Aviora Buddy (${(typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.format(6) : '$6'})</a>
+                <a href="#buddy" class="btn btn-outline-gold btn-sm"><span data-i18n="Explore Aviora Buddy">Explore Aviora Buddy</span> (<span>${(typeof AvioraCurrency !== 'undefined') ? AvioraCurrency.format(6) : '$6'}</span>)</a>
               </div>
             </div>
           </div>
@@ -746,8 +753,13 @@ const Student = {
     if (!grid) return;
 
     const monthDate = new Date(this.calYear, this.calMonth, 1);
+    const calLocale = (typeof I18n !== 'undefined' && I18n.currentLanguage) || 'en-US';
     if (monthTitle) {
-      monthTitle.textContent = monthDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+      try {
+        monthTitle.textContent = monthDate.toLocaleDateString(calLocale, { month: 'long', year: 'numeric' });
+      } catch (e) {
+        monthTitle.textContent = monthDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+      }
     }
 
     grid.innerHTML = '';
@@ -894,7 +906,8 @@ const Student = {
     const dObj = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
     const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     const dayOfWeekName = dayNames[dObj.getDay()];
-    const formattedDate = dObj.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+    const activeCalLocale = (typeof I18n !== 'undefined' && I18n.currentLanguage) || 'en-US';
+    const formattedDate = dObj.toLocaleDateString(activeCalLocale, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
 
     const appointments = this.scheduleData?.appointments || [];
     const occupiedSlots = this.scheduleData?.occupiedSlots || [];
@@ -1232,7 +1245,11 @@ const Student = {
       .sort((a, b) => (a.requested_date + ' ' + a.requested_time).localeCompare(b.requested_date + ' ' + b.requested_time));
 
     if (badge) {
-      badge.textContent = `${scheduled.length} ${scheduled.length === 1 ? 'Class' : 'Classes'}`;
+      const sLang = (typeof I18n !== 'undefined' && I18n.currentLanguage) || 'en-US';
+      const classWord = (typeof I18n !== 'undefined' && sLang !== 'en-US' && I18n.translatePhrase)
+        ? I18n.translatePhrase(scheduled.length === 1 ? 'Class' : 'Classes', sLang)
+        : (scheduled.length === 1 ? 'Class' : 'Classes');
+      badge.textContent = sLang === 'en-US' ? `${scheduled.length} ${classWord}` : `${scheduled.length}${classWord}`;
     }
 
     if (scheduled.length === 0) {

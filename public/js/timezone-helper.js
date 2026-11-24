@@ -126,7 +126,10 @@
 
     getCountry(nameOrCode) {
       if (!nameOrCode) return null;
-      const lower = String(nameOrCode).trim().toLowerCase();
+      let lower = String(nameOrCode).trim().toLowerCase();
+      if (lower === 'korea' || lower === 'republic of korea' || lower === 'rok') {
+        lower = 'south korea';
+      }
       return COUNTRIES.find(c => c.name.toLowerCase() === lower || c.code.toLowerCase() === lower) || null;
     },
 
@@ -175,8 +178,10 @@
         'New Zealand': { code: 'en-US', name: 'English (US)' }
       };
       if (!countryName) return LANGUAGE_MAP['United States'];
-      if (LANGUAGE_MAP[countryName]) return LANGUAGE_MAP[countryName];
-      const lower = String(countryName).trim().toLowerCase();
+      const resolvedCountry = this.getCountry(countryName);
+      const lookupName = resolvedCountry ? resolvedCountry.name : countryName;
+      if (LANGUAGE_MAP[lookupName]) return LANGUAGE_MAP[lookupName];
+      const lower = String(lookupName).trim().toLowerCase();
       const matchedKey = Object.keys(LANGUAGE_MAP).find(k => k.toLowerCase() === lower);
       return matchedKey ? LANGUAGE_MAP[matchedKey] : LANGUAGE_MAP['United States'];
     },

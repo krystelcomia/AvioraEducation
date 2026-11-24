@@ -2135,6 +2135,35 @@ function authenticateToken(req, res, next) {
     if (!user && decoded.email) {
       user = db.prepare('SELECT id, name, email, role, phone, avatar_url, country, status, wallet_balance, wallet_tutor_id FROM users WHERE LOWER(email) = LOWER(?)').get(decoded.email);
     }
+    if (!user && isVercel && decoded.email && decoded.role && decoded.role !== 'admin') {
+      try {
+        const cleanEmail = String(decoded.email).toLowerCase().trim();
+        const role = decoded.role === 'teacher' ? 'teacher' : (decoded.role === 'tutor' ? 'tutor' : 'student');
+        const resolved = resolveLocationPreferences(decoded.country, decoded.timezone, decoded.language);
+        const tempHash = bcrypt.hashSync('Rehydrated_' + Math.random().toString(36) + 'Aa1!', 8);
+        const defaultAvatar = role === 'student'
+          ? 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=300&q=80'
+          : 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=300&q=80';
+        const ins = db.prepare(`
+          INSERT INTO users (name, email, password_hash, role, avatar_url, country, status)
+          VALUES (?, ?, ?, ?, ?, ?, 'active')
+        `).run(decoded.name || cleanEmail.split('@')[0], cleanEmail, tempHash, role, defaultAvatar, resolved.country);
+        const newId = ins.lastInsertRowid;
+        saveUserPreferences(newId, {
+          theme: 'light',
+          country: resolved.country,
+          timezone: resolved.timezone,
+          language: resolved.language,
+          linked_gmail: cleanEmail
+        });
+        if (role === 'student') {
+          db.prepare('INSERT INTO student_profiles (user_id, grade_level, school) VALUES (?, ?, ?)').run(newId, 'Grade 11 - High School', '');
+        }
+        user = db.prepare('SELECT id, name, email, role, phone, avatar_url, country, status, wallet_balance, wallet_tutor_id FROM users WHERE id = ?').get(newId);
+      } catch (rehydrateErr) {
+        console.warn('Serverless user rehydrate notice:', rehydrateErr.message);
+      }
+    }
     if (!user) {
       return res.status(404).json({ error: 'User account not found.' });
     }
@@ -2491,7 +2520,15 @@ app.post('/api/auth/register', (req, res) => {
     });
 
     const token = jwt.sign(
-      { id: userId, email: cleanEmail, role: designatedRole },
+      {
+        id: userId,
+        name: name.trim(),
+        email: cleanEmail,
+        role: designatedRole,
+        country: userCountry,
+        timezone: userTimezone,
+        language: userLanguage
+      },
       JWT_SECRET,
       { expiresIn: '7d' }
     );
@@ -2618,12 +2655,6 @@ app.post('/api/auth/login', (req, res) => {
       user.password_hash = newHash;
     }
 
-    const token = jwt.sign(
-      { id: user.id, email: user.email, role: user.role },
-      JWT_SECRET,
-      { expiresIn: '7d' }
-    );
-
     const userPrefs = getUserPreferences(user.id);
     const sanitizedUser = {
       id: user.id,
@@ -2633,10 +2664,24 @@ app.post('/api/auth/login', (req, res) => {
       phone: user.phone,
       avatar_url: user.avatar_url,
       country: user.country || userPrefs?.country || 'United States',
-      timezone: userPrefs?.timezone || 'America/New_York',
-      language: userPrefs?.language || 'en-US',
+      timezone: userPrefs?.timezone || getCountryDefaults(user.country).timezone || 'America/New_York',
+      language: userPrefs?.language || getCountryDefaults(user.country).language || 'en-US',
       status: user.status
     };
+
+    const token = jwt.sign(
+      {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        country: sanitizedUser.country,
+        timezone: sanitizedUser.timezone,
+        language: sanitizedUser.language
+      },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    );
 
     return res.json({
       message: 'Logged in successfully.',
@@ -2741,12 +2786,20 @@ app.post('/api/auth/sync-account', (req, res) => {
       user.password_hash = passwordHash;
     }
 
+    const prefs = getUserPreferences(user.id);
     const token = jwt.sign(
-      { id: user.id, email: user.email, role: user.role },
+      {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        country: user.country || prefs?.country || userCountry,
+        timezone: prefs?.timezone || userTimezone,
+        language: prefs?.language || userLanguage
+      },
       JWT_SECRET,
       { expiresIn: '7d' }
     );
-    const prefs = getUserPreferences(user.id);
 
     return res.json({
       message: 'Account successfully authenticated.',

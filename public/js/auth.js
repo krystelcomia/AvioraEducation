@@ -237,12 +237,75 @@ const Auth = {
       }
     } catch (err) {
       console.warn('Session restore failed:', err.message);
+      const synced = await this.tryAutoSyncCurrentUser();
+      if (synced && this.currentUser) {
+        this.updateNavUI(this.currentUser);
+        if (this.currentUser.role === 'student') {
+          this.refreshWallet();
+        }
+        return;
+      }
       Storage.clearSession();
       this.currentUser = null;
       document.documentElement.removeAttribute('data-theme');
       try { localStorage.removeItem('aviora_theme'); } catch(e){}
       this.updateNavUI(null);
     }
+  },
+
+  async tryAutoSyncCurrentUser() {
+    if (this._autoSyncPromise) return this._autoSyncPromise;
+    this._autoSyncPromise = (async () => {
+      try {
+        const storedUser = Storage.getUser();
+        if (!storedUser || !storedUser.email) return false;
+        const savedAccount = this.getSavedCreatedAccount(storedUser.email);
+        if (!savedAccount || !savedAccount.password) return false;
+
+        const savedPrefs = Storage.getUserPreferences(storedUser.id) || {};
+        const res = await fetch('/api/auth/sync-account', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: savedAccount.name || storedUser.name,
+            email: storedUser.email.toLowerCase().trim(),
+            password: savedAccount.password,
+            role: savedAccount.role || storedUser.role || 'student',
+            phone: savedAccount.phone || storedUser.phone || null,
+            country: savedAccount.country || savedPrefs.country || storedUser.country || 'United States',
+            timezone: savedAccount.timezone || savedPrefs.timezone || storedUser.timezone,
+            language: savedAccount.language || savedPrefs.language || storedUser.language,
+            grade_level: savedAccount.grade_level,
+            school: savedAccount.school,
+            learning_goals: savedAccount.learning_goals,
+            target_subjects: savedAccount.target_subjects,
+            headline: savedAccount.headline,
+            subjects: savedAccount.subjects,
+            institution: savedAccount.institution,
+            highest_degree: savedAccount.highest_degree,
+            years_experience: savedAccount.years_experience,
+            bio: savedAccount.bio
+          })
+        });
+        if (!res.ok) return false;
+        const data = await res.json();
+        if (!data || !data.token || !data.user) return false;
+
+        Storage.setToken(data.token);
+        Storage.setUser(data.user);
+        this.currentUser = data.user;
+        if (data.preferences) {
+          Storage.setUserPreferences(data.user.id, data.preferences);
+          this.syncUserPreferences(data.preferences);
+        }
+        return true;
+      } catch (e) {
+        return false;
+      } finally {
+        this._autoSyncPromise = null;
+      }
+    })();
+    return this._autoSyncPromise;
   },
 
   syncUserPreferences(prefs) {
@@ -252,6 +315,16 @@ const Auth = {
     }
     const uid = this.currentUser.id;
     try {
+      if (uid && prefs) {
+        Storage.setUserPreferences(uid, prefs);
+        if (prefs.language) localStorage.setItem(`aviora_language_${uid}`, prefs.language);
+        if (prefs.country) localStorage.setItem(`aviora_country_${uid}`, prefs.country);
+        if (prefs.timezone) localStorage.setItem(`aviora_timezone_${uid}`, prefs.timezone);
+        this.currentUser.country = prefs.country || this.currentUser.country;
+        this.currentUser.timezone = prefs.timezone || this.currentUser.timezone;
+        this.currentUser.language = prefs.language || this.currentUser.language;
+        Storage.setUser(this.currentUser);
+      }
       if (typeof Profile !== 'undefined' && typeof Profile.syncAllPreferences === 'function') {
         Profile.syncAllPreferences(prefs, false);
       }
@@ -318,12 +391,16 @@ const Auth = {
         phone: account.phone !== undefined ? account.phone : (accounts[email]?.phone || null),
         grade_level: account.grade_level || accounts[email]?.grade_level,
         school: account.school || accounts[email]?.school,
+        learning_goals: account.learning_goals || accounts[email]?.learning_goals,
+        target_subjects: account.target_subjects || accounts[email]?.target_subjects,
         headline: account.headline || accounts[email]?.headline,
         subjects: account.subjects || accounts[email]?.subjects,
         country: account.country || accounts[email]?.country,
         timezone: account.timezone || accounts[email]?.timezone,
+        language: account.language || accounts[email]?.language,
         institution: account.institution || accounts[email]?.institution,
         highest_degree: account.highest_degree || accounts[email]?.highest_degree,
+        years_experience: account.years_experience || accounts[email]?.years_experience,
         hourly_rate: account.hourly_rate || accounts[email]?.hourly_rate,
         bio: account.bio || accounts[email]?.bio,
         avatar_url: account.avatar_url || account.avatar || accounts[email]?.avatar_url,
@@ -1604,23 +1681,24 @@ const Auth = {
       if (typeof AvioraCurrency !== 'undefined' && typeof AvioraCurrency.updateDOM === 'function') {
         AvioraCurrency.updateDOM();
       }
-      if (typeof I18n !== 'undefined' && typeof I18n.applyLanguage === 'function') {
-        I18n.applyLanguage(I18n.currentLanguage, false);
+      const registeredLang = res.preferences?.language || res.user?.language || payload.language;
+      if (registeredLang && typeof I18n !== 'undefined' && typeof I18n.applyLanguage === 'function') {
+        I18n.applyLanguage(registeredLang, false);
       }
       
       if (res.user.role === 'teacher' || res.user.role === 'tutor') {
         showToast(`Account created successfully! Welcome to Aviora, ${res.user.name}. Your Tutor Dashboard is ready—please complete your credential application to unlock live tutoring operations.`, 'success');
-        window.location.hash = '#teacher-dashboard';
-        if (typeof Router !== 'undefined' && Router.handleRoute) {
-          Router.handleRoute();
+        if (window.location.hash === '#teacher-dashboard') {
+          if (typeof Router !== 'undefined' && Router.handleRoute) Router.handleRoute();
+        } else {
+          window.location.hash = '#teacher-dashboard';
         }
       } else {
         showToast(`Account created successfully! Welcome to Aviora, ${res.user.name}.`, 'success');
-        window.location.hash = '#student-portal';
-        if (typeof Router !== 'undefined' && Router.handleRoute) {
-          Router.handleRoute();
+        if (window.location.hash === '#student-portal') {
+          if (typeof Router !== 'undefined' && Router.handleRoute) Router.handleRoute();
         } else {
-          this.handlePostAuthRedirect(res.user);
+          window.location.hash = '#student-portal';
         }
       }
     } catch (err) {

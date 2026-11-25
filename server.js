@@ -2982,6 +2982,22 @@ function buildRegistrationImmutableSnapshot(role, data = {}) {
   };
 }
 
+function evaluatePasswordCriteria(password) {
+  const val = typeof password === 'string' ? password : '';
+  const checks = [
+    val.length >= 8,
+    /[A-Z]/.test(val),
+    /[a-z]/.test(val),
+    /[0-9]/.test(val),
+    /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(val)
+  ];
+  const metCount = checks.filter(Boolean).length;
+  return {
+    metCount,
+    isAcceptable: metCount >= 3
+  };
+}
+
 app.post('/api/auth/register', async (req, res) => {
   try {
     const {
@@ -3014,21 +3030,13 @@ app.post('/api/auth/register', async (req, res) => {
       return res.status(400).json({ error: 'Invalid account type selected.' });
     }
 
-    // Strict Strong Password Requirement (8+ chars, upper, lower, number, special)
-    if (!password || password.length < 8) {
-      return res.status(400).json({ error: 'Password must be at least 8 characters long.' });
-    }
-    if (!/[A-Z]/.test(password)) {
-      return res.status(400).json({ error: 'Password must contain at least one uppercase letter (A-Z).' });
-    }
-    if (!/[a-z]/.test(password)) {
-      return res.status(400).json({ error: 'Password must contain at least one lowercase letter (a-z).' });
-    }
-    if (!/[0-9]/.test(password)) {
-      return res.status(400).json({ error: 'Password must contain at least one number (0-9).' });
-    }
-    if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
-      return res.status(400).json({ error: 'Password must contain at least one special symbol (e.g. !@#$%^&*).' });
+    // Strong Password Requirement: at least 3 of the 5 listed security criteria
+    // (8+ characters, uppercase, lowercase, number, special symbol; uppercase and special are optional when >=3 criteria are met)
+    const regPasswordCheck = evaluatePasswordCriteria(password);
+    if (!regPasswordCheck.isAcceptable) {
+      return res.status(400).json({
+        error: 'Password must meet at least 3 of the 5 security criteria (8+ characters, uppercase letter, lowercase letter, number, or special symbol).'
+      });
     }
 
     const cleanEmail = email.toLowerCase().trim();
@@ -3254,8 +3262,8 @@ app.post('/api/auth/login', (req, res) => {
       return res.status(400).json({ error: 'Please enter a complete and valid email address (e.g., name@example.com).' });
     }
 
-    // Validate complete password (minimum 6 characters)
-    if (password.length < 6) {
+    // Validate complete password (minimum 3 characters to match 3-of-5 criteria passwords)
+    if (password.length < 3) {
       return res.status(400).json({ error: 'Password is incomplete. Please enter your full password.' });
     }
 
@@ -4011,22 +4019,12 @@ app.post('/api/auth/forgot-password/reset', async (req, res) => {
       return res.status(400).json({ error: 'Verification code has already been consumed or expired. Please request a new code.' });
     }
 
-    // Strict Strong Password Requirements (same as registration):
-    // 8+ chars, uppercase, lowercase, number, special symbol
-    if (newPassword.length < 8) {
-      return res.status(400).json({ error: 'Password must be at least 8 characters long.' });
-    }
-    if (!/[A-Z]/.test(newPassword)) {
-      return res.status(400).json({ error: 'Password must contain at least one uppercase letter (A-Z).' });
-    }
-    if (!/[a-z]/.test(newPassword)) {
-      return res.status(400).json({ error: 'Password must contain at least one lowercase letter (a-z).' });
-    }
-    if (!/[0-9]/.test(newPassword)) {
-      return res.status(400).json({ error: 'Password must contain at least one number (0-9).' });
-    }
-    if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(newPassword)) {
-      return res.status(400).json({ error: 'Password must contain at least one special symbol (e.g. !@#$%^&*).' });
+    // Strong Password Requirements (same as registration: at least 3 of 5 criteria)
+    const resetPasswordCheck = evaluatePasswordCriteria(newPassword);
+    if (!resetPasswordCheck.isAcceptable) {
+      return res.status(400).json({
+        error: 'Password must meet at least 3 of the 5 security criteria (8+ characters, uppercase letter, lowercase letter, number, or special symbol).'
+      });
     }
 
     const salt = bcrypt.genSaltSync(10);

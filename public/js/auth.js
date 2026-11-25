@@ -32,14 +32,14 @@ const PasswordValidator = {
       label = 'Enter a strong password';
     } else if (score <= 2) {
       strength = 'weak';
-      label = 'Weak (Needs uppercase, numbers, symbols)';
+      label = 'Weak (Meet at least 3 criteria)';
       color = '#EF4444';
-      width = '25%';
+      width = score === 0 ? '15%' : `${score * 20}%`;
     } else if (score === 3 || score === 4) {
       strength = 'good';
-      label = 'Moderate (Almost strong)';
-      color = '#F59E0B';
-      width = '70%';
+      label = score === 3 ? 'Strong (3 of 5 criteria met)' : 'Strong (4 of 5 criteria met)';
+      color = '#10B981';
+      width = score === 4 ? '85%' : '70%';
     } else if (score === 5) {
       strength = 'strong';
       label = 'Strong (Excellent security!)';
@@ -47,7 +47,7 @@ const PasswordValidator = {
       width = '100%';
     }
 
-    return { score, results, strength, label, color, width, isStrong: score === 5 };
+    return { score, results, strength, label, color, width, isStrong: score >= 3 };
   },
 
   updateUI(prefix, password) {
@@ -1636,7 +1636,7 @@ const Auth = {
     }
     const passEval = PasswordValidator.evaluate(password);
     if (!passEval.isStrong) {
-      showToast('Please fulfill all 5 strong password requirements before continuing.', 'error');
+      showToast('Please meet at least 3 of the 5 password criteria before continuing.', 'error');
       const strengthBox = document.getElementById('page-password-strength-box');
       if (strengthBox) {
         strengthBox.style.display = 'block';
@@ -1930,10 +1930,10 @@ const Auth = {
       return;
     }
 
-    // MANDATORY STRONG PASSWORD VALIDATION
+    // MANDATORY STRONG PASSWORD VALIDATION (at least 3 of 5 listed criteria)
     const passEval = PasswordValidator.evaluate(password);
     if (!passEval.isStrong) {
-      showToast('Please fulfill all 5 strong password requirements before creating your account.', 'error');
+      showToast('Please meet at least 3 of the 5 password criteria before creating your account.', 'error');
       const strengthBox = document.getElementById(isPage ? 'page-password-strength-box' : 'modal-password-strength-box');
       if (strengthBox) {
         strengthBox.style.display = 'block';
@@ -2434,10 +2434,10 @@ const Auth = {
     const newPassword = newPassInput ? newPassInput.value : '';
     const confirmPassword = confirmInput ? confirmInput.value : '';
 
-    // Enforce identical 5 security rules as registration
+    // Enforce identical security rules as registration (at least 3 of 5 criteria)
     const passEval = PasswordValidator.evaluate(newPassword);
     if (!passEval.isStrong) {
-      showToast('Please fulfill all 5 security standards to keep your account safe.', 'error');
+      showToast('Please meet at least 3 of the 5 password criteria to keep your account safe.', 'error');
       const strengthBox = document.getElementById('forgot-password-strength-box');
       if (strengthBox) {
         strengthBox.style.display = 'block';

@@ -202,6 +202,12 @@ const Admin = {
         }
       });
     }
+
+    const announcementForm = document.getElementById('admin-announcement-form');
+    if (announcementForm && !announcementForm.dataset.bound) {
+      announcementForm.dataset.bound = 'true';
+      announcementForm.addEventListener('submit', (e) => this.handleAnnouncementSubmit(e));
+    }
   },
 
   switchSection(section) {
@@ -349,8 +355,73 @@ const Admin = {
       if (typeof AvioraPayments !== 'undefined' && AvioraPayments.loadAdminPayments) {
         AvioraPayments.loadAdminPayments(AvioraPayments.adminFilter || 'all');
       }
+      this.loadEmailDeliveryStatus();
     } catch (err) {
       console.error('Failed to load admin metrics:', err);
+    }
+  },
+
+  async loadEmailDeliveryStatus() {
+    const pill = document.getElementById('admin-email-status-pill');
+    const detail = document.getElementById('admin-email-status-detail');
+    if (!pill && !detail) return;
+    try {
+      const res = await API.getAdminEmailStatus();
+      const s = res?.status || {};
+      const st = res?.stats || {};
+      const activeList = [];
+      if (s.smtp) activeList.push('Gmail / SMTP');
+      if (s.resend) activeList.push('Resend');
+      if (s.brevo) activeList.push('Brevo');
+      if (s.sendgrid) activeList.push('SendGrid');
+      if (s.emailjsServer) activeList.push('EmailJS Server');
+      if (s.gmailWebhook) activeList.push('Gmail Webhook');
+
+      if (pill) {
+        pill.textContent = s.configured ? `Active (${activeList.join(', ')})` : 'Not Configured';
+        pill.style.background = s.configured ? 'rgba(16, 185, 129, 0.16)' : 'rgba(239, 68, 68, 0.16)';
+        pill.style.color = s.configured ? '#34D399' : '#FCA5A5';
+      }
+      if (detail) {
+        detail.textContent = `Delivered: ${st.delivered || 0} • Failed: ${st.failed || 0} • Queued: ${st.queued || 0}`;
+      }
+    } catch (e) {
+      if (pill) pill.textContent = 'Unavailable';
+    }
+  },
+
+  async handleAnnouncementSubmit(e) {
+    e.preventDefault();
+    const titleEl = document.getElementById('admin-announcement-title');
+    const targetEl = document.getElementById('admin-announcement-target');
+    const msgEl = document.getElementById('admin-announcement-message');
+    const btn = document.getElementById('btn-send-admin-announcement');
+    const title = titleEl ? titleEl.value.trim() : '';
+    const target_role = targetEl ? targetEl.value : 'all';
+    const message = msgEl ? msgEl.value.trim() : '';
+
+    if (!title || !message) {
+      showToast('Please enter both an announcement title and message.', 'warning');
+      return;
+    }
+
+    try {
+      if (btn) {
+        btn.disabled = true;
+        btn.textContent = 'Broadcasting...';
+      }
+      const res = await API.sendAdminAnnouncement({ title, message, target_role, link: '#home' });
+      showToast(res.message || 'Announcement sent!', 'success');
+      if (titleEl) titleEl.value = '';
+      if (msgEl) msgEl.value = '';
+      this.loadEmailDeliveryStatus();
+    } catch (err) {
+      showToast(err.message || 'Failed to send announcement.', 'error');
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = 'Broadcast Announcement (Website + Gmail)';
+      }
     }
   },
 

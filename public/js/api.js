@@ -221,6 +221,8 @@ const API = {
   getAdminWalletChats: () => apiRequest('/admin/wallet-chats'),
   getAdminWalletChatThread: (studentId, markRead = true) => apiRequest(`/admin/wallet-chats/${studentId}?mark_read=${markRead ? '1' : '0'}`),
   replyAdminWalletChat: (studentId, body) => apiRequest(`/admin/wallet-chats/${studentId}/reply`, { method: 'POST', body }),
+  sendAdminAnnouncement: (body) => apiRequest('/admin/announcements', { method: 'POST', body }),
+  getAdminEmailStatus: () => apiRequest('/admin/email-status'),
 
   // Inquiries (Public / Student / Guest Submission)
   submitInquiry: (body) => apiRequest('/inquiries', { method: 'POST', body }),

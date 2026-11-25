@@ -113,7 +113,7 @@ function showConfirm(title, message, onConfirm, options = {}) {
 
 // Router
 const Router = {
-  routes: ['#home', '#about', '#tutors', '#aviora-buddy', '#buddy', '#aviora-buddy-studio', '#how-it-works', '#book-now', '#book-lesson', '#subscriptions', '#subscription', '#student-subscriptions', '#login', '#signup', '#student-portal', '#dashboard', '#student-lessons', '#student-tutors', '#student-history', '#student-schedule', '#student-payments', '#student-messages', '#messages', '#student-profile', '#student-settings', '#settings', '#teacher-portal', '#teacher-classes', '#teacher-class', '#teacher-students', '#teacher-schedule', '#teacher-ratings', '#teacher-messages', '#teacher-dashboard', '#teacher-profile', '#teacher-application', '#admin-portal', '#admin-profile'],
+  routes: ['#home', '#about', '#tutors', '#aviora-buddy', '#buddy', '#aviora-buddy-studio', '#how-it-works', '#book-now', '#book-lesson', '#subscriptions', '#subscription', '#student-subscriptions', '#login', '#forgot-password', '#signup', '#student-portal', '#dashboard', '#student-lessons', '#student-tutors', '#student-history', '#student-schedule', '#student-payments', '#student-messages', '#messages', '#student-profile', '#student-settings', '#settings', '#teacher-portal', '#teacher-classes', '#teacher-class', '#teacher-students', '#teacher-schedule', '#teacher-ratings', '#teacher-messages', '#teacher-dashboard', '#teacher-profile', '#teacher-application', '#admin-portal', '#admin-profile'],
 
   init() {
     if (!this._subNavResetBound) {
@@ -310,6 +310,15 @@ const Router = {
         await Auth.handleOAuthCallbackHash();
       }
       return;
+    } else if (hash === '#forgot-password' || hash.startsWith('#forgot-password')) {
+      const view = document.getElementById('view-login');
+      if (view) view.style.display = 'block';
+      window.scrollTo(0, 0);
+      if (typeof Auth !== 'undefined' && typeof Auth.showForgotPassword === 'function') {
+        const queryStr = hash.includes('?') ? hash.split('?')[1] : '';
+        const params = new URLSearchParams(queryStr);
+        Auth.showForgotPassword(params.get('email') || '', true);
+      }
     } else if (hash === '#login' || hash.startsWith('#login')) {
       const view = document.getElementById('view-login');
       if (view) view.style.display = 'block';

@@ -492,7 +492,7 @@ const Profile = {
   },
 
   applyNotification(prefKey, isChecked, notify = true, persistToServer = true) {
-    const elementId = prefKey.replace('_', '-');
+    const elementId = prefKey.replace(/_/g, '-');
     const toggle = document.getElementById(elementId);
     if (toggle) toggle.checked = Boolean(isChecked);
     const tToggle = document.getElementById('teacher-' + elementId);
@@ -569,6 +569,11 @@ const Profile = {
     }
 
     const notifMap = {
+      'notif_website': 'notif-website',
+      'notif_gmail': 'notif-gmail',
+      'notif_security_emails': 'notif-security-emails',
+      'notif_announcements': 'notif-announcements',
+      'notif_transactions': 'notif-transactions',
       'notif_lessons': 'notif-lessons',
       'notif_calendar': 'notif-calendar',
       'notif_messages': 'notif-messages',
@@ -695,8 +700,13 @@ const Profile = {
     });
     this.updateTimezoneClockDisplays();
 
-    // Notification toggles
+    // Notification toggles (Student)
     const notifMap = {
+      'notif-website': 'notif_website',
+      'notif-gmail': 'notif_gmail',
+      'notif-security-emails': 'notif_security_emails',
+      'notif-announcements': 'notif_announcements',
+      'notif-transactions': 'notif_transactions',
       'notif-lessons': 'notif_lessons',
       'notif-calendar': 'notif_calendar',
       'notif-messages': 'notif_messages',
@@ -838,10 +848,14 @@ const Profile = {
       }
     });
 
-    ['teacher-notif-lessons', 'teacher-notif-calendar', 'teacher-notif-messages', 'teacher-notif-reports'].forEach(id => {
+    [
+      'teacher-notif-website', 'teacher-notif-gmail', 'teacher-notif-security-emails',
+      'teacher-notif-announcements', 'teacher-notif-transactions',
+      'teacher-notif-lessons', 'teacher-notif-calendar', 'teacher-notif-messages', 'teacher-notif-reports'
+    ].forEach(id => {
       const toggle = document.getElementById(id);
       if (toggle) {
-        const prefKey = id.replace('teacher-', '').replace('-', '_');
+        const prefKey = id.replace('teacher-', '').replace(/-/g, '_');
         toggle.addEventListener('change', (e) => {
           this.applyNotification(prefKey, e.target.checked);
         });
@@ -895,10 +909,14 @@ const Profile = {
       });
     }
 
-    ['admin-notif-lessons', 'admin-notif-calendar', 'admin-notif-messages', 'admin-notif-reports'].forEach(id => {
+    [
+      'admin-notif-website', 'admin-notif-gmail', 'admin-notif-security-emails',
+      'admin-notif-announcements', 'admin-notif-transactions',
+      'admin-notif-lessons', 'admin-notif-calendar', 'admin-notif-messages', 'admin-notif-reports'
+    ].forEach(id => {
       const toggle = document.getElementById(id);
       if (toggle) {
-        const prefKey = id.replace('admin-', '').replace('-', '_');
+        const prefKey = id.replace('admin-', '').replace(/-/g, '_');
         toggle.addEventListener('change', (e) => {
           this.applyNotification(prefKey, e.target.checked);
         });

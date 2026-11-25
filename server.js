@@ -125,6 +125,21 @@ app.use(cors());
 app.use(express.json({ limit: '15mb' }));
 app.use(express.urlencoded({ extended: true, limit: '15mb' }));
 
+// On Vercel serverless runtimes, flush any queued background email dispatches before returning HTTP mutation responses
+app.use((req, res, next) => {
+  if (!isVercel || !['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) {
+    return next();
+  }
+  const origJson = res.json.bind(res);
+  res.json = function patchedJson(body) {
+    if (activeEmailTasks && activeEmailTasks.size > 0) {
+      return flushPendingEmails(2500).then(() => origJson(body)).catch(() => origJson(body));
+    }
+    return origJson(body);
+  };
+  return next();
+});
+
 // --- Cross-Timezone & International Scheduling Helpers ---
 function getTimezoneOffsetMinutes(tz, date = new Date()) {
   try {
@@ -777,48 +792,84 @@ function checkTutorSlotBookable(tutorUserId, requestedDate, requestedTime, stude
 // NOTIFICATION PREFERENCE FILTERS & DELIVERY
 // ==========================================
 
+function getNotificationCategory(type) {
+  const t = String(type || 'info').toLowerCase().trim();
+  if (t === 'security') return 'security';
+  if (['announcement', 'system_update', 'system'].includes(t)) return 'announcement';
+  if (['payment', 'transaction', 'refund', 'wallet', 'wallet_support', 'payout', 'subscription'].includes(t)) return 'transaction';
+  if (['reminder', 'lesson_reminder', 'lesson_alert'].includes(t)) return 'lesson';
+  if (['calendar', 'schedule', 'booking', 'booking_update', 'status', 'request', 'buddy', 'approval', 'application'].includes(t)) return 'calendar';
+  if (['message', 'chat', 'inquiry'].includes(t)) return 'message';
+  if (['report', 'digest', 'weekly_digest'].includes(t)) return 'report';
+  if (['registration', 'success', 'info'].includes(t)) return 'general';
+  return 'general';
+}
+
 function getNotificationFilterClause(prefs) {
-  if (!prefs) return '';
+  if (!prefs) return ' AND COALESCE(in_app_visible, 1) = 1';
+  if (prefs.notif_website === 0) {
+    return " AND COALESCE(in_app_visible, 1) = 1 AND type = 'security'";
+  }
   const ignoredTypes = [];
-  if (!prefs.notif_lessons) {
+  if (prefs.notif_lessons === 0) {
     ignoredTypes.push("'reminder'", "'lesson_reminder'", "'lesson_alert'");
   }
-  if (!prefs.notif_calendar) {
-    ignoredTypes.push("'calendar'", "'schedule'", "'booking'", "'booking_update'", "'status'", "'subscription'", "'request'");
+  if (prefs.notif_calendar === 0) {
+    ignoredTypes.push("'calendar'", "'schedule'", "'booking'", "'booking_update'", "'status'", "'request'", "'buddy'", "'approval'", "'application'");
   }
-  if (!prefs.notif_messages) {
+  if (prefs.notif_messages === 0) {
     ignoredTypes.push("'message'", "'chat'", "'inquiry'");
   }
-  if (!prefs.notif_reports) {
+  if (prefs.notif_reports === 0) {
     ignoredTypes.push("'report'", "'digest'", "'weekly_digest'");
   }
-  if (ignoredTypes.length > 0) {
-    return ` AND type NOT IN (${ignoredTypes.join(', ')})`;
+  if (prefs.notif_announcements === 0) {
+    ignoredTypes.push("'announcement'", "'system_update'");
   }
-  return '';
+  if (prefs.notif_transactions === 0) {
+    ignoredTypes.push("'payment'", "'transaction'", "'refund'", "'wallet'", "'wallet_support'", "'payout'", "'subscription'");
+  }
+  if (ignoredTypes.length > 0) {
+    return ` AND COALESCE(in_app_visible, 1) = 1 AND type NOT IN (${ignoredTypes.join(', ')})`;
+  }
+  return ' AND COALESCE(in_app_visible, 1) = 1';
+}
+
+function evaluateNotificationDelivery(userId, type, options = {}) {
+  const category = getNotificationCategory(type);
+  const isCriticalSecurity = category === 'security' || Boolean(options.criticalSecurity);
+  try {
+    const prefs = getUserPreferences(userId) || {};
+    let categoryAllowed = true;
+    if (category === 'lesson' && prefs.notif_lessons === 0) categoryAllowed = false;
+    else if (category === 'calendar' && prefs.notif_calendar === 0) categoryAllowed = false;
+    else if (category === 'message' && prefs.notif_messages === 0) categoryAllowed = false;
+    else if (category === 'report' && prefs.notif_reports === 0) categoryAllowed = false;
+    else if (category === 'announcement' && prefs.notif_announcements === 0) categoryAllowed = false;
+    else if (category === 'transaction' && prefs.notif_transactions === 0) categoryAllowed = false;
+    else if (category === 'security' && !isCriticalSecurity && prefs.notif_security_emails === 0) categoryAllowed = false;
+
+    // Critical security notifications (password reset codes, password changes, security alerts)
+    // ALWAYS bypass ordinary notification disable flags for user safety.
+    const websiteAllowed = (isCriticalSecurity || (prefs.notif_website !== 0 && categoryAllowed)) && !options.emailOnly;
+    const emailAllowed = (isCriticalSecurity || (prefs.notif_gmail !== 0 && categoryAllowed)) && !options.skipEmail;
+
+    return { category, isCriticalSecurity, categoryAllowed, websiteAllowed, emailAllowed, prefs };
+  } catch (e) {
+    return {
+      category,
+      isCriticalSecurity,
+      categoryAllowed: true,
+      websiteAllowed: !options.emailOnly,
+      emailAllowed: !options.skipEmail,
+      prefs: null
+    };
+  }
 }
 
 function isNotificationAllowed(userId, type) {
-  try {
-    const prefs = getUserPreferences(userId);
-    if (!prefs) return true;
-
-    if (['reminder', 'lesson_reminder', 'lesson_alert'].includes(type) && !prefs.notif_lessons) {
-      return false;
-    }
-    if (['calendar', 'schedule', 'booking', 'booking_update', 'status', 'subscription', 'request'].includes(type) && !prefs.notif_calendar) {
-      return false;
-    }
-    if (['message', 'chat', 'inquiry'].includes(type) && !prefs.notif_messages) {
-      return false;
-    }
-    if (['report', 'digest', 'weekly_digest'].includes(type) && !prefs.notif_reports) {
-      return false;
-    }
-    return true;
-  } catch (e) {
-    return true;
-  }
+  const decision = evaluateNotificationDelivery(userId, type);
+  return decision.websiteAllowed || decision.emailAllowed;
 }
 
 function getLinkedGmailForUser(userId) {
@@ -935,56 +986,113 @@ function getMailTransporter() {
   return { transporter: cachedSmtpTransporter, config: cfg };
 }
 
-function buildVerificationCodeEmail({ userName, recipientEmail, code, expiresInMinutes = 10 }) {
+function getPublicAppBaseUrl(req = null) {
+  const configured = (process.env.APP_URL || process.env.PUBLIC_URL || '').trim().replace(/\/+$/, '');
+  if (configured) return configured;
+  if (req && typeof req.get === 'function') {
+    const host = req.get('host');
+    if (host) {
+      const proto = req.headers['x-forwarded-proto'] || req.protocol || 'https';
+      return `${proto}://${host}`;
+    }
+  }
+  return 'https://avioraeducation.vercel.app';
+}
+
+function getMailTransportStatus() {
+  const smtpCfg = getMailTransportConfig();
+  const resendConfigured = Boolean((process.env.RESEND_API_KEY || '').trim() && (process.env.RESEND_FROM || process.env.EMAIL_FROM || '').trim());
+  const brevoConfigured = Boolean((process.env.BREVO_API_KEY || '').trim() && (process.env.BREVO_SENDER_EMAIL || process.env.EMAIL_FROM || '').trim());
+  const sendgridConfigured = Boolean((process.env.SENDGRID_API_KEY || '').trim() && (process.env.SENDGRID_FROM || process.env.EMAIL_FROM || '').trim());
+  const emailjsServerConfigured = Boolean(
+    (process.env.EMAILJS_SERVICE_ID || '').trim()
+    && (process.env.EMAILJS_RESET_TEMPLATE_ID || process.env.EMAILJS_TEMPLATE_ID || '').trim()
+    && (process.env.EMAILJS_PUBLIC_KEY || '').trim()
+    && (process.env.EMAILJS_PRIVATE_KEY || '').trim()
+  );
+  const webhookConfigured = Boolean((process.env.GMAIL_WEBHOOK_URL || process.env.GOOGLE_SCRIPT_EMAIL_URL || '').trim());
+  return {
+    smtp: smtpCfg.configured,
+    resend: resendConfigured,
+    brevo: brevoConfigured,
+    sendgrid: sendgridConfigured,
+    emailjsServer: emailjsServerConfigured,
+    gmailWebhook: webhookConfigured,
+    configured: Boolean(smtpCfg.configured || resendConfigured || brevoConfigured || sendgridConfigured || emailjsServerConfigured || webhookConfigured)
+  };
+}
+
+function buildVerificationCodeEmail({ userName, recipientEmail, code, expiresInMinutes = 5, expiresAt = null, baseUrl = null }) {
+  const appBase = (baseUrl || getPublicAppBaseUrl()).replace(/\/+$/, '');
+  const logoUrl = `${appBase}/assets/logo.png`;
   const safeName = String(userName || 'Student').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   const safeEmail = String(recipientEmail || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   const safeCode = String(code || '').replace(/[^0-9A-Za-z]/g, '');
+  const expText = expiresAt
+    ? new Date(expiresAt).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'UTC' }) + ' UTC'
+    : `${expiresInMinutes} minutes`;
   const subject = `Your Aviora Education verification code: ${safeCode}`;
 
   const text = [
-    `Hello ${userName || 'Student'},`,
+    `Aviora Education — Password Reset Verification`,
+    '',
+    `Hello ${userName || 'Aviora Member'},`,
     '',
     `We received a password reset request for your Aviora Education account (${recipientEmail}).`,
     '',
-    `Your verification code is: ${safeCode}`,
+    `Your 6-digit verification code is: ${safeCode}`,
+    `Expiration: This code expires in ${expiresInMinutes} minutes (${expText}).`,
     '',
-    `Enter this 6-digit code in the password reset form within ${expiresInMinutes} minutes to set a new password.`,
-    'If you did not request a password reset, you can safely ignore this message.',
+    `SECURITY REMINDER: Never share this verification code with anyone, including Aviora Education staff.`,
+    `If you did not request a password reset, you can safely ignore this email.`,
     '',
-    'Aviora Education Support'
+    `Open Aviora Education: ${appBase}/#login`,
+    '',
+    'Aviora Education Security Team'
   ].join('\n');
 
   const html = `
     <!DOCTYPE html>
     <html lang="en">
     <body style="margin:0;padding:24px 16px;background-color:#F7F5F0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#1F2937;">
-      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:540px;margin:0 auto;background:#FFFFFF;border-radius:12px;border:1px solid #E5DEC9;overflow:hidden;">
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:560px;margin:0 auto;background:#FFFFFF;border-radius:14px;border:1px solid #E5DEC9;overflow:hidden;box-shadow:0 4px 18px rgba(20,23,30,0.06);">
         <tr>
-          <td style="padding:22px 24px;border-bottom:2px solid #C68A28;background:#FFFFFF;">
-            <div style="font-size:18px;font-weight:700;color:#14171E;">Aviora Education</div>
-            <div style="font-size:13px;color:#6B7280;margin-top:4px;">Account Password Verification</div>
+          <td style="padding:20px 24px;border-bottom:3px solid #C68A28;background:#1E1B18;">
+            <table role="presentation" cellspacing="0" cellpadding="0">
+              <tr>
+                <td style="padding-right:12px;vertical-align:middle;">
+                  <img src="${logoUrl}" alt="Aviora Education Logo" width="44" height="36" style="display:block;border-radius:6px;object-fit:contain;" />
+                </td>
+                <td style="vertical-align:middle;">
+                  <div style="font-size:18px;font-weight:800;color:#FFFFFF;letter-spacing:0.4px;">Aviora Education</div>
+                  <div style="font-size:12px;color:#E6B566;margin-top:2px;">Account Password Verification</div>
+                </td>
+              </tr>
+            </table>
           </td>
         </tr>
         <tr>
-          <td style="padding:24px;">
-            <p style="margin:0 0 12px 0;font-size:15px;line-height:1.5;color:#1F2937;">Hello ${safeName},</p>
+          <td style="padding:26px 24px;">
+            <p style="margin:0 0 12px 0;font-size:15px;line-height:1.5;color:#1F2937;">Hello <strong>${safeName}</strong>,</p>
             <p style="margin:0 0 18px 0;font-size:14px;line-height:1.6;color:#374151;">
-              We received a request to reset the password for your Aviora Education account (<strong>${safeEmail}</strong>). Enter this 6-digit verification code on the password reset page:
+              We received a request to reset the password for your Aviora Education account (<strong>${safeEmail}</strong>). Enter this 6-digit verification code on the password verification page:
             </p>
-            <div style="margin:18px 0;padding:16px;text-align:center;background:#FAF7F0;border:1px solid #D8B467;border-radius:10px;">
-              <span style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:30px;font-weight:700;letter-spacing:8px;color:#14171E;">${safeCode}</span>
+            <div style="margin:18px 0;padding:18px 16px;text-align:center;background:#FAF7F0;border:1.5px solid #D8B467;border-radius:12px;">
+              <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#8A5A12;margin-bottom:6px;">6-Digit Verification Code</div>
+              <span style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:32px;font-weight:800;letter-spacing:9px;color:#14171E;">${safeCode}</span>
+              <div style="font-size:12px;color:#6B7280;margin-top:8px;">Expires in <strong>${expiresInMinutes} minutes</strong> (${expText})</div>
             </div>
-            <p style="margin:0 0 10px 0;font-size:13px;line-height:1.55;color:#4B5563;">
-              This code remains valid for ${expiresInMinutes} minutes.
-            </p>
+            <div style="margin:16px 0;padding:12px 14px;background:#FEF2F2;border:1px solid #FECACA;border-radius:8px;font-size:13px;line-height:1.55;color:#991B1B;">
+              <strong>Security Reminder:</strong> Never share this verification code with anyone. Aviora Education staff will never ask for your verification code or password.
+            </div>
             <p style="margin:0;font-size:13px;line-height:1.55;color:#6B7280;">
-              If you did not initiate this request, you can safely ignore this email and your password will remain unchanged.
+              If you did not request a password reset, you can safely ignore this email and your password will remain unchanged.
             </p>
           </td>
         </tr>
         <tr>
           <td style="padding:14px 24px;background:#FAF8F3;border-top:1px solid #ECE7DA;font-size:12px;color:#6B7280;">
-            Sent to ${safeEmail} by Aviora Education. You will also receive important account updates and lesson notifications at this address.
+            Sent to <strong>${safeEmail}</strong> by Aviora Education • Website security &amp; notifications
           </td>
         </tr>
       </table>
@@ -995,29 +1103,38 @@ function buildVerificationCodeEmail({ userName, recipientEmail, code, expiresInM
   return { subject, text, html };
 }
 
-function buildNotificationEmailText({ userName, recipientEmail, title, message, link }) {
+function buildNotificationEmailText({ userName, recipientEmail, title, message, link, timestamp, baseUrl }) {
+  const appBase = (baseUrl || getPublicAppBaseUrl()).replace(/\/+$/, '');
   const portalUrl = link && link.startsWith('http')
     ? link
-    : `https://avioraeducation.vercel.app/${link ? (link.startsWith('#') ? link : '#' + link.replace(/^\//, '')) : '#student-portal'}`;
+    : `${appBase}/${link ? (link.startsWith('#') ? link : '#' + link.replace(/^\//, '')) : '#student-portal'}`;
+  const formattedTime = new Date(timestamp || Date.now()).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'UTC' }) + ' UTC';
   return [
+    `Aviora Education Notification`,
+    `Date & Time: ${formattedTime}`,
+    '',
     `Hello ${userName || 'Aviora Member'},`,
     '',
     title || 'Aviora Education Notification',
     '',
     message || '',
     '',
-    `View in Aviora Education: ${portalUrl}`,
+    `Open in Aviora Education: ${portalUrl}`,
     '',
-    `This account notification was sent to ${recipientEmail}.`
+    `This notification was sent to ${recipientEmail}. Manage preferences in Account Settings.`
   ].join('\n');
 }
 
-function buildNotificationEmailHtml({ userName, recipientEmail, title, message, type, link }) {
+function buildNotificationEmailHtml({ userName, recipientEmail, title, message, type, link, timestamp, baseUrl }) {
+  const appBase = (baseUrl || getPublicAppBaseUrl()).replace(/\/+$/, '');
+  const logoUrl = `${appBase}/assets/logo.png`;
   const safeName = String(userName || 'Aviora Member').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   const safeTitle = String(title || 'Aviora Notification').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   const safeMsg = String(message || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   const safeEmail = String(recipientEmail || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const formattedTime = new Date(timestamp || Date.now()).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'UTC' }) + ' UTC';
   const categoryMap = {
+    registration: 'Account Registration',
     lesson_reminder: 'Upcoming Class Reminder',
     reminder: 'Class Reminder',
     lesson_alert: 'Live Class Update',
@@ -1027,31 +1144,52 @@ function buildNotificationEmailHtml({ userName, recipientEmail, title, message, 
     booking_update: 'Schedule Update',
     schedule: 'Schedule Update',
     calendar: 'Calendar Update',
-    refund: 'Wallet Update',
+    payment: 'Payment & Transaction Update',
+    transaction: 'Transaction Update',
+    refund: 'Wallet & Refund Update',
     wallet: 'Wallet Balance Notice',
     wallet_support: 'Wallet Support',
+    payout: 'Payout Update',
+    subscription: 'Subscription Plan Update',
+    announcement: 'Announcement & System Update',
+    system_update: 'System Update',
     approval: 'Account Update',
-    security: 'Account Security Notice'
+    application: 'Educator Application Update',
+    security: 'Account Security Alert'
   };
   const badgeLabel = categoryMap[type] || 'Aviora Account Notification';
-  const portalUrl = link && link.startsWith('http') ? link : `https://avioraeducation.vercel.app/${link ? (link.startsWith('#') ? link : '#' + link.replace(/^\//, '')) : '#student-portal'}`;
+  const portalUrl = link && link.startsWith('http') ? link : `${appBase}/${link ? (link.startsWith('#') ? link : '#' + link.replace(/^\//, '')) : '#student-portal'}`;
 
   return `
     <!DOCTYPE html>
     <html lang="en">
     <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #FAF6F0; margin: 0; padding: 24px 16px; color: #1A202C;">
-      <div style="max-width: 560px; margin: 0 auto; background: #FFFFFF; border-radius: 14px; border: 1px solid #E5DEC9; overflow: hidden;">
+      <div style="max-width: 560px; margin: 0 auto; background: #FFFFFF; border-radius: 14px; border: 1px solid #E5DEC9; overflow: hidden; box-shadow: 0 4px 18px rgba(20,23,30,0.06);">
         <div style="background: #1E1B18; padding: 18px 24px; border-bottom: 3px solid #C68A28;">
-          <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #E6B566; font-weight: 700; margin-bottom: 4px;">
-            Aviora Education
-          </div>
-          <div style="font-size: 18px; font-weight: 700; color: #FFFFFF;">
-            ${safeTitle}
-          </div>
+          <table role="presentation" cellspacing="0" cellpadding="0" style="width:100%;">
+            <tr>
+              <td style="width:52px;vertical-align:middle;padding-right:12px;">
+                <img src="${logoUrl}" alt="Aviora Education Logo" width="44" height="36" style="display:block;border-radius:6px;object-fit:contain;" />
+              </td>
+              <td style="vertical-align:middle;">
+                <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #E6B566; font-weight: 700; margin-bottom: 3px;">
+                  Aviora Education
+                </div>
+                <div style="font-size: 17px; font-weight: 700; color: #FFFFFF; line-height: 1.3;">
+                  ${safeTitle}
+                </div>
+              </td>
+            </tr>
+          </table>
         </div>
         <div style="padding: 24px;">
-          <div style="display: inline-block; background: #FAF3E3; color: #8A5A12; border: 1px solid #E3C98F; border-radius: 999px; padding: 4px 12px; font-size: 11px; font-weight: 700; margin-bottom: 14px;">
-            ${badgeLabel}
+          <div style="margin-bottom: 14px;">
+            <span style="display: inline-block; background: #FAF3E3; color: #8A5A12; border: 1px solid #E3C98F; border-radius: 999px; padding: 4px 12px; font-size: 11px; font-weight: 700;">
+              ${badgeLabel}
+            </span>
+            <span style="display: inline-block; margin-left: 8px; font-size: 11px; color: #6B7280;">
+              ${formattedTime}
+            </span>
           </div>
           <p style="font-size: 14px; color: #2D3748; margin: 0 0 12px 0;">
             Hello <strong>${safeName}</strong>,
@@ -1061,12 +1199,12 @@ function buildNotificationEmailHtml({ userName, recipientEmail, title, message, 
           </div>
           <div style="margin-top: 18px;">
             <a href="${portalUrl}" style="display: inline-block; background: #C68A28; color: #FFFFFF; text-decoration: none; font-weight: 700; font-size: 13px; padding: 11px 22px; border-radius: 8px;">
-              View in Aviora Education
+              Open in Aviora Education →
             </a>
           </div>
         </div>
         <div style="background: #F7F3EB; padding: 14px 24px; font-size: 11px; color: #6B7280; border-top: 1px solid #ECE7DA;">
-          Sent to <strong>${safeEmail}</strong> for your Aviora Education account notifications. You can manage email notification preferences in Settings.
+          Sent to <strong>${safeEmail}</strong> on ${formattedTime}. You can manage notification preferences anytime in Account Settings.
         </div>
       </div>
     </body>
@@ -1074,18 +1212,50 @@ function buildNotificationEmailHtml({ userName, recipientEmail, title, message, 
   `.trim();
 }
 
-async function dispatchRealTimeGmailAPI({ notificationId, userId, userName, recipientEmail, title, message, type, link, subject: customSubject, html: customHtml, text: customText, code = null }) {
-  if (!recipientEmail || !recipientEmail.includes('@')) {
-    return { sent: false, delivered: false, reason: 'invalid_email' };
+const recentEmailDedupCache = new Map();
+const activeEmailTasks = new Set();
+
+function computeEmailDedupKey({ userId, recipientEmail, type, title, message }) {
+  return crypto
+    .createHash('sha256')
+    .update(`${userId || ''}|${String(recipientEmail || '').toLowerCase()}|${type || 'info'}|${title || ''}|${message || ''}`)
+    .digest('hex');
+}
+
+function isDuplicateEmailEvent(dedupKey, windowMs = 60000) {
+  if (!dedupKey) return false;
+  const now = Date.now();
+  // Prune stale entries
+  for (const [k, ts] of recentEmailDedupCache.entries()) {
+    if (now - ts > windowMs) recentEmailDedupCache.delete(k);
   }
-  const subject = customSubject || (type === 'security' ? `Aviora Education — ${title}` : `Aviora Education: ${title}`);
-  const htmlContent = customHtml || buildNotificationEmailHtml({ userName, recipientEmail, title, message, type, link });
-  const textContent = customText || buildNotificationEmailText({ userName, recipientEmail, title, message, link });
+  if (recentEmailDedupCache.has(dedupKey)) return true;
+  recentEmailDedupCache.set(dedupKey, now);
+  return false;
+}
+
+async function flushPendingEmails(maxWaitMs = 3500) {
+  if (activeEmailTasks.size === 0) return;
+  const tasks = Array.from(activeEmailTasks);
+  await Promise.race([
+    Promise.allSettled(tasks),
+    new Promise(resolve => setTimeout(resolve, maxWaitMs))
+  ]);
+}
+
+async function dispatchRealTimeGmailAPI({ notificationId, userId, userName, recipientEmail, title, message, type, link, subject: customSubject, html: customHtml, text: customText, code = null, baseUrl = null, timestamp = null }) {
+  if (!recipientEmail || !recipientEmail.includes('@')) {
+    return { sent: false, delivered: false, reason: 'invalid_email', provider: 'none', error: 'Invalid recipient email.' };
+  }
+  const subject = customSubject || (type === 'security' ? `Aviora Education Security Alert — ${title}` : `Aviora Education: ${title}`);
+  const htmlContent = customHtml || buildNotificationEmailHtml({ userName, recipientEmail, title, message, type, link, timestamp, baseUrl });
+  const textContent = customText || buildNotificationEmailText({ userName, recipientEmail, title, message, link, timestamp, baseUrl });
   let providerUsed = 'none';
   let delivered = false;
+  let lastError = null;
 
   try {
-    // 1. Primary Authenticated SMTP via Nodemailer (Gmail App Password / Custom SMTP -> Primary Inbox)
+    // 1. Primary Authenticated SMTP via Nodemailer (Gmail App Password / Custom SMTP)
     const mailSetup = getMailTransporter();
     if (mailSetup && mailSetup.transporter && mailSetup.config.fromAddress) {
       try {
@@ -1104,7 +1274,8 @@ async function dispatchRealTimeGmailAPI({ notificationId, userId, userName, reci
         providerUsed = 'nodemailer_smtp';
         delivered = true;
       } catch (smtpErr) {
-        console.warn('Nodemailer SMTP send warning:', smtpErr.message);
+        lastError = smtpErr.message || 'SMTP send failed';
+        console.warn('Nodemailer SMTP send warning:', lastError);
       }
     }
 
@@ -1134,9 +1305,12 @@ async function dispatchRealTimeGmailAPI({ notificationId, userId, userName, reci
         if (resp.ok) {
           providerUsed = 'resend_api';
           delivered = true;
+        } else {
+          lastError = `Resend HTTP ${resp.status}`;
         }
       } catch (e) {
         clearTimeout(timeoutId);
+        lastError = e.message;
       }
     }
 
@@ -1166,22 +1340,61 @@ async function dispatchRealTimeGmailAPI({ notificationId, userId, userName, reci
         if (resp.ok) {
           providerUsed = 'brevo_api';
           delivered = true;
+        } else {
+          lastError = `Brevo HTTP ${resp.status}`;
         }
       } catch (e) {
         clearTimeout(timeoutId);
+        lastError = e.message;
       }
     }
 
-    // 4. EmailJS Transactional REST API (server-side when accessToken/private key is set; otherwise hand off cleanly to browser @emailjs/browser SDK)
+    // 4. SendGrid Transactional HTTP API (if SENDGRID_API_KEY configured)
+    const sendgridKey = (process.env.SENDGRID_API_KEY || '').trim();
+    const sendgridFrom = (process.env.SENDGRID_FROM || process.env.EMAIL_FROM || '').trim();
+    if (!delivered && sendgridKey && sendgridFrom && typeof fetch === 'function') {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      try {
+        const fromAddr = sendgridFrom.replace(/^.*<([^>]+)>.*$/, '$1');
+        const resp = await fetch('https://api.sendgrid.com/v3/mail/send', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${sendgridKey}`
+          },
+          body: JSON.stringify({
+            personalizations: [{ to: [{ email: recipientEmail, name: userName || 'Aviora Member' }] }],
+            from: { email: fromAddr, name: 'Aviora Education' },
+            subject,
+            content: [
+              { type: 'text/plain', value: textContent },
+              { type: 'text/html', value: htmlContent }
+            ]
+          }),
+          signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+        if (resp.ok) {
+          providerUsed = 'sendgrid_api';
+          delivered = true;
+        } else {
+          lastError = `SendGrid HTTP ${resp.status}`;
+        }
+      } catch (e) {
+        clearTimeout(timeoutId);
+        lastError = e.message;
+      }
+    }
+
+    // 5. EmailJS Server-Side REST API (requires EMAILJS_PRIVATE_KEY kept strictly server-side)
     const emailjsServiceId = (process.env.EMAILJS_SERVICE_ID || '').trim();
     const emailjsTemplateId = code
       ? (process.env.EMAILJS_RESET_TEMPLATE_ID || process.env.EMAILJS_TEMPLATE_ID || '').trim()
       : (process.env.EMAILJS_NOTIFICATION_TEMPLATE_ID || process.env.EMAILJS_TEMPLATE_ID || '').trim();
     const emailjsPublicKey = (process.env.EMAILJS_PUBLIC_KEY || '').trim();
     const emailjsPrivateKey = (process.env.EMAILJS_PRIVATE_KEY || '').trim();
-    const hasEmailJSBase = Boolean(emailjsServiceId && emailjsTemplateId && emailjsPublicKey);
-
-    if (!delivered && hasEmailJSBase && emailjsPrivateKey && typeof fetch === 'function') {
+    if (!delivered && emailjsServiceId && emailjsTemplateId && emailjsPublicKey && emailjsPrivateKey && typeof fetch === 'function') {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 5000);
       try {
@@ -1214,15 +1427,18 @@ async function dispatchRealTimeGmailAPI({ notificationId, userId, userName, reci
         });
         clearTimeout(timeoutId);
         if (resp.ok) {
-          providerUsed = 'emailjs_api';
+          providerUsed = 'emailjs_server_api';
           delivered = true;
+        } else {
+          lastError = `EmailJS HTTP ${resp.status}`;
         }
       } catch (e) {
         clearTimeout(timeoutId);
+        lastError = e.message;
       }
     }
 
-    // 5. Google Apps Script / Gmail Webhook (sends directly from Google account to Inbox)
+    // 6. Google Apps Script / Gmail Webhook (sends directly from Google account to Inbox)
     const gmailWebhookUrl = (process.env.GMAIL_WEBHOOK_URL || process.env.GOOGLE_SCRIPT_EMAIL_URL || '').trim();
     if (!delivered && gmailWebhookUrl && typeof fetch === 'function') {
       const controller = new AbortController();
@@ -1247,51 +1463,12 @@ async function dispatchRealTimeGmailAPI({ notificationId, userId, userName, reci
         if (resp.ok) {
           providerUsed = 'google_script_gmail_api';
           delivered = true;
+        } else {
+          lastError = `Gmail Webhook HTTP ${resp.status}`;
         }
       } catch (e) {
         clearTimeout(timeoutId);
-      }
-    }
-
-    // Skip FormSubmit fallback when client EmailJS is configured so browser @emailjs/browser sends directly
-    const needsClientEmailJS = !delivered && hasEmailJSBase && !emailjsPrivateKey;
-
-    // 6. Optional FormSubmit Fallback only when no authenticated SMTP/EmailJS/API provider is active
-    if (!delivered && !needsClientEmailJS && typeof fetch === 'function' && process.env.DISABLE_EXTERNAL_EMAIL_RELAY !== 'true') {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 4500);
-      try {
-        const resp = await fetch(`https://formsubmit.co/ajax/${encodeURIComponent(recipientEmail)}`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            'Origin': 'https://avioraeducation.vercel.app',
-            'Referer': 'https://avioraeducation.vercel.app/'
-          },
-          body: JSON.stringify({
-            _subject: subject,
-            _template: 'basic',
-            _captcha: 'false',
-            Service: 'Aviora Education',
-            Recipient: userName || recipientEmail,
-            Subject: title,
-            ...(code ? { Verification_Code: code } : {}),
-            Message: message
-          }),
-          signal: controller.signal
-        });
-        clearTimeout(timeoutId);
-        if (resp.ok) {
-          const json = await resp.json().catch(() => null);
-          const fsOk = json && (json.success === true || json.success === 'true');
-          if (fsOk) {
-            providerUsed = 'formsubmit_relay';
-            delivered = true;
-          }
-        }
-      } catch (e) {
-        clearTimeout(timeoutId);
+        lastError = e.message;
       }
     }
 
@@ -1309,40 +1486,74 @@ async function dispatchRealTimeGmailAPI({ notificationId, userId, userName, reci
         db.prepare(`
           UPDATE email_notifications_log
           SET api_provider = ?,
-              delivery_status = ?
+              delivery_status = ?,
+              last_error = ?,
+              attempts = COALESCE(attempts, 0) + 1
           WHERE notification_id = ?
-        `).run(providerUsed, delivered ? 'delivered' : (needsClientEmailJS ? 'client_relay' : 'pending_configuration'), notificationId);
+        `).run(providerUsed, delivered ? 'delivered' : 'failed', delivered ? null : lastError, notificationId);
       }
     } catch (e) { }
 
-    return { sent: delivered, delivered, recipientEmail, provider: providerUsed, subject, needsClientEmailJS };
+    return { sent: delivered, delivered, recipientEmail, provider: providerUsed, subject, error: lastError };
   } catch (err) {
-    return { sent: false, delivered: false, recipientEmail, provider: providerUsed, subject, needsClientEmailJS: false };
+    return { sent: false, delivered: false, recipientEmail, provider: providerUsed, subject, error: err.message };
   }
 }
 
-function sendNotification(userId, title, message, type = 'info', link = null) {
+function enqueueNotificationEmail(job) {
+  const task = (async () => {
+    const maxAttempts = 2;
+    let result = null;
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      result = await dispatchRealTimeGmailAPI(job);
+      if (result && result.delivered) break;
+      if (!getMailTransportStatus().configured) break;
+      if (attempt < maxAttempts) {
+        await new Promise(r => setTimeout(r, 450));
+      }
+    }
+    return result;
+  })();
+  activeEmailTasks.add(task);
+  task.finally(() => activeEmailTasks.delete(task));
+  return task;
+}
+
+function sendNotification(userId, title, message, type = 'info', link = null, options = {}) {
   try {
-    if (!isNotificationAllowed(userId, type)) {
+    const decision = evaluateNotificationDelivery(userId, type, options);
+    if (!decision.websiteAllowed && !decision.emailAllowed) {
       return null;
     }
 
     const userAccount = getLinkedGmailForUser(userId);
     const recipientEmail = userAccount ? userAccount.linkedEmail : null;
     const userName = userAccount ? userAccount.name : 'Aviora Member';
-    const subject = `[Aviora Education] ${title}`;
+    const subject = decision.isCriticalSecurity ? `Aviora Education Security Alert — ${title}` : `[Aviora Education] ${title}`;
+    const dedupKey = computeEmailDedupKey({ userId, recipientEmail, type, title, message });
 
     const stmt = db.prepare(`
       INSERT INTO notifications (
-        user_id, title, message, type, is_read, link,
+        user_id, title, message, type, is_read, in_app_visible, link,
         email_sent, email_recipient, email_sent_at, email_provider, email_subject
       )
-      VALUES (?, ?, ?, ?, 0, ?, 1, ?, CURRENT_TIMESTAMP, 'gmail_free_api', ?)
+      VALUES (?, ?, ?, ?, 0, ?, ?, 0, ?, CURRENT_TIMESTAMP, 'queued', ?)
     `);
-    const res = stmt.run(userId, title, message, type, link || null, recipientEmail, subject);
+    const res = stmt.run(
+      userId,
+      title,
+      message,
+      type,
+      decision.websiteAllowed ? 1 : 0,
+      link || null,
+      recipientEmail,
+      subject
+    );
     const notifId = res.lastInsertRowid;
 
-    if (recipientEmail && (!userAccount || userAccount.gmailEnabled !== false)) {
+    if (decision.emailAllowed && recipientEmail && !isDuplicateEmailEvent(dedupKey)) {
+      const nowIso = Date.now();
+      const baseUrl = options.baseUrl || getPublicAppBaseUrl();
       try {
         const htmlContent = buildNotificationEmailHtml({
           userName,
@@ -1350,30 +1561,32 @@ function sendNotification(userId, title, message, type = 'info', link = null) {
           title,
           message,
           type,
-          link
+          link,
+          timestamp: nowIso,
+          baseUrl
         });
         db.prepare(`
           INSERT INTO email_notifications_log (
             notification_id, user_id, recipient_email, recipient_name,
-            subject, message, html_content, type, link, api_provider, delivery_status
+            subject, message, html_content, type, link, dedup_key, api_provider, delivery_status
           )
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'gmail_free_api', 'delivered')
-        `).run(notifId, userId, recipientEmail, userName, subject, message, htmlContent, type || 'info', link || null);
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'queued', 'queued')
+        `).run(notifId, userId, recipientEmail, userName, subject, message, htmlContent, type || 'info', link || null, dedupKey);
       } catch (logErr) { }
 
-      // Asynchronously dispatch real-time email notification via free API (non-blocking)
-      Promise.resolve().then(() =>
-        dispatchRealTimeGmailAPI({
-          notificationId: notifId,
-          userId,
-          userName,
-          recipientEmail,
-          title,
-          message,
-          type,
-          link
-        })
-      ).catch(() => { });
+      enqueueNotificationEmail({
+        notificationId: notifId,
+        userId,
+        userName,
+        recipientEmail,
+        title,
+        message,
+        type,
+        link,
+        subject,
+        timestamp: nowIso,
+        baseUrl
+      });
     }
 
     return notifId;
@@ -2677,7 +2890,7 @@ function buildRegistrationImmutableSnapshot(role, data = {}) {
   };
 }
 
-app.post('/api/auth/register', (req, res) => {
+app.post('/api/auth/register', async (req, res) => {
   try {
     const {
       name, email, password, role, phone,
@@ -2831,9 +3044,27 @@ app.post('/api/auth/register', (req, res) => {
       timezone: userTimezone,
       language: userLanguage,
       linked_gmail: cleanEmail,
+      notif_website: 1,
+      notif_gmail: 1,
+      notif_security_emails: 1,
+      notif_announcements: 1,
+      notif_transactions: 1,
       registration_immutable: registrationImmutable,
       ...(tutorDraftProfile ? { tutor_signup_profile: tutorDraftProfile } : {})
     });
+
+    const welcomeLink = (designatedRole === 'tutor' || designatedRole === 'teacher') ? '#teacher-application' : '#student-portal';
+    sendNotification(
+      userId,
+      'Welcome to Aviora Education — Account Created',
+      `Welcome ${name.trim()}! Your ${designatedRole === 'tutor' ? 'Educator' : 'Student'} account (${cleanEmail}) is now active. Important account updates, verification alerts, and session notifications will be sent to this address.`,
+      'registration',
+      welcomeLink,
+      { baseUrl: getPublicAppBaseUrl(req) }
+    );
+    if (isVercel) {
+      await flushPendingEmails(2500);
+    }
 
     const token = signUserToken(
       {
@@ -2953,20 +3184,10 @@ app.post('/api/auth/login', (req, res) => {
       return res.status(403).json({ error: 'Your account is deactivated or suspended. Please contact Aviora support.' });
     }
 
-    // Strict password verification with guaranteed support for Krystel Comia and Joshua Garcia accounts
-    const isKrystel = cleanEmail === 'comiakrystel65@gmail.com';
-    const isKrystelPass = isKrystel && (password === 'Krystel123._' || password === 'Krystel123_');
-    const isJoshua = cleanEmail === 'joshuagarcia@gmail.com';
-    const isJoshuaPass = isJoshua && (password === 'Joshua123_' || password === 'Joshua123._');
-    const validPassword = isKrystelPass || isJoshuaPass || bcrypt.compareSync(password, user.password_hash);
+    // Strict bcrypt password verification so reset passwords immediately invalidate prior passwords
+    const validPassword = bcrypt.compareSync(password, user.password_hash);
     if (!validPassword) {
       return res.status(401).json({ error: 'Invalid email or password. Please verify your credentials and try again.' });
-    }
-
-    if ((isKrystelPass || isJoshuaPass) && !bcrypt.compareSync(password, user.password_hash)) {
-      const newHash = bcrypt.hashSync(password, 10);
-      db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(newHash, user.id);
-      user.password_hash = newHash;
     }
 
     const userPrefs = getUserPreferences(user.id);
@@ -3172,18 +3393,43 @@ app.post('/api/auth/sync-account', (req, res) => {
 // FORGOT PASSWORD / EMAILJS VERIFICATION CODE FLOW
 // ===================================================
 
-// Provide public EmailJS configuration if configured in environment
+// Public safe mail delivery readiness indicator (NO secrets or keys ever exposed to client)
 app.get('/api/auth/emailjs-config', (req, res) => {
+  const status = getMailTransportStatus();
   return res.json({
-    serviceId: process.env.EMAILJS_SERVICE_ID || '',
-    templateId: process.env.EMAILJS_TEMPLATE_ID || '',
-    resetTemplateId: process.env.EMAILJS_RESET_TEMPLATE_ID || process.env.EMAILJS_TEMPLATE_ID || '',
-    publicKey: process.env.EMAILJS_PUBLIC_KEY || ''
+    serverManaged: true,
+    configured: status.configured
   });
 });
 
-// In-memory cache + persistent SQLite store + HMAC challenge tokens for serverless password resets
+// In-memory cache + persistent SQLite store + HMAC challenge tokens + rate limiters for password resets
 const passwordResetStore = new Map();
+const forgotRequestIpLimiter = new Map();
+const forgotRequestEmailLimiter = new Map();
+const forgotVerifyLimiter = new Map();
+const FORGOT_RESEND_COOLDOWN_MS = 45 * 1000;
+const FORGOT_CODE_EXPIRY_MINUTES = 5;
+
+function checkSlidingWindowRateLimit(storeMap, key, maxHits, windowMs) {
+  const now = Date.now();
+  const prev = storeMap.get(key) || [];
+  const valid = prev.filter(ts => now - ts < windowMs);
+  if (valid.length >= maxHits) {
+    const oldest = valid[0];
+    const retryAfterSec = Math.max(1, Math.ceil((windowMs - (now - oldest)) / 1000));
+    storeMap.set(key, valid);
+    return { allowed: false, retryAfterSec };
+  }
+  valid.push(now);
+  storeMap.set(key, valid);
+  return { allowed: true, retryAfterSec: 0 };
+}
+
+function getClientIp(req) {
+  const fwd = req.headers['x-forwarded-for'];
+  if (fwd) return String(fwd).split(',')[0].trim();
+  return req.ip || req.socket?.remoteAddress || 'unknown';
+}
 
 function hashResetCode(email, code) {
   return crypto
@@ -3260,10 +3506,10 @@ function findUserByEmailOrLinkedGoogle(rawEmail) {
   return user || null;
 }
 
-// 1. Request verification code for password reset (sends code to the provided email & enables inbox notifications)
+// 1. Request verification code for password reset (5-min expiry, cooldown, rate-limited, anti-enumeration)
 app.post('/api/auth/forgot-password/request', async (req, res) => {
   try {
-    const { email } = req.body;
+    const { email } = req.body || {};
     if (!email || typeof email !== 'string' || !email.trim()) {
       return res.status(400).json({ error: 'Please enter your registered email address.' });
     }
@@ -3272,12 +3518,76 @@ app.post('/api/auth/forgot-password/request', async (req, res) => {
       return res.status(400).json({ error: 'Please enter a valid email address.' });
     }
 
-    const user = findUserByEmailOrLinkedGoogle(cleanEmail);
-    if (!user) {
-      return res.status(404).json({ error: 'No account registered with this email address. Please check your spelling or sign up.' });
+    const clientIp = getClientIp(req);
+    const ipLimit = checkSlidingWindowRateLimit(forgotRequestIpLimiter, clientIp, 15, 15 * 60 * 1000);
+    if (!ipLimit.allowed) {
+      return res.status(429).json({
+        error: `Too many password reset attempts. Please try again in ${ipLimit.retryAfterSec} seconds.`,
+        retryAfter: ipLimit.retryAfterSec
+      });
     }
 
-    // Deliver verification code directly to the provided email (and ensure notifications remain enabled on this email)
+    // Enforce cooldown period per email regardless of account existence (prevents abuse & enumeration)
+    const nowMs = Date.now();
+    let existingLastSent = forgotRequestEmailLimiter.get(`${cleanEmail}:last`) || 0;
+    try {
+      const recentRow = db.prepare(`
+        SELECT last_sent_at, consumed FROM password_reset_codes
+        WHERE LOWER(email) = LOWER(?) AND consumed = 0
+        ORDER BY id DESC LIMIT 1
+      `).get(cleanEmail);
+      if (recentRow && Number(recentRow.last_sent_at) > existingLastSent) {
+        existingLastSent = Number(recentRow.last_sent_at);
+      }
+    } catch (e) { }
+
+    const cooldownElapsed = nowMs - existingLastSent;
+    if (existingLastSent > 0 && cooldownElapsed < FORGOT_RESEND_COOLDOWN_MS) {
+      const waitSec = Math.max(1, Math.ceil((FORGOT_RESEND_COOLDOWN_MS - cooldownElapsed) / 1000));
+      return res.status(429).json({
+        error: `Please wait ${waitSec} seconds before requesting another verification code.`,
+        retryAfter: waitSec
+      });
+    }
+
+    const emailWindowLimit = checkSlidingWindowRateLimit(forgotRequestEmailLimiter, `${cleanEmail}:window`, 5, 15 * 60 * 1000);
+    if (!emailWindowLimit.allowed) {
+      return res.status(429).json({
+        error: `Maximum verification code requests reached for this address. Please wait ${emailWindowLimit.retryAfterSec} seconds.`,
+        retryAfter: emailWindowLimit.retryAfterSec
+      });
+    }
+
+    // Check server mail configuration upfront so config state never leaks account existence
+    const mailStatus = getMailTransportStatus();
+    if (!mailStatus.configured) {
+      return res.status(503).json({
+        error: 'Email delivery service is not currently configured on the server. Please configure GMAIL_USER and GMAIL_APP_PASSWORD (or SMTP/Resend/Brevo/SendGrid/EmailJS server credentials) in environment variables.',
+        code: 'EMAIL_DELIVERY_UNAVAILABLE',
+        emailConfigRequired: true
+      });
+    }
+
+    forgotRequestEmailLimiter.set(`${cleanEmail}:last`, nowMs);
+
+    const user = findUserByEmailOrLinkedGoogle(cleanEmail);
+    const expiresInMinutes = FORGOT_CODE_EXPIRY_MINUTES;
+    const genericResponse = {
+      success: true,
+      message: `If an account is associated with ${cleanEmail}, a 6-digit verification code has been sent to that email address.`,
+      email: cleanEmail,
+      recoveryEmail: cleanEmail,
+      expiresInMinutes,
+      cooldownSeconds: Math.round(FORGOT_RESEND_COOLDOWN_MS / 1000)
+    };
+
+    if (!user) {
+      // Constant-time dummy work so non-existent addresses do not leak via timing differences
+      hashResetCode(cleanEmail, crypto.randomInt(100000, 1000000).toString());
+      await new Promise(r => setTimeout(r, 120));
+      return res.json(genericResponse);
+    }
+
     const linkedInfo = getLinkedGmailForUser(user.id);
     const recoveryEmail = cleanEmail.includes('@')
       ? cleanEmail
@@ -3286,18 +3596,16 @@ app.post('/api/auth/forgot-password/request', async (req, res) => {
 
     try {
       const existingPrefs = getUserPreferences(user.id);
-      if (!existingPrefs || !existingPrefs.linked_gmail || existingPrefs.notif_gmail === 0) {
+      if (!existingPrefs || !existingPrefs.linked_gmail) {
         saveUserPreferences(user.id, {
-          linked_gmail: existingPrefs?.linked_gmail || recoveryEmail,
-          notif_gmail: 1
+          linked_gmail: existingPrefs?.linked_gmail || recoveryEmail
         });
       }
     } catch (prefErr) { }
 
-    // Generate cryptographically random 6-digit numeric verification code
+    // Generate cryptographically random 6-digit numeric verification code (hashed in DB, 5-min expiry)
     const code = crypto.randomInt(100000, 1000000).toString();
-    const expiresInMinutes = 10;
-    const expiresAt = Date.now() + expiresInMinutes * 60 * 1000;
+    const expiresAt = nowMs + expiresInMinutes * 60 * 1000;
     const codeHash = hashResetCode(cleanEmail, code);
 
     const resetEntry = {
@@ -3305,6 +3613,8 @@ app.post('/api/auth/forgot-password/request', async (req, res) => {
       expiresAt,
       attempts: 0,
       verified: false,
+      consumed: false,
+      lastSentAt: nowMs,
       userName,
       userId: user.id,
       accountEmail: user.email,
@@ -3319,9 +3629,9 @@ app.post('/api/auth/forgot-password/request', async (req, res) => {
     try {
       db.prepare('DELETE FROM password_reset_codes WHERE LOWER(email) = LOWER(?) OR user_id = ?').run(cleanEmail, user.id);
       db.prepare(`
-        INSERT INTO password_reset_codes (email, recovery_email, user_id, code_hash, expires_at)
-        VALUES (?, ?, ?, ?, ?)
-      `).run(cleanEmail, recoveryEmail, user.id, codeHash, expiresAt);
+        INSERT INTO password_reset_codes (email, recovery_email, user_id, code_hash, attempts, verified, consumed, last_sent_at, expires_at)
+        VALUES (?, ?, ?, ?, 0, 0, 0, ?, ?)
+      `).run(cleanEmail, recoveryEmail, user.id, codeHash, nowMs, expiresAt);
     } catch (dbErr) {
       console.warn('Password reset SQLite store notice:', dbErr.message);
     }
@@ -3338,14 +3648,17 @@ app.post('/api/auth/forgot-password/request', async (req, res) => {
       { expiresIn: `${expiresInMinutes}m` }
     );
 
+    const appBaseUrl = getPublicAppBaseUrl(req);
     const emailContent = buildVerificationCodeEmail({
       userName,
       recipientEmail: recoveryEmail,
       code,
-      expiresInMinutes
+      expiresInMinutes,
+      expiresAt,
+      baseUrl: appBaseUrl
     });
 
-    let dispatchResult = { sent: false, delivered: false, provider: 'none', needsClientEmailJS: false };
+    let dispatchResult = { sent: false, delivered: false, provider: 'none', error: null };
     try {
       dispatchResult = await dispatchRealTimeGmailAPI({
         notificationId: null,
@@ -3359,9 +3672,11 @@ app.post('/api/auth/forgot-password/request', async (req, res) => {
         html: emailContent.html,
         code,
         type: 'security',
-        link: '#login'
+        link: '#login',
+        baseUrl: appBaseUrl
       });
     } catch (dispatchErr) {
+      dispatchResult.error = dispatchErr.message;
       console.warn('Recovery code email relay warning:', dispatchErr.message);
     }
 
@@ -3369,40 +3684,44 @@ app.post('/api/auth/forgot-password/request', async (req, res) => {
       db.prepare(`
         INSERT INTO email_notifications_log (
           notification_id, user_id, recipient_email, recipient_name,
-          subject, message, html_content, type, link, api_provider, delivery_status
+          subject, message, html_content, type, link, api_provider, delivery_status, last_error
         )
-        VALUES (NULL, ?, ?, ?, ?, ?, NULL, 'security', '#login', ?, ?)
+        VALUES (NULL, ?, ?, ?, ?, ?, NULL, 'security', '#login', ?, ?, ?)
       `).run(
         user.id,
         recoveryEmail,
         userName,
-        'Password Reset Verification Code',
+        emailContent.subject,
         `6-digit password reset verification code requested for ${recoveryEmail}.`,
         dispatchResult.provider || 'none',
-        dispatchResult.delivered ? 'delivered' : (dispatchResult.needsClientEmailJS ? 'client_relay' : 'not_configured')
+        dispatchResult.delivered ? 'delivered' : 'failed',
+        dispatchResult.delivered ? null : (dispatchResult.error || 'Delivery failed')
       );
     } catch (logErr) { }
 
-    if (!dispatchResult.delivered && !dispatchResult.needsClientEmailJS) {
-      return res.status(503).json({
-        error: 'We could not deliver the verification email because no mail sender is currently configured on the server. Please configure GMAIL_USER & GMAIL_APP_PASSWORD (or SMTP/Resend/EmailJS credentials) in environment settings.',
-        code: 'EMAIL_DELIVERY_UNAVAILABLE',
-        emailConfigRequired: true
+    if (!dispatchResult.delivered) {
+      // Roll back un-delivered reset record so rate limits stay accurate
+      passwordResetStore.delete(cleanEmail);
+      try { db.prepare('DELETE FROM password_reset_codes WHERE LOWER(email) = LOWER(?)').run(cleanEmail); } catch (e) { }
+      return res.status(502).json({
+        error: 'We could not deliver the verification email right now. Please verify your email address or try again in a moment.',
+        code: 'EMAIL_DELIVERY_FAILED'
       });
     }
 
+    // Record in-app security trail WITHOUT sending a duplicate second email
+    sendNotification(
+      user.id,
+      'Password Reset Requested',
+      `A 6-digit password reset code was sent to ${recoveryEmail}. If this was not you, secure your account immediately.`,
+      'security',
+      '#student-settings',
+      { skipEmail: true, criticalSecurity: true, baseUrl: appBaseUrl }
+    );
+
     return res.json({
-      success: true,
-      message: `A 6-digit verification code has been sent to ${recoveryEmail}.`,
-      email: cleanEmail,
-      recoveryEmail,
-      userName,
-      emailDelivered: Boolean(dispatchResult.delivered),
-      needsClientEmailJS: Boolean(dispatchResult.needsClientEmailJS),
-      provider: dispatchResult.provider,
-      challengeToken,
-      ...(dispatchResult.needsClientEmailJS ? { code } : {}),
-      expiresInMinutes
+      ...genericResponse,
+      challengeToken
     });
   } catch (error) {
     console.error('Forgot password request error:', error);
@@ -3413,11 +3732,20 @@ app.post('/api/auth/forgot-password/request', async (req, res) => {
 // 2. Verify submitted 6-digit code
 app.post('/api/auth/forgot-password/verify', (req, res) => {
   try {
-    const { email, code, challengeToken } = req.body;
+    const { email, code, challengeToken } = req.body || {};
     if (!email || !code) {
       return res.status(400).json({ error: 'Email and 6-digit verification code are required.' });
     }
     const cleanEmail = email.toLowerCase().trim();
+    const clientIp = getClientIp(req);
+    const verifyIpLimit = checkSlidingWindowRateLimit(forgotVerifyLimiter, `${clientIp}:${cleanEmail}`, 20, 15 * 60 * 1000);
+    if (!verifyIpLimit.allowed) {
+      return res.status(429).json({
+        error: `Too many verification attempts. Please wait ${verifyIpLimit.retryAfterSec} seconds and request a new code.`,
+        retryAfter: verifyIpLimit.retryAfterSec
+      });
+    }
+
     const cleanCode = String(code).replace(/\D/g, '').trim();
     if (cleanCode.length !== 6) {
       return res.status(400).json({ error: 'Please enter the exact 6-digit numeric verification code sent to your email.' });
@@ -3429,7 +3757,8 @@ app.post('/api/auth/forgot-password/verify', (req, res) => {
     try {
       dbRow = db.prepare(`
         SELECT * FROM password_reset_codes
-        WHERE LOWER(email) = LOWER(?) OR LOWER(recovery_email) = LOWER(?)
+        WHERE (LOWER(email) = LOWER(?) OR LOWER(recovery_email) = LOWER(?))
+          AND COALESCE(consumed, 0) = 0
         ORDER BY id DESC LIMIT 1
       `).get(cleanEmail, cleanEmail);
     } catch (e) { }
@@ -3449,23 +3778,23 @@ app.post('/api/auth/forgot-password/verify', (req, res) => {
       }
     }
 
-    const activeSource = dbRow || memRecord || tokenChallenge;
+    const activeSource = dbRow || (memRecord && !memRecord.consumed ? memRecord : null) || tokenChallenge;
     if (!activeSource) {
-      return res.status(400).json({ error: 'No active verification code found for this email, or it has expired. Please request a new code.' });
+      return res.status(400).json({ error: 'Invalid or expired verification code. Please check your code or request a new one.' });
     }
 
     const expiresAt = dbRow ? Number(dbRow.expires_at) : (memRecord ? memRecord.expiresAt : (tokenChallenge.exp * 1000));
     if (Date.now() > expiresAt) {
       passwordResetStore.delete(cleanEmail);
       try { db.prepare('DELETE FROM password_reset_codes WHERE LOWER(email) = LOWER(?)').run(cleanEmail); } catch (e) { }
-      return res.status(400).json({ error: 'Verification code has expired. Please request a new code.' });
+      return res.status(400).json({ error: 'Verification code has expired (5-minute limit). Please request a new code.' });
     }
 
     const attempts = dbRow ? Number(dbRow.attempts || 0) : (memRecord ? (memRecord.attempts || 0) : 0);
     if (attempts >= 5) {
       passwordResetStore.delete(cleanEmail);
       try { db.prepare('DELETE FROM password_reset_codes WHERE LOWER(email) = LOWER(?)').run(cleanEmail); } catch (e) { }
-      return res.status(400).json({ error: 'Too many incorrect attempts. Please request a new verification code.' });
+      return res.status(429).json({ error: 'Too many incorrect code attempts. Please request a new verification code.' });
     }
 
     const expectedHash = (dbRow && dbRow.code_hash) || (memRecord && memRecord.codeHash) || (tokenChallenge && tokenChallenge.codeHash);
@@ -3479,9 +3808,9 @@ app.post('/api/auth/forgot-password/verify', (req, res) => {
       if (attempts + 1 >= 5) {
         passwordResetStore.delete(cleanEmail);
         try { db.prepare('DELETE FROM password_reset_codes WHERE LOWER(email) = LOWER(?)').run(cleanEmail); } catch (e) { }
-        return res.status(400).json({ error: 'Too many incorrect attempts. Please request a new verification code.' });
+        return res.status(429).json({ error: 'Too many incorrect code attempts. For your security, please request a new verification code.' });
       }
-      return res.status(400).json({ error: 'Incorrect verification code. Please check your email inbox and enter the exact 6-digit code.' });
+      return res.status(400).json({ error: 'Incorrect verification code. Please check your Gmail inbox and enter the exact 6-digit code.' });
     }
 
     const resolvedRecovery = (dbRow && dbRow.recovery_email) || (memRecord && memRecord.recoveryEmail) || (tokenChallenge && tokenChallenge.recoveryEmail) || cleanEmail;
@@ -3496,7 +3825,7 @@ app.post('/api/auth/forgot-password/verify', (req, res) => {
         nonce: crypto.randomBytes(12).toString('hex')
       },
       JWT_SECRET,
-      { expiresIn: '15m' }
+      { expiresIn: '10m' }
     );
 
     if (memRecord) {
@@ -3521,10 +3850,10 @@ app.post('/api/auth/forgot-password/verify', (req, res) => {
   }
 });
 
-// 3. Set new password following strict security standards
-app.post('/api/auth/forgot-password/reset', (req, res) => {
+// 3. Set new password following strict security standards (strict single-use enforcement)
+app.post('/api/auth/forgot-password/reset', async (req, res) => {
   try {
-    const { email, code, resetToken, newPassword } = req.body;
+    const { email, code, resetToken, newPassword } = req.body || {};
     if (!email || !newPassword || !resetToken) {
       return res.status(400).json({ error: 'Email, verified session token, and new password are required.' });
     }
@@ -3550,6 +3879,27 @@ app.post('/api/auth/forgot-password/reset', (req, res) => {
       return res.status(400).json({ error: 'Verification session is invalid. Please request a new code.' });
     }
 
+    // Strict Single-Use Enforcement against DB & Memory
+    const dbRow = db.prepare(`
+      SELECT * FROM password_reset_codes
+      WHERE (LOWER(email) = LOWER(?) OR LOWER(recovery_email) = LOWER(?))
+        AND code_hash = ?
+      ORDER BY id DESC LIMIT 1
+    `).get(cleanEmail, cleanEmail, candidateHash);
+    const memRecord = passwordResetStore.get(cleanEmail);
+
+    if (dbRow) {
+      if (Number(dbRow.consumed) === 1 || Number(dbRow.verified) !== 1 || dbRow.reset_token !== resetToken) {
+        return res.status(400).json({ error: 'This verification code has already been used or invalidated. Please request a new code.' });
+      }
+    } else if (memRecord) {
+      if (memRecord.consumed || !memRecord.verified || memRecord.resetToken !== resetToken) {
+        return res.status(400).json({ error: 'This verification code has already been used or invalidated. Please request a new code.' });
+      }
+    } else {
+      return res.status(400).json({ error: 'Verification code has already been consumed or expired. Please request a new code.' });
+    }
+
     // Strict Strong Password Requirements (same as registration):
     // 8+ chars, uppercase, lowercase, number, special symbol
     if (newPassword.length < 8) {
@@ -3571,7 +3921,6 @@ app.post('/api/auth/forgot-password/reset', (req, res) => {
     const salt = bcrypt.genSaltSync(10);
     const passwordHash = bcrypt.hashSync(newPassword, salt);
 
-    // Update target user resolved from primary email OR linked Google account
     let user = decodedReset.userId
       ? db.prepare('SELECT id, name, email, role FROM users WHERE id = ?').get(decodedReset.userId)
       : findUserByEmailOrLinkedGoogle(cleanEmail);
@@ -3579,34 +3928,33 @@ app.post('/api/auth/forgot-password/reset', (req, res) => {
     if (!user) {
       user = findUserByEmailOrLinkedGoogle(cleanEmail);
     }
-
-    if (user) {
-      db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(passwordHash, user.id);
-      const notifyAddr = decodedReset.recoveryEmail || cleanEmail || user.email;
-      try {
-        const curPrefs = getUserPreferences(user.id);
-        saveUserPreferences(user.id, {
-          linked_gmail: curPrefs?.linked_gmail || notifyAddr,
-          notif_gmail: 1
-        });
-      } catch (pErr) { }
-      sendNotification(
-        user.id,
-        'Password Updated Successfully',
-        'Your Aviora Education account password was reset using your verified recovery code.',
-        'security',
-        '#settings'
-      );
-    } else {
-      return res.status(404).json({ error: 'Account not found. Please sign up or contact support.' });
+    if (!user) {
+      return res.status(400).json({ error: 'Unable to complete password reset. Please request a new code.' });
     }
 
-    // Clean up single-use reset session
+    db.transaction(() => {
+      db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(passwordHash, user.id);
+      if (dbRow) {
+        db.prepare('UPDATE password_reset_codes SET consumed = 1, used_at = CURRENT_TIMESTAMP WHERE id = ?').run(dbRow.id);
+      }
+      db.prepare('DELETE FROM password_reset_codes WHERE (LOWER(email) = LOWER(?) OR user_id = ?) AND COALESCE(consumed, 0) = 0').run(cleanEmail, user.id);
+    })();
+
     passwordResetStore.delete(cleanEmail);
     if (decodedReset.recoveryEmail) passwordResetStore.delete(decodedReset.recoveryEmail);
-    try {
-      db.prepare('DELETE FROM password_reset_codes WHERE LOWER(email) = LOWER(?) OR user_id = ?').run(cleanEmail, user.id);
-    } catch (e) { }
+
+    const roleSettingsLink = user.role === 'admin' ? '#admin-profile' : ((user.role === 'teacher' || user.role === 'tutor') ? '#teacher-profile' : '#student-settings');
+    sendNotification(
+      user.id,
+      'Password Updated Successfully',
+      'Your Aviora Education account password was reset using your verified 6-digit recovery code. If you did not perform this reset, contact support immediately.',
+      'security',
+      roleSettingsLink,
+      { criticalSecurity: true, baseUrl: getPublicAppBaseUrl(req) }
+    );
+    if (isVercel) {
+      await flushPendingEmails(2500);
+    }
 
     return res.json({
       success: true,
@@ -4993,7 +5341,11 @@ app.put('/api/user/preferences', authenticateToken, (req, res) => {
   try {
     const userId = req.user.id;
     const isAdmin = req.user.role === 'admin';
-    const { theme, language, font_size, timezone, country, notif_lessons, notif_calendar, notif_messages, notif_reports, notif_gmail, linked_gmail } = req.body;
+    const {
+      theme, language, font_size, timezone, country,
+      notif_website, notif_gmail, notif_security_emails, notif_announcements, notif_transactions,
+      notif_lessons, notif_calendar, notif_messages, notif_reports, linked_gmail
+    } = req.body;
 
     const currentPrefs = getUserPreferences(userId); // ensure row exists
     const normStr = (v) => (v === undefined || v === null) ? '' : String(v).trim();
@@ -5051,6 +5403,22 @@ app.put('/api/user/preferences', authenticateToken, (req, res) => {
       return 0;
     };
 
+    if (notif_website !== undefined) {
+      updates.push('notif_website = ?');
+      params.push(parseBool(notif_website));
+    }
+    if (notif_security_emails !== undefined) {
+      updates.push('notif_security_emails = ?');
+      params.push(parseBool(notif_security_emails));
+    }
+    if (notif_announcements !== undefined) {
+      updates.push('notif_announcements = ?');
+      params.push(parseBool(notif_announcements));
+    }
+    if (notif_transactions !== undefined) {
+      updates.push('notif_transactions = ?');
+      params.push(parseBool(notif_transactions));
+    }
     if (notif_lessons !== undefined) {
       updates.push('notif_lessons = ?');
       params.push(parseBool(notif_lessons));
@@ -5105,7 +5473,7 @@ app.put('/api/user/preferences', authenticateToken, (req, res) => {
 });
 
 // Change Password
-app.put('/api/auth/change-password', authenticateToken, (req, res) => {
+app.put('/api/auth/change-password', authenticateToken, async (req, res) => {
   try {
     const { currentPassword, newPassword } = req.body;
     const userId = req.user.id;
@@ -5131,6 +5499,19 @@ app.put('/api/auth/change-password', authenticateToken, (req, res) => {
     const salt = bcrypt.genSaltSync(10);
     const newHash = bcrypt.hashSync(newPassword, salt);
     db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(newHash, userId);
+
+    const roleSettingsLink = user.role === 'admin' ? '#admin-profile' : ((user.role === 'teacher' || user.role === 'tutor') ? '#teacher-profile' : '#student-settings');
+    sendNotification(
+      userId,
+      'Account Password Changed',
+      'Your Aviora Education account password was just updated. If you did not authorize this change, reset your password immediately or contact support.',
+      'security',
+      roleSettingsLink,
+      { criticalSecurity: true, baseUrl: getPublicAppBaseUrl(req) }
+    );
+    if (isVercel) {
+      await flushPendingEmails(2500);
+    }
 
     return res.json({ message: 'Password updated successfully.' });
   } catch (error) {
@@ -5266,6 +5647,11 @@ app.get('/api/account/backup', authenticateToken, (req, res) => {
         language: preferences?.language || "en-US",
         timezone: preferences?.timezone || "America/New_York",
         country: preferences?.country || "United States",
+        notif_website: preferences?.notif_website !== undefined ? preferences.notif_website : 1,
+        notif_gmail: preferences?.notif_gmail !== undefined ? preferences.notif_gmail : 1,
+        notif_security_emails: preferences?.notif_security_emails !== undefined ? preferences.notif_security_emails : 1,
+        notif_announcements: preferences?.notif_announcements !== undefined ? preferences.notif_announcements : 1,
+        notif_transactions: preferences?.notif_transactions !== undefined ? preferences.notif_transactions : 1,
         notif_lessons: preferences?.notif_lessons !== undefined ? preferences.notif_lessons : 1,
         notif_calendar: preferences?.notif_calendar !== undefined ? preferences.notif_calendar : 1,
         notif_messages: preferences?.notif_messages !== undefined ? preferences.notif_messages : 1,
@@ -5608,6 +5994,11 @@ app.post('/api/account/restore', authenticateToken, (req, res) => {
       language: (allowOverwrite && prefsCat.language) ? prefsCat.language : (currentPrefs?.language || prefsCat.language || 'en-US'),
       country: (allowOverwrite && prefsCat.country) ? prefsCat.country : (currentPrefs?.country || prefsCat.country || countryToRestore || 'United States'),
       timezone: (allowOverwrite && prefsCat.timezone) ? prefsCat.timezone : (currentPrefs?.timezone || prefsCat.timezone || tzToRestore || 'America/New_York'),
+      notif_website: currentPrefs?.notif_website !== undefined ? currentPrefs.notif_website : (prefsCat.notif_website !== undefined ? prefsCat.notif_website : 1),
+      notif_gmail: currentPrefs?.notif_gmail !== undefined ? currentPrefs.notif_gmail : (prefsCat.notif_gmail !== undefined ? prefsCat.notif_gmail : 1),
+      notif_security_emails: currentPrefs?.notif_security_emails !== undefined ? currentPrefs.notif_security_emails : (prefsCat.notif_security_emails !== undefined ? prefsCat.notif_security_emails : 1),
+      notif_announcements: currentPrefs?.notif_announcements !== undefined ? currentPrefs.notif_announcements : (prefsCat.notif_announcements !== undefined ? prefsCat.notif_announcements : 1),
+      notif_transactions: currentPrefs?.notif_transactions !== undefined ? currentPrefs.notif_transactions : (prefsCat.notif_transactions !== undefined ? prefsCat.notif_transactions : 1),
       notif_lessons: currentPrefs?.notif_lessons !== undefined ? currentPrefs.notif_lessons : (prefsCat.notif_lessons !== undefined ? prefsCat.notif_lessons : 1),
       notif_calendar: currentPrefs?.notif_calendar !== undefined ? currentPrefs.notif_calendar : (prefsCat.notif_calendar !== undefined ? prefsCat.notif_calendar : 1),
       notif_messages: currentPrefs?.notif_messages !== undefined ? currentPrefs.notif_messages : (prefsCat.notif_messages !== undefined ? prefsCat.notif_messages : 1),
@@ -12689,9 +13080,9 @@ app.get('/api/notifications', authenticateToken, (req, res) => {
       LIMIT 30
     `).all(userId).map(n => ({
       ...n,
-      email_sent: n.email_sent !== undefined && n.email_sent !== null ? n.email_sent : 1,
+      email_sent: n.email_sent !== undefined && n.email_sent !== null ? n.email_sent : 0,
       email_recipient: n.email_recipient || linkedGmail,
-      email_provider: n.email_provider || 'gmail_free_api'
+      email_provider: n.email_provider || 'none'
     }));
 
     const unreadCount = db.prepare(`
@@ -12709,6 +13100,65 @@ app.get('/api/notifications', authenticateToken, (req, res) => {
   } catch (error) {
     console.error('Notifications error:', error);
     res.status(500).json({ error: 'Failed to fetch notifications.' });
+  }
+});
+
+// Admin: Broadcast Announcement or System Update (Website Notification + Gmail respecting user preferences)
+app.post('/api/admin/announcements', authenticateToken, requireRole('admin'), async (req, res) => {
+  try {
+    const { title, message, target_role = 'all', link = '#home' } = req.body || {};
+    if (!title || !String(title).trim() || !message || !String(message).trim()) {
+      return res.status(400).json({ error: 'Announcement title and message are required.' });
+    }
+    const cleanTitle = String(title).trim().slice(0, 140);
+    const cleanMessage = String(message).trim().slice(0, 2000);
+    const cleanLink = (link && String(link).trim()) || '#home';
+    const roleFilter = String(target_role || 'all').toLowerCase();
+
+    let targetUsers = db.prepare("SELECT id, role FROM users WHERE status = 'active'").all();
+    if (roleFilter === 'student') {
+      targetUsers = targetUsers.filter(u => u.role === 'student');
+    } else if (roleFilter === 'tutor' || roleFilter === 'teacher') {
+      targetUsers = targetUsers.filter(u => u.role === 'tutor' || u.role === 'teacher');
+    }
+
+    let queuedCount = 0;
+    const baseUrl = getPublicAppBaseUrl(req);
+    for (const u of targetUsers) {
+      const nid = sendNotification(u.id, cleanTitle, cleanMessage, 'announcement', cleanLink, { baseUrl });
+      if (nid) queuedCount++;
+    }
+    if (isVercel) {
+      await flushPendingEmails(3000);
+    }
+
+    return res.status(201).json({
+      success: true,
+      recipientsTargeted: targetUsers.length,
+      notificationsCreated: queuedCount,
+      message: `Announcement sent to ${queuedCount} recipient(s) via enabled website and Gmail channels.`
+    });
+  } catch (err) {
+    console.error('Admin broadcast announcement error:', err);
+    return res.status(500).json({ error: 'Failed to broadcast announcement.' });
+  }
+});
+
+// Admin: Non-secret Email Delivery Readiness & Stats
+app.get('/api/admin/email-status', authenticateToken, requireRole('admin'), (req, res) => {
+  try {
+    const status = getMailTransportStatus();
+    const logCounts = db.prepare(`
+      SELECT
+        COUNT(*) as total,
+        SUM(CASE WHEN delivery_status = 'delivered' THEN 1 ELSE 0 END) as delivered,
+        SUM(CASE WHEN delivery_status = 'failed' THEN 1 ELSE 0 END) as failed,
+        SUM(CASE WHEN delivery_status = 'queued' THEN 1 ELSE 0 END) as queued
+      FROM email_notifications_log
+    `).get();
+    return res.json({ status, stats: logCounts || {} });
+  } catch (err) {
+    return res.status(500).json({ error: 'Failed to fetch email delivery status.' });
   }
 });
 
@@ -12796,18 +13246,19 @@ app.post('/api/notifications/:id/read', authenticateToken, (req, res) => {
 });
 
 // Test Notification Delivery according to active user preferences
-app.post('/api/notifications/test-delivery', authenticateToken, (req, res) => {
+app.post('/api/notifications/test-delivery', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.id;
-    const { type, title, message } = req.body;
+    const { type, title, message, criticalSecurity } = req.body || {};
     const notifType = type || 'lesson_reminder';
+    const decision = evaluateNotificationDelivery(userId, notifType, { criticalSecurity: Boolean(criticalSecurity) });
 
-    if (!isNotificationAllowed(userId, notifType)) {
+    if (!decision.websiteAllowed && !decision.emailAllowed) {
       return res.json({
         sent: false,
         blocked: true,
         type: notifType,
-        message: `Notification delivery blocked: User has disabled "${notifType}" notifications in preferences.`
+        message: `Notification delivery blocked: User has disabled "${notifType}" notifications across website & email preferences.`
       });
     }
 
@@ -12816,8 +13267,12 @@ app.post('/api/notifications/test-delivery', authenticateToken, (req, res) => {
       title || 'Aviora Notification Alert',
       message || 'This notification was delivered based on your active delivery settings.',
       notifType,
-      '#profile'
+      '#student-settings',
+      { criticalSecurity: Boolean(criticalSecurity), baseUrl: getPublicAppBaseUrl(req) }
     );
+    if (isVercel) {
+      await flushPendingEmails(2500);
+    }
 
     const prefs = getUserPreferences(userId);
     const filterClause = getNotificationFilterClause(prefs);
@@ -12826,6 +13281,8 @@ app.post('/api/notifications/test-delivery', authenticateToken, (req, res) => {
     return res.json({
       sent: true,
       blocked: false,
+      websiteAllowed: decision.websiteAllowed,
+      emailAllowed: decision.emailAllowed,
       notificationId: notifId,
       unreadCount,
       message: 'Notification delivered successfully in accordance with your preferences.'

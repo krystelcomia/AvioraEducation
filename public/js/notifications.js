@@ -68,28 +68,12 @@ const NotificationsUI = {
     if (!user || !Array.isArray(notifications) || notifications.length === 0) return;
 
     const dispatchedSet = this.getStoredGmailDispatchedIds(user.id);
-    const emailToUse = linkedGmail || user.linked_google_email || user.email || '';
-
-    // On initial load, mark historical notifications (> 5 mins old) as already dispatched by server
-    const now = Date.now();
     for (const notif of notifications) {
       const nid = Number(notif.id);
       if (!nid || dispatchedSet.has(nid)) continue;
-
-      let createdMs = now;
-      if (notif.created_at) {
-        const parsed = new Date(notif.created_at.endsWith('Z') ? notif.created_at : notif.created_at + 'Z').getTime();
-        if (!isNaN(parsed)) createdMs = parsed;
-      }
-      const isFresh = (now - createdMs) <= 5 * 60 * 1000;
-
       this.saveGmailDispatchedId(user.id, nid);
-
-      const alreadySentByServer = Boolean(notif.email_sent) && notif.email_provider && !['none', 'gmail_free_api'].includes(notif.email_provider);
-      if (!alreadySentByServer && (!isInitialSeed || isFresh) && typeof Auth !== 'undefined' && typeof Auth.sendEmailJSNotification === 'function') {
-        Auth.sendEmailJSNotification(notif, emailToUse).catch(() => {});
-      }
     }
+    this.updateGmailBanner(linkedGmail);
   },
 
   startRealtimePolling() {

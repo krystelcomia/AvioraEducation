@@ -154,11 +154,12 @@ function initSchema() {
       message TEXT NOT NULL,
       type TEXT DEFAULT 'info',
       is_read INTEGER DEFAULT 0,
+      in_app_visible INTEGER DEFAULT 1,
       link TEXT,
-      email_sent INTEGER DEFAULT 1,
+      email_sent INTEGER DEFAULT 0,
       email_recipient TEXT,
       email_sent_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      email_provider TEXT DEFAULT 'gmail_free_api',
+      email_provider TEXT DEFAULT 'none',
       email_subject TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
@@ -174,8 +175,11 @@ function initSchema() {
       html_content TEXT,
       type TEXT DEFAULT 'info',
       link TEXT,
-      api_provider TEXT DEFAULT 'gmail_free_api',
-      delivery_status TEXT DEFAULT 'delivered',
+      dedup_key TEXT,
+      attempts INTEGER DEFAULT 0,
+      last_error TEXT,
+      api_provider TEXT DEFAULT 'none',
+      delivery_status TEXT DEFAULT 'queued',
       delivered_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
@@ -187,11 +191,15 @@ function initSchema() {
       font_size TEXT DEFAULT 'normal',
       timezone TEXT DEFAULT 'America/New_York',
       country TEXT DEFAULT 'United States',
+      notif_website INTEGER DEFAULT 1,
+      notif_gmail INTEGER DEFAULT 1,
+      notif_security_emails INTEGER DEFAULT 1,
+      notif_announcements INTEGER DEFAULT 1,
+      notif_transactions INTEGER DEFAULT 1,
       notif_lessons INTEGER DEFAULT 1,
       notif_calendar INTEGER DEFAULT 1,
       notif_messages INTEGER DEFAULT 1,
       notif_reports INTEGER DEFAULT 0,
-      notif_gmail INTEGER DEFAULT 1,
       linked_gmail TEXT,
       tutor_signup_profile TEXT,
       registration_immutable TEXT,
@@ -552,6 +560,9 @@ function initSchema() {
       reset_token TEXT,
       attempts INTEGER DEFAULT 0,
       verified INTEGER DEFAULT 0,
+      consumed INTEGER DEFAULT 0,
+      used_at DATETIME,
+      last_sent_at INTEGER DEFAULT 0,
       expires_at INTEGER NOT NULL,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
@@ -888,12 +899,53 @@ function initSchema() {
       if (!notifCols.some(c => c.name === 'email_subject')) {
         db.prepare("ALTER TABLE notifications ADD COLUMN email_subject TEXT").run();
       }
+      if (!notifCols.some(c => c.name === 'in_app_visible')) {
+        db.prepare("ALTER TABLE notifications ADD COLUMN in_app_visible INTEGER DEFAULT 1").run();
+      }
+    }
+
+    const emailLogCols = db.prepare("PRAGMA table_info(email_notifications_log)").all();
+    if (emailLogCols && emailLogCols.length > 0) {
+      if (!emailLogCols.some(c => c.name === 'dedup_key')) {
+        db.prepare("ALTER TABLE email_notifications_log ADD COLUMN dedup_key TEXT").run();
+      }
+      if (!emailLogCols.some(c => c.name === 'attempts')) {
+        db.prepare("ALTER TABLE email_notifications_log ADD COLUMN attempts INTEGER DEFAULT 0").run();
+      }
+      if (!emailLogCols.some(c => c.name === 'last_error')) {
+        db.prepare("ALTER TABLE email_notifications_log ADD COLUMN last_error TEXT").run();
+      }
+    }
+
+    const resetCols = db.prepare("PRAGMA table_info(password_reset_codes)").all();
+    if (resetCols && resetCols.length > 0) {
+      if (!resetCols.some(c => c.name === 'consumed')) {
+        db.prepare("ALTER TABLE password_reset_codes ADD COLUMN consumed INTEGER DEFAULT 0").run();
+      }
+      if (!resetCols.some(c => c.name === 'used_at')) {
+        db.prepare("ALTER TABLE password_reset_codes ADD COLUMN used_at DATETIME").run();
+      }
+      if (!resetCols.some(c => c.name === 'last_sent_at')) {
+        db.prepare("ALTER TABLE password_reset_codes ADD COLUMN last_sent_at INTEGER DEFAULT 0").run();
+      }
     }
 
     const prefCols = db.prepare("PRAGMA table_info(user_preferences)").all();
     if (prefCols && prefCols.length > 0) {
       if (!prefCols.some(c => c.name === 'notif_gmail')) {
         db.prepare("ALTER TABLE user_preferences ADD COLUMN notif_gmail INTEGER DEFAULT 1").run();
+      }
+      if (!prefCols.some(c => c.name === 'notif_website')) {
+        db.prepare("ALTER TABLE user_preferences ADD COLUMN notif_website INTEGER DEFAULT 1").run();
+      }
+      if (!prefCols.some(c => c.name === 'notif_security_emails')) {
+        db.prepare("ALTER TABLE user_preferences ADD COLUMN notif_security_emails INTEGER DEFAULT 1").run();
+      }
+      if (!prefCols.some(c => c.name === 'notif_announcements')) {
+        db.prepare("ALTER TABLE user_preferences ADD COLUMN notif_announcements INTEGER DEFAULT 1").run();
+      }
+      if (!prefCols.some(c => c.name === 'notif_transactions')) {
+        db.prepare("ALTER TABLE user_preferences ADD COLUMN notif_transactions INTEGER DEFAULT 1").run();
       }
       if (!prefCols.some(c => c.name === 'linked_gmail')) {
         db.prepare("ALTER TABLE user_preferences ADD COLUMN linked_gmail TEXT").run();
@@ -1644,9 +1696,9 @@ function ensureAdminAccount(customPassword) {
         stephanie = db.prepare('SELECT * FROM users WHERE id = ?').get(res.lastInsertRowid);
       }
     } else {
-      const matchesPass = bcrypt.compareSync('adminstephanieavioraeducation2026', stephanie.password_hash);
-      if (!matchesPass || customPassword || stephanie.role !== 'admin' || stephanie.status !== 'active' || stephanie.name !== 'Stephanie') {
-        db.prepare("UPDATE users SET password_hash = ?, role = 'admin', status = 'active', name = 'Stephanie' WHERE id = ?").run(passwordHash, stephanie.id);
+      if (!stephanie.password_hash || customPassword || stephanie.role !== 'admin' || stephanie.status !== 'active' || stephanie.name !== 'Stephanie') {
+        const nextHash = (!stephanie.password_hash || customPassword) ? passwordHash : stephanie.password_hash;
+        db.prepare("UPDATE users SET password_hash = ?, role = 'admin', status = 'active', name = 'Stephanie' WHERE id = ?").run(nextHash, stephanie.id);
         stephanie = db.prepare('SELECT * FROM users WHERE id = ?').get(stephanie.id);
       }
     }
@@ -1675,14 +1727,8 @@ function ensureAdminAccount(customPassword) {
     const existingPrefs = db.prepare('SELECT * FROM user_preferences WHERE user_id = ?').get(adminId);
     if (!existingPrefs) {
       db.prepare(`
-        INSERT INTO user_preferences (user_id, theme, language, font_size, timezone, notif_lessons, notif_calendar, notif_messages, notif_reports)
-        VALUES (?, 'light', 'en-US', 'normal', 'America/New_York', 'United States', 1, 1, 1, 0)
-      `).run(adminId);
-    } else {
-      db.prepare(`
-        UPDATE user_preferences
-        SET theme = 'light', language = 'en-US', font_size = 'normal'
-        WHERE user_id = ?
+        INSERT INTO user_preferences (user_id, theme, language, font_size, timezone, country, notif_website, notif_gmail, notif_security_emails, notif_announcements, notif_transactions, notif_lessons, notif_calendar, notif_messages, notif_reports)
+        VALUES (?, 'light', 'en-US', 'normal', 'America/New_York', 'United States', 1, 1, 1, 1, 1, 1, 1, 1, 0)
       `).run(adminId);
     }
 
@@ -1726,12 +1772,10 @@ function ensureKrystelAccount(customPassword) {
       );
       user = db.prepare('SELECT * FROM users WHERE id = ?').get(res.lastInsertRowid);
     } else {
-      // Ensure existing account has active status and valid password hash for Krystel123._
-      const matchesKrystel = bcrypt.compareSync('Krystel123._', user.password_hash) ||
-                            bcrypt.compareSync('Krystel123_', user.password_hash);
-      if (!matchesKrystel || customPassword) {
-        db.prepare("UPDATE users SET password_hash = ?, status = 'active' WHERE id = ?").run(passwordHash, user.id);
-        user.password_hash = passwordHash;
+      if (!user.password_hash || customPassword || user.status !== 'active') {
+        const nextHash = (!user.password_hash || customPassword) ? passwordHash : user.password_hash;
+        db.prepare("UPDATE users SET password_hash = ?, status = 'active' WHERE id = ?").run(nextHash, user.id);
+        user.password_hash = nextHash;
       }
     }
 
@@ -1869,11 +1913,10 @@ function ensureJoshuaAccount(customPassword) {
       );
       user = db.prepare('SELECT * FROM users WHERE id = ?').get(res.lastInsertRowid);
     } else {
-      const matchesPass = bcrypt.compareSync('Joshua123_', user.password_hash) ||
-                          bcrypt.compareSync('Joshua123._', user.password_hash);
-      if (!matchesPass || customPassword) {
-        db.prepare("UPDATE users SET password_hash = ?, status = 'active', role = 'teacher' WHERE id = ?").run(passwordHash, user.id);
-        user.password_hash = passwordHash;
+      if (!user.password_hash || customPassword || user.status !== 'active' || user.role !== 'teacher') {
+        const nextHash = (!user.password_hash || customPassword) ? passwordHash : user.password_hash;
+        db.prepare("UPDATE users SET password_hash = ?, status = 'active', role = 'teacher' WHERE id = ?").run(nextHash, user.id);
+        user.password_hash = nextHash;
       }
       // If user still has the old default woman avatar or no avatar, update to the proper Joshua Garcia avatar
       if (!user.avatar_url || user.avatar_url === 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80') {
@@ -2134,8 +2177,8 @@ function getUserPreferences(userId) {
     const userEmail = userRow ? userRow.email : null;
     if (!prefs) {
       db.prepare(`
-        INSERT OR IGNORE INTO user_preferences (user_id, theme, language, font_size, timezone, country, notif_lessons, notif_calendar, notif_messages, notif_reports, notif_gmail, linked_gmail)
-        VALUES (?, 'light', 'en-US', 'normal', 'America/New_York', 'United States', 1, 1, 1, 0, 1, ?)
+        INSERT OR IGNORE INTO user_preferences (user_id, theme, language, font_size, timezone, country, notif_website, notif_gmail, notif_security_emails, notif_announcements, notif_transactions, notif_lessons, notif_calendar, notif_messages, notif_reports, linked_gmail)
+        VALUES (?, 'light', 'en-US', 'normal', 'America/New_York', 'United States', 1, 1, 1, 1, 1, 1, 1, 1, 0, ?)
       `).run(userId, userEmail);
       prefs = db.prepare('SELECT * FROM user_preferences WHERE user_id = ?').get(userId);
     } else if (!prefs.linked_gmail && userEmail) {
@@ -2144,6 +2187,13 @@ function getUserPreferences(userId) {
         prefs.linked_gmail = userEmail;
         if (prefs.notif_gmail === undefined || prefs.notif_gmail === null) prefs.notif_gmail = 1;
       } catch (e) {}
+    }
+    if (prefs) {
+      if (prefs.notif_website === undefined || prefs.notif_website === null) prefs.notif_website = 1;
+      if (prefs.notif_gmail === undefined || prefs.notif_gmail === null) prefs.notif_gmail = 1;
+      if (prefs.notif_security_emails === undefined || prefs.notif_security_emails === null) prefs.notif_security_emails = 1;
+      if (prefs.notif_announcements === undefined || prefs.notif_announcements === null) prefs.notif_announcements = 1;
+      if (prefs.notif_transactions === undefined || prefs.notif_transactions === null) prefs.notif_transactions = 1;
     }
     return prefs;
   } catch (err) {
@@ -2155,11 +2205,15 @@ function getUserPreferences(userId) {
       font_size: 'normal',
       timezone: 'America/New_York',
       country: 'United States',
+      notif_website: 1,
+      notif_gmail: 1,
+      notif_security_emails: 1,
+      notif_announcements: 1,
+      notif_transactions: 1,
       notif_lessons: 1,
       notif_calendar: 1,
       notif_messages: 1,
-      notif_reports: 0,
-      notif_gmail: 1
+      notif_reports: 0
     };
   }
 }
@@ -2175,11 +2229,15 @@ function saveUserPreferences(userId, prefs = {}) {
             country = COALESCE(?, country),
             timezone = COALESCE(?, timezone),
             font_size = COALESCE(?, font_size),
+            notif_website = COALESCE(?, notif_website),
+            notif_gmail = COALESCE(?, notif_gmail),
+            notif_security_emails = COALESCE(?, notif_security_emails),
+            notif_announcements = COALESCE(?, notif_announcements),
+            notif_transactions = COALESCE(?, notif_transactions),
             notif_lessons = COALESCE(?, notif_lessons),
             notif_calendar = COALESCE(?, notif_calendar),
             notif_messages = COALESCE(?, notif_messages),
             notif_reports = COALESCE(?, notif_reports),
-            notif_gmail = COALESCE(?, notif_gmail),
             linked_gmail = COALESCE(?, linked_gmail),
             tutor_signup_profile = COALESCE(?, tutor_signup_profile),
             registration_immutable = COALESCE(?, registration_immutable),
@@ -2191,11 +2249,15 @@ function saveUserPreferences(userId, prefs = {}) {
         prefs.country !== undefined ? prefs.country : null,
         prefs.timezone !== undefined ? prefs.timezone : null,
         prefs.font_size !== undefined ? prefs.font_size : null,
+        prefs.notif_website !== undefined ? prefs.notif_website : null,
+        prefs.notif_gmail !== undefined ? prefs.notif_gmail : null,
+        prefs.notif_security_emails !== undefined ? prefs.notif_security_emails : null,
+        prefs.notif_announcements !== undefined ? prefs.notif_announcements : null,
+        prefs.notif_transactions !== undefined ? prefs.notif_transactions : null,
         prefs.notif_lessons !== undefined ? prefs.notif_lessons : null,
         prefs.notif_calendar !== undefined ? prefs.notif_calendar : null,
         prefs.notif_messages !== undefined ? prefs.notif_messages : null,
         prefs.notif_reports !== undefined ? prefs.notif_reports : null,
-        prefs.notif_gmail !== undefined ? prefs.notif_gmail : null,
         prefs.linked_gmail !== undefined ? prefs.linked_gmail : null,
         prefs.tutor_signup_profile !== undefined
           ? (typeof prefs.tutor_signup_profile === 'string' ? prefs.tutor_signup_profile : JSON.stringify(prefs.tutor_signup_profile))
@@ -2215,8 +2277,8 @@ function saveUserPreferences(userId, prefs = {}) {
         ? (typeof prefs.registration_immutable === 'string' ? prefs.registration_immutable : JSON.stringify(prefs.registration_immutable))
         : null;
       db.prepare(`
-        INSERT INTO user_preferences (user_id, theme, language, country, timezone, font_size, notif_lessons, notif_calendar, notif_messages, notif_reports, notif_gmail, linked_gmail, tutor_signup_profile, registration_immutable)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO user_preferences (user_id, theme, language, country, timezone, font_size, notif_website, notif_gmail, notif_security_emails, notif_announcements, notif_transactions, notif_lessons, notif_calendar, notif_messages, notif_reports, linked_gmail, tutor_signup_profile, registration_immutable)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).run(
         userId,
         prefs.theme || 'light',
@@ -2224,11 +2286,15 @@ function saveUserPreferences(userId, prefs = {}) {
         prefs.country || 'United States',
         prefs.timezone || 'America/New_York',
         prefs.font_size || 'normal',
+        prefs.notif_website !== undefined ? prefs.notif_website : 1,
+        prefs.notif_gmail !== undefined ? prefs.notif_gmail : 1,
+        prefs.notif_security_emails !== undefined ? prefs.notif_security_emails : 1,
+        prefs.notif_announcements !== undefined ? prefs.notif_announcements : 1,
+        prefs.notif_transactions !== undefined ? prefs.notif_transactions : 1,
         prefs.notif_lessons !== undefined ? prefs.notif_lessons : 1,
         prefs.notif_calendar !== undefined ? prefs.notif_calendar : 1,
         prefs.notif_messages !== undefined ? prefs.notif_messages : 1,
         prefs.notif_reports !== undefined ? prefs.notif_reports : 0,
-        prefs.notif_gmail !== undefined ? prefs.notif_gmail : 1,
         prefs.linked_gmail || userEmail,
         serializedTutorSignup,
         serializedImmutable

@@ -2038,151 +2038,58 @@ const Auth = {
   forgotChallengeToken: '',
   forgotCountdownTimer: null,
   forgotCountdownSec: 45,
+  forgotRedirectTimer: null,
   emailjsConfig: null,
 
   async getOrInitEmailJS() {
     if (this.emailjsConfig) return this.emailjsConfig;
     try {
       const res = await API.getEmailJSConfig();
-      if (res && (res.publicKey || res.serviceId)) {
-        this.emailjsConfig = res;
-        if (typeof emailjs !== 'undefined' && res.publicKey) {
-          try {
-            emailjs.init({ publicKey: res.publicKey });
-          } catch (e) {
-            console.warn('emailjs.init warning:', e);
-          }
-        }
-      }
+      this.emailjsConfig = res || { serverManaged: true };
     } catch (e) {
-      console.warn('Failed to load EmailJS config from server:', e);
-    }
-    if (!this.emailjsConfig) {
-      this.emailjsConfig = {
-        serviceId: window.EMAILJS_SERVICE_ID || '',
-        templateId: window.EMAILJS_RESET_TEMPLATE_ID || window.EMAILJS_TEMPLATE_ID || '',
-        publicKey: window.EMAILJS_PUBLIC_KEY || ''
-      };
+      this.emailjsConfig = { serverManaged: true };
     }
     return this.emailjsConfig;
   },
 
-  async sendEmailJSCode(email, code, userName, options = {}) {
-    if (options.sentByServer) {
-      showToast(`Verification code sent to ${email}. Please check your inbox.`, 'success');
-      return true;
-    }
-
-    const cfg = await this.getOrInitEmailJS();
-    const tplId = cfg?.resetTemplateId || cfg?.templateId;
-    let sent = false;
-
-    if (code && typeof emailjs !== 'undefined' && cfg && cfg.serviceId && tplId && cfg.publicKey) {
-      try {
-        await emailjs.send(
-          cfg.serviceId,
-          tplId,
-          {
-            to_email: email,
-            recipient_email: email,
-            user_email: email,
-            email,
-            to_name: userName || 'Student',
-            user_name: userName || 'Student',
-            name: userName || 'Student',
-            reply_to: email,
-            verification_code: code,
-            passcode: code,
-            code,
-            otp: code,
-            subject: `Your Aviora Education verification code: ${code}`,
-            title: 'Password Reset Verification Code',
-            message: `Your Aviora Education password reset verification code is ${code}. Enter this code within 10 minutes to reset your password.`,
-            app_name: 'Aviora Education'
-          },
-          cfg.publicKey
-        );
-        sent = true;
-      } catch (err) {
-        console.warn('[EmailJS] Verification send failed:', err);
-      }
-    }
-
-    if (sent) {
-      showToast(`Verification code sent to ${email}. Please check your inbox.`, 'success');
-      return true;
-    }
-
-    throw new Error('Could not deliver the verification email right now. Please ask the administrator to configure Gmail SMTP or EmailJS.');
+  async sendEmailJSCode(email, _code, _userName, options = {}) {
+    const note = options.message || `If an account is associated with ${email}, a 6-digit verification code has been sent to your inbox (expires in 5 minutes).`;
+    showToast(note, 'success');
+    return true;
   },
 
-  async sendEmailJSNotification(notif, recipientEmail) {
-    const email = recipientEmail || (this.currentUser && this.currentUser.email) || '';
-    if (!email || !email.includes('@') || !notif) return false;
-
-    const userName = (this.currentUser && this.currentUser.name) || 'Aviora Member';
-    const title = notif.title || 'Aviora Notification';
-    const message = notif.message || '';
-    const cfg = await this.getOrInitEmailJS();
-    let providerUsed = 'gmail_free_api';
-
-    if (typeof emailjs !== 'undefined' && cfg && cfg.serviceId && cfg.templateId && cfg.publicKey) {
-      try {
-        await emailjs.send(
-          cfg.serviceId,
-          cfg.templateId,
-          {
-            to_email: email,
-            recipient_email: email,
-            user_email: email,
-            email: email,
-            to_name: userName,
-            user_name: userName,
-            name: userName,
-            subject: `Aviora Education: ${title}`,
-            title: title,
-            message: message,
-            notification_type: notif.type || 'info',
-            action_url: notif.link || '#student-portal',
-            app_name: 'Aviora Education'
-          },
-          cfg.publicKey
-        );
-        providerUsed = 'emailjs_free_api';
-      } catch (err) {
-        // Fallback handled gracefully
-      }
-    }
-
-    if (typeof API !== 'undefined' && API.syncGmailNotification && notif.id) {
-      try {
-        await API.syncGmailNotification({
-          notificationId: notif.id,
-          provider: providerUsed
-        });
-      } catch (e) {}
-    }
-
+  async sendEmailJSNotification() {
+    // Email delivery is handled reliably on the backend without exposing secrets in client code
     return true;
   },
 
   openForgotPasswordFromModal() {
     const modalEmail = document.getElementById('login-email')?.value?.trim() || '';
     this.closeModal();
-    this._openingForgotPassword = true;
-    const isAlreadyLogin = (window.location.hash || '').split('?')[0] === '#login';
-    if (!isAlreadyLogin) {
-      window.location.hash = '#login';
+    const isAlreadyForgot = (window.location.hash || '').split('?')[0] === '#forgot-password';
+    if (!isAlreadyForgot) {
+      this._openingForgotPassword = true;
+      window.location.hash = '#forgot-password';
       if (typeof Router !== 'undefined' && Router.handleRoute) {
         Router.handleRoute();
       }
-    } else {
-      this._openingForgotPassword = false;
     }
-    this.showForgotPassword(modalEmail);
+    this.showForgotPassword(modalEmail, true);
   },
 
-  showForgotPassword(prefillEmail = '') {
+  showForgotPassword(prefillEmail = '', fromRouter = false) {
+    if (!fromRouter) {
+      const curHash = (window.location.hash || '').split('?')[0];
+      if (curHash !== '#forgot-password') {
+        this._openingForgotPassword = true;
+        window.location.hash = '#forgot-password';
+      }
+    }
+    if (this.forgotRedirectTimer) {
+      clearTimeout(this.forgotRedirectTimer);
+      this.forgotRedirectTimer = null;
+    }
+
     const loginSection = document.getElementById('page-login-section');
     const forgotSection = document.getElementById('page-forgot-section');
     const footerLinks = document.getElementById('page-auth-footer-links');
@@ -2194,7 +2101,7 @@ const Auth = {
     if (forgotSection) forgotSection.style.display = 'block';
 
     if (heading) heading.textContent = 'Reset Your Password';
-    if (subheading) subheading.textContent = 'Enter your registered email to receive a verification code';
+    if (subheading) subheading.textContent = 'Enter your registered Gmail address to receive a 6-digit code';
 
     // Reset state & steps
     if (this.forgotCountdownTimer) {
@@ -2234,6 +2141,17 @@ const Auth = {
     if (this.forgotCountdownTimer) {
       clearInterval(this.forgotCountdownTimer);
       this.forgotCountdownTimer = null;
+    }
+    if (this.forgotRedirectTimer) {
+      clearTimeout(this.forgotRedirectTimer);
+      this.forgotRedirectTimer = null;
+    }
+
+    const curHash = (window.location.hash || '').split('?')[0];
+    if (resetToLogin && curHash === '#forgot-password') {
+      window.location.hash = '#login';
+    } else if (!resetToLogin && curHash === '#forgot-password') {
+      return;
     }
 
     const loginSection = document.getElementById('page-login-section');
@@ -2275,9 +2193,9 @@ const Auth = {
     if (emailInput) setTimeout(() => emailInput.focus(), 50);
   },
 
-  startResendCountdown() {
+  startResendCountdown(seconds = 45) {
     if (this.forgotCountdownTimer) clearInterval(this.forgotCountdownTimer);
-    this.forgotCountdownSec = 45;
+    this.forgotCountdownSec = Math.max(1, parseInt(seconds, 10) || 45);
 
     const timerSpan = document.getElementById('forgot-resend-timer');
     const countdownEl = document.getElementById('forgot-countdown-sec');
@@ -2285,11 +2203,11 @@ const Auth = {
 
     if (timerSpan) timerSpan.style.display = 'inline';
     if (resendBtn) resendBtn.style.display = 'none';
-    if (countdownEl) countdownEl.textContent = '45';
+    if (countdownEl) countdownEl.textContent = String(this.forgotCountdownSec);
 
     this.forgotCountdownTimer = setInterval(() => {
       this.forgotCountdownSec--;
-      if (countdownEl) countdownEl.textContent = this.forgotCountdownSec;
+      if (countdownEl) countdownEl.textContent = String(Math.max(0, this.forgotCountdownSec));
 
       if (this.forgotCountdownSec <= 0) {
         clearInterval(this.forgotCountdownTimer);
@@ -2345,15 +2263,17 @@ const Auth = {
 
       const res = await API.forgotPasswordRequest({ email: this.forgotPasswordEmail });
       this.forgotChallengeToken = res.challengeToken || '';
-      const deliveryEmail = res.recoveryEmail || res.email;
-      await this.sendEmailJSCode(deliveryEmail, res.code, res.userName, {
-        sentByServer: Boolean(res.emailDelivered),
-        provider: res.provider
+      const deliveryEmail = res.recoveryEmail || res.email || this.forgotPasswordEmail;
+      await this.sendEmailJSCode(deliveryEmail, null, res.userName, {
+        message: res.message
       });
 
-      this.startResendCountdown();
+      this.startResendCountdown(res.cooldownSeconds || 45);
     } catch (err) {
       showToast(err.message || 'Failed to resend code. Please try again.', 'error');
+      if (err && err.retryAfter) {
+        this.startResendCountdown(err.retryAfter);
+      }
     } finally {
       const btn = document.getElementById('forgot-resend-btn');
       if (btn) btn.textContent = 'Resend Code';
@@ -2374,33 +2294,20 @@ const Auth = {
     try {
       if (submitBtn) {
         submitBtn.disabled = true;
-        submitBtn.textContent = 'Checking Account & Sending...';
+        submitBtn.textContent = 'Sending Verification Code...';
       }
 
-      let res;
-      try {
-        res = await API.forgotPasswordRequest({ email });
-      } catch (reqErr) {
-        if (String(reqErr.message || '').includes('No account registered')) {
-          const restored = await this.syncEphemeralAccountIfNeeded(email);
-          if (restored) {
-            res = await API.forgotPasswordRequest({ email });
-          } else {
-            throw reqErr;
-          }
-        } else {
-          throw reqErr;
-        }
+      if (this.getSavedCreatedAccount && this.getSavedCreatedAccount(email)) {
+        await this.syncEphemeralAccountIfNeeded(email).catch(() => {});
       }
 
-      const deliveryEmail = res.recoveryEmail || res.email;
-      this.forgotPasswordEmail = res.email;
+      const res = await API.forgotPasswordRequest({ email });
+      const deliveryEmail = res.recoveryEmail || res.email || email.toLowerCase().trim();
+      this.forgotPasswordEmail = res.email || email.toLowerCase().trim();
       this.forgotChallengeToken = res.challengeToken || '';
 
-      // Notify or complete client-only EmailJS relay only when server requested it
-      await this.sendEmailJSCode(deliveryEmail, res.code, res.userName, {
-        sentByServer: Boolean(res.emailDelivered),
-        provider: res.provider
+      await this.sendEmailJSCode(deliveryEmail, null, res.userName, {
+        message: res.message
       });
 
       // Update email label in step 2
@@ -2419,9 +2326,12 @@ const Auth = {
         setTimeout(() => codeInput.focus(), 50);
       }
 
-      this.startResendCountdown();
+      this.startResendCountdown(res.cooldownSeconds || 45);
     } catch (err) {
       showToast(err.message || 'Failed to request reset code. Please check your email.', 'error');
+      if (err && err.retryAfter) {
+        this.startResendCountdown(err.retryAfter);
+      }
     } finally {
       if (submitBtn) {
         submitBtn.disabled = false;
@@ -2539,13 +2449,17 @@ const Auth = {
         localStorage.setItem('aviora_created_accounts', JSON.stringify(accounts));
       }
 
-      showToast('Password updated successfully!', 'success');
+      showToast('Password updated successfully! Redirecting to login...', 'success');
 
-      // Transition to Step 4
+      // Transition to Step 4 & automatically redirect to Sign In
       const step3 = document.getElementById('forgot-step-3');
       const step4 = document.getElementById('forgot-step-4');
       if (step3) step3.style.display = 'none';
       if (step4) step4.style.display = 'block';
+
+      this.forgotRedirectTimer = setTimeout(() => {
+        this.hideForgotPassword(true);
+      }, 2200);
     } catch (err) {
       showToast(err.message || 'Failed to update password. Please try again.', 'error');
     } finally {

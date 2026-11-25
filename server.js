@@ -2822,7 +2822,7 @@ const COUNTRY_DEFAULTS_MAP = {
   'United Kingdom': { timezone: 'Europe/London', language: 'en-US', currency: 'GBP', symbol: '£', abbr: 'GMT' },
   'Canada': { timezone: 'America/Toronto', language: 'en-US', currency: 'CAD', symbol: 'CA$', abbr: 'EST' },
   'Australia': { timezone: 'Australia/Sydney', language: 'en-US', currency: 'AUD', symbol: 'A$', abbr: 'AEST' },
-  'Philippines': { timezone: 'Asia/Manila', language: 'fil-PH', currency: 'PHP', symbol: '₱', abbr: 'PHT' },
+  'Philippines': { timezone: 'Asia/Manila', language: 'en-US', currency: 'PHP', symbol: '₱', abbr: 'PHT' },
   'Singapore': { timezone: 'Asia/Singapore', language: 'en-US', currency: 'SGD', symbol: 'S$', abbr: 'SGT' },
   'Japan': { timezone: 'Asia/Tokyo', language: 'ja-JP', currency: 'JPY', symbol: '¥', abbr: 'JST' },
   'South Korea': { timezone: 'Asia/Seoul', language: 'ko-KR', currency: 'KRW', symbol: '₩', abbr: 'KST' },

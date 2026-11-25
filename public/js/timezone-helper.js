@@ -151,7 +151,7 @@
         'United Kingdom': { code: 'en-US', name: 'English (US)' },
         'Canada': { code: 'en-US', name: 'English (US)' },
         'Australia': { code: 'en-US', name: 'English (US)' },
-        'Philippines': { code: 'fil-PH', name: 'Filipino (Tagalog)' },
+        'Philippines': { code: 'en-US', name: 'English (US)' },
         'Singapore': { code: 'en-US', name: 'English (US)' },
         'Japan': { code: 'ja-JP', name: '日本語 (Japanese)' },
         'South Korea': { code: 'ko-KR', name: '한국어 (Korean)' },

@@ -1580,6 +1580,14 @@ const Profile = {
       }
 
       const res = await API.changePassword({ currentPassword, newPassword });
+      if (typeof Auth !== 'undefined' && Auth.currentUser?.email) {
+        const cleanEmail = String(Auth.currentUser.email).toLowerCase().trim();
+        const accounts = Auth.getCreatedAccounts ? Auth.getCreatedAccounts() : {};
+        if (accounts[cleanEmail]) {
+          accounts[cleanEmail].password = newPassword;
+          try { localStorage.setItem('aviora_created_accounts', JSON.stringify(accounts)); } catch (e) {}
+        }
+      }
       showToast(res.message || 'Password updated successfully!', 'success');
 
       // Clear password fields

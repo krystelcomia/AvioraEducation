@@ -294,8 +294,9 @@ const Router = {
         const view = document.getElementById('view-subscriptions');
         if (view) view.style.display = 'block';
         window.scrollTo(0, 0);
-        if (typeof StudentSub !== 'undefined' && StudentSub.checkVisitorBookingTutor) {
-          StudentSub.checkVisitorBookingTutor();
+        if (typeof StudentSub !== 'undefined') {
+          if (StudentSub.checkVisitorBookingTutor) StudentSub.checkVisitorBookingTutor();
+          if (StudentSub.syncTrialVisibility) StudentSub.syncTrialVisibility();
         }
       }
     } else if (hash === '#book-now' || hash === '#book-lesson' || hash.startsWith('#book-lesson') || hash.startsWith('#book-now')) {

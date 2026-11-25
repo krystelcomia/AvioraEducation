@@ -815,6 +815,21 @@ const AvioraPayments = {
 
       const res = await API.submitInvoiceProof(invoiceId, formData);
       this.clearProofSelection();
+      if ((inv && inv.item_type === 'trial_lesson') || (res && res.trial_used)) {
+        if (typeof Auth !== 'undefined' && Auth.currentUser) {
+          Auth.currentUser.trial_used = true;
+          try {
+            Storage.setUser(Auth.currentUser);
+            if (Auth.currentUser.email) {
+              localStorage.setItem('aviora_trial_used_' + String(Auth.currentUser.email).toLowerCase().trim(), '1');
+            }
+          } catch (e) {}
+        }
+        if (typeof StudentSub !== 'undefined') {
+          if (StudentSub.markLocalTrialUsed) StudentSub.markLocalTrialUsed(Auth?.currentUser?.email);
+          if (StudentSub.syncTrialVisibility) StudentSub.syncTrialVisibility(true);
+        }
+      }
       showToast(res.message || 'Proof of payment submitted! Status is Pending Admin Review.', 'success');
 
       try {

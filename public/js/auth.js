@@ -216,8 +216,20 @@ const Auth = {
       data.user = merged.user;
       if (merged.studentProfile) data.studentProfile = merged.studentProfile;
 
+      const emailKey = data.user?.email ? String(data.user.email).toLowerCase().trim() : '';
+      const localTrialFlag = emailKey ? localStorage.getItem(`aviora_trial_used_${emailKey}`) === '1' : false;
+      if (data.user && (data.user.trial_used || data.trialUsed || localTrialFlag)) {
+        data.user.trial_used = true;
+        if (emailKey) {
+          try { localStorage.setItem(`aviora_trial_used_${emailKey}`, '1'); } catch (e) {}
+        }
+      }
+
       this.currentUser = data.user;
       Storage.setUser(data.user);
+      if (typeof StudentSub !== 'undefined' && typeof StudentSub.syncTrialVisibility === 'function') {
+        StudentSub.syncTrialVisibility(data.user?.trial_used ? true : null);
+      }
       if (typeof Profile !== 'undefined') {
         Profile.currentUser = data.user;
         if (data.studentProfile) Profile.studentProfile = data.studentProfile;
@@ -297,6 +309,12 @@ const Auth = {
             timezone: savedAccount.timezone || savedPrefs.timezone || storedUser.timezone,
             language: savedAccount.language || savedPrefs.language || storedUser.language,
             theme: savedEmailTheme || savedPrefs.theme || savedAccount.theme || 'light',
+            trial_used: Boolean(savedAccount.trial_used || storedUser.trial_used || (cleanSyncEmail && localStorage.getItem(`aviora_trial_used_${cleanSyncEmail}`) === '1')),
+            notif_website: savedPrefs.notif_website,
+            notif_gmail: savedPrefs.notif_gmail,
+            notif_security_emails: savedPrefs.notif_security_emails,
+            notif_announcements: savedPrefs.notif_announcements,
+            notif_transactions: savedPrefs.notif_transactions,
             notif_lessons: savedPrefs.notif_lessons,
             notif_calendar: savedPrefs.notif_calendar,
             notif_messages: savedPrefs.notif_messages,
@@ -652,6 +670,7 @@ const Auth = {
         hourly_rate: account.hourly_rate || existing.hourly_rate,
         bio: account.bio || existing.bio,
         avatar_url: chosenAvatar,
+        trial_used: Boolean(account.trial_used || existing.trial_used || (email && localStorage.getItem(`aviora_trial_used_${email}`) === '1')),
         created_at: existing.created_at || new Date().toISOString(),
         updated_at: new Date().toISOString()
       };
@@ -1819,6 +1838,7 @@ const Auth = {
               timezone: savedAccount?.timezone,
               language: savedAccount?.language,
               theme: savedEmailTheme || savedAccount?.theme,
+              trial_used: Boolean(savedAccount?.trial_used || (cleanLoginEmail && localStorage.getItem(`aviora_trial_used_${cleanLoginEmail}`) === '1')),
               grade_level: savedAccount?.grade_level,
               school: backup.school || savedAccount?.school,
               learning_goals: backup.learning_goals || savedAccount?.learning_goals,
@@ -1840,6 +1860,14 @@ const Auth = {
 
       const mergedLogin = this.mergeSavedProfileState(res.user);
       res.user = mergedLogin.user;
+      if (res.user?.email) {
+        const cleanLoginEmail = String(res.user.email).toLowerCase().trim();
+        const localTrial = localStorage.getItem(`aviora_trial_used_${cleanLoginEmail}`) === '1';
+        if (res.user.trial_used || localTrial) {
+          res.user.trial_used = true;
+          try { localStorage.setItem(`aviora_trial_used_${cleanLoginEmail}`, '1'); } catch (e) {}
+        }
+      }
 
       Storage.setToken(res.token);
       Storage.setUser(res.user);
@@ -1856,7 +1884,8 @@ const Auth = {
           country: res.user.country,
           timezone: res.user.timezone,
           language: res.user.language,
-          theme: res.preferences?.theme
+          theme: res.preferences?.theme,
+          trial_used: Boolean(res.user.trial_used)
         });
       }
       if (mergedLogin.needsServerHeal) {
@@ -2238,6 +2267,7 @@ const Auth = {
           timezone: saved.timezone,
           language: saved.language,
           theme: saved.theme || 'light',
+          trial_used: Boolean(saved.trial_used || (cleanEmail && localStorage.getItem(`aviora_trial_used_${cleanEmail}`) === '1')),
           grade_level: saved.grade_level,
           school: backup.school || saved.school,
           learning_goals: backup.learning_goals || saved.learning_goals,
@@ -3215,14 +3245,23 @@ const Auth = {
     const mainNavLinks = document.getElementById('main-nav-links');
 
     if (user) {
+      if (user.email && user.trial_used) {
+        try { localStorage.setItem('aviora_trial_used_' + String(user.email).toLowerCase().trim(), '1'); } catch (e) {}
+      }
       this.startHeartbeat();
       if (typeof NotificationsUI !== 'undefined' && NotificationsUI.startRealtimePolling) {
         NotificationsUI.startRealtimePolling();
+      }
+      if (typeof StudentSub !== 'undefined' && typeof StudentSub.syncTrialVisibility === 'function') {
+        StudentSub.syncTrialVisibility(user.trial_used ? true : null);
       }
     } else {
       this.stopHeartbeat();
       if (typeof NotificationsUI !== 'undefined' && NotificationsUI.stopRealtimePolling) {
         NotificationsUI.stopRealtimePolling();
+      }
+      if (typeof StudentSub !== 'undefined' && typeof StudentSub.syncTrialVisibility === 'function') {
+        StudentSub.syncTrialVisibility(false);
       }
     }
 

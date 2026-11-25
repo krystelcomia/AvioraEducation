@@ -12,7 +12,18 @@ try {
 } catch (e) {
   nodemailer = null;
 }
-const { db, ensureAdminAccount, ensureKrystelAccount, ensureJoshuaAccount, ensurePaymentSettings, getUserPreferences, saveUserPreferences } = require('./database/db');
+const {
+  db,
+  ensureAdminAccount,
+  ensureKrystelAccount,
+  ensureJoshuaAccount,
+  ensurePaymentSettings,
+  getUserPreferences,
+  saveUserPreferences,
+  isRemoteDbSyncConfigured,
+  ensureRemoteDbHydrated,
+  flushRemoteDbSnapshot
+} = require('./database/db');
 const { inspectDocument } = require('./utils/documentDetector');
 
 try {
@@ -125,15 +136,30 @@ app.use(cors());
 app.use(express.json({ limit: '15mb' }));
 app.use(express.urlencoded({ extended: true, limit: '15mb' }));
 
-// On Vercel serverless runtimes, flush any queued background email dispatches before returning HTTP mutation responses
-app.use((req, res, next) => {
-  if (!isVercel || !['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) {
+// On Vercel serverless runtimes, hydrate remote snapshot (when configured) and flush background tasks on mutations
+app.use(async (req, res, next) => {
+  if (req.path.startsWith('/api')) {
+    try {
+      await ensureRemoteDbHydrated();
+    } catch (e) { }
+  }
+  if (!isVercel && !isRemoteDbSyncConfigured()) {
+    return next();
+  }
+  if (!['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) {
     return next();
   }
   const origJson = res.json.bind(res);
   res.json = function patchedJson(body) {
-    if (activeEmailTasks && activeEmailTasks.size > 0) {
-      return flushPendingEmails(2500).then(() => origJson(body)).catch(() => origJson(body));
+    const flushTasks = [];
+    if (isVercel && activeEmailTasks && activeEmailTasks.size > 0) {
+      flushTasks.push(flushPendingEmails(2500).catch(() => {}));
+    }
+    if (isRemoteDbSyncConfigured() && res.statusCode < 500) {
+      flushTasks.push(flushRemoteDbSnapshot().catch(() => {}));
+    }
+    if (flushTasks.length > 0) {
+      return Promise.allSettled(flushTasks).then(() => origJson(body)).catch(() => origJson(body));
     }
     return origJson(body);
   };
@@ -2612,6 +2638,70 @@ function processAllStudentSubscriptions() {
   }
 }
 
+/**
+ * Permanently mark a user's one-time trial lesson as utilized (monotonic: 0 -> 1).
+ */
+function markStudentTrialUsed(studentId) {
+  if (!studentId) return;
+  try {
+    db.prepare(`
+      UPDATE users
+      SET trial_used = 1,
+          trial_used_at = COALESCE(trial_used_at, CURRENT_TIMESTAMP)
+      WHERE id = ? AND COALESCE(trial_used, 0) = 0
+    `).run(studentId);
+  } catch (e) { }
+}
+
+/**
+ * Authoritative check for whether an account has already utilized (or is pending verification for) its one-time trial lesson.
+ * Backfills permanent users.trial_used = 1 if historical/active trial records exist.
+ */
+function hasStudentUtilizedTrial(studentId) {
+  if (!studentId) return false;
+  try {
+    const userRow = db.prepare('SELECT COALESCE(trial_used, 0) as trial_used FROM users WHERE id = ?').get(studentId);
+    if (userRow && Number(userRow.trial_used) === 1) {
+      return true;
+    }
+
+    const subRow = db.prepare('SELECT id FROM student_subscriptions WHERE user_id = ? AND COALESCE(is_trial, 0) = 1 LIMIT 1').get(studentId);
+    if (subRow) {
+      markStudentTrialUsed(studentId);
+      return true;
+    }
+
+    const reqRow = db.prepare(`
+      SELECT id FROM tutoring_requests
+      WHERE student_id = ?
+        AND LOWER(COALESCE(payment_method, '')) IN ('trial', 'free_trial')
+        AND LOWER(COALESCE(status, '')) != 'cancelled'
+      LIMIT 1
+    `).get(studentId);
+    if (reqRow) {
+      markStudentTrialUsed(studentId);
+      return true;
+    }
+
+    const invRow = db.prepare(`
+      SELECT id, status, fulfilled FROM invoices
+      WHERE student_id = ?
+        AND item_type = 'trial_lesson'
+        AND (COALESCE(fulfilled, 0) = 1 OR LOWER(COALESCE(status, '')) IN ('accepted', 'pending_verification'))
+      LIMIT 1
+    `).get(studentId);
+    if (invRow) {
+      if (Number(invRow.fulfilled) === 1 || String(invRow.status || '').toLowerCase() === 'accepted') {
+        markStudentTrialUsed(studentId);
+      }
+      return true;
+    }
+    return false;
+  } catch (e) {
+    return false;
+  }
+}
+
 function getRoleDefaultAvatar(role) {
   return (role === 'tutor' || role === 'teacher')
     ? 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=300&q=80'
@@ -2638,6 +2728,7 @@ function signUserToken(user, prefs = null) {
       email: user.email,
       role: user.role,
       phone: user.phone || null,
+      trial_used: user?.trial_used ? 1 : 0,
       country,
       timezone: prefs?.timezone || def.timezone || 'America/New_York',
       language: prefs?.language || def.language || 'en-US'
@@ -2661,9 +2752,9 @@ function authenticateToken(req, res, next) {
       return res.status(403).json({ error: 'Session expired or invalid token. Please log in again.' });
     }
 
-    let user = db.prepare('SELECT id, name, email, role, phone, avatar_url, country, status, wallet_balance, wallet_tutor_id FROM users WHERE id = ?').get(decoded.id);
+    let user = db.prepare('SELECT id, name, email, role, phone, avatar_url, country, status, wallet_balance, wallet_tutor_id, trial_used FROM users WHERE id = ?').get(decoded.id);
     if (!user && decoded.email) {
-      user = db.prepare('SELECT id, name, email, role, phone, avatar_url, country, status, wallet_balance, wallet_tutor_id FROM users WHERE LOWER(email) = LOWER(?)').get(decoded.email);
+      user = db.prepare('SELECT id, name, email, role, phone, avatar_url, country, status, wallet_balance, wallet_tutor_id, trial_used FROM users WHERE LOWER(email) = LOWER(?)').get(decoded.email);
     }
     if (!user && isVercel && decoded.email && decoded.role && decoded.role !== 'admin') {
       try {
@@ -2672,10 +2763,11 @@ function authenticateToken(req, res, next) {
         const resolved = resolveLocationPreferences(decoded.country, decoded.timezone, decoded.language);
         const tempHash = bcrypt.hashSync('Rehydrated_' + Math.random().toString(36) + 'Aa1!', 8);
         const defaultAvatar = getRoleDefaultAvatar(role);
+        const restoredTrialUsed = decoded.trial_used ? 1 : 0;
         const ins = db.prepare(`
-          INSERT INTO users (name, email, password_hash, role, phone, avatar_url, country, status)
-          VALUES (?, ?, ?, ?, ?, ?, ?, 'active')
-        `).run(decoded.name || cleanEmail.split('@')[0], cleanEmail, tempHash, role, decoded.phone || null, defaultAvatar, resolved.country);
+          INSERT INTO users (name, email, password_hash, role, phone, avatar_url, country, trial_used, trial_used_at, status)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, CASE WHEN ? = 1 THEN CURRENT_TIMESTAMP ELSE NULL END, 'active')
+        `).run(decoded.name || cleanEmail.split('@')[0], cleanEmail, tempHash, role, decoded.phone || null, defaultAvatar, resolved.country, restoredTrialUsed, restoredTrialUsed);
         const newId = ins.lastInsertRowid;
         saveUserPreferences(newId, {
           theme: 'light',
@@ -2687,7 +2779,7 @@ function authenticateToken(req, res, next) {
         if (role === 'student') {
           db.prepare('INSERT INTO student_profiles (user_id, grade_level, school) VALUES (?, ?, ?)').run(newId, 'Grade 11 - High School', '');
         }
-        user = db.prepare('SELECT id, name, email, role, phone, avatar_url, country, status, wallet_balance, wallet_tutor_id FROM users WHERE id = ?').get(newId);
+        user = db.prepare('SELECT id, name, email, role, phone, avatar_url, country, status, wallet_balance, wallet_tutor_id, trial_used FROM users WHERE id = ?').get(newId);
         req._rehydratedUser = true;
       } catch (rehydrateErr) {
         console.warn('Serverless user rehydrate notice:', rehydrateErr.message);
@@ -3073,6 +3165,7 @@ app.post('/api/auth/register', async (req, res) => {
         email: cleanEmail,
         role: designatedRole,
         phone: (phone && String(phone).trim()) || null,
+        trial_used: 0,
         country: userCountry
       },
       savedPrefs
@@ -3088,6 +3181,7 @@ app.post('/api/auth/register', async (req, res) => {
       country: userCountry,
       timezone: userTimezone,
       language: userLanguage,
+      trial_used: false,
       status: 'active'
     };
 
@@ -3191,6 +3285,7 @@ app.post('/api/auth/login', (req, res) => {
     }
 
     const userPrefs = getUserPreferences(user.id);
+    const loginTrialUsed = hasStudentUtilizedTrial(user.id);
     const sanitizedUser = {
       id: user.id,
       name: user.name,
@@ -3201,6 +3296,7 @@ app.post('/api/auth/login', (req, res) => {
       country: user.country || userPrefs?.country || 'United States',
       timezone: userPrefs?.timezone || getCountryDefaults(user.country).timezone || 'America/New_York',
       language: userPrefs?.language || getCountryDefaults(user.country).language || 'en-US',
+      trial_used: loginTrialUsed,
       status: user.status
     };
 
@@ -3255,11 +3351,12 @@ app.post('/api/auth/sync-account', (req, res) => {
 
       const defaultAvatar = getRoleDefaultAvatar(designatedRole);
       const chosenAvatar = incomingAvatar || defaultAvatar;
+      const incomingTrialFlag = (req.body.trial_used === true || Number(req.body.trial_used) === 1) ? 1 : 0;
 
       const result = db.prepare(`
-        INSERT INTO users (name, email, password_hash, role, phone, avatar_url, country, status)
-        VALUES (?, ?, ?, ?, ?, ?, ?, 'active')
-      `).run(name ? name.trim() : cleanEmail.split('@')[0], cleanEmail, passwordHash, designatedRole, cleanPhone, chosenAvatar, userCountry);
+        INSERT INTO users (name, email, password_hash, role, phone, avatar_url, country, trial_used, trial_used_at, status)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, CASE WHEN ? = 1 THEN CURRENT_TIMESTAMP ELSE NULL END, 'active')
+      `).run(name ? name.trim() : cleanEmail.split('@')[0], cleanEmail, passwordHash, designatedRole, cleanPhone, chosenAvatar, userCountry, incomingTrialFlag, incomingTrialFlag);
 
       const userId = result.lastInsertRowid;
       let tutorDraftProfile = null;
@@ -3311,8 +3408,15 @@ app.post('/api/auth/sync-account', (req, res) => {
       });
       user = db.prepare('SELECT * FROM users WHERE id = ?').get(userId);
     } else {
-      const existingUpdates = ["password_hash = ?", "status = 'active'"];
-      const existingParams = [passwordHash];
+      // Never overwrite an existing user's password_hash, status, or role; require matching password
+      if (!user.password_hash || !bcrypt.compareSync(password, user.password_hash)) {
+        return res.status(401).json({ error: 'Invalid email or password. Please verify your credentials and try again.' });
+      }
+      if (user.status !== 'active') {
+        return res.status(403).json({ error: 'Your account is deactivated or suspended. Please contact Aviora support.' });
+      }
+      const existingUpdates = [];
+      const existingParams = [];
       if ((!user.phone || !String(user.phone).trim()) && cleanPhone) {
         existingUpdates.push('phone = ?');
         existingParams.push(cleanPhone);
@@ -3321,8 +3425,13 @@ app.post('/api/auth/sync-account', (req, res) => {
         existingUpdates.push('avatar_url = ?');
         existingParams.push(incomingAvatar);
       }
-      existingParams.push(user.id);
-      db.prepare(`UPDATE users SET ${existingUpdates.join(', ')} WHERE id = ?`).run(...existingParams);
+      if ((req.body.trial_used === true || Number(req.body.trial_used) === 1) && Number(user.trial_used || 0) === 0) {
+        existingUpdates.push('trial_used = 1', 'trial_used_at = COALESCE(trial_used_at, CURRENT_TIMESTAMP)');
+      }
+      if (existingUpdates.length > 0) {
+        existingParams.push(user.id);
+        db.prepare(`UPDATE users SET ${existingUpdates.join(', ')} WHERE id = ?`).run(...existingParams);
+      }
       if (incomingAvatar && !isDefaultProfileAvatar(incomingAvatar) && isDefaultProfileAvatar(user.avatar_url)) {
         try {
           db.prepare('UPDATE tutor_profiles SET avatar_url = ? WHERE user_id = ?').run(incomingAvatar, user.id);
@@ -3363,8 +3472,9 @@ app.post('/api/auth/sync-account', (req, res) => {
       user = db.prepare('SELECT * FROM users WHERE id = ?').get(user.id);
     }
 
+    const syncTrialUsed = hasStudentUtilizedTrial(user.id);
     const prefs = getUserPreferences(user.id);
-    const token = signUserToken(user, prefs);
+    const token = signUserToken({ ...user, trial_used: syncTrialUsed ? 1 : 0 }, prefs);
 
     return res.json({
       message: 'Account successfully authenticated.',
@@ -3379,6 +3489,7 @@ app.post('/api/auth/sync-account', (req, res) => {
         country: user.country || prefs?.country || 'United States',
         timezone: prefs?.timezone || 'America/New_York',
         language: prefs?.language || 'en-US',
+        trial_used: syncTrialUsed,
         status: user.status
       },
       preferences: prefs
@@ -5063,15 +5174,21 @@ app.get('/api/auth/me', authenticateToken, (req, res) => {
       extra.tutorDraftProfile = safeParseObject(userPrefs.tutor_signup_profile);
     }
 
+    const meTrialUsed = req.user.role === 'student'
+      ? hasStudentUtilizedTrial(userId)
+      : Boolean(req.user.trial_used);
+
     return res.json({
       user: {
         ...req.user,
+        trial_used: meTrialUsed,
         country: req.user.country || userPrefs?.country || 'United States',
         timezone: userPrefs?.timezone || 'America/New_York',
         language: userPrefs?.language || 'en-US',
         linked_accounts: linkedAccounts,
         linked_google_email: extra.linkedGoogleEmail
       },
+      trialUsed: meTrialUsed,
       ...(req._rehydratedUser ? { rehydrated: true } : {}),
       ...extra
     });
@@ -5598,6 +5715,7 @@ app.get('/api/account/backup', authenticateToken, (req, res) => {
         phone: user.phone || "",
         country: user.country || "United States",
         avatar_url: user.avatar_url || "",
+        trial_used: hasStudentUtilizedTrial(user.id),
         registered_at: user.created_at || ""
       },
       credentials_and_bio: {
@@ -5743,14 +5861,17 @@ app.post('/api/account/restore', authenticateToken, (req, res) => {
       ? (profileCat.country || currentUser.country)
       : ((currentUser.country && currentUser.country.trim()) ? currentUser.country : (profileCat.country || null));
 
+    const trialFromBackup = (profileCat.trial_used === true || Number(profileCat.trial_used) === 1 || payload.trial_used === true) ? 1 : 0;
     db.prepare(`
       UPDATE users
       SET name = COALESCE(?, name),
           phone = COALESCE(?, phone),
           avatar_url = COALESCE(?, avatar_url),
-          country = COALESCE(?, country)
+          country = COALESCE(?, country),
+          trial_used = CASE WHEN COALESCE(trial_used, 0) = 1 OR ? = 1 THEN 1 ELSE 0 END,
+          trial_used_at = CASE WHEN COALESCE(trial_used, 0) = 1 THEN trial_used_at WHEN ? = 1 THEN COALESCE(trial_used_at, CURRENT_TIMESTAMP) ELSE NULL END
       WHERE id = ?
-    `).run(nameToRestore, phoneToRestore, avatarToRestore, countryToRestore, userId);
+    `).run(nameToRestore, phoneToRestore, avatarToRestore, countryToRestore, trialFromBackup, trialFromBackup, userId);
     restoredSummary.push('Profile & Personal Identity');
 
     // Category 2: Academic Credentials & Biography
@@ -7033,12 +7154,8 @@ app.get('/api/student/subscription', authenticateToken, requireRole('student'), 
     `).all(studentId);
     const activeSub = activeSubs[0] || null;
 
-    // Check if trial was ever used
-    const trialRow = db.prepare(`
-      SELECT id FROM student_subscriptions
-      WHERE user_id = ? AND is_trial = 1
-    `).get(studentId);
-    const trialUsed = !!trialRow;
+    // Check if trial was ever used (authoritative account-level + historical trial check)
+    const trialUsed = hasStudentUtilizedTrial(studentId);
 
     // Calculate total spending: subscriptions + booked sessions
     const subSpendingRow = db.prepare(`
@@ -7368,8 +7485,7 @@ app.post('/api/student/subscription/purchase', authenticateToken, requireRole('s
       }
 
       if (selectedPkg.is_trial) {
-        const trialCheck = db.prepare('SELECT id FROM student_subscriptions WHERE user_id = ? AND is_trial = 1').get(studentId);
-        if (trialCheck) {
+        if (hasStudentUtilizedTrial(studentId)) {
           return res.status(400).json({ error: 'The trial session is limited to one use per account and has already been used.' });
         }
       }
@@ -7566,6 +7682,10 @@ app.post('/api/student/subscription/purchase', authenticateToken, requireRole('s
         selectedPkg.is_trial
       );
 
+      if (selectedPkg.is_trial) {
+        markStudentTrialUsed(studentId);
+      }
+
       if (appliedVoucher) {
         db.prepare('UPDATE vouchers SET used_count = COALESCE(used_count, 0) + 1 WHERE id = ?').run(appliedVoucher.id);
       }
@@ -7610,8 +7730,7 @@ app.post('/api/student/subscription/purchase', authenticateToken, requireRole('s
     }
 
     if (selectedPkg.is_trial) {
-      const trialCheck = db.prepare('SELECT id FROM student_subscriptions WHERE user_id = ? AND is_trial = 1').get(studentId);
-      if (trialCheck) {
+      if (hasStudentUtilizedTrial(studentId)) {
         return res.status(400).json({ error: 'The trial lesson is strictly limited to one use per account and has already been used.' });
       }
     }
@@ -7731,6 +7850,10 @@ app.post('/api/student/subscription/purchase', authenticateToken, requireRole('s
       selectedPkg.days,
       selectedPkg.is_trial
     );
+
+    if (selectedPkg.is_trial) {
+      markStudentTrialUsed(studentId);
+    }
 
     // Notification for student
     const studentNotifMsg = hasScheduledLesson
@@ -13692,8 +13815,7 @@ function computeInvoiceDetails(studentId, body = {}) {
       throw Object.assign(new Error(`Please schedule all ${selectedPkg.lessons} lessons before generating the PayPal invoice.`), { statusCode: 400 });
     }
     if (selectedPkg.is_trial) {
-      const trialCheck = db.prepare('SELECT id FROM student_subscriptions WHERE user_id = ? AND is_trial = 1').get(studentId);
-      if (trialCheck) {
+      if (hasStudentUtilizedTrial(studentId)) {
         throw Object.assign(new Error('The trial session is limited to one use per account and has already been used.'), { statusCode: 400 });
       }
     }
@@ -13897,6 +14019,10 @@ function fulfillAcceptedInvoice(invoice) {
       meta.is_trial ? 1 : 0
     );
 
+    if (meta.is_trial || invoice.item_type === 'trial_lesson') {
+      markStudentTrialUsed(invoice.student_id);
+    }
+
     if (invoice.voucher_code) {
       try { db.prepare('UPDATE vouchers SET used_count = COALESCE(used_count, 0) + 1 WHERE LOWER(code) = LOWER(?)').run(invoice.voucher_code); } catch (e) {}
     }
@@ -14087,6 +14213,16 @@ app.post('/api/student/invoices', authenticateToken, requireRole('student'), (re
   try {
     const studentId = req.user.id;
     const computed = computeInvoiceDetails(studentId, req.body);
+    if (computed.itemType === 'trial_lesson') {
+      // Remove any abandoned zero-payment unpaid trial draft so only one active unpaid trial invoice exists
+      db.prepare(`
+        DELETE FROM invoices
+        WHERE student_id = ?
+          AND item_type = 'trial_lesson'
+          AND status = 'unpaid'
+          AND id NOT IN (SELECT invoice_id FROM paypal_payments)
+      `).run(studentId);
+    }
     const invoiceNumber = generateUniquePaymentCode('INV', 'invoices', 'invoice_number');
 
     const ins = db.prepare(`
@@ -14339,6 +14475,9 @@ app.post('/api/student/invoices/:invoiceId/submit-proof', authenticateToken, req
       if (invoice.status === 'accepted') {
         return res.status(409).json({ error: 'This invoice has already been accepted. Duplicate submissions are not permitted.' });
       }
+      if (invoice.item_type === 'trial_lesson' && hasStudentUtilizedTrial(req.user.id)) {
+        return res.status(409).json({ error: 'The trial lesson is strictly limited to one use per account and has already been used or submitted for verification.' });
+      }
 
       const activePayment = db.prepare("SELECT id, status FROM paypal_payments WHERE invoice_id = ? AND status IN ('pending', 'accepted')").get(invoice.id);
       if (activePayment) {
@@ -14466,7 +14605,8 @@ app.post('/api/student/invoices/:invoiceId/submit-proof', authenticateToken, req
       return res.status(201).json({
         message: `Proof of payment submitted! Status is Pending Administrator verification (${txCode}).`,
         payment: savedPayment,
-        invoice: db.prepare('SELECT * FROM invoices WHERE id = ?').get(invoice.id)
+        invoice: db.prepare('SELECT * FROM invoices WHERE id = ?').get(invoice.id),
+        trial_used: hasStudentUtilizedTrial(req.user.id)
       });
     } catch (err) {
       console.error('Submit proof of payment error:', err);

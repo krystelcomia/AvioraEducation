@@ -1,30 +1,56 @@
 const Database = require('better-sqlite3');
 const path = require('path');
 const fs = require('fs');
+const zlib = require('zlib');
 const bcrypt = require('bcryptjs');
 
 const isVercel = process.env.VERCEL === '1' || process.env.VERCEL === 'true' || !!process.env.AWS_LAMBDA_FUNCTION_NAME;
 const sourceDbPath = path.join(__dirname, 'aviora.db');
-const targetDbDir = isVercel ? '/tmp' : __dirname;
-const dbPath = path.join(targetDbDir, 'aviora.db');
+const customDbPath = (process.env.DB_PATH || process.env.AVIORA_DB_PATH || '').trim();
+const customDataDir = (process.env.DATA_DIR || process.env.AVIORA_DATA_DIR || '').trim();
 
-if (isVercel && !fs.existsSync(dbPath)) {
-  if (fs.existsSync(sourceDbPath)) {
-    try {
-      fs.copyFileSync(sourceDbPath, dbPath);
-    } catch (e) {
-      console.warn('Could not copy initial aviora.db to /tmp, will initialize new DB:', e);
-    }
+let dbPath;
+if (customDbPath) {
+  dbPath = path.resolve(customDbPath);
+  fs.mkdirSync(path.dirname(dbPath), { recursive: true });
+} else if (customDataDir) {
+  const dir = path.resolve(customDataDir);
+  fs.mkdirSync(dir, { recursive: true });
+  dbPath = path.join(dir, 'aviora.db');
+} else {
+  const targetDbDir = isVercel ? '/tmp' : __dirname;
+  dbPath = path.join(targetDbDir, 'aviora.db');
+}
+
+if (!fs.existsSync(dbPath) && fs.existsSync(sourceDbPath) && path.resolve(dbPath) !== path.resolve(sourceDbPath)) {
+  try {
+    fs.copyFileSync(sourceDbPath, dbPath);
+  } catch (e) {
+    console.warn('Could not copy initial aviora.db, will initialize new DB:', e);
   }
 }
 
-const db = new Database(dbPath);
-
-// Enable foreign keys and WAL mode for fast concurrent operations
-db.pragma('foreign_keys = ON');
-if (!isVercel) {
-  db.pragma('journal_mode = WAL');
+function openSqliteHandle(targetFile) {
+  const handle = new Database(targetFile);
+  handle.pragma('foreign_keys = ON');
+  if (!isVercel) {
+    handle.pragma('journal_mode = WAL');
+  }
+  return handle;
 }
+
+let _db = openSqliteHandle(dbPath);
+const db = new Proxy({}, {
+  get(_, prop) {
+    if (prop === '__raw') return _db;
+    const val = _db[prop];
+    return typeof val === 'function' ? val.bind(_db) : val;
+  },
+  set(_, prop, value) {
+    _db[prop] = value;
+    return true;
+  }
+});
 
 function initSchema() {
   db.exec(`
@@ -39,6 +65,8 @@ function initSchema() {
       country TEXT DEFAULT 'United States',
       wallet_balance REAL DEFAULT 0.00,
       wallet_tutor_id INTEGER REFERENCES users(id),
+      trial_used INTEGER DEFAULT 0,
+      trial_used_at DATETIME,
       status TEXT DEFAULT 'active' CHECK(status IN ('active', 'inactive', 'suspended')),
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
@@ -871,17 +899,47 @@ function initSchema() {
         db.prepare("ALTER TABLE buddy_sessions ADD COLUMN cancelled_at DATETIME").run();
       }
     }
-    // Update any existing seeded buddy sessions that had 50-minute ranges to 30m call ranges
-    db.prepare("UPDATE buddy_sessions SET scheduled_time = '16:00 - 16:30 (30m)' WHERE scheduled_time LIKE '%16:50%'").run();
-    db.prepare("UPDATE buddy_sessions SET scheduled_time = '17:00 - 17:30 (30m)' WHERE scheduled_time LIKE '%17:50%'").run();
-    db.prepare("UPDATE buddy_sessions SET scheduled_time = '15:00 - 15:30 (30m)' WHERE scheduled_time LIKE '%15:50%'").run();
-    db.prepare("UPDATE buddy_sessions SET scheduled_time = REPLACE(scheduled_time, ':50', ':30 (30m)') WHERE scheduled_time LIKE '%:50%'").run();
-    db.prepare("UPDATE buddy_sessions SET duration_minutes = 30 WHERE duration_minutes IS NULL OR duration_minutes = 50").run();
+    // Update legacy seeded buddy sessions only (never overwrite user-created/edited sessions)
+    db.prepare("UPDATE buddy_sessions SET scheduled_time = '16:00 - 16:30 (30m)' WHERE session_code = 'BUDDY-7482' AND scheduled_time LIKE '%16:50%'").run();
+    db.prepare("UPDATE buddy_sessions SET scheduled_time = '17:00 - 17:30 (30m)' WHERE session_code = 'BUDDY-9134' AND scheduled_time LIKE '%17:50%'").run();
+    db.prepare("UPDATE buddy_sessions SET duration_minutes = 30 WHERE session_code IN ('BUDDY-7482', 'BUDDY-9134', 'BUDDY-3829') AND (duration_minutes IS NULL OR duration_minutes = 50)").run();
   } catch (e) {
     console.warn('Buddy session migration notice:', e.message);
   }
 
   try {
+    const userCols = db.prepare("PRAGMA table_info(users)").all();
+    if (userCols && userCols.length > 0) {
+      if (!userCols.some(c => c.name === 'trial_used')) {
+        db.prepare("ALTER TABLE users ADD COLUMN trial_used INTEGER DEFAULT 0").run();
+      }
+      if (!userCols.some(c => c.name === 'trial_used_at')) {
+        db.prepare("ALTER TABLE users ADD COLUMN trial_used_at DATETIME").run();
+      }
+      // Monotonically backfill permanent trial usage from existing trial subscriptions, bookings, and accepted invoices
+      db.prepare(`
+        UPDATE users
+        SET trial_used = 1,
+            trial_used_at = COALESCE(trial_used_at, CURRENT_TIMESTAMP)
+        WHERE COALESCE(trial_used, 0) = 0
+          AND (
+            EXISTS (SELECT 1 FROM student_subscriptions ss WHERE ss.user_id = users.id AND COALESCE(ss.is_trial, 0) = 1)
+            OR EXISTS (
+              SELECT 1 FROM tutoring_requests tr
+              WHERE tr.student_id = users.id
+                AND LOWER(COALESCE(tr.payment_method, '')) IN ('trial', 'free_trial')
+                AND LOWER(COALESCE(tr.status, '')) != 'cancelled'
+            )
+            OR EXISTS (
+              SELECT 1 FROM invoices inv
+              WHERE inv.student_id = users.id
+                AND inv.item_type = 'trial_lesson'
+                AND (COALESCE(inv.fulfilled, 0) = 1 OR LOWER(COALESCE(inv.status, '')) = 'accepted')
+            )
+          )
+      `).run();
+    }
+
     const notifCols = db.prepare("PRAGMA table_info(notifications)").all();
     if (notifCols && notifCols.length > 0) {
       if (!notifCols.some(c => c.name === 'email_sent')) {
@@ -1696,9 +1754,9 @@ function ensureAdminAccount(customPassword) {
         stephanie = db.prepare('SELECT * FROM users WHERE id = ?').get(res.lastInsertRowid);
       }
     } else {
-      if (!stephanie.password_hash || customPassword || stephanie.role !== 'admin' || stephanie.status !== 'active' || stephanie.name !== 'Stephanie') {
+      if (!stephanie.password_hash || customPassword || stephanie.role !== 'admin') {
         const nextHash = (!stephanie.password_hash || customPassword) ? passwordHash : stephanie.password_hash;
-        db.prepare("UPDATE users SET password_hash = ?, role = 'admin', status = 'active', name = 'Stephanie' WHERE id = ?").run(nextHash, stephanie.id);
+        db.prepare("UPDATE users SET password_hash = ?, role = 'admin', name = COALESCE(NULLIF(name, ''), 'Stephanie') WHERE id = ?").run(nextHash, stephanie.id);
         stephanie = db.prepare('SELECT * FROM users WHERE id = ?').get(stephanie.id);
       }
     }
@@ -1772,9 +1830,9 @@ function ensureKrystelAccount(customPassword) {
       );
       user = db.prepare('SELECT * FROM users WHERE id = ?').get(res.lastInsertRowid);
     } else {
-      if (!user.password_hash || customPassword || user.status !== 'active') {
+      if (!user.password_hash || customPassword) {
         const nextHash = (!user.password_hash || customPassword) ? passwordHash : user.password_hash;
-        db.prepare("UPDATE users SET password_hash = ?, status = 'active' WHERE id = ?").run(nextHash, user.id);
+        db.prepare("UPDATE users SET password_hash = ? WHERE id = ?").run(nextHash, user.id);
         user.password_hash = nextHash;
       }
     }
@@ -1913,9 +1971,9 @@ function ensureJoshuaAccount(customPassword) {
       );
       user = db.prepare('SELECT * FROM users WHERE id = ?').get(res.lastInsertRowid);
     } else {
-      if (!user.password_hash || customPassword || user.status !== 'active' || user.role !== 'teacher') {
+      if (!user.password_hash || customPassword) {
         const nextHash = (!user.password_hash || customPassword) ? passwordHash : user.password_hash;
-        db.prepare("UPDATE users SET password_hash = ?, status = 'active', role = 'teacher' WHERE id = ?").run(nextHash, user.id);
+        db.prepare("UPDATE users SET password_hash = ? WHERE id = ?").run(nextHash, user.id);
         user.password_hash = nextHash;
       }
       // If user still has the old default woman avatar or no avatar, update to the proper Joshua Garcia avatar
@@ -1983,8 +2041,8 @@ function ensureJoshuaAccount(customPassword) {
               THEN ? 
               ELSE availability_schedule 
             END,
-            status = 'approved',
-            interview_status = 'completed',
+            status = COALESCE(NULLIF(status, ''), 'approved'),
+            interview_status = COALESCE(NULLIF(interview_status, ''), 'completed'),
             reviewed_by = COALESCE(reviewed_by, 1),
             reviewed_at = COALESCE(reviewed_at, CURRENT_TIMESTAMP)
         WHERE user_id = ?
@@ -2025,7 +2083,7 @@ function ensureJoshuaAccount(customPassword) {
               THEN ? 
               ELSE availability_schedule 
             END,
-            is_active = 1
+            is_active = COALESCE(is_active, 1)
         WHERE user_id = ?
       `).run(appId, defaultSubjects, defaultSubjectRates, JSON.stringify(['Grade 9-12', 'College Prep']), defaultSchedule, userId);
     }
@@ -2061,13 +2119,6 @@ function ensureJoshuaAccount(customPassword) {
             ) VALUES (?, ?, 'Calculus BC', 'Taylor Polynomials Practice Worksheet', 'Complete exercises 1 through 8 on finding the 3rd-degree Taylor polynomial centered at x=0.', '2026-11-02', 'assigned')
           `).run(userId, krystel.id);
         }
-      } else {
-        // Concluded class with Krystel Comia is marked as completed/done and ended
-        db.prepare(`
-          UPDATE tutoring_requests
-          SET status = 'completed', room_status = 'ended', updated_at = CURRENT_TIMESTAMP
-          WHERE id = ? AND (status != 'completed' OR room_status != 'ended')
-        `).run(existingReq.id);
       }
 
       // Ensure conversation history with Krystel Comia exists and is preserved
@@ -2651,6 +2702,228 @@ try {
   db.pragma('wal_checkpoint(TRUNCATE)');
 } catch (e) {}
 
+// ===================================================
+// PERSISTENT REMOTE SNAPSHOT SYNC (Serverless Redeploys)
+// Keeps SQLite records preserved across container restarts & code pushes when configured.
+// ===================================================
+const REMOTE_SNAPSHOT_KEY = 'aviora:sqlite:snapshot:v1';
+const REMOTE_GIST_FILENAME = 'aviora-db-snapshot.gz.b64';
+let _remoteHydratePromise = null;
+let _remoteHydrateCompleted = false;
+let _remoteFlushInFlight = null;
+let _remoteFlushQueued = false;
+
+function getRemoteSyncProvider() {
+  const upstashUrl = (process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL || '').trim().replace(/\/+$/, '');
+  const upstashToken = (process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN || '').trim();
+  if (upstashUrl && upstashToken) {
+    return { type: 'upstash', url: upstashUrl, token: upstashToken };
+  }
+  const gistId = (process.env.AVIORA_GITHUB_GIST_ID || '').trim();
+  const gistToken = (process.env.AVIORA_GITHUB_TOKEN || '').trim();
+  if (gistId && gistToken) {
+    return { type: 'gist', gistId, token: gistToken };
+  }
+  const syncUrl = (process.env.AVIORA_DB_SYNC_URL || '').trim();
+  if (syncUrl) {
+    return { type: 'http', url: syncUrl, token: (process.env.AVIORA_DB_SYNC_TOKEN || '').trim() };
+  }
+  return null;
+}
+
+function isRemoteDbSyncConfigured() {
+  return Boolean(getRemoteSyncProvider()) && (isVercel || process.env.FORCE_REMOTE_DB_SYNC === 'true');
+}
+
+async function fetchRemoteSnapshotBuffer(provider) {
+  if (!provider || typeof fetch !== 'function') return null;
+  if (provider.type === 'upstash') {
+    const res = await fetch(provider.url, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${provider.token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(['GET', REMOTE_SNAPSHOT_KEY])
+    });
+    if (!res.ok) return null;
+    const data = await res.json().catch(() => null);
+    if (!data || !data.result || typeof data.result !== 'string') return null;
+    return zlib.gunzipSync(Buffer.from(data.result, 'base64'));
+  }
+  if (provider.type === 'gist') {
+    const res = await fetch(`https://api.github.com/gists/${encodeURIComponent(provider.gistId)}`, {
+      headers: {
+        Authorization: `Bearer ${provider.token}`,
+        Accept: 'application/vnd.github+json',
+        'User-Agent': 'AvioraEducation'
+      }
+    });
+    if (!res.ok) return null;
+    const gist = await res.json().catch(() => null);
+    const fileObj = gist?.files?.[REMOTE_GIST_FILENAME];
+    if (!fileObj || !fileObj.content) return null;
+    return zlib.gunzipSync(Buffer.from(String(fileObj.content).trim(), 'base64'));
+  }
+  if (provider.type === 'http') {
+    const headers = {};
+    if (provider.token) headers.Authorization = `Bearer ${provider.token}`;
+    const res = await fetch(provider.url, { method: 'GET', headers });
+    if (!res.ok) return null;
+    const ctype = String(res.headers.get('content-type') || '').toLowerCase();
+    if (ctype.includes('application/json')) {
+      const json = await res.json().catch(() => null);
+      if (!json || !json.snapshot_gz_b64) return null;
+      return zlib.gunzipSync(Buffer.from(String(json.snapshot_gz_b64), 'base64'));
+    }
+    const raw = Buffer.from(await res.arrayBuffer());
+    if (raw.length >= 2 && raw[0] === 0x1f && raw[1] === 0x8b) {
+      return zlib.gunzipSync(raw);
+    }
+    return raw;
+  }
+  return null;
+}
+
+async function uploadRemoteSnapshotBuffer(provider, gzBuffer) {
+  if (!provider || typeof fetch !== 'function') return false;
+  const b64 = gzBuffer.toString('base64');
+  if (provider.type === 'upstash') {
+    const res = await fetch(provider.url, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${provider.token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(['SET', REMOTE_SNAPSHOT_KEY, b64])
+    });
+    return res.ok;
+  }
+  if (provider.type === 'gist') {
+    const res = await fetch(`https://api.github.com/gists/${encodeURIComponent(provider.gistId)}`, {
+      method: 'PATCH',
+      headers: {
+        Authorization: `Bearer ${provider.token}`,
+        Accept: 'application/vnd.github+json',
+        'Content-Type': 'application/json',
+        'User-Agent': 'AvioraEducation'
+      },
+      body: JSON.stringify({
+        files: {
+          [REMOTE_GIST_FILENAME]: { content: b64 }
+        }
+      })
+    });
+    return res.ok;
+  }
+  if (provider.type === 'http') {
+    const headers = { 'Content-Type': 'application/json' };
+    if (provider.token) headers.Authorization = `Bearer ${provider.token}`;
+    const res = await fetch(provider.url, {
+      method: 'PUT',
+      headers,
+      body: JSON.stringify({
+        snapshot_gz_b64: b64,
+        updated_at: new Date().toISOString()
+      })
+    });
+    return res.ok;
+  }
+  return false;
+}
+
+function runAdditiveSchemaAndPreserveSeeds() {
+  initSchema();
+  ensureAdminAccount();
+  ensureKrystelAccount();
+  ensureJoshuaAccount();
+  ensureBuddySeedData();
+  ensureInquirySeedData();
+  ensureTutorSeedData();
+  ensureTutorLocations();
+  ensurePaymentSettings();
+  try {
+    _db.pragma('wal_checkpoint(TRUNCATE)');
+  } catch (e) {}
+}
+
+async function ensureRemoteDbHydrated() {
+  if (_remoteHydrateCompleted) return true;
+  if (!isRemoteDbSyncConfigured()) {
+    _remoteHydrateCompleted = true;
+    return false;
+  }
+  if (_remoteHydratePromise) return _remoteHydratePromise;
+
+  _remoteHydratePromise = (async () => {
+    try {
+      const provider = getRemoteSyncProvider();
+      const buf = await fetchRemoteSnapshotBuffer(provider);
+      if (buf && buf.length >= 4096 && buf.subarray(0, 15).toString('utf8') === 'SQLite format 3') {
+        const incomingPath = `${dbPath}.incoming`;
+        fs.writeFileSync(incomingPath, buf);
+        try { _db.pragma('wal_checkpoint(TRUNCATE)'); } catch (e) {}
+        try { _db.close(); } catch (e) {}
+        for (const sidecar of [`${dbPath}-wal`, `${dbPath}-shm`]) {
+          try { if (fs.existsSync(sidecar)) fs.unlinkSync(sidecar); } catch (e) {}
+        }
+        try {
+          fs.renameSync(incomingPath, dbPath);
+        } catch (renErr) {
+          fs.copyFileSync(incomingPath, dbPath);
+          try { fs.unlinkSync(incomingPath); } catch (e) {}
+        }
+        _db = openSqliteHandle(dbPath);
+        // Upgrade schema additively ONLY without overwriting existing user state
+        runAdditiveSchemaAndPreserveSeeds();
+        return true;
+      }
+      return false;
+    } catch (err) {
+      console.warn('Remote DB snapshot hydration notice:', err.message);
+      return false;
+    } finally {
+      _remoteHydrateCompleted = true;
+      _remoteHydratePromise = null;
+    }
+  })();
+
+  return _remoteHydratePromise;
+}
+
+async function flushRemoteDbSnapshot() {
+  if (!isRemoteDbSyncConfigured()) return false;
+  if (_remoteFlushInFlight) {
+    _remoteFlushQueued = true;
+    return _remoteFlushInFlight;
+  }
+  const provider = getRemoteSyncProvider();
+  if (!provider) return false;
+
+  _remoteFlushInFlight = (async () => {
+    const snapPath = `${dbPath}.snapshot.${process.pid}`;
+    try {
+      await _db.backup(snapPath);
+      const raw = fs.readFileSync(snapPath);
+      const gz = zlib.gzipSync(raw, { level: 6 });
+      const ok = await uploadRemoteSnapshotBuffer(provider, gz);
+      return ok;
+    } catch (err) {
+      console.warn('Remote DB snapshot flush notice:', err.message);
+      return false;
+    } finally {
+      try { if (fs.existsSync(snapPath)) fs.unlinkSync(snapPath); } catch (e) {}
+      _remoteFlushInFlight = null;
+      if (_remoteFlushQueued) {
+        _remoteFlushQueued = false;
+        setImmediate(() => { flushRemoteDbSnapshot().catch(() => {}); });
+      }
+    }
+  })();
+
+  return _remoteFlushInFlight;
+}
+
 module.exports = {
   db,
   initSchema,
@@ -2662,6 +2935,9 @@ module.exports = {
   ensureTutorSeedData,
   ensurePaymentSettings,
   getUserPreferences,
-  saveUserPreferences
+  saveUserPreferences,
+  isRemoteDbSyncConfigured,
+  ensureRemoteDbHydrated,
+  flushRemoteDbSnapshot
 };
 

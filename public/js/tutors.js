@@ -1621,8 +1621,8 @@ const Tutors = {
       if (title) title.textContent = 'Book Tutoring Session';
       if (subtitle) subtitle.textContent = 'Step 1 of 3: Select Date & Available 50-Min Slot';
     } else if (step === 3) {
-      if (title) title.textContent = 'Pay via PayPal & Upload Proof';
-      if (subtitle) subtitle.textContent = 'Step 3 of 3: Redirect to PayPal for exact amount & submit confirmation';
+      if (title) title.textContent = 'Complete Payment & Upload Proof';
+      if (subtitle) subtitle.textContent = 'Step 3 of 3: Choose PayPal or GCash, send exact amount & upload screenshot proof';
     } else {
       if (title) title.textContent = 'Select Payment Method';
       if (subtitle) subtitle.textContent = 'Step 2 of 3: Review Booking & Continue to Payment';

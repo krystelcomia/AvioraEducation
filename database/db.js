@@ -436,7 +436,10 @@ function initSchema() {
       id INTEGER PRIMARY KEY CHECK(id = 1),
       paypal_holder_name TEXT NOT NULL DEFAULT 'Stephanie Nicole Debo Manalo',
       paypal_contact TEXT NOT NULL DEFAULT '09945586658',
-      paypal_business_email TEXT DEFAULT '',
+      paypal_email TEXT NOT NULL DEFAULT 'snmanalo26@gmail.com',
+      paypal_business_email TEXT DEFAULT 'snmanalo26@gmail.com',
+      gcash_holder_name TEXT NOT NULL DEFAULT 'ST******E N****E M.',
+      gcash_number TEXT NOT NULL DEFAULT '09945586658',
       paypal_qr_image TEXT DEFAULT NULL,
       paypal_qr_filename TEXT DEFAULT NULL,
       paypal_qr_mime_type TEXT DEFAULT NULL,
@@ -473,7 +476,7 @@ function initSchema() {
       invoice_id INTEGER NOT NULL REFERENCES invoices(id) ON DELETE CASCADE,
       invoice_number TEXT NOT NULL,
       student_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      payment_channel TEXT NOT NULL DEFAULT 'paypal_qr' CHECK(payment_channel IN ('paypal_qr', 'paypal_direct', 'paypal_checkout', 'paypal_manual')),
+      payment_channel TEXT NOT NULL DEFAULT 'paypal_qr' CHECK(payment_channel IN ('paypal_qr', 'paypal_direct', 'paypal_details', 'paypal_checkout', 'paypal_manual', 'gcash_qr', 'gcash_direct', 'gcash_details')),
       amount REAL NOT NULL,
       currency_code TEXT NOT NULL,
       currency_symbol TEXT NOT NULL,
@@ -555,10 +558,24 @@ function initSchema() {
     CREATE INDEX IF NOT EXISTS idx_password_reset_email ON password_reset_codes(email);
   `);
 
-  // Ensure existing paypal_payments tables also allow 'paypal_direct'
+  // Ensure existing payment_settings tables have PayPal email & GCash columns
+  try {
+    const psCols = db.prepare("PRAGMA table_info(payment_settings)").all();
+    if (psCols.length > 0 && !psCols.some(c => c.name === 'paypal_email')) {
+      db.prepare("ALTER TABLE payment_settings ADD COLUMN paypal_email TEXT DEFAULT 'snmanalo26@gmail.com'").run();
+    }
+    if (psCols.length > 0 && !psCols.some(c => c.name === 'gcash_holder_name')) {
+      db.prepare("ALTER TABLE payment_settings ADD COLUMN gcash_holder_name TEXT DEFAULT 'ST******E N****E M.'").run();
+    }
+    if (psCols.length > 0 && !psCols.some(c => c.name === 'gcash_number')) {
+      db.prepare("ALTER TABLE payment_settings ADD COLUMN gcash_number TEXT DEFAULT '09945586658'").run();
+    }
+  } catch (e) {}
+
+  // Ensure existing paypal_payments tables allow PayPal & GCash channels
   try {
     const ppTbl = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='paypal_payments'").get();
-    if (ppTbl && ppTbl.sql && !ppTbl.sql.includes('paypal_direct')) {
+    if (ppTbl && ppTbl.sql && (!ppTbl.sql.includes('paypal_direct') || !ppTbl.sql.includes('gcash_qr'))) {
       db.pragma('foreign_keys = OFF');
       try {
         db.transaction(() => {
@@ -569,7 +586,7 @@ function initSchema() {
               invoice_id INTEGER NOT NULL REFERENCES invoices(id) ON DELETE CASCADE,
               invoice_number TEXT NOT NULL,
               student_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-              payment_channel TEXT NOT NULL DEFAULT 'paypal_qr' CHECK(payment_channel IN ('paypal_qr', 'paypal_direct', 'paypal_checkout', 'paypal_manual')),
+              payment_channel TEXT NOT NULL DEFAULT 'paypal_qr' CHECK(payment_channel IN ('paypal_qr', 'paypal_direct', 'paypal_details', 'paypal_checkout', 'paypal_manual', 'gcash_qr', 'gcash_direct', 'gcash_details')),
               amount REAL NOT NULL,
               currency_code TEXT NOT NULL,
               currency_symbol TEXT NOT NULL,
@@ -2493,14 +2510,18 @@ function ensurePaymentSettings() {
     const existing = db.prepare('SELECT id FROM payment_settings WHERE id = 1').get();
     if (!existing) {
       db.prepare(`
-        INSERT INTO payment_settings (id, paypal_holder_name, paypal_contact, paypal_business_email)
-        VALUES (1, 'Stephanie Nicole Debo Manalo', '09945586658', '')
+        INSERT INTO payment_settings (id, paypal_holder_name, paypal_contact, paypal_email, paypal_business_email, gcash_holder_name, gcash_number)
+        VALUES (1, 'Stephanie Nicole Debo Manalo', '09945586658', 'snmanalo26@gmail.com', 'snmanalo26@gmail.com', 'ST******E N****E M.', '09945586658')
       `).run();
     } else {
       db.prepare(`
         UPDATE payment_settings
         SET paypal_holder_name = COALESCE(NULLIF(paypal_holder_name, ''), 'Stephanie Nicole Debo Manalo'),
-            paypal_contact = COALESCE(NULLIF(paypal_contact, ''), '09945586658')
+            paypal_contact = COALESCE(NULLIF(paypal_contact, ''), '09945586658'),
+            paypal_email = COALESCE(NULLIF(paypal_email, ''), 'snmanalo26@gmail.com'),
+            paypal_business_email = COALESCE(NULLIF(paypal_business_email, ''), 'snmanalo26@gmail.com'),
+            gcash_holder_name = COALESCE(NULLIF(gcash_holder_name, ''), 'ST******E N****E M.'),
+            gcash_number = COALESCE(NULLIF(gcash_number, ''), '09945586658')
         WHERE id = 1
       `).run();
     }

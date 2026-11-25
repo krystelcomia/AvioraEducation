@@ -2797,16 +2797,17 @@
                   <div id="page-pay-wallet-status" style="font-size: 0.68rem; color: var(--charcoal-500);">Available Balance</div>
                 </div>
               </div>
-              <!-- Official Admin PayPal Option -->
+              <!-- Official PayPal / GCash Payment Option -->
               <div class="payment-method-card" id="page-pay-method-paypal" onclick="BookLesson.setPaymentMethod('paypal')" style="padding: 0.65rem 0.85rem;">
                 <div class="payment-method-left">
                   <input type="radio" name="page_payment_choice" id="page-pay-opt-paypal" value="paypal" />
                   <div>
-                    <div class="payment-method-title" style="font-size: 0.85rem; display: flex; align-items: center; gap: 0.35rem;">
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--gold-600);"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect><path d="M14 14h3v3h-3z"></path><path d="M17 17h4v4h-4z"></path></svg>
-                      <span>PayPal (QR Code or Direct Transfer)</span>
+                    <div class="payment-method-title" style="font-size: 0.85rem; display: flex; align-items: center; gap: 0.4rem;">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7.8 20.5H5.2c-.5 0-.8-.4-.7-.9L6.8 5.2c.1-.6.6-1 1.2-1h5.6c2.7 0 4.4 1.3 4 3.9-.5 3.1-2.6 4.7-5.6 4.7h-1.8c-.5 0-.9.4-1 .9l-.8 5.9c-.1.5-.3.9-.6.9z" fill="#003087"/><path d="M10.4 18.8l.7-4.5c.1-.5.5-.8 1-.8h1.5c2.5 0 4.3-1.2 4.8-3.8.4-2.1-.3-3.5-1.8-4.1-.4 2.8-2.4 4.4-5.4 4.4H9.5c-.5 0-.9.4-1 .9L7.4 18.8c0 .4.2.7.6.7h1.8c.3 0 .5-.3.6-.7z" fill="#0079C1"/></svg>
+                      <span style="display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:4px;background:#007DFE;color:#FFF;font-size:10px;font-weight:900;">G</span>
+                      <span>PayPal or GCash (Details / QR Code)</span>
                     </div>
-                    <div class="payment-method-sub" style="font-size: 0.72rem;">Pay via QR or direct transfer to Stephanie Nicole Debo Manalo (09945586658), then upload proof</div>
+                    <div class="payment-method-sub" style="font-size: 0.72rem;">Choose PayPal (snmanalo26@gmail.com) or GCash (09945586658), send exact amount &amp; upload proof</div>
                   </div>
                 </div>
                 <div style="text-align: right;">
@@ -2818,7 +2819,7 @@
 
             <div style="background: rgba(198, 138, 40, 0.08); border: 1px solid rgba(198, 138, 40, 0.25); border-radius: var(--radius-sm); padding: 0.55rem 0.75rem; margin-bottom: 0.85rem; font-size: 0.72rem; color: var(--charcoal-700); display: flex; align-items: center; gap: 0.45rem;">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--gold-700); flex-shrink: 0;"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
-              <span>Paid sessions require completing the PayPal payment steps, uploading proof screenshot, and Administrator verification before approval.</span>
+              <span>Paid sessions require sending the exact amount via PayPal or GCash, uploading proof screenshot, and Administrator verification before approval.</span>
             </div>
 
             <button type="button" class="btn btn-primary btn-lg" id="btn-page-confirm-booking" style="width: 100%; justify-content: center; font-weight: 700; margin-top: auto; padding: 0.85rem 1rem;" disabled>
@@ -2826,11 +2827,11 @@
             </button>
             </div><!-- end #page-checkout-review-body -->
 
-            <!-- Inline PayPal Payment Step (No separate page needed) -->
+            <!-- Inline Payment Step (No separate page needed) -->
             <div id="page-checkout-paypal-body" style="display: none;">
               <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem;">
                 <button type="button" class="btn btn-secondary btn-sm" onclick="BookLesson.showCheckoutStep('review')">← Back to Booking Options</button>
-                <span class="badge-gold" style="font-size: 0.72rem;">PayPal Payment Step</span>
+                <span class="badge-gold" style="font-size: 0.72rem;">PayPal / GCash Payment</span>
               </div>
               <div id="page-booking-paypal-inline-container"></div>
             </div>
@@ -3119,9 +3120,9 @@
       <div class="container portal-wrapper">
         <div style="display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.25rem;">
           <div>
-            <span class="badge-gold">Official PayPal Billing &amp; Verification</span>
-            <h1 style="font-size: 1.85rem; margin: 0.35rem 0 0.25rem;">Student PayPal Payments &amp; Invoices</h1>
-            <p style="font-size: 0.9rem; color: var(--text-secondary); margin: 0;">Complete payment to our verified Admin PayPal recipient using your exact generated invoice total and upload your confirmation screenshot.</p>
+            <span class="badge-gold">Official Payment Billing &amp; Verification</span>
+            <h1 style="font-size: 1.85rem; margin: 0.35rem 0 0.25rem;">Student Payments &amp; Invoices</h1>
+            <p style="font-size: 0.9rem; color: var(--text-secondary); margin: 0;">Choose PayPal or GCash, complete payment via Payment Details or QR Code using the exact invoice amount, and upload your proof screenshot.</p>
           </div>
           <a href="#student-portal" class="btn btn-outline-gold btn-sm">← Back to Student Dashboard</a>
         </div>
@@ -7013,16 +7014,17 @@
                   <div id="pay-wallet-status-sub" style="font-size: 0.72rem; color: var(--charcoal-500);">Available Balance</div>
                 </div>
               </div>
-              <!-- Official Admin PayPal Option -->
+              <!-- Official PayPal / GCash Payment Option -->
               <div class="payment-method-card" id="pay-method-paypal-card" onclick="Tutors.selectPaymentMethod('paypal')">
                 <div class="payment-method-left">
                   <input type="radio" name="payment_choice" id="pay-opt-paypal" value="paypal" />
                   <div>
-                    <div class="payment-method-title" style="display: flex; align-items: center; gap: 0.35rem;">
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--gold-600);"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect><path d="M14 14h3v3h-3z"></path><path d="M17 17h4v4h-4z"></path></svg>
-                      <span>PayPal (Pay via QR Code or Direct Transfer)</span>
+                    <div class="payment-method-title" style="display: flex; align-items: center; gap: 0.4rem;">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7.8 20.5H5.2c-.5 0-.8-.4-.7-.9L6.8 5.2c.1-.6.6-1 1.2-1h5.6c2.7 0 4.4 1.3 4 3.9-.5 3.1-2.6 4.7-5.6 4.7h-1.8c-.5 0-.9.4-1 .9l-.8 5.9c-.1.5-.3.9-.6.9z" fill="#003087"/><path d="M10.4 18.8l.7-4.5c.1-.5.5-.8 1-.8h1.5c2.5 0 4.3-1.2 4.8-3.8.4-2.1-.3-3.5-1.8-4.1-.4 2.8-2.4 4.4-5.4 4.4H9.5c-.5 0-.9.4-1 .9L7.4 18.8c0 .4.2.7.6.7h1.8c.3 0 .5-.3.6-.7z" fill="#0079C1"/></svg>
+                      <span style="display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:4px;background:#007DFE;color:#FFF;font-size:10px;font-weight:900;">G</span>
+                      <span>PayPal or GCash (Payment Details or QR Code)</span>
                     </div>
-                    <div class="payment-method-sub">Send exact invoice to Stephanie Nicole Debo Manalo (09945586658) &amp; upload proof screenshot</div>
+                    <div class="payment-method-sub">Pay via PayPal (snmanalo26@gmail.com) or GCash (09945586658), send exact amount &amp; upload proof screenshot</div>
                   </div>
                 </div>
                 <div style="text-align: right;">
@@ -7035,7 +7037,7 @@
 
           <div style="background: rgba(198, 138, 40, 0.08); border: 1px solid rgba(198, 138, 40, 0.25); border-radius: var(--radius-sm); padding: 0.75rem 1rem; margin-bottom: 1.25rem; font-size: 0.76rem; color: var(--charcoal-700); display: flex; align-items: center; gap: 0.65rem;">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--gold-700); flex-shrink: 0;"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
-            <span>Paid bookings require sending real PayPal funds, uploading your payment screenshot, and Administrator verification before approval. Max 50 minutes per lesson.</span>
+            <span>Paid bookings require sending the exact amount via PayPal or GCash, uploading your payment screenshot, and Administrator verification before approval. Max 50 minutes per lesson.</span>
           </div>
 
           <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 0.75rem;">
@@ -7048,11 +7050,11 @@
           </div>
         </div>
 
-        <!-- STEP 3: INLINE PAYPAL PAYMENT & PROOF UPLOAD (No separate page needed) -->
+        <!-- STEP 3: INLINE PAYPAL / GCASH PAYMENT & PROOF UPLOAD (No separate page needed) -->
         <div id="booking-step-paypal" style="display: none;">
           <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; margin-bottom: 0.85rem;">
             <button type="button" class="btn btn-secondary btn-sm" onclick="Tutors.showStep(2)">← Back to Payment Options</button>
-            <span class="badge-gold" style="font-size: 0.72rem;">Direct PayPal Payment &amp; Proof</span>
+            <span class="badge-gold" style="font-size: 0.72rem;">PayPal / GCash Payment &amp; Proof</span>
           </div>
           <div id="booking-paypal-inline-container"></div>
         </div>
@@ -7294,11 +7296,11 @@
         </button>
         </div><!-- end #sub-step-schedule -->
 
-        <!-- Step 2: Inline PayPal Payment Step inside Setup Modal -->
+        <!-- Step 2: Inline Payment Step inside Setup Modal -->
         <div id="sub-step-payment" style="display: none;">
           <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; margin-bottom: 1rem; flex-wrap: wrap;">
             <button type="button" class="btn btn-secondary btn-sm" onclick="StudentSub.showEnrollStep(1)">← Back to Schedule &amp; Cost Summary</button>
-            <span class="badge-gold" style="font-size: 0.74rem;">Direct PayPal Payment • Proof Required</span>
+            <span class="badge-gold" style="font-size: 0.74rem;">PayPal / GCash Payment • Proof Required</span>
           </div>
           <div id="sub-paypal-inline-container"></div>
         </div>
@@ -8241,7 +8243,7 @@
 
           <div id="buddy-modal-use-paypal-box" style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1.15rem; padding: 0.75rem 0.95rem; border: 1.5px solid rgba(198, 138, 40, 0.35); border-radius: 10px; background: rgba(198, 138, 40, 0.06); font-size: 0.8rem; font-weight: 700;">
             <input type="checkbox" id="buddy-peer-use-paypal" value="paypal" checked disabled style="cursor: not-allowed;" />
-            <span>Pay via Official Admin PayPal (QR Code or Direct Transfer to Stephanie Nicole Debo Manalo • 09945586658) &amp; upload proof</span>
+            <span>Pay via PayPal App (snmanalo26@gmail.com) or GCash (09945586658) &amp; upload proof</span>
           </div>
 
           <button type="submit" class="btn btn-primary" id="btn-submit-buddy-peer" style="width: 100%; justify-content: center; font-weight: 700; padding: 0.85rem;">
@@ -8253,7 +8255,7 @@
         <div id="buddy-step-payment" style="display: none;">
           <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; margin-bottom: 0.85rem;">
             <button type="button" class="btn btn-secondary btn-sm" onclick="AvioraBuddy.showPeerStep(1)">← Back to Buddy Setup</button>
-            <span class="badge-gold" style="font-size: 0.72rem;">PayPal Payment ($6.00)</span>
+            <span class="badge-gold" style="font-size: 0.72rem;">PayPal / GCash Payment ($6.00)</span>
           </div>
           <div id="buddy-paypal-inline-container"></div>
         </div>
@@ -8635,20 +8637,20 @@
   <script src="/js/i18n.js?v=2.4"></script>
   <script src="/js/auth.js?v=2.8"></script>
   <script src="/js/notifications.js?v=2.4"></script>
-  <script src="/js/tutors.js?v=2.4"></script>
+  <script src="/js/tutors.js?v=2.5"></script>
   <script src="/js/student.js?v=2.4"></script>
   <script src="/js/book-lesson.js?v=2.4"></script>
-  <script src="/js/subscription.js?v=2.4"></script>
+  <script src="/js/subscription.js?v=2.5"></script>
   <script src="/js/profile.js?v=2.6"></script>
   <script src="/js/spin-wheel.js?v=2.3"></script>
   <script src="/js/teacher.js?v=2.5"></script>
   <script src="/js/admin.js?v=2.3"></script>
   <script src="/js/buddy.js?v=2.3"></script>
   <script src="/js/virtual-room.js?v=2.3"></script>
-  <script src="/js/payments.js?v=1.0"></script>
+  <script src="/js/payments.js?v=1.1"></script>
   <script src="/js/main.js?v=2.3"></script>
 
-  <!-- Modal: Lightbox for PayPal QR Code & Uploaded Payment Proof -->
+  <!-- Modal: Lightbox for QR Code & Uploaded Payment Proof -->
   <div class="modal-overlay" id="paypal-image-lightbox-modal" onclick="if(event.target===this)AvioraPayments.closeImageModal()">
     <div class="modal-card" style="max-width: 720px; width: 100%;">
       <div class="modal-header">
@@ -8666,8 +8668,8 @@
     <div class="modal-card" style="max-width: 960px; width: 100%; max-height: 90vh; display: flex; flex-direction: column;">
       <div class="modal-header">
         <div>
-          <span class="badge-gold" style="font-size: 0.72rem;">Official PayPal Billing</span>
-          <h3 class="modal-title text-gold" id="student-invoice-modal-title" style="margin: 0.2rem 0 0;">Complete PayPal Payment &amp; Verification</h3>
+          <span class="badge-gold" style="font-size: 0.72rem;">Official PayPal &amp; GCash Billing</span>
+          <h3 class="modal-title text-gold" id="student-invoice-modal-title" style="margin: 0.2rem 0 0;">Complete Payment &amp; Verification</h3>
         </div>
         <button type="button" class="modal-close-btn" onclick="AvioraPayments.closeInvoicePaymentModal()">✕</button>
       </div>

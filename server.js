@@ -13089,15 +13089,23 @@ function validateUploadedImageBuffer(file) {
 function getSafePaymentSettings() {
   ensurePaymentSettings();
   const row = db.prepare('SELECT * FROM payment_settings WHERE id = 1').get() || {};
-  const hasQr = Boolean(row.paypal_qr_image && String(row.paypal_qr_image).trim());
+  const hasCustomQr = Boolean(row.paypal_qr_image && String(row.paypal_qr_image).trim());
   const paypalCheckoutSupported = Boolean(PAYPAL_CLIENT_ID && PAYPAL_CLIENT_SECRET);
+  const resolvedPayPalEmail = row.paypal_email || row.paypal_business_email || 'snmanalo26@gmail.com';
+  const paypalQr = hasCustomQr ? row.paypal_qr_image : '/assets/paypal-qr.jpg';
+  const gcashQr = '/assets/gcash-qr.jpg';
   return {
     paypal_holder_name: row.paypal_holder_name || 'Stephanie Nicole Debo Manalo',
+    paypal_email: resolvedPayPalEmail,
     paypal_contact: row.paypal_contact || '09945586658',
-    paypal_business_email: row.paypal_business_email || '',
-    has_qr_image: hasQr,
-    qr_image_data: hasQr ? row.paypal_qr_image : null,
-    qr_filename: row.paypal_qr_filename || null,
+    paypal_business_email: resolvedPayPalEmail,
+    gcash_holder_name: row.gcash_holder_name || 'ST******E N****E M.',
+    gcash_number: row.gcash_number || '09945586658',
+    has_qr_image: true,
+    qr_image_data: paypalQr,
+    paypal_qr_url: paypalQr,
+    gcash_qr_url: gcashQr,
+    qr_filename: row.paypal_qr_filename || 'paypal-qr.jpg',
     qr_updated_at: row.paypal_qr_updated_at || null,
     paypal_checkout_supported: paypalCheckoutSupported,
     qr_supports_dynamic_amount: false
@@ -13487,7 +13495,7 @@ function buildDirectPayPalTransferUrl(invoice, settings) {
   const exactVal = meta.zeroDecimal
     ? String(Math.round(Number(invoice.amount) || 0))
     : (Number(invoice.amount) || 0).toFixed(2);
-  const recipient = encodeURIComponent(settings.paypal_contact || '09945586658');
+  const recipient = encodeURIComponent(settings.paypal_email || settings.paypal_business_email || 'snmanalo26@gmail.com');
   const amountParam = encodeURIComponent(exactVal);
   const currencyParam = encodeURIComponent(meta.code || 'USD');
   return {
@@ -13545,7 +13553,7 @@ async function buildPayPalRedirectData(invoice, req) {
           exactAmount: direct.exactAmount,
           currencyCode: direct.currencyCode,
           recipientName: settings.paypal_holder_name,
-          recipientContact: settings.paypal_contact,
+          recipientContact: settings.paypal_email || settings.paypal_contact,
           invoiceNumber: invoice.invoice_number
         };
       }
@@ -13559,7 +13567,7 @@ async function buildPayPalRedirectData(invoice, req) {
     exactAmount: direct.exactAmount,
     currencyCode: direct.currencyCode,
     recipientName: settings.paypal_holder_name,
-    recipientContact: settings.paypal_contact,
+    recipientContact: settings.paypal_email || settings.paypal_contact,
     invoiceNumber: invoice.invoice_number
   };
 }
@@ -13900,7 +13908,9 @@ app.post('/api/student/invoices/:invoiceId/submit-proof', authenticateToken, req
       }
 
       const channelRaw = String(req.body.payment_channel || 'paypal_qr').trim();
-      const paymentChannel = ['paypal_qr', 'paypal_direct', 'paypal_checkout', 'paypal_manual'].includes(channelRaw) ? channelRaw : 'paypal_qr';
+      const allowedChannels = ['paypal_qr', 'paypal_direct', 'paypal_details', 'paypal_checkout', 'paypal_manual', 'gcash_qr', 'gcash_direct', 'gcash_details'];
+      const paymentChannel = allowedChannels.includes(channelRaw) ? channelRaw : 'paypal_qr';
+      const isGcash = paymentChannel.startsWith('gcash');
       const refNum = req.body.paypal_reference_number ? String(req.body.paypal_reference_number).trim().slice(0, 100) : null;
       const paypalOrderId = req.body.paypal_order_id ? String(req.body.paypal_order_id).trim().slice(0, 100) : null;
       const paypalCaptureId = req.body.paypal_capture_id ? String(req.body.paypal_capture_id).trim().slice(0, 100) : null;
@@ -13909,6 +13919,9 @@ app.post('/api/student/invoices/:invoiceId/submit-proof', authenticateToken, req
       const proofSha256 = crypto.createHash('sha256').update(req.file.buffer).digest('hex');
       const dataUrl = `data:${imgCheck.mimeType};base64,${req.file.buffer.toString('base64')}`;
       const settings = getSafePaymentSettings();
+      const recipientName = isGcash ? (settings.gcash_holder_name || 'ST******E N****E M.') : (settings.paypal_holder_name || 'Stephanie Nicole Debo Manalo');
+      const recipientContact = isGcash ? (settings.gcash_number || '09945586658') : (settings.paypal_email || 'snmanalo26@gmail.com');
+      const appDisplay = isGcash ? 'GCash' : 'PayPal';
       const txCode = generateUniquePaymentCode('PAY', 'paypal_payments', 'transaction_code');
       const isRetry = invoice.status === 'not_received';
 
@@ -13930,8 +13943,8 @@ app.post('/api/student/invoices/:invoiceId/submit-proof', authenticateToken, req
           invoice.amount,
           invoice.currency_code,
           invoice.currency_symbol,
-          settings.paypal_holder_name,
-          settings.paypal_contact,
+          recipientName,
+          recipientContact,
           paypalOrderId,
           paypalCaptureId,
           refNum,
@@ -13969,7 +13982,7 @@ app.post('/api/student/invoices/:invoiceId/submit-proof', authenticateToken, req
       sendNotification(
         req.user.id,
         'Proof of Payment Submitted (Pending Verification)',
-        `Your proof of payment (${txCode}) for Invoice ${invoice.invoice_number} (${formatExactMoney(invoice.amount, invoice.currency_code, invoice.currency_symbol)}) was submitted and is now Pending Administrator verification.`,
+        `Your ${appDisplay} proof of payment (${txCode}) for Invoice ${invoice.invoice_number} (${formatExactMoney(invoice.amount, invoice.currency_code, invoice.currency_symbol)}) was submitted and is now Pending Administrator verification.`,
         'payment',
         '#student-payments'
       );
@@ -13978,8 +13991,8 @@ app.post('/api/student/invoices/:invoiceId/submit-proof', authenticateToken, req
       admins.forEach(adm => {
         sendNotification(
           adm.id,
-          'PayPal Proof Pending Verification',
-          `${req.user.name} submitted proof of payment (${formatExactMoney(invoice.amount, invoice.currency_code, invoice.currency_symbol)}) for Invoice ${invoice.invoice_number}. Please verify funds in Stephanie Nicole Debo Manalo (09945586658).`,
+          `${appDisplay} Proof Pending Verification`,
+          `${req.user.name} submitted ${appDisplay} proof of payment (${formatExactMoney(invoice.amount, invoice.currency_code, invoice.currency_symbol)}) for Invoice ${invoice.invoice_number}. Please verify funds in ${recipientName} (${recipientContact}).`,
           'payment',
           '#admin-portal?section=paypal-payments'
         );
@@ -14084,6 +14097,7 @@ app.post('/api/admin/payments/:paymentId/accept', authenticateToken, requireRole
       return res.status(409).json({ error: 'This invoice payment has already been accepted.' });
     }
 
+    const appLabel = String(payment.payment_channel || '').startsWith('gcash') ? 'GCash' : 'PayPal';
     const txResult = db.transaction(() => {
       db.prepare(`
         UPDATE paypal_payments
@@ -14095,7 +14109,7 @@ app.post('/api/admin/payments/:paymentId/accept', authenticateToken, requireRole
             updated_at = CURRENT_TIMESTAMP
         WHERE id = ?
       `).run(
-        (admin_notes && String(admin_notes).trim()) || 'Funds verified in Admin PayPal account (Stephanie Nicole Debo Manalo).',
+        (admin_notes && String(admin_notes).trim()) || `Funds verified in Admin ${appLabel} account (${payment.recipient_name || 'Admin'}).`,
         req.user.id,
         req.user.name,
         payment.id
@@ -14118,7 +14132,7 @@ app.post('/api/admin/payments/:paymentId/accept', authenticateToken, requireRole
         newStatus: 'accepted',
         amount: payment.amount,
         currencyCode: payment.currency_code,
-        notes: (admin_notes && String(admin_notes).trim()) || 'Accepted after confirming PayPal funds receipt.'
+        notes: (admin_notes && String(admin_notes).trim()) || `Accepted after confirming ${appLabel} funds receipt.`
       });
 
       return refId;
@@ -14126,8 +14140,8 @@ app.post('/api/admin/payments/:paymentId/accept', authenticateToken, requireRole
 
     sendNotification(
       payment.student_id,
-      'PayPal Payment Accepted',
-      `Your payment (${payment.transaction_code}) of ${formatExactMoney(payment.amount, payment.currency_code, payment.currency_symbol)} for Invoice ${invoice.invoice_number} has been verified and ACCEPTED by the Administrator. Your lessons are now active!`,
+      `${appLabel} Payment Accepted`,
+      `Your ${appLabel} payment (${payment.transaction_code}) of ${formatExactMoney(payment.amount, payment.currency_code, payment.currency_symbol)} for Invoice ${invoice.invoice_number} has been verified and ACCEPTED by the Administrator. Your lessons are now active!`,
       'payment',
       '#student-payments'
     );
@@ -14159,7 +14173,8 @@ app.post('/api/admin/payments/:paymentId/reject', authenticateToken, requireRole
       return res.status(404).json({ error: 'Associated invoice not found.' });
     }
 
-    const noteText = (admin_notes && String(admin_notes).trim()) || 'Payment not received or screenshot verification insufficient. Please check your PayPal transfer and upload a clearer confirmation screenshot.';
+    const appLabel = String(payment.payment_channel || '').startsWith('gcash') ? 'GCash' : 'PayPal';
+    const noteText = (admin_notes && String(admin_notes).trim()) || `Payment not received or screenshot verification insufficient. Please check your ${appLabel} transfer and upload a clearer confirmation screenshot.`;
 
     db.transaction(() => {
       db.prepare(`
@@ -14195,7 +14210,7 @@ app.post('/api/admin/payments/:paymentId/reject', authenticateToken, requireRole
     sendNotification(
       payment.student_id,
       'Payment Marked as Not Received',
-      `Your payment proof (${payment.transaction_code}) for Invoice ${invoice.invoice_number} was marked as Not Received: "${noteText}". Please verify your PayPal transfer and submit a new proof screenshot.`,
+      `Your payment proof (${payment.transaction_code}) for Invoice ${invoice.invoice_number} was marked as Not Received: "${noteText}". Please verify your ${appLabel} transfer and submit a new proof screenshot.`,
       'payment',
       `#student-payments?invoice=${encodeURIComponent(invoice.invoice_number)}`
     );

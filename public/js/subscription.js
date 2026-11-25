@@ -1942,8 +1942,8 @@ const StudentSub = {
     if (step === 2) {
       if (step1El) step1El.style.display = 'none';
       if (step2El) step2El.style.display = 'block';
-      if (stepTag) stepTag.textContent = 'Step 2 of 2: Complete PayPal Payment & Upload Proof';
-      if (titleEl) titleEl.textContent = 'Complete PayPal Payment';
+      if (stepTag) stepTag.textContent = 'Step 2 of 2: Complete Payment & Upload Proof';
+      if (titleEl) titleEl.textContent = 'Complete Payment (PayPal / GCash)';
       const bodyEl = step2El && step2El.closest('.modal-body');
       if (bodyEl) bodyEl.scrollTop = 0;
     } else {
